@@ -1,3 +1,0 @@
-"""
-MERA recursion engine.
-"""
