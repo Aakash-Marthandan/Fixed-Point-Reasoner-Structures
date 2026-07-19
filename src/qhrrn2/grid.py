@@ -28,14 +28,19 @@ ARC_DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "ARC-AGI" / "data
 
 def place(grid: np.ndarray) -> np.ndarray:
     """Place an (H, W) grid of colors 0..9 top-left on a VOID-filled canvas."""
+    return place_at(grid, 0, 0)
+
+
+def place_at(grid: np.ndarray, oy: int, ox: int) -> np.ndarray:
+    """Place a grid at offset (oy, ox) — translation augmentation (ledger C10)."""
     grid = np.asarray(grid, dtype=np.int8)
     h, w = grid.shape
-    if h > CANVAS or w > CANVAS:
-        raise ValueError(f"grid {h}x{w} exceeds canvas {CANVAS}")
+    if oy < 0 or ox < 0 or oy + h > CANVAS or ox + w > CANVAS:
+        raise ValueError(f"grid {h}x{w} at ({oy},{ox}) exceeds canvas {CANVAS}")
     if grid.min() < 0 or grid.max() >= NUM_COLORS:
         raise ValueError("grid values must be ARC colors 0..9")
     canvas = np.full((CANVAS, CANVAS), VOID, dtype=np.int8)
-    canvas[:h, :w] = grid
+    canvas[oy:oy + h, ox:ox + w] = grid
     return canvas
 
 
