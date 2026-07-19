@@ -1,0 +1,304 @@
+# QHRRN-2 Architecture Specification
+
+**Status:** v0.2 — for PI review (v0.2 adds the expressivity audit §16 and three amendments A/B/C found by it) · **Date:** 2026-07-18 · **Working paper name candidates:** HoloMERA / FluxRG / RG-Adapt
+**Companion:** `Divergence_Analysis_2026-07.md` (the autopsy this design answers) · **Target:** AAMAS 2027, submission early October 2026 · **Budget:** ≤ $4000 GCP
+
+---
+
+## 0. Design contract
+
+Every mechanism in this spec exists to discharge a specific, measured failure from the April system (**E**-numbers) or a specific documented idea that was never implemented (**D**-numbers). §9 gives the full traceability table; §10 gives the CI gates that make each claim falsifiable *before* any cloud spend. Nothing in this architecture is decorative: if a component can't be measured or ablated, it doesn't ship.
+
+The three load-bearing mechanisms, in one breath each:
+
+1. **Priced holographic streams** — every coarse-graining step splits its input into a *kept* channel (flows up the RG hierarchy) and a *boundary stream* (retained, bottlenecked, re-injected during decoding at the matching scale). Nothing is destroyed; everything transmitted is *priced* via an information penalty. The optimizer chooses, per task, how much UV detail to pay for. This resolves the identity-vs-abstraction tension that no funnel architecture can.
+2. **Symmetry stack** — exact color-permutation equivariance (colors as a set axis), translation equivariance (convolutional structure), D₄ handled by orbit augmentation + test-time symmetrization (strict D₄-tied kernels as a stretch ablation). Symmetry divides parameters and sample complexity simultaneously: this is the parameter-golf engine.
+3. **Discrete rule selection as measurable symmetry breaking** — a small codebook of rule tokens at the IR point, selected by temperature-annealed categorical attention. The entropy of the selection distribution is an *order parameter*; its collapse during test-time training is the honest version of the SSB story, and it's plottable.
+
+---
+
+## 1. Data representation
+
+- **Canvas:** fixed 32×32 (covers ARC's 30×30 max). One JIT shape, compile once.
+- **Cell alphabet:** 12 states = 10 ARC colors + `VOID` (outside the true grid) + implicit "empty within grid" = color 0 as usual. `VOID ≠ black`: this kills the E4 padding pathology at the representation level. The vacuum the April vocabulary kept invoking is now an actual distinguished state.
+- **Color axis as a set (AMENDED v0.2 — Amendment A):** the state carries a **per-color field** `Z⁽ᶜ⁾ ∈ ℝ^{H×W×d}` with *weights shared across colors* plus permutation-equivariant interaction terms (DeepSets/mean-pool style). The symmetric group is **S₉ over colors 1–9**; **black (0) and `VOID` are distinguished fields** with private weights — matching ARC's empirical convention (black ≈ background; standard palette augmentation permutes 1–9 and fixes 0).
+  **Color symmetry breaking at TTT:** a strictly S₉-equivariant network cannot represent color-*constant* rules ("always paint it red") — permute the palette and the output must permute, contradiction. Fix: θ_task includes **per-color bias vectors** (10 × d ≈ 160 params, initialized 0, ~0 during pretraining). The equivariant core is the symmetric phase; the support pairs are the explicit breaking field; the TTT biases are the order parameter. Color-constant rules become learnable *precisely and only when the evidence demands them* — the SSB story extends to the color sector, and this is the correct prior (most ARC rules are color-relational; the exceptions break the symmetry through data, not weights).
+- **Input embedding:** per-color occupancy map `o⁽ᶜ⁾ ∈ {0,1}^{H×W}` → 3×3 conv (shared across colors) → `Z₀⁽ᶜ⁾`. Each color field starts as "where my color is, locally."
+- **Episodes:** a training example is a whole episode (support pairs + query), matching the TTT deployment condition.
+
+**Why this fixes April:** the network cannot even *represent* a color-specific rule in its weights — rules become functions of color *relations* (same/different, majority, containment), which is what ARC rules actually are. Palette-swap generalization is exact by construction instead of hoped-for. Parameter cost of color processing drops from O((10d)²) to O(d²).
+
+---
+
+## 2. The RG cell (shared core)
+
+One cell `R_θ` implements one renormalization step `H_s → H_{s+1} = H_s/2`. The same cell (with scale/iteration modulation) is applied at every scale — one core, five scales.
+
+### 2.1 Seam mixer (the disentangler, wired correctly this time)
+
+- Partition the grid into 2×2 blocks **offset by (1,1)** relative to the pooling blocks that follow.
+- Within each offset block, the 4 site features interact through a residual GELU MLP:
+  `u = concat(z₁..z₄, z̄₁..z̄₄) → MLP → (Δz₁..Δz₄)`, `zᵢ += Δzᵢ`,
+  where `z̄ᵢ` is the color-mean at site i (the permutation-equivariant cross-color term).
+- Optionally a Cayley-orthogonal linear component for TTT stability — an *ablation*, not a pillar.
+
+**Why:** this is MERA's staggered disentangler layout (deep-learning twin: Swin's shifted windows — a known-working pattern, which de-risks it). It is the D2 fix: information at pooling-block boundaries is mixed *before* pooling can sever it, and it is **nonlinear** — the E1 linearity collapse is dead at this layer. It is also the D1 fix: these block-local interactions *are* the lattice bonds; locality (Area Law) is enforced because each cell only ever talks to its neighborhood, at every scale.
+
+### 2.2 Coarse-graining with conservation (isometry → kept ⊕ streamed)
+
+Aligned 2×2 blocks pool to one coarse site. The block vector `u ∈ ℝ^{4d}` splits:
+
+- **Kept channel:** `k = GELU(W_k u) ∈ ℝ^d` — flows to scale s+1.
+- **Boundary stream:** `(μ_s, log σ_s) = W_b u ∈ ℝ^{2·d_b}` — a variational code `b_s ~ N(μ_s, σ_s)` retained at the coarse resolution of scale s+1, `d_b ≈ 6`.
+
+**Why:** this is the honest version of the documents' "isometry keeps Signal, discards Noise." Nothing is discarded — the complement of the kept channel is shunted to a *priced* stream. The cell is (softly) information-conserving, which is what the unitarity/reversibility language in the original docs was actually reaching for. The April network deleted; QHRRN-2 *files*.
+
+### 2.2b Coarse-scale attention — "wormholes at the IR" (AMENDED v0.2 — Amendment B)
+
+At scales s ≥ 3 (grids 8×8, 4×4, 2×2 → ≤ 64 tokens), the cell includes one light multi-head attention block over all coarse sites (QKV+out at d=16: ~1.5k params total, gated on by the scale embedding; inactive at fine scales). 
+
+**Why:** long-range *correspondence* — symmetry completion about an arbitrary axis, "copy patch A onto marker B", same/different comparison across distance — is the known structural weakness of purely local hierarchies. Strictly local seam mixers route such correlations through many layers with positional blur; a 16–64-token attention at the coarse scales computes correspondence directly while the streams supply fine registration. **The physics is honest:** this is exactly MERA's structure — causal cones widen with depth and the top tensors couple everything; equivalently, in EFT terms the UV stays strictly local while relevant long-range operators enter only in the IR. The Area-Law prior is preserved where it does its work (pixel statistics); rules are allowed to be globally coupled among a few IR degrees of freedom, because rules *are* global.
+
+### 2.2c Axial summaries (AMENDED v0.2 — Amendment C)
+
+At each scale, append to every site's features the permutation-equivariant pooled summaries of its **row and column** (mean/max, per color, ~0 params, one matmul). 
+
+**Why:** row/column-global rules — gravity/compaction ("everything falls"), ray casting, "move to the last empty cell in the column" — are prefix/aggregate computations along an axis. The isotropic 2×2 pyramid never materializes 1×32 reductions, and pure seam-mixing advances a falling object ~2 cells per pass. Axial summaries + two recursion passes express compaction directly (position = prefix count of occupied cells — verified constructively on pretrain task `1e0a9b12`, a column-compaction task). Cheap, translation-equivariant, and closes a whole family.
+
+### 2.3 Scale–iteration modulation (the hypernetwork, kept from the original design)
+
+Cell weights are modulated by (scale s, recursion step t): `θ(s,t) = θ_base + A(s,t)B(s,t)ᵀ` (LoRA rank ~4) or FiLM gains. One tiny embedding-MLP generates the modulation.
+
+**Why:** the θ(s) = θ_base + Δ(s) idea from the January proposal was good — it's how one ~5k-param core covers UV texture handling *and* IR object logic. Modulating by t as well lets early recursion passes do coarse hypothesizing and late passes do refinement.
+
+---
+
+## 3. Encoder, IR latent, rule codebook
+
+- **Encoder:** 5 cell applications: 32→16→8→4→2→1, emitting streams `b₁..b₅` (at resolutions 16,8,4,2,1) and the IR state.
+- **IR summary:** color-pooled, spatially pooled invariant vector `h ∈ ℝ^{64}` + per-color IR features (for color-binding decisions).
+- **Rule codebook:** `K = 128` learned rule tokens `e_k ∈ ℝ^{64}`, `M = 2` selection slots (compositional rules: "move AND recolor"). Each slot attends: `q_m(k) = softmax(⟨W_m h, e_k⟩ / τ)`.
+  - Pretraining: τ moderate (soft mixtures), Gumbel-softmax gradients, codebook usage regularization (EMA updates, usage-entropy bonus — standard VQ hygiene).
+  - TTT: τ annealed 1 → 0.05. **The collapse of H[q] is the symmetry-breaking event.** Degenerate low-τ vacua = rule hypotheses consistent with the support set; support evidence breaks the degeneracy. We log H[q] per step — the phase-transition plot is a paper figure, and it *means* something this time (contrast E6: April's "FROZEN" banner measured gradient-clipping arithmetic).
+
+**Why K=128, M=2:** ARC's rule inventory at the granularity a conditioning code needs is O(10²) (transformation families × arguments get handled by the decoder conditioning, not the code). M=2 covers the common "two-step" compositions; M is an ablation axis. If discrete selection underperforms, the fallback is a continuous rule vector — everything else survives, we lose one figure.
+
+---
+
+## 4. Decoder: holographic reconstruction with gated, priced streams
+
+Mirror pyramid, separate decode core `D_θ` (sharing with encode core is elegant but empirically brittle; separate is +~5k params):
+
+At each upscale s+1 → s:
+1. Upsample coarse state (2×2 nearest + linear).
+2. **Stream injection:** `z_s += G_s ⊙ MLP(b_s)` where the gate `G_s = σ(g(rule code, s, t)) ∈ ℝ^{d_b}` is rule- and scale-conditioned.
+3. Seam-mix (offset blocks, as encoder).
+
+Output heads:
+- **Grid head:** per-color logits via the equivariant readout `logit_c = ψ(Z⁽ᶜ⁾, Z̄, V)` + void logit → 11-way softmax/cell.
+- **Canvas head:** `(H_out, W_out)` as two 30-way classifications from `h` + rule code. Train-time loss masks by *true* canvas; test-time output uses *predicted* canvas (no E13/D13 ground-truth-size leak). Report exact-match and size-given accuracy separately.
+
+**Why the gates matter:** the identity task needs `G ≈ 1` at fine scales (full UV transmission — your point that ARC needs UV data is architecturally honored here); "fill everything with the majority color" needs `G ≈ 0` everywhere (pure IR). The rule code chooses. April had no path from UV to output at all (E1: rank 8); a U-Net has a free unpriced path (lazy copying); QHRRN-2 has a *tollgated* path.
+
+---
+
+## 5. Recursion (depth without parameters)
+
+TRM-style outer loop, T ≈ 6 iterations:
+
+- State per iteration: `(X, Y_{t-1})` embedded jointly (previous prediction as extra per-color occupancy channels; `Y_0` = blank).
+- Full encode→rule→decode pass emits `Y_t`.
+- **Deep supervision:** the loss hits every `Y_t` (weights `w_t` uniform or ramped). Prevents drift, gives gradient signal at effective depth ~ T × 10 cell applications ≈ 60 layer-equivalents from two ~5k-param cores.
+
+**TRM correspondence** (useful for the paper's positioning): TRM's answer `y` ↔ our `Y_t`; TRM's latent scratchpad `z` ↔ our stream stack + IR state; TRM's weight-shared recursion ↔ our radial re-flow. The difference: our recursion has *scale semantics*, exact symmetry structure, and priced information routing — TRM is a volume-law MLP/attention block at 7M params; we target ≤0.5M with structure doing the work parameters do in TRM.
+
+---
+
+## 6. Objective: the flux ledger
+
+Per episode:
+
+```
+L = Σ_t w_t · CE_masked(Y_t, Y*)          (masked to true canvas; void excluded from CE weighting pathology)
+  + β · Σ_s I_s                            I_s = Σ_sites,colors KL( N(μ_s,σ_s) ‖ N(0,1) )   [nats crossing cut s]
+  + λ_size · [CE(H_out) + CE(W_out)]
+  + κ · (codebook commitment / usage terms)
+```
+
+- `I_s` is a variational upper bound on the information crossing RG cut s — the **flux ledger**. β sets the exchange rate between fit and abstraction.
+- **The RT-flavored claim (stated as analogy, tested as mechanism):** complexity of the inferred rule = total boundary information flux through the RG cuts. Simple rules ⇒ low total flux; texture-carrying rules ⇒ flux concentrated at fine cuts. The per-task **flux spectrum {I_s}** at the TTT solution is a new, quantitative, per-task interpretability object — "which scales does this task's rule live at." Clustering ARC by flux spectra is a headline figure candidate no other ARC system can produce.
+- β schedule: warmup 0 → β* during pretraining (let reconstruction work first, then price it). β* swept in Phase 2; per-scale β_s if needed.
+
+**Contrast with April (D4/E1):** the entropy penalty now acts on *states crossing cuts* — the object the theory documents specified — not on weight-matrix spectra. And CE is masked (E4 dead).
+
+---
+
+## 7. Test-time training: boundary-condition adaptation
+
+**Frozen:** both cores, codebook, embeddings, readouts (the "bulk geometry").
+**Adapted per task θ_task (~10–25k params):** LoRA modulators (rank 4) on cell linear maps per scale, rule-slot queries `W_m h`, stream gate biases. In the holographic frame: the task fixes *boundary couplings*; the bulk is universal.
+
+Protocol:
+1. Augment support pairs by the symmetry orbit: D₄ × color permutations (subsampled, ~50–200 variants) × small translations. With 3 support pairs → effective support ~500–2000.
+2. AdamW on θ_task, ~300–800 steps; τ annealed 1 → 0.05 across the run (the SSB anneal).
+3. **Leave-one-out validation:** hold out each support pair in rotation; LoO accuracy = early-stopping signal + candidate score.
+4. **pass@2:** two attempts = top-2 distinct predictions by LoO score (across the TTT trajectory and 2 seeds).
+5. Optional ablation: SGLD with the *correct* noise scale √(2·lr·T) — an honest nod to the Langevin story, reported as an ablation row, not load-bearing.
+
+**Vectorized population TTT (systems contribution):** θ_task is tiny and identically-shaped across tasks ⇒ `vmap` the entire TTT loop over ~64 tasks simultaneously on one TPU. Full 400-task ARC-1 eval becomes a few TPU-hours instead of a serial day. This is what makes the β × d × T sweep grid affordable inside $4000, and it's a reportable engineering novelty.
+
+**Contrast with April (D6):** 78k/78k parameters adapted against 2–5 examples → now ≤25k structured params against 500–2000 orbit-augmented examples, with validation-based stopping instead of a broken temperature trigger.
+
+---
+
+## 8. Pretraining
+
+- **Corpus:** RE-ARC-style procedural generators over the 400 public training tasks' rule families (Hodel's re-arc as base; extend with symmetry/object-dynamics generators), target 100k–400k episodes. Optionally BARC-class synthetic tasks for diversity. **No evaluation-split contact, ever.**
+- **Regime:** episodic (support + query per example) so the pretrained network is already few-shot-shaped; augmentation orbit always on; AdamW, cosine decay; deep supervision on all T iterates.
+- **Scale:** d ∈ {12, 16, 24, 32} sweep. Parameter table (both cores + hypernet + codebook + heads):
+
+| d  | approx. params | note |
+|----|----------------|------|
+| 12 | ~60k  | sanity scale (Mac-trainable) |
+| 16 | ~100k | expected operating point |
+| 24 | ~220k | if capacity-limited |
+| 32 | ~400k | ceiling; still 17× under TRM |
+
+(All ≪ 10M spec cap; parameter golf headline target: **TRM-competitive accuracy at 10–30× fewer parameters**, with the honest fallback framing "X% of TRM's score at Y× fewer params" if we land short.)
+
+---
+
+## 9. Traceability: autopsy finding → design element
+
+| Finding (April) | QHRRN-2 answer |
+|---|---|
+| E1 exactly linear, rank 8 | GELU seam mixers at every scale ×2 pyramids × T iterations; streams give full-rank UV→output paths. CI gate: measured output rank > 1000; superposition must *fail* |
+| E2 learned "all-black" | Masked CE + void state + episodic pretraining on generators (not 20 tasks × 5 epochs) |
+| E3 identity 7.8% | Streams + gates: identity = "gates open, rule = copy." CI gate: identity exact-match < 200 TTT steps |
+| E4 87.7% padding loss | VOID ≠ black; CE masked to true canvas; canvas head predicts size (no GT-size leak) |
+| E5/E6 SSB was a timer | Discrete codebook + τ-anneal; order parameter H[q] logged per step; LoO early stop replaces temperature trigger |
+| E7 fake sparse kernel | No speculative kernels. Pallas only if a *profiled* bottleneck appears (candidate: none expected at d≤32 — XLA handles these shapes) |
+| E8 env rot | Pinned requirements, vendored data (done), version stamps in checkpoints |
+| D1 no PEPS bonds | Seam mixers are local bonds at every scale; locality = Area Law prior, actually enforced |
+| D2 tree ≠ MERA | Offset seam blocks (staggered MERA layout / shifted windows) |
+| D4 weight-entropy ≠ holography | Flux ledger on stream states crossing cuts (VIB bound) |
+| D6 TTT-everything | Frozen bulk; ≤25k boundary params adapted |
+| D8 symmetry sectors unused | Color-set equivariance (exact), D₄ orbit + symmetrization, strict G-conv as stretch |
+| D9 no recursion | T-iteration outer loop with deep supervision |
+| D10 reversibility unused | Conservation-by-construction cell (kept ⊕ streamed); flux ledger doubles as the leak meter |
+| D11 no interpretability | Flux spectra {I_s}, gate maps, H[q] trajectories, per-scale activation heatmaps — first-class outputs |
+
+## 10. CI gates (all local/CPU, all before cloud spend)
+
+1. **Equivariance exactness:** permute palette → logits permute bit-exactly; translate input → output translates (within canvas).
+2. **Nonlinearity/rank probe** (inverted April E1): superposition violated; output rank > 1000 over random inputs.
+3. **Sanity triad via TTT:** identity, color-swap, translation — 3/3 exact match.
+4. **Seam test:** a task whose rule crosses pooling-block boundaries (e.g., 2-px-offset checkerboard completion) must not degrade vs. block-aligned variant by more than ε.
+5. **Flux behavior:** identity's fine-scale flux ≫ constant-fill's total flux; β=0 vs β>0 changes spectra in the predicted direction.
+6. **Canvas:** size prediction exact on size-preserving tasks; no use of GT size anywhere in the predict path.
+
+## 11. Ablation matrix (paper table, each row = one mechanism claim)
+
+| Ablation | Tests the claim |
+|---|---|
+| streams off (pure funnel) | UV transmission is necessary (April-redux control) |
+| β = 0 (free streams / U-Net mode) | pricing improves generalization, not just compresses |
+| aligned (non-offset) seam blocks | staggered disentanglers matter (MERA vs tree) |
+| color-set → plain embedding | exact color equivariance beats learned embedding |
+| discrete code → continuous vector | SSB selection helps (or is just pretty) |
+| T = 1 vs 6 | recursion depth contribution |
+| TTT: frozen-core LoRA vs full fine-tune | the D6 lesson, quantified |
+| + strict D₄ G-conv (stretch) | symmetrization vs strict equivariance |
+
+## 12. Compute plan (≤ $4000)
+
+| Item | Est. |
+|---|---|
+| Phase 1–2 dev (Mac + v5e-1 spot spot-checks) | ~$50 |
+| Pretraining sweeps: d × β grid, short runs, v5e-8 spot | $300–600 |
+| Full pretrains (3–4 configs × ~30–60 h v5e-8 spot) | $400–900 |
+| Vectorized TTT evals (ARC-1 400-task, ~10–15 full evals) | $500–1200 |
+| ARC-2 attempts + final reruns + seeds | $300–600 |
+| **Total** | **~$1600–3300** (headroom ~$700–2400) |
+
+Spot instances + the dispatcher's unconditional-teardown discipline (add `--spot`); results to GCS, not stdout-scraping.
+
+## 13. Risks & fallbacks
+
+| Risk | Mitigation / fallback |
+|---|---|
+| Streams enable lazy copying; abstraction never forms | β warmup + per-scale β_s; monitor flux spectra; worst case, β fixed high at fine scales |
+| Codebook collapse / dead codes | EMA + usage entropy (standard VQ hygiene); fallback: continuous rule vector |
+| Color-set axis underperforms | A/B in Phase 2 week 1 — cheap to swap to plain embedding |
+| Capacity short at d=16 | dial d (params ∝ d²); 32 still 17× under TRM |
+| TTT wall-clock for 400 tasks | vmapped population TTT (64-wide); measured before Phase 4 |
+| AAMAS fit | frame TTT as an *adaptive agent* (online adaptation under few-shot supervision); learning-and-adaptation track; confirm venue with Prof |
+| Deadline | stretch items (strict G-conv, M>2 slots, ARC-2 depth) are severable; gates are go/no-go dates per report §7 |
+
+## 14. Related work positioning (novelty defense)
+
+- **RG-Flow** (Hu, Li, You et al.): MERA-topology normalizing flow for *generation*; no task adaptation, no priced skips, no discrete rule selection. We are the task-adaptive, discriminative-with-reconstruction counterpart.
+- **Neural RG** (Li & Wang 2018): learned RG for sampling physics models; same family tree, different task.
+- **U-Net / Swin:** skip connections and shifted windows exist — *unpriced* and without scale-semantics; our contribution is the flux ledger + rule-gated routing, and the RG framing that makes {I_s} meaningful.
+- **HRM (27M) / TRM (7M):** recursion + deep supervision at small scale, volume-law cores; we add exact symmetry structure, scale semantics, priced information routing, at 10–30× fewer params.
+- **TN classifiers (Stoudenmire et al.):** multilinear TN models; no locality-hierarchy-adaptivity triple, no ARC.
+- **TTT for ARC (MindsAI lineage, Akyürek et al.):** validated TTT + augmentation orbit; we adopt the protocol but adapt only structured boundary parameters, and vectorize the population.
+
+**Claimed novel contributions (paper):** (1) priced per-scale boundary streams as an adaptive abstraction mechanism (holographic Occam); (2) per-task RG flux spectra as an interpretability object; (3) rule selection as measurable annealed symmetry breaking; (4) the equivariance-stacked recursive tiny-core, placing a new point on the ARC params-accuracy frontier; (5) vectorized population TTT.
+
+## 15. Open questions for PI review
+
+1. **Strict D₄ G-convs now or later?** My call: symmetrization first (cheap, 90% of the benefit), strict equivariance as ablation. Override if you want the cleaner theory story from day one.
+2. **M = 2 rule slots** — enough compositionality, or do you want a small program-like chain (M=3-4 with ordering)?
+3. **Episodic pretraining** (my default) vs TRM-style supervised-with-augmentation on the training set — episodic matches deployment; supervised is closer to TRM comparability. Could run both at d=16 in Phase 3 if budget allows (~$300).
+4. **How physics-forward to pitch the RT analogy** in the paper: "inspired-by" framing (safe) vs a formal section mapping flux ledger ↔ entanglement-entropy bounds (riskier, more distinctive). Your hep-th judgment call.
+5. Canvas head: direct (H,W) classification vs size-transform taxonomy — direct is simpler; taxonomy is more interpretable. Default: direct.
+
+---
+
+## 16. Expressivity audit (v0.2) — can it represent the ARC function class?
+
+**Method:** enumerate the functional requirements ARC-1 empirically demands (Chollet's core-knowledge priors + task-family analyses), and for each give either a constructive representability argument in this architecture or an honest flag. The audit produced Amendments A (S₉ + TTT color biases), B (coarse attention), C (axial summaries) — v0.1 could not represent color-constant rules at all, and was weak on correspondence and axial-global families.
+
+### 16.1 Family-by-family
+
+| ARC requirement | Expressing mechanism | Confidence |
+|---|---|---|
+| Identity / texture-preserving edits | Constructive: mixers ≈ id (residual → 0), gates open, streams carry 4-subcell occupancy (needs ~4 bits ≤ d_b=6 dims), decoder re-places. Exact identity exists in weight space; CI gate tests TTT *finds* it | **High (proved)** |
+| Geometry: translate / rotate / reflect / tile | Translation native to conv structure; D₄ via orbit + symmetrization; tiling via rule-conditioned decoder + canvas head | High |
+| Object formation (connected components) | Hierarchical assembly: a component of diameter k is assembled by scale log₂k; seam mixers prevent boundary splitting; pretraining auxiliaries (predict component ids/sizes/bboxes — labels free from generators) reinforce | Med-high |
+| Counting | Components-minus-holes is a *local* quad-count (Gray's identity for the Euler characteristic — a topological invariant computed as a local density, exactly in the network's wheelhouse); hole-free counting exact; general counting via hierarchy + IR pooling | Med-high |
+| Select / argmax over objects ("largest", "the odd one") | Coarse-scale competition via Amendment-B attention (soft argmax over ≤64 tokens) + iterative sharpening across T passes + fine-scale masks from streams | **Medium — top learnability risk (R1)** |
+| Long-range correspondence (symmetry completion, copy A→B) | Amendment-B attention computes correspondence at IR; streams provide content; recursion refines registration | Medium (R2) |
+| Row/column-global rules (gravity, rays, compaction) | Amendment-C axial summaries: prefix/aggregate statistics per axis; compaction = prefix-count (constructive on `1e0a9b12`) | Med-high with C |
+| Color-constant rules ("paint it red") | Amendment-A TTT per-color biases (symmetry breaking by evidence) | High with A |
+| Relational color logic (recolor by rank/count/mapping) | Native to the set-equivariant color axis | High |
+| Conditional branching (if P then A else B) | Rule slots (M=2) + gates + FiLM; per-object conditions through object features | Medium |
+| Grid-size transforms (crop/bbox/scale/tile) | Canvas head + rule-conditioned decode | High |
+| Small arithmetic (×N, N from a count) | Count features → canvas/tiling conditioning | Medium |
+
+**Residual, knowingly out of reach:** long *sequential* simulations with no hierarchical shortcut (multi-bounce trajectories, order-dependent stacking of many objects) — bounded by circuit depth ≈ T×(10 cells + attention) ≈ 60–100 nonlinear steps with log-depth shortcuts; tasks needing genuinely serial O(N²) simulation exceed it. TRM has the same ceiling; these families are a small ARC-1 minority. T is a TTT-time dial (compute at 100k params is cheap; T up to 16 if a task's LoO score wants it).
+
+### 16.2 Representable ≠ learnable — the honest gap, ranked
+
+April's failure was *representational*; that class of failure is now closed (and CI-gated). The remaining risk is *learnability*: whether pretraining + TTT actually finds the representations. Ranked, with the gate that catches each early:
+
+| # | Risk | Mitigation | Early gate |
+|---|---|---|---|
+| R1 | Object-argmax/selection doesn't emerge from pixels | Auxiliary object heads during pretraining (component ids, sizes, bboxes — free labels from generators); Amendment-B competition substrate | dev-30 stratified: object-selection family, Aug gate |
+| R2 | Correspondence tasks stay unlearned | Amendment B; symmetry-completion family over-sampled in generators | dev-30: symmetry family |
+| R3 | Stream/VIB collapse (β kills streams → funnel redux) or the reverse (β→0 lazy copying) | Free-bits floor per stream; β warmup; per-scale β_s; {I_s} monitored every run | identity CI + flux-direction sanity |
+| R4 | Codebook pathologies (collapse/dead codes) | EMA + usage-entropy hygiene; fallback: continuous rule vector (loses one figure, not the system) | code-usage histograms, Phase 2 |
+| R5 | Generator-distribution gap (RE-ARC ≠ eval rules) | Mix RE-ARC + BARC-style + hand-written families; dev-30 uses *real* tasks only | dev-30 vs generator-holdout delta |
+| R6 | TTT overfits 2-pair tasks | LoO stopping; θ_task kept ≤25k; orbit augmentation | LoO-vs-test correlation on training split |
+
+### 16.3 Why a decent solve rate is credible (the argument's load-bearing structure)
+
+The solve-rate bet deliberately does **not** ride on the novel physics. It decomposes:
+
+1. **Proven engine, kept:** recursion + deep supervision + orbit-augmented TTT is TRM's demonstrated 45%-at-7M recipe (and the MindsAI-lineage TTT results before it). We keep that engine intact.
+2. **Params removed by exactness, not hope:** TRM spends capacity learning approximate invariances from its augmentation orbit; we impose translation + S₉ exactly and D₄ by symmetrization. Equivariant nets matching or beating augmented baselines at a fraction of the parameters is a repeatedly replicated finding (G-CNN literature) — this is where the 10–70× parameter reduction comes from without a solve-rate sacrifice.
+3. **The bottleneck problem TRM never had, solved structurally:** TRM's full-width recurrent state gives it UV access by brute width; streams give the same access at a fraction of the state and parameters — plus the Occam pressure and the measurables. Streams are how we stay tiny *while keeping* TRM-class capability; the flux machinery's accuracy upside (better composition/generalization) is a bonus bet, priced as ablations.
+4. **Honest expectation:** target band **30–50% ARC-1 public-eval** at ≤400k params (TRM-competitive at 17–70× fewer params); floor scenario ~15–25% if R1/R2 bite hard — detectable by Aug 31 at the dev-30 gate with time to descope; upside >50% if priced composition genuinely helps. Any point in the target band is a new params-accuracy frontier point, which is the paper's efficiency claim; the physics deliverables (flux spectra, SSB transitions) do not depend on beating TRM.
+
+**Efficiency, quantified:** ~100k params (d=16); pretraining ≈ one v5e-8-spot day; vectorized TTT ≈ $0.10–0.20 per task at evaluation (compare: frontier-LLM refinement harnesses at ~$31/task on ARC-2) — three orders of magnitude cheaper per task, at 70× fewer parameters than the smallest strong baseline.

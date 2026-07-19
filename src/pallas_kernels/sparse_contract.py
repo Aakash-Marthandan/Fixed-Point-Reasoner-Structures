@@ -95,9 +95,7 @@ def contract_sparse(tensor_a: jax.Array, tensor_b: jax.Array, block_size: int) -
     mask = a_mask & b_mask
     non_zero_count = jnp.sum(mask)
     
-    backend = jax.lib.xla_bridge.get_backend()
-    
-    if backend.platform == 'tpu':
+    if jax.default_backend() == 'tpu':
         c_blocks = pallas_sparse_dot(a_blocks, b_blocks)
     else:
         # CPU/GPU fallback: compute ALL block dot products via vmap
