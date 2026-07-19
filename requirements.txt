@@ -1,0 +1,14 @@
+# QHRRN-2 pinned environment — exact versions, no ranges.
+# Ledger rule: record jax version in every checkpoint; env drift was April failure E8.
+# Python: 3.14.6 (Apple Silicon, CPU) locally; TPU deps added per-phase, pinned when added.
+absl-py==2.5.0
+jax==0.10.2
+jaxlib==0.10.2
+ml_dtypes==0.5.4
+numpy==2.5.1
+opt_einsum==3.4.0
+optax==0.2.8
+scipy==1.18.0
+
+# dev/test
+pytest==9.1.1

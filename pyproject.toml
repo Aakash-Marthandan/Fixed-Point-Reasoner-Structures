@@ -1,0 +1,10 @@
+[project]
+name = "qhrrn2"
+version = "0.1.0"
+description = "QHRRN-2: holographic RG network for ARC-AGI"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
