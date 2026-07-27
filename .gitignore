@@ -27,3 +27,4 @@ ENV/
 Thumbs.db
 data/
 .jax_cache/
+runs/
