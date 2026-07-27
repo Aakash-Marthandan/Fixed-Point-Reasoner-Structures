@@ -1,4 +1,5 @@
 # Ledger: C2 (S9 field axis + roles), C3 (color_bias — Amendment A), C5 (streams+gates),
+#         C6+C14 (priced attention at all scales — Amendment D, flux_attn ledger),
 #         C8 (rule codebook, tau-annealed), C9 (recursion, deep supervision feeds),
 #         C1 (canvas head). Equivariance guarded by tests/test_model.py::test_s9_equivariance.
 """QHRRN-2 model: equivariant recursive coarse-graining with priced streams.
@@ -28,7 +29,9 @@ class StepOutput(NamedTuple):
     logits: jax.Array        # (H, W, VOCAB)
     size_h: jax.Array        # (30,) logits for H_out-1
     size_w: jax.Array        # (30,)
-    flux: jax.Array          # (scales,) nats per RG cut
+    flux: jax.Array          # (scales,) nats per RG cut — I_local (C5)
+    flux_attn: jax.Array     # (scales,) nats through nonlocal channels — A_nonlocal (C14);
+    #                          index s = enc + dec attention at resolution 32/2^s
     rule_q: jax.Array        # (M, K) slot distributions
     h_ir: jax.Array          # (d_ir,)
 
@@ -53,7 +56,7 @@ def init_params(key, cfg: Config):
         "enc": {
             "mixer": cell.init_mixer(ks[2], d),
             "pool": cell.init_pool_split(ks[3], d, db),
-            "attn": cell.init_attention(ks[4], d),
+            "attn": cell.init_attention(ks[4], d, cfg.d_a),
             "film": cell.init_film(ks[5], d),
         },
         "ir_proj": lin(ks[6], 3 * d, cfg.d_ir),
@@ -62,7 +65,7 @@ def init_params(key, cfg: Config):
         "dec_init": lin(ks[9], cfg.d_ir + r_dim, d),
         "dec": {
             "mixer": cell.init_mixer(ks[10], d),
-            "attn": cell.init_attention(ks[11], d),
+            "attn": cell.init_attention(ks[11], d, cfg.d_a),
             "film": cell.init_film(ks[12], d),
             "inject": cell.init_inject(ks[13], db, d),
         },
@@ -100,13 +103,19 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     d, db, S = cfg.d, cfg.d_b, cfg.scales
     z = _embed(params, fields)
 
+    def split(r):
+        return jax.random.split(r) if r is not None else (None, None)
+
     streams, flux = [], []
+    flux_nl = [jnp.zeros(())] * S           # A_s ledger (C14): enc + dec per scale
     for s in range(S):
         s_norm = s / max(S - 1, 1)
         gammas, betas = cell.film_params(params["enc"]["film"], s_norm, t_norm, d)
         z = cell.film(cell.mixer(params["enc"]["mixer"], z), gammas[0], betas[0])
         if z.shape[1] <= cfg.attn_max_hw:
-            z = cell.attention(params["enc"]["attn"], z)
+            rng, sub = split(rng)
+            z, a_s = cell.attention(params["enc"]["attn"], z, rng=sub)
+            flux_nl[s] = flux_nl[s] + a_s
         kept, mu, log_sigma = cell.pool_split(params["enc"]["pool"], z, db)
         if rng is not None:
             rng, sub = jax.random.split(rng)
@@ -148,7 +157,9 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
         gammas, betas = cell.film_params(params["dec"]["film"], s_norm, t_norm, d)
         zd = cell.film(cell.mixer(params["dec"]["mixer"], zd), gammas[0], betas[0])
         if zd.shape[1] <= cfg.attn_max_hw:
-            zd = cell.attention(params["dec"]["attn"], zd)
+            rng, sub = split(rng)
+            zd, a_s = cell.attention(params["dec"]["attn"], zd, rng=sub)
+            flux_nl[s] = flux_nl[s] + a_s
         zd = cell.film(zd, gammas[1], betas[1])
 
     # Equivariant readout: shared vector + role bias -> (H, W, N_FIELDS) logits.
@@ -162,6 +173,7 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
         size_h=cell._linear(params["canvas"]["h"], hc),
         size_w=cell._linear(params["canvas"]["w"], hc),
         flux=jnp.stack(flux),
+        flux_attn=jnp.stack(flux_nl),
         rule_q=jnp.stack(rule_q),
         h_ir=h_ir,
     )

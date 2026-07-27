@@ -1,6 +1,6 @@
 # QHRRN-2 Architecture Specification
 
-**Status:** v0.3 — v0.2 added the expressivity audit §16 and Amendments A/B/C; v0.3 registers **Amendment D** (ledger C14, 2026-07-21): KL-priced attention channels at *all* scales ("wormhole tolls"), each with measured flux A_s and price β_nl — required by thesis statement S3 (`Thesis_Information_Holography.md` §6), making nonlocal information demand a per-task measurable. Implementation pending (next session, ~+2–3k params) · **Date:** 2026-07-18/21 · **Working paper name candidates:** HoloMERA / FluxRG / RG-Adapt
+**Status:** v0.3 — v0.2 added the expressivity audit §16 and Amendments A/B/C; v0.3 registers **Amendment D** (ledger C14, 2026-07-21): KL-priced attention channels at *all* scales ("wormhole tolls"), each with measured flux A_s and price β_nl — required by thesis statement S3 (`Thesis_Information_Holography.md` §6), making nonlocal information demand a per-task measurable. Implemented 2026-07-27 (§2.2b; measured net **−144 params** at d=12 — the VIB messages replace the heavier full-width value path) · **Date:** 2026-07-18/27 · **Working paper name candidates:** HoloMERA / FluxRG / RG-Adapt
 **Companion:** `Divergence_Analysis_2026-07.md` (the autopsy this design answers) · **Target:** AAMAS 2027, submission early October 2026 · **Budget:** ≤ $4000 GCP
 
 ---
@@ -53,11 +53,15 @@ Aligned 2×2 blocks pool to one coarse site. The block vector `u ∈ ℝ^{4d}` s
 
 **Why:** this is the honest version of the documents' "isometry keeps Signal, discards Noise." Nothing is discarded — the complement of the kept channel is shunted to a *priced* stream. The cell is (softly) information-conserving, which is what the unitarity/reversibility language in the original docs was actually reaching for. The April network deleted; QHRRN-2 *files*.
 
-### 2.2b Coarse-scale attention — "wormholes at the IR" (AMENDED v0.2 — Amendment B)
+### 2.2b Priced attention at every scale — "wormhole tolls" (AMENDED v0.2 — Amendment B; v0.3 — Amendment D)
 
-At scales s ≥ 3 (grids 8×8, 4×4, 2×2 → ≤ 64 tokens), the cell includes one light multi-head attention block over all coarse sites (QKV+out at d=16: ~1.5k params total, gated on by the scale embedding; inactive at fine scales). 
+Attention runs at **all** scales (32×32 and 16×16 included — Amendment D upgrades Amendment B's coarse-only placement), and every attention channel is **priced**. The mechanism (`cell.attention`): the pattern is computed S9-safely from the field-mean (`q, k` from z̄); each site then emits a **variational message** `(μ, log σ) ∈ ℝ^{2·d_a}` (d_a ≈ 6, projections shared across fields); the sampled messages `m ~ N(μ, σ)` are transported by the attention pattern and injected residually. The per-scale toll is `A_s = Σ KL(N(μ,σ) ‖ N(0,1))` — encoder + decoder contributions at the same resolution — reported in `StepOutput.flux_attn` and priced by its own coefficient **β_nl**.
 
-**Why:** long-range *correspondence* — symmetry completion about an arbitrary axis, "copy patch A onto marker B", same/different comparison across distance — is the known structural weakness of purely local hierarchies. Strictly local seam mixers route such correlations through many layers with positional blur; a 16–64-token attention at the coarse scales computes correspondence directly while the streams supply fine registration. **The physics is honest:** this is exactly MERA's structure — causal cones widen with depth and the top tensors couple everything; equivalently, in EFT terms the UV stays strictly local while relevant long-range operators enter only in the IR. The Area-Law prior is preserved where it does its work (pixel statistics); rules are allowed to be globally coupled among a few IR degrees of freedom, because rules *are* global.
+**Pricing at emission, deliberately:** messages are sampled *before* the convex attention mixing, so by data processing Σ A_s upper-bounds the information that actually crosses the nonlocal channel — the same variational status as the stream ledger I_s, and the accounting point is where "wormhole toll" literally applies: at the mouth. Emission-side coding also transports d_a dims instead of d, which is what keeps 1024-token attention affordable (~12M MACs for the pattern at 32×32; measured ~2 s/step CPU at the CI-3a batch, negligible on TPU).
+
+**Why attention at all (Amendment B's case, unchanged):** long-range *correspondence* — symmetry completion about an arbitrary axis, "copy patch A onto marker B", same/different comparison across distance — is the known structural weakness of purely local hierarchies. Strictly local seam mixers route such correlations through many layers with positional blur; attention computes correspondence directly while the streams supply fine registration.
+
+**Why all scales, priced (Amendment D's case):** with the channel present but *tolled* everywhere, the Area-Law prior stops being an architectural axiom and becomes a **measured default the optimizer pays to relax** — the exact same move C5 made for UV detail, now for nonlocality. Each task's solution yields the decomposition **(I_local = Σ I_s, A_nonlocal = Σ A_s)**: hierarchical vs nonlocal information demand, the measurable that thesis statement S3 (Locality-Class Law) is built on. The EFT reading of Amendment B ("relevant nonlocal operators enter at the IR") is no longer imposed — it becomes a *prediction*: if it's true, the optimizer will spend A_s at coarse scales and starve the fine-scale channels; if a task family needs fine-scale wormholes, the ledger will say so. Ablation axes: β_nl (priced vs free) and `attn_max_hw` ∈ {32, 8, 0} (all-scales vs Amendment-B coarse-only vs absent).
 
 ### 2.2c Axial summaries (AMENDED v0.2 — Amendment C)
 
@@ -121,11 +125,12 @@ Per episode:
 ```
 L = Σ_t w_t · CE_masked(Y_t, Y*)          (masked to true canvas; void excluded from CE weighting pathology)
   + β · Σ_s I_s                            I_s = Σ_sites,colors KL( N(μ_s,σ_s) ‖ N(0,1) )   [nats crossing cut s]
+  + β_nl · Σ_s A_s                         A_s = attention-message KL at scale s (Amendment D — wormhole tolls)
   + λ_size · [CE(H_out) + CE(W_out)]
   + κ · (codebook commitment / usage terms)
 ```
 
-- `I_s` is a variational upper bound on the information crossing RG cut s — the **flux ledger**. β sets the exchange rate between fit and abstraction.
+- `I_s` is a variational upper bound on the information crossing RG cut s — the **flux ledger**. β sets the exchange rate between fit and abstraction. `A_s` is the same bound for the nonlocal channels (§2.2b); β_nl prices nonlocality separately, and the pair (Σ I_s, Σ A_s) is the S3 locality decomposition.
 - **The RT-flavored claim (stated as analogy, tested as mechanism):** complexity of the inferred rule = total boundary information flux through the RG cuts. Simple rules ⇒ low total flux; texture-carrying rules ⇒ flux concentrated at fine cuts. The per-task **flux spectrum {I_s}** at the TTT solution is a new, quantitative, per-task interpretability object — "which scales does this task's rule live at." Clustering ARC by flux spectra is a headline figure candidate no other ARC system can produce.
 - β schedule: warmup 0 → β* during pretraining (let reconstruction work first, then price it). β* swept in Phase 2; per-scale β_s if needed.
 
@@ -204,6 +209,7 @@ Protocol:
 | streams off (pure funnel) | UV transmission is necessary (April-redux control) |
 | β = 0 (free streams / U-Net mode) | pricing improves generalization, not just compresses |
 | aligned (non-offset) seam blocks | staggered disentanglers matter (MERA vs tree) |
+| attention: priced (β_nl>0) vs free (β_nl=0) vs coarse-only vs absent | Amendment D: tolls select genuine nonlocality; S3 architecture-selection law |
 | color-set → plain embedding | exact color equivariance beats learned embedding |
 | discrete code → continuous vector | SSB selection helps (or is just pretty) |
 | T = 1 vs 6 | recursion depth contribution |

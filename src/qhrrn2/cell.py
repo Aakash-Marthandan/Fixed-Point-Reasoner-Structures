@@ -1,5 +1,6 @@
 # Ledger: C4 (seam mixer, offset blocks), C5 (pool/split -> priced streams),
-#         C6 (coarse attention, Amendment B), C7 (axial summaries, Amendment C),
+#         C6+C14 (priced attention at all scales, Amendments B+D),
+#         C7 (axial summaries, Amendment C),
 #         C13 (nonlinearity everywhere; guarded by CI-2 in tests/test_model.py).
 """The RG cell's building blocks, as pure functions over explicit param pytrees.
 
@@ -86,27 +87,39 @@ def stream_kl(mu, log_sigma):
     return 0.5 * jnp.sum(mu ** 2 + jnp.exp(2 * log_sigma) - 2 * log_sigma - 1.0)
 
 
-# ── Coarse attention (C6): pattern from color-mean, applied to every field ─
+# ── Priced attention (C6+C14): the nonlocal channel, tolled at the mouth ───
 
-def init_attention(key, d):
+def init_attention(key, d, d_a):
     k1, k2, k3, k4 = jax.random.split(key, 4)
     return {
         "q": _linear_init(k1, d, d), "k": _linear_init(k2, d, d),
-        "v": _linear_init(k3, d, d), "o": _linear_init(k4, d, d, scale=1e-2),
+        "vib": _linear_init(k3, d, 2 * d_a),
+        "o": _linear_init(k4, d_a, d, scale=1e-2),
     }
 
 
-def attention(p, z):
-    """Residual single-head attention over all sites; S9-safe: the attention
-    pattern is computed from the field-mean (equivariant scalar function) and
-    shared across fields."""
+def attention(p, z, rng=None):
+    """Residual attention as a *priced* channel (Amendment D). Each site emits
+    a variational message (mu, log_sigma) of width d_a; the toll
+    A = KL(N(mu, sigma) || N(0,1)) is the nats this scale spends on
+    nonlocality. Messages are mixed by the attention pattern — a convex
+    combination of the sampled codes, so by data processing A upper-bounds
+    what actually crosses. S9-safe: the pattern comes from the field-mean and
+    all projections are shared across fields. Returns (z', A)."""
     C, H, W, d = z.shape
     zbar = jnp.mean(z, axis=0).reshape(H * W, d)
     q, k = _linear(p["q"], zbar), _linear(p["k"], zbar)
     a = jax.nn.softmax(q @ k.T / math.sqrt(d), axis=-1)          # (HW, HW)
-    v = _linear(p["v"], z.reshape(C, H * W, d))
-    out = jnp.einsum("ts,csd->ctd", a, v)
-    return z + _linear(p["o"], out).reshape(C, H, W, d)
+    stats = _linear(p["vib"], z.reshape(C, H * W, d))
+    d_a = stats.shape[-1] // 2
+    mu, log_sigma = stats[..., :d_a], jnp.clip(stats[..., d_a:], -6.0, 2.0)
+    if rng is not None:
+        m = mu + jnp.exp(log_sigma) * jax.random.normal(rng, mu.shape)
+    else:
+        m = mu
+    flux = stream_kl(mu, log_sigma)
+    out = jnp.einsum("ts,csa->cta", a, m)
+    return z + _linear(p["o"], out).reshape(C, H, W, d), flux
 
 
 # ── FiLM modulation by (scale, iteration) (C13/H-8) ────────────────────────

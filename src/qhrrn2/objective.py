@@ -1,5 +1,6 @@
 # Ledger: C1 (masked CE + weighted VOID region + canvas-size loss),
-#         C5/H-4 (flux ledger, beta-priced), C9 (deep supervision over iterates).
+#         C5/H-4 (flux ledger, beta-priced), C14 (attention flux, beta_nl-priced),
+#         C9 (deep supervision over iterates).
 from __future__ import annotations
 
 import jax
@@ -25,7 +26,8 @@ def _step_loss(out, y_canvas, mask, cfg: Config):
 
     total = (ce_in + cfg.w_void * ce_out
              + cfg.lambda_size * size_ce
-             + cfg.beta_flux * jnp.sum(out.flux))
+             + cfg.beta_flux * jnp.sum(out.flux)
+             + cfg.beta_flux_nl * jnp.sum(out.flux_attn))
     return total, ce_in
 
 
@@ -37,6 +39,7 @@ def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None):
     return jnp.mean(jnp.stack(losses)), {
         "ce_in_last": ces[-1],
         "flux_last": outs[-1].flux,
+        "flux_attn_last": outs[-1].flux_attn,
         "rule_entropy_last": -jnp.sum(outs[-1].rule_q * jnp.log(outs[-1].rule_q + 1e-9), axis=-1),
     }
 

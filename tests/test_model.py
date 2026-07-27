@@ -1,5 +1,7 @@
 # Ledger: CI-2 (anti-linearity + rank — April E1 inverted into a permanent gate),
 #         CI-1 extension (full-model S9 equivariance), C13 (param budget),
+#         C14 mechanism tests (Amendment D: attention flux measured at all scales,
+#         ablation knobs, toll wired into the objective — CI-5's mechanism half),
 #         trainability smoke for CI-3a.
 import numpy as np
 import jax
@@ -59,9 +61,11 @@ def test_s9_equivariance(params):
     gathered = out_p.logits[..., jnp.asarray(lut)]
     err = float(jnp.max(jnp.abs(gathered - out.logits)))
     assert err < 1e-4, f"S9 equivariance violated at init: max err {err}"
-    # rule distribution and sizes are invariants
+    # rule distribution, sizes, and both flux ledgers are invariants
     assert float(jnp.max(jnp.abs(out_p.rule_q - out.rule_q))) < 1e-4
     assert float(jnp.max(jnp.abs(out_p.size_h - out.size_h))) < 1e-4
+    assert float(jnp.max(jnp.abs(out_p.flux - out.flux))) < 1e-3
+    assert float(jnp.max(jnp.abs(out_p.flux_attn - out.flux_attn))) < 1e-3
 
 
 def test_color_bias_breaks_equivariance(params):
@@ -103,6 +107,56 @@ def test_ci2_output_rank_floor(params):
     s = np.linalg.svd(np.asarray(outs), compute_uv=False)
     rank = int(np.sum(s > s[0] * 1e-4))
     assert rank >= n - 2, f"output rank {rank} < {n-2}: bottleneck collapse — April E1 regression"
+
+
+# ── C14 (Amendment D): priced attention at all scales ──────────────────────
+
+def test_c14_attention_flux_all_scales(params):
+    """Every scale's nonlocal channel must report positive, finite flux at
+    init (mu is generically nonzero) — the A_s ledger is real, not decorative."""
+    x = jnp.asarray(G.place(_random_grid(5)), dtype=jnp.int32)
+    yprev = jnp.full((G.CANVAS, G.CANVAS), G.VOID, dtype=jnp.int32)
+    out = forward_fields(params, CFG, build_fields(x, yprev), t_norm=0.0, tau=1.0)
+    assert out.flux_attn.shape == (CFG.scales,)
+    assert bool(jnp.all(jnp.isfinite(out.flux_attn)))
+    assert bool(jnp.all(out.flux_attn > 0)), f"dead nonlocal channel: {out.flux_attn}"
+
+
+def test_c14_ablation_knobs():
+    """attn_max_hw=0 -> absent (A_s = 0 everywhere); attn_max_hw=8 -> the old
+    Amendment-B coarse-only mode (fine scales 32,16 carry zero nonlocal flux)."""
+    x = jnp.asarray(G.place(_random_grid(6)), dtype=jnp.int32)
+    yprev = jnp.full((G.CANVAS, G.CANVAS), G.VOID, dtype=jnp.int32)
+    fields = build_fields(x, yprev)
+
+    cfg_absent = Config(d=12, T=2, attn_max_hw=0)
+    p = init_params(jax.random.PRNGKey(0), cfg_absent)
+    out = forward_fields(p, cfg_absent, fields, t_norm=0.0, tau=1.0)
+    assert float(jnp.sum(out.flux_attn)) == 0.0
+
+    cfg_coarse = Config(d=12, T=2, attn_max_hw=8)
+    p = init_params(jax.random.PRNGKey(0), cfg_coarse)
+    out = forward_fields(p, cfg_coarse, fields, t_norm=0.0, tau=1.0)
+    assert float(jnp.sum(out.flux_attn[:2])) == 0.0, "fine scales must be silent at attn_max_hw=8"
+    assert bool(jnp.all(out.flux_attn[2:] > 0))
+
+
+def test_c14_toll_enters_loss(params):
+    """beta_flux_nl must price A_s in the objective: the loss difference equals
+    the deep-supervision mean of the total attention flux, exactly."""
+    from qhrrn2.objective import pair_loss
+    x = jnp.asarray(G.place(_random_grid(7)), dtype=jnp.int32)
+    y = jnp.asarray(G.place(_random_grid(7)), dtype=jnp.int32)
+    cfg0 = Config(d=12, T=2, beta_flux_nl=0.0)
+    cfg1 = Config(d=12, T=2, beta_flux_nl=1.0)
+    loss0, _ = pair_loss(params, cfg0, x, y, tau=1.0)
+    loss1, _ = pair_loss(params, cfg1, x, y, tau=1.0)
+    outs = iterate(params, cfg0, x, tau=1.0)
+    expected = jnp.mean(jnp.stack([jnp.sum(o.flux_attn) for o in outs]))
+    diff = float(loss1 - loss0)
+    assert diff > 0
+    assert abs(diff - float(expected)) < 1e-3 * max(float(expected), 1.0), (
+        f"toll mispriced: loss diff {diff} vs mean total A {float(expected)}")
 
 
 # ── CI-3a smoke: the loss actually descends on a tiny identity episode ─────
