@@ -1,6 +1,6 @@
 # QHRRN-2 Architecture Specification
 
-**Status:** v0.2 — for PI review (v0.2 adds the expressivity audit §16 and three amendments A/B/C found by it) · **Date:** 2026-07-18 · **Working paper name candidates:** HoloMERA / FluxRG / RG-Adapt
+**Status:** v0.3 — v0.2 added the expressivity audit §16 and Amendments A/B/C; v0.3 registers **Amendment D** (ledger C14, 2026-07-21): KL-priced attention channels at *all* scales ("wormhole tolls"), each with measured flux A_s and price β_nl — required by thesis statement S3 (`Thesis_Information_Holography.md` §6), making nonlocal information demand a per-task measurable. Implementation pending (next session, ~+2–3k params) · **Date:** 2026-07-18/21 · **Working paper name candidates:** HoloMERA / FluxRG / RG-Adapt
 **Companion:** `Divergence_Analysis_2026-07.md` (the autopsy this design answers) · **Target:** AAMAS 2027, submission early October 2026 · **Budget:** ≤ $4000 GCP
 
 ---
