@@ -54,9 +54,12 @@ Working constraint: prefer conscious sequential work over agent fleets
 
 1. Every module header cites the ledger IDs it implements.
 2. No hypothesis-tagged mechanism ships without its named test in the same change.
-3. CI gates (all local/CPU) must pass before any cloud spend:
+3. CI gates must PASS before any cloud **training** spend:
    equivariance bit-exactness · anti-linearity/rank · sanity triad via TTT ·
    seam-boundary task · flux-direction sanity · canvas/no-GT-size.
+   (Amended 2026-07-27, PI-authorized: the gate battery itself may execute on
+   a ≤$5 spot instance when local hardware limits — two thermal incidents in
+   one day; fast tests stay local.)
 
 ## Setup
 
