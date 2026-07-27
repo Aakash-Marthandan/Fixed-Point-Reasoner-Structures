@@ -15,8 +15,10 @@ Done: post-mortem of the April system (measured, `d874427` preserved) · QHRRN-2
 implemented at d=12 (45,509 params, 25 tests green incl. CI-1/CI-2 + C14 gates) ·
 **Amendment D implemented** (ledger C14: KL-priced attention at all scales,
 "wormhole tolls" — the `(I_local, A_nonlocal)` decomposition S3 needs is now a
-per-task measurable; ledger §5, 2026-07-27) · CI-3a triad at 2/3 with the
-translate miss diagnosed as non-structural noise ·
+per-task measurable; ledger §5, 2026-07-27) · **CI-3a 3/3 PASSED** (first full
+triad pass, 2026-07-27, under C14; color-swap exact via orbit voting; the old
+translate one-pixel miss did not recur — seed-ensemble remedy not needed,
+kept queued for CI-3b) ·
 **thesis narrowed to four kill-conditioned statements S1–S4**
 (`Documentation/Thesis_Information_Holography.md` §6; ledger §3c) with two
 load-bearing citations verified (RT-on-trees; CompressARC 76k/20% baseline).
@@ -24,13 +26,16 @@ Note: all-scales attention raises CPU gate cost to ~2 s/step (~20 min per
 600-step task fit); fine on TPU.
 
 Next, in order:
-1. CI-3a to 3/3 via seed-ensemble voting (remedy queued in ledger log);
-   re-baselined under C14.
-2. Phase 2 per the roadmap (`Divergence_Analysis_2026-07.md` §7): dev-30 +
-   ablations + flux-frontier measurements on constructed families (S1/S2);
-   S3 stability now unblocked by Amendment D.
-3. Phase 3: RE-ARC-style pretraining on TPU (GCP project `quantum-llm` is
-   fully configured; dispatcher discipline + `--spot`).
+1. Phase 2 per the roadmap (`Divergence_Analysis_2026-07.md` §7): write the
+   remaining named gates (CI-4 seam task, CI-5 flux-direction, CI-6 canvas),
+   assemble dev-30, then ablations + flux-frontier measurements on
+   constructed families (S1/S2) and the S3 stability check (unblocked by
+   Amendment D). Dev-30 gate: Aug 31.
+2. Phase 3: RE-ARC-style pretraining on TPU (GCP project `quantum-llm` is
+   fully configured; dispatcher discipline + `--spot`), then CI-3b (triad
+   under frozen-core TTT) with seed-ensemble voting.
+3. Also owed (cheap, paper hygiene): mechanical re-verification pass of the
+   remaining thesis citations; S1 proof-obligation write-up (thesis §2).
 
 Deadline: results freeze **Sep 28, 2026**; AAMAS 2027 submission early October.
 Working constraint: prefer conscious sequential work over agent fleets
