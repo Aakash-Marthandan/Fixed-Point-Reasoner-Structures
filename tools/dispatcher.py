@@ -102,14 +102,23 @@ def run_cloud(args):
                f"{TPU_NAME}:{REMOTE_PROJECT}/ --zone={zone} --project={PROJECT}",
                dry=dry)
 
-        print(">>> Phase 3: Bootstrap")
-        sh(gssh(f"cd {REMOTE_PROJECT} && pip install -q -r requirements.txt && "
-                "pip install -q 'jax[tpu]' "
+        # Shakedown 1 lesson (2026-07-27): the VM image's system Python is too
+        # old for the pinned jax==0.10.2 (pip cannot resolve it). Bootstrap an
+        # exact modern interpreter with uv — parity with the local 3.14 venv,
+        # no version skew (April E8).
+        print(">>> Phase 3: Bootstrap (uv-managed Python 3.14 + pinned deps)")
+        sh(gssh(f"export PATH=~/.local/bin:$PATH && cd {REMOTE_PROJECT} && "
+                "python3 -m pip install -q uv && "
+                "uv python install 3.14 && "
+                "uv venv --python 3.14 .venv && "
+                "uv pip install --python .venv/bin/python -q -r requirements.txt "
+                "'jax[tpu]==0.10.2' "
                 "-f https://storage.googleapis.com/jax-releases/libtpu_releases.html",
                 zone), dry=dry)
 
         print(f">>> Phase 4: Run (ceiling {args.wall_time}s): {args.cmd}")
-        run_inner = f"cd {REMOTE_PROJECT} && PYTHONPATH=src {args.cmd}"
+        run_inner = (f"cd {REMOTE_PROJECT} && "
+                     f"PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src {args.cmd}")
         full = gssh(run_inner, zone)
         print(f"  $ {full}")
         if not dry:
