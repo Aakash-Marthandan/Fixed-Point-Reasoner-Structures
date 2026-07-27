@@ -71,7 +71,10 @@ def init_params(key, cfg: Config):
         },
         "gate": {"l1": lin(ks[14], r_dim + cfg.scales, 16), "l2": lin(ks[15], 16, db, scale=1e-2)},
         "readout": {"w": jax.random.normal(ks[16], (d,)) / jnp.sqrt(d), "role_b": jnp.zeros((3,))},
-        "canvas": {"l1": lin(ks[17], cfg.d_ir + r_dim, 64), "h": lin(ks[18], 64, 30), "w": lin(ks[19], 64, 30)},
+        # C1 refinement (ledger 2026-07-27): size is predicted relative to the
+        # INPUT extent (one-hot h_in, w_in appended) — observable at predict
+        # time, so no GT leak; fixes the memorized-size snap CI-6 exposed.
+        "canvas": {"l1": lin(ks[17], cfg.d_ir + r_dim + 60, 64), "h": lin(ks[18], 64, 30), "w": lin(ks[19], 64, 30)},
     }
 
 
@@ -167,7 +170,15 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     logits = logits + params["readout"]["role_b"][ROLE_OF_FIELD][:, None, None]
     logits = logits.transpose(1, 2, 0)
 
-    hc = jax.nn.gelu(cell._linear(params["canvas"]["l1"], jnp.concatenate([h_ir, r])))
+    # Input extent from the x occupancy (1 - VOID channel): palette-invariant,
+    # observable at predict time — no ground-truth size anywhere (C1).
+    x_occ = 1.0 - fields[VOID, :, :, 0]
+    h_in = jnp.clip(jnp.round(jnp.sum(jnp.max(x_occ, axis=1))).astype(jnp.int32) - 1, 0, 29)
+    w_in = jnp.clip(jnp.round(jnp.sum(jnp.max(x_occ, axis=0))).astype(jnp.int32) - 1, 0, 29)
+    extent = jnp.concatenate([jax.nn.one_hot(h_in, 30), jax.nn.one_hot(w_in, 30)])
+
+    hc = jax.nn.gelu(cell._linear(params["canvas"]["l1"],
+                                  jnp.concatenate([h_ir, r, extent])))
     return StepOutput(
         logits=logits,
         size_h=cell._linear(params["canvas"]["h"], hc),

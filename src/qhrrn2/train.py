@@ -115,7 +115,8 @@ def fit_loo(params, cfg: Config, ep: G.Episode, *, steps: int, transforms=None,
             if log_every and (i + 1) % log_every == 0:
                 print(f"  step {i+1:4d}  loss {losses[-1]:.4f}  val_pix {pix:.3f}"
                       f"  val_exact {exact}", flush=True)
-    return best["params"], {"losses": losses, "val_curve": val_curve, "best": best}
+    return best["params"], {"losses": losses, "val_curve": val_curve, "best": best,
+                            "final_params": params}
 
 
 @functools.lru_cache(maxsize=8)

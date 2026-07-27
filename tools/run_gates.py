@@ -98,15 +98,20 @@ def run_triad_gate(cfg: Config, steps: int, seed: int = 0, only: str | None = No
 def make_checkerboard_task(name: str, *, block_offset: int, n_support: int = 5,
                            hw: int = 8, seed: int = 0) -> G.Episode:
     """Checkerboard completion (spec §10.4): two random colors, random phase,
-    ~25% of cells deleted to black; output restores the pattern. Content is
-    padded to sit at (2,2) [block-aligned] or (1,1) [maximally block-crossing];
-    total grid size is identical, so the ONLY difference between variants is
-    alignment to the 2x2 pooling lattice. Pattern corners are never deleted,
-    keeping the content extent unambiguous per example."""
+    ~25% of cells DELETED TO SENTINEL COLOR 5 (run-1 lesson, ledger
+    2026-07-27 evening: black deletions collide with the black border and the
+    model widens the border at edges); output restores the pattern. Pattern
+    colors are drawn from {1..9} minus the sentinel. Content is fully
+    enclosed by a black border and sits at (2,2) [block-aligned, border 2]
+    or (1,1) [maximally block-crossing, border 1]; the alignment to the 2x2
+    pooling lattice is the only structural difference. Pattern corners are
+    never deleted, keeping the content extent unambiguous per example."""
+    SENTINEL = 5
+    palette = np.asarray([c for c in range(1, 10) if c != SENTINEL], dtype=np.int8)
     rng = np.random.default_rng(seed)
     pairs = []
     for _ in range(n_support + 1):
-        a, b = rng.choice(np.arange(1, 10, dtype=np.int8), size=2, replace=False)
+        a, b = rng.choice(palette, size=2, replace=False)
         phase = int(rng.integers(2))
         r, c = np.indices((hw, hw))
         full = np.where((r + c + phase) % 2 == 0, a, b).astype(np.int8)
@@ -115,8 +120,8 @@ def make_checkerboard_task(name: str, *, block_offset: int, n_support: int = 5,
         mask[0, 0] = mask[0, -1] = mask[-1, 0] = mask[-1, -1] = False
         if not mask.any():
             mask[hw // 2, hw // 2] = True
-        x[mask] = 0
-        pad = ((2, 0), (2, 0)) if block_offset == 0 else ((1, 1), (1, 1))
+        x[mask] = SENTINEL
+        pad = 2 if block_offset == 0 else 1
         pairs.append((np.pad(x, pad), np.pad(full, pad)))
     return G.Episode(task_id=name, support=tuple(pairs[:-1]),
                      query_x=pairs[-1][0], query_y=pairs[-1][1])
@@ -147,7 +152,14 @@ def run_flux_gate(cfg: Config, steps: int, seed: int = 0):
     (b) identity's fine-scale stream flux must dwarf constant-fill's total
         stream flux (UV transport is bought only when the rule needs it);
     (c) pricing must compress identity's total (I+A) vs the free (beta=0) fit.
-    Prints the project's first per-task (I_s, A_s) spectra."""
+    Prints per-task (I_s, A_s) spectra.
+
+    PROTOCOL (run-1 lesson, ledger 2026-07-27 evening): beta WARMUP — spec
+    §6's own schedule, which run 1 skipped. From-scratch full fit cannot pay
+    the toll and fit simultaneously (identity stuck at 0.625 under flat
+    beta=1e-4; solves by step 100 free). Phase 1 fits free (beta=0); phase 2
+    continues from phase-1 final params under the toll, with LoO selection
+    inside the priced phase."""
     beta = 1e-4
     cfg_b = replace(cfg, beta_flux=beta, beta_flux_nl=beta)
 
@@ -156,11 +168,34 @@ def run_flux_gate(cfg: Config, steps: int, seed: int = 0):
         o = iterate(params, c, x_can, tau=1.0)[-1]
         return np.asarray(o.flux), np.asarray(o.flux_attn)
 
+    def fit_warmup(name, ep, seed):
+        """Free phase -> priced phase; evaluate the priced-phase selection."""
+        s1, s2 = steps // 2, steps - steps // 2
+        p0 = init_params(jax.random.PRNGKey(seed), cfg)
+        _, hist = fit_loo(p0, cfg, ep, steps=s1, transforms=D4_FULL,
+                          val_every=50, tau=1.0, seed=seed,
+                          log_every=max(s1 // 2, 1))
+        print(f"  [{name}] warmup done ({s1} free steps); pricing on", flush=True)
+        t0 = time.time()
+        params, hist2 = fit_loo(hist["final_params"], cfg_b, ep, steps=s2,
+                                transforms=D4_FULL, val_every=50, tau=1.0,
+                                seed=seed + 1, log_every=max(s2 // 2, 1))
+        exact1, pix1, _ = evaluate_pair(params, cfg_b, ep.query_x, ep.query_y, tau=1.0)
+        voted, vshape = predict_voted(params, cfg_b, ep.query_x, D4_FULL, tau=1.0)
+        exact = bool(vshape == ep.query_y.shape and np.array_equal(voted, ep.query_y))
+        pix = float((voted == ep.query_y).mean()) if vshape == ep.query_y.shape else 0.0
+        best = hist2["best"]
+        print(f"[{'PASS' if exact else 'FAIL'}] {name:<20} voted: exact={exact} "
+              f"pix={pix:.3f} | single-view: exact={exact1} pix={pix1:.3f} | "
+              f"priced-phase best@{best['step']} (val_pix {best['val_pix']:.3f}) "
+              f"({time.time() - t0:.0f}s)", flush=True)
+        return exact, params
+
     ep_id = make_task("flux-identity", lambda g: g.copy(), seed=seed)
     ep_cf = make_task("flux-constfill", lambda g: np.full_like(g, 4), seed=seed)
 
-    ex_id, _, p_id = run_gate("flux-identity(b>0)", ep_id, cfg_b, steps, D4_FULL, seed=seed)
-    ex_cf, _, p_cf = run_gate("flux-constfill(b>0)", ep_cf, cfg_b, steps, D4_FULL, seed=seed)
+    ex_id, p_id = fit_warmup("flux-identity(warm-b)", ep_id, seed)
+    ex_cf, p_cf = fit_warmup("flux-constfill(warm-b)", ep_cf, seed)
     _, _, p_id0 = run_gate("flux-identity(b=0)", ep_id, cfg, steps, D4_FULL, seed=seed)
 
     I_id, A_id = spectra(p_id, cfg_b, ep_id)
