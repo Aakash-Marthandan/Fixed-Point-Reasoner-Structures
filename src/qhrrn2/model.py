@@ -71,9 +71,10 @@ def init_params(key, cfg: Config):
         },
         "gate": {"l1": lin(ks[14], r_dim + cfg.scales, 16), "l2": lin(ks[15], 16, db, scale=1e-2)},
         "readout": {"w": jax.random.normal(ks[16], (d,)) / jnp.sqrt(d), "role_b": jnp.zeros((3,))},
-        # C1 refinement (ledger 2026-07-27): size is predicted relative to the
-        # INPUT extent (one-hot h_in, w_in appended) — observable at predict
-        # time, so no GT leak; fixes the memorized-size snap CI-6 exposed.
+        # C1 v2 (ledger 2026-07-27): input-extent one-hots as head FEATURES,
+        # and the heads classify size OFFSETS relative to that extent (see
+        # objective._step_loss / train.predict) — extent is observable at
+        # predict time, no GT leak; the relative frame is what extrapolates.
         "canvas": {"l1": lin(ks[17], cfg.d_ir + r_dim + 60, 64), "h": lin(ks[18], 64, 30), "w": lin(ks[19], 64, 30)},
     }
 

@@ -95,7 +95,7 @@ def run_triad_gate(cfg: Config, steps: int, seed: int = 0, only: str | None = No
 
 # ── CI-4 (C4): seam-boundary gate ──────────────────────────────────────────
 
-def make_checkerboard_task(name: str, *, block_offset: int, n_support: int = 5,
+def make_checkerboard_task(name: str, *, block_offset: int, n_support: int = 8,
                            hw: int = 8, seed: int = 0) -> G.Episode:
     """Checkerboard completion (spec §10.4): two random colors, random phase,
     ~25% of cells DELETED TO SENTINEL COLOR 5 (run-1 lesson, ledger

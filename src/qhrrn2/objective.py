@@ -11,7 +11,7 @@ from qhrrn2.grid import VOID
 from qhrrn2.model import iterate
 
 
-def _step_loss(out, y_canvas, mask, cfg: Config):
+def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
     logp = jax.nn.log_softmax(out.logits, axis=-1)
     ce_map = -jnp.take_along_axis(logp, y_canvas[..., None], axis=-1)[..., 0]
     n_in = jnp.maximum(mask.sum(), 1)
@@ -19,10 +19,20 @@ def _step_loss(out, y_canvas, mask, cfg: Config):
     ce_in = jnp.sum(ce_map * mask) / n_in
     ce_out = jnp.sum(ce_map * ~mask) / n_out
 
-    h_true = jnp.sum(jnp.any(mask, axis=1))          # rows occupied (top-left placement)
+    # RELATIVE size targets (C1 v2, ledger 2026-07-27 TPU battery): the heads
+    # classify the OFFSET output-minus-input in [-15, 14] (class = delta + 15).
+    # Absolute classes cannot extrapolate to unseen extents by construction
+    # (one-hot column never trained — measured: query (9,6) -> (4,6));
+    # size-preservation is ONE shared class under this frame.
+    mask_x = x_canvas != VOID
+    h_in = jnp.sum(jnp.any(mask_x, axis=1))
+    w_in = jnp.sum(jnp.any(mask_x, axis=0))
+    h_true = jnp.sum(jnp.any(mask, axis=1))
     w_true = jnp.sum(jnp.any(mask, axis=0))
-    size_ce = (-jax.nn.log_softmax(out.size_h)[h_true - 1]
-               - jax.nn.log_softmax(out.size_w)[w_true - 1])
+    kh = jnp.clip(h_true - h_in + 15, 0, 29)
+    kw = jnp.clip(w_true - w_in + 15, 0, 29)
+    size_ce = (-jax.nn.log_softmax(out.size_h)[kh]
+               - jax.nn.log_softmax(out.size_w)[kw])
 
     total = (ce_in + cfg.w_void * ce_out
              + cfg.lambda_size * size_ce
@@ -35,7 +45,7 @@ def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None):
     """Deep-supervised loss for one (input, output) pair; mask = true output canvas."""
     mask = y_canvas != VOID
     outs = iterate(params, cfg, x_canvas, tau=tau, rng=rng)
-    losses, ces = zip(*(_step_loss(o, y_canvas, mask, cfg) for o in outs))
+    losses, ces = zip(*(_step_loss(o, x_canvas, y_canvas, mask, cfg) for o in outs))
     return jnp.mean(jnp.stack(losses)), {
         "ce_in_last": ces[-1],
         "flux_last": outs[-1].flux,

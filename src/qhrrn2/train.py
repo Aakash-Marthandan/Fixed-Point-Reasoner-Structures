@@ -101,7 +101,8 @@ def fit_loo(params, cfg: Config, ep: G.Episode, *, steps: int, transforms=None,
     opt_state = opt.init(params)
 
     rng = jax.random.PRNGKey(seed)
-    best = {"params": params, "val_pix": -1.0, "val_exact": False, "step": 0}
+    best = {"params": params, "val_pix": -1.0, "val_exact": False, "step": 0,
+            "loss": float("inf")}
     losses, val_curve = [], []
     for i in range(steps):
         rng, sub = jax.random.split(rng)
@@ -110,8 +111,15 @@ def fit_loo(params, cfg: Config, ep: G.Episode, *, steps: int, transforms=None,
         if (i + 1) % val_every == 0 or i + 1 == steps:
             exact, pix, _ = evaluate_pair(params, cfg, val_x, val_y, tau=tau)
             val_curve.append((i + 1, pix, exact))
-            if (exact, pix) > (best["val_exact"], best["val_pix"]):
-                best = {"params": params, "val_pix": pix, "val_exact": exact, "step": i + 1}
+            # MDL selection (ledger 2026-07-27 TPU battery): validation ties are
+            # broken by train loss — under pricing this selects the most
+            # COMPRESSED checkpoint among LoO-validated ones; free fits get the
+            # sharpest. First-val-exact froze at best@50 (measured: seam query
+            # 0.965/0.970, constfill flux 33x under-compressed, canvas best@50).
+            if (exact, pix, -losses[-1]) > (best["val_exact"], best["val_pix"],
+                                            -best["loss"]):
+                best = {"params": params, "val_pix": pix, "val_exact": exact,
+                        "step": i + 1, "loss": losses[-1]}
             if log_every and (i + 1) % log_every == 0:
                 print(f"  step {i+1:4d}  loss {losses[-1]:.4f}  val_pix {pix:.3f}"
                       f"  val_exact {exact}", flush=True)
@@ -170,7 +178,10 @@ def predict(params, cfg: Config, x_grid: np.ndarray, *, tau: float = 1.0):
     x_can = jnp.asarray(G.place(np.asarray(x_grid)), dtype=jnp.int32)
     logits, size_h, size_w = _predict_core(cfg, tau)(params, x_can)
     canvas = np.asarray(jnp.argmax(logits, axis=-1))
-    h = int(jnp.argmax(size_h)) + 1
-    w = int(jnp.argmax(size_w)) + 1
+    # Relative size decode (C1 v2): head classes are offsets delta+15 from the
+    # input extent — size-preservation extrapolates to unseen extents.
+    h_in, w_in = np.asarray(x_grid).shape
+    h = int(np.clip(h_in + int(jnp.argmax(size_h)) - 15, 1, 30))
+    w = int(np.clip(w_in + int(jnp.argmax(size_w)) - 15, 1, 30))
     pred = np.where(canvas[:h, :w] == G.VOID, 0, canvas[:h, :w]).astype(np.int8)
     return pred, (h, w), canvas
