@@ -67,6 +67,10 @@ def run_gate(name: str, ep: G.Episode, cfg: Config, steps: int, transforms, seed
           f"single-view: exact={exact1} pix={pix1:.3f} | "
           f"best@{best['step']} (val_pix {best['val_pix']:.3f}, val_exact {best['val_exact']}) "
           f"({dt:.0f}s)", flush=True)
+    if not exact and vshape == gt.shape:
+        for (r, c) in np.argwhere(voted != gt):
+            print(f"    diff at ({r},{c}): predicted {voted[r, c]}, expected {gt[r, c]} "
+                  f"| input cell was {ep.query_x[r, c]}", flush=True)
     return exact
 
 

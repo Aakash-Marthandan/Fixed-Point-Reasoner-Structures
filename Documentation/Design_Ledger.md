@@ -126,11 +126,25 @@
 | **T2** | Excess flux above the floor tracks memorization: correlation between excess flux and LoO generalization gap | same runs as H-4; per-task scatter | no correlation across families |
 | **T3** | Scaling is geometric: d-sweep exponents and minimal-adaptation-rank per task relate monotonically to flux floors and difficulty | d ∈ {8..32} sweep + rank binary-search probe (Phase 2) | rank/flux/difficulty mutually uncorrelated |
 
+### 3c. FINAL thesis statements (v0.2, 2026-07-21 — supersede/absorb T1–T3; full text in `Thesis_Information_Holography.md` §6)
+
+| ID | Statement (short) | Absorbs | Anchor | Kill condition |
+|---|---|---|---|---|
+| **S1** | Flux-Floor Law: per-cut flux ≥ distributional IC of the cut function; equality (min-cut) on tree-embeddable rules; β→0⁺ frontier closes the sandwich on constructed families | T1 | classical MFMC + IC (theorem); RT-on-trees proven for perfect-tensor codes (physics twin) | frontier undercuts analytic floor beyond bias, or sandwich never closes |
+| **S2** | Excess-Flux Criterion: excess over floor tracks LoO gap, causally under β-intervention; CMI-style bound conjectured with stream noise as randomizer | T2 | Xu–Raginsky/CMI family (theorem, adaptation conjectured) | no correlation or no directional β effect |
+| **S3** | Locality-Class Law: (I_local, A_nonlocal) decomposition is stable and predicts minimal architecture class — requires **Amendment D** (priced attention at all scales, "wormhole tolls") | new (PI's attention proposal) | construction + stability-as-claim | unstable decomposition or no architecture-selection power |
+| **S4** | Rule Code Distance: erasure-robustness of discrete rule selection; nesting prediction | new (QEC analogy), exploratory | operational only | q-invariance fails at δ=1 or nesting violated |
+
+New component: **C14 — Amendment D**, priced attention channels at every scale with flux A_s and price β_nl (~+2–3k params). Test: S3 stability + ablation attention-priced vs free vs absent. Status [H] until Phase-2 measurements.
+
 ## 4. Refuted & superseded register (carried from the post-mortem, IDs stable)
 
 [R-1] lossy funnel sufficiency (E1/E3) · [R-2] same-block disentangler = MERA (D2) · [R-3] weight-SVD entropy as holographic loss (D4) · [R-4] April's Langevin noise/trigger implementation (E5/E6) · [R-5] continuous-weight SSB (E6 + no-order-parameter argument) · [R-6] TTT-everything (D6) · [R-7] local-only hierarchies handle correspondence (expressivity audit) · [R-8] speculative sparse kernels (E7). Superseded: [S-1] capacity→usage penalty · [S-2] TN-library mandate · [S-3] symmetry *sectors* → symmetry *equivariance* · [S-4] exact unitarity → conservation-with-priced-leak.
 
 ## 5. Status-change log (append-only)
+
+- **2026-07-21** — Translate-right watch-item RESOLVED as non-structural: the failing cell is interior (2,4) — predicted color 1 vs expected 2 (shifted from input (2,3)=2) — not an edge/block-boundary artifact. The seam/pooling mechanism is fine; this is near-convergence color-binding noise. Remedy queued for the next gate run: seed-ensemble voting (2 seeds × orbit). Block-alignment-bias concern closed.
+- **2026-07-21** — Thesis narrowed to final statements S1–S4 (§3c) via **conscious sequential adjudication** (the 55-agent fleet died with the prior session; per PI instruction re-run inline, token-lean). Two targeted verifications spent, both CONFIRMED: (1) RT-like minimal-cut entanglement formulas proven for perfect-tensor holographic codes on Bruhat–Tits trees incl. disconnected regions and genus-one (Heydeman–Marcolli–Parikh–Saberi, arXiv:1605.07639, 1801.09623) — upgrades S1's physics twin to theorem-grade with the perfect-tensor scope caveat explicit; (2) CompressARC numbers exact as harvested (76k params, no pretraining, 20% ARC-1 eval, per-puzzle MDL; Liao & Gu, arXiv:2512.06104, OpenReview + GitHub public). Amendment D (priced attention, C14) registered — the PI's attention-layer proposal formalized as measurable nonlocality. SSB finite-size prediction folded into S1/S2 measurement suite as a large-deviations sub-claim; thermodynamic SSB language beyond that retired.
 
 - **2026-07-16** — [R-1..R-8] established by measurement; see `Divergence_Analysis_2026-07.md` (probes: `probe_linearity.py`, `probe_ttt.py`, checkpoint @ `d874427`).
 - **2026-07-18** — Spec v0.1 drafted; C1–C13 initial statuses assigned.

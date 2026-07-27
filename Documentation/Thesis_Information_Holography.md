@@ -1,6 +1,6 @@
-# The Information-Holography Thesis (v0.1)
+# The Information-Holography Thesis (v0.2)
 
-**Status:** working thesis for PI review · **Date:** 2026-07-20 · **Governed by:** `Design_Ledger.md` (hypotheses T1–T3 registered there)
+**Status:** narrowed statements for PI review (§6 is the v0.2 core; §§1–5 retained as the derivation trail) · **Date:** 2026-07-21 · **Governed by:** `Design_Ledger.md`
 **Verification caveat:** the adversarial-verification pass of the literature harness failed on infrastructure (session rate limit; all 75 votes errored). The claims below were harvested with sources by the search/extraction phases and then **adjudicated manually by us against the primary literature**; a mechanical re-verification pass is scheduled. Claims are conservative and each carries its rigor class.
 
 ---
@@ -55,3 +55,43 @@ Sketch obligations: (i) is a standard data-processing/communication-complexity a
 ## 5. Measurement plan mapping (no new compute beyond the ledger)
 
 T1 ↔ H-4/H-9 (β-sweeps, flux spectra, dev-30) + analytic floors on the CI-gate tasks. T2 ↔ excess-flux vs LoO-gap correlation (same runs). T3 ↔ d-sweep exponents + minimal-adaptation-rank probe (Phase 2, cheap). Paper §1 states the thesis; §experiments report the frontier; the grand cross-domain version is explicitly deferred to a follow-up paper.
+
+---
+
+# v0.2 — THE NARROWED STATEMENTS
+
+Method note: the planned 55-agent adjudication fleet died with the prior session; per PI instruction the final narrowing was done **consciously and sequentially** — six analogy tracks each given a propose→attack→survive pass inline, with exactly two targeted web verifications spent on the claims whose failure would sink a statement (both confirmed: RT-like minimal-cut entanglement formulas are *proven* for perfect-tensor holographic codes on Bruhat–Tits trees, Heydeman–Marcolli–Parikh–Saberi lineage, arXiv:1605.07639 / 1801.09623; CompressARC = 76k params, no pretraining, 20% ARC-1 eval by per-puzzle MDL, Liao & Gu arXiv:2512.06104). Remaining un-reverified citations (Xu–Raginsky form, Cui et al. QMFMC conditions, Equitz–Cover) are canonical and flagged for the mechanical pass.
+
+## 6. The four statements
+
+### S1 — The Flux-Floor Law (headline, theorem-anchored)
+
+**Statement.** For a task family R (a generator distribution over episodes) and the solver's cut set 𝒞 (scale cuts, spatial cuts, and — with Amendment D — attention channels), every solver computing R to accuracy 1−ε with explicit noisy channels satisfies, per cut c: **I_c ≥ IC_c(R) − O(ε)**, where IC_c(R) is the distributional information complexity of the two-party function induced by c. On rules whose dependency graph embeds in the computation tree, the floor **equals the weighted min-cut of that graph** (classical MFMC; the quantum obstruction is dodged by construction — our channels are classical; and uniform bond dimensions sit inside the regime where even quantum MFMC holds). The β→0⁺ accuracy-flux frontier is a certified *upper* estimator; the IC bound is the analytic *lower* one; **the thesis content is the empirical closing of this sandwich on constructed task families** (identity, shifts, recolor-by-relation, count-and-paint — min-cuts hand-computable on our graph).
+**Physics twin (stated as such):** proven RT-on-trees for perfect-tensor codes is the exact holographic counterpart of min-cut-on-our-graph; we import no gravity, only the shared mathematics.
+**Attack survived:** "IC is distributional, ARC tasks are finite" — resolved by defining floors over generator distributions (RE-ARC families), not 3-support episodes. Estimator-gap objection is answered by reporting both bounds, never a point estimate.
+**Kill:** measured frontiers undercut analytic floors beyond estimator bias (would mean a bug or a wrong bound — either is reportable), or sandwich gaps stay ≫ O(1) nats on every constructed family.
+
+### S2 — The Excess-Flux Criterion (headline, the AI-general claim)
+
+**Statement.** Define excess flux E(f, R) = Φ(f) − Φ̂*(R) (measured minus estimated floor, per cut). Then (i) *empirically*: E correlates with the LoO generalization gap across ARC families, and the effect is **causal under β-intervention** (raising β reduces the gap on memorization-prone families); (ii) *conjecture with proof owed*: an Xu–Raginsky/CMI-style bound holds with the stream noise as the randomization device, making our channels the first **enforced, non-vacuous, spatially-and-scale-resolved** instance of information-generalization bounds (the known vacuity objection — deterministic training ⇒ I(S;W) ill-defined — does not apply, because the measured quantity is channel flux, stochastic by construction).
+**Attack survived:** "this is the Information Bottleneck again" — no: IB measured ill-defined MI in deterministic nets (the Saxe controversy); our KL is exact by construction, and the resolution is per-cut, not per-layer-scalar. Nearest prior art (Generalization Ridge, arXiv:2507.05387) is depth-only and observational.
+**Kill:** no correlation, or β-intervention has no directional effect on the gap.
+
+### S3 — The Locality-Class Law (headline, requires Amendment D — the PI's attention proposal, formalized)
+
+**Amendment D (architecture):** attention channels at **all** scales (32×32 and 16×16 added to the existing ≤8×8), each routed through a variational bottleneck with measured flux A_s and its own price β_nl — "**wormhole tolls**." (~+2–3k params; ~12M MACs/pass at 32×32 — negligible on TPU.)
+**Statement.** At the accuracy frontier, each task yields a two-component decomposition **(I_local, A_nonlocal)** — hierarchical flux vs nonlocal flux. Claims: (i) ARC tasks stratify into stable locality classes under this decomposition (stability across seeds and β-paths is part of the claim); (ii) class membership **predicts which architecture family solves the task at fixed parameter budget** (local-only vs +attention) — a falsifiable *architecture-selection law*; (iii) classes align with human task-family labels up to an enumerated exception list. This is the statement that generalizes beyond ARC: *the nonlocal information demand of a task is a measurable invariant that lower-bounds the connectivity any successful architecture must provide.*
+**Attack survived:** identifiability ("the decomposition is an artifact of the β-path") — stability across seeds/paths is promoted into the claim itself; instability = falsification, not embarrassment.
+**Kill:** unstable decomposition, or zero predictive power for architecture selection on the held-out family split.
+
+### S4 — Rule Code Distance (exploratory, QEC analogy made operational)
+
+**Statement.** With the discrete rule codebook, define a task's **code distance** δ(R) = the largest number of support-pair erasures under which the TTT-selected rule distribution q stays within ε total variation of the full-support q. Predictions: δ ≥ 1 on solvable tasks (LoO is exactly 1-erasure — already measured); nested support subsets select consistent rules (the wedge-nesting analog); δ correlates with H[q]-collapse sharpness and generalization. Cost: a subset-lattice sweep on dev-30, hours.
+**Honest status:** operational analogy (no theorem imported); the non-trivial content vs plain jackknife stability is the *discreteness* of rule selection and the nesting prediction. Ranked exploratory; promoted only if the measurements are clean.
+**Kill:** q-invariance never holds even at δ=1 on solved tasks, or nesting violated generically.
+
+**Folded, not dropped:** the SSB finite-size prediction (annealing critical τ_c grows ∝ n_eff × per-example discrimination information — a large-deviations statement, honestly licensed) becomes a free sub-measurement of S1/S2 runs. The adaptation-rank/intrinsic-dimension chain (old T3) becomes a measurable inside S2/S3. **Retired:** "scaling hypothesis = AdS/CFT" (already retired in v0.1); the SSB *thermodynamic* language beyond the large-deviations statement.
+
+## 7. Why these four
+
+Each has: a shared mathematical object (not a metaphor), at least one theorem-grade anchor or an explicit conjecture-with-proof-owed label, an experiment inside the existing compute plan (only S3 needs an architecture change, and it is the change the PI proposed), a named kill condition, and a novelty defense against the verified prior art (CompressARC: global MDL, no cuts; Generalization Ridge: depth-only, observational; ConvAC: capacity, not usage; p-adic holography: exact but physics-side only, never measured in a trained solver). Headline for AAMAS: **S1+S2 measured, S3 as the architecture-selection result, S4 as an exploratory section.**
