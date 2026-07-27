@@ -32,8 +32,10 @@ Next, in order:
    constructed families (S1/S2) and the S3 stability check (unblocked by
    Amendment D). Dev-30 gate: Aug 31.
 2. Phase 3: RE-ARC-style pretraining on TPU (GCP project `quantum-llm` is
-   fully configured; dispatcher discipline + `--spot`), then CI-3b (triad
-   under frozen-core TTT) with seed-ensemble voting.
+   fully configured; session-persistent dispatcher `up`/`run`/`down` with
+   always-armed dead-man's-switch backstop, spot default; unattended
+   `cycle` mode for pretraining), then CI-3b (triad under frozen-core TTT)
+   with seed-ensemble voting.
 3. Also owed (cheap, paper hygiene): mechanical re-verification pass of the
    remaining thesis citations; S1 proof-obligation write-up (thesis §2).
 
