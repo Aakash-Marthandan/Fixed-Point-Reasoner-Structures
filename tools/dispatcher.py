@@ -12,7 +12,10 @@
 """QHRRN-2 TPU dispatcher.
 
   up      provision (spot default) + arm DMS + upload + bootstrap (idempotent)
-  run     re-arm DMS + sync code + execute --cmd (wall ceiling) + rescue
+  run     re-arm DMS + sync code + execute --cmd (wall ceiling) + rescue;
+          --detach = reset-proof: remote nohup + short-SSH polling (REQUIRED
+          for anything longer than ~15 min — attached SSH resets, and gcloud
+          auto-retry re-runs the command)
   down    rescue + delete
   status  describe the VM (read-only)
   cycle   up + run + unconditional down — unattended mode (pretraining)
@@ -142,6 +145,58 @@ def cmd_up(args) -> int:
     return 0
 
 
+def _run_detached(args) -> int:
+    """Reset-proof execution (ledger night-3 (g)): the job runs under setsid+
+    nohup on the VM writing to a remote log; the local side POLLS with short
+    SSH calls, so a dropped connection can neither kill the job nor re-run it
+    (the gcloud auto-retry hazard for non-idempotent training)."""
+    launch = (f"cd {REMOTE_PROJECT} && mkdir -p runs && "
+              "rm -f runs/detached.exit && "
+              "setsid nohup sh -c "
+              + shlex.quote(f"PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src {args.cmd}; "
+                            "echo $? > runs/detached.exit")
+              + " > runs/detached.log 2>&1 & echo $! > runs/detached.pid; "
+                "echo detached-launch-ok")
+    sh(gssh(launch, args.zone), dry=args.dry_run)
+    if args.dry_run:
+        print("  (dry-run: poll loop skipped)")
+        return 0
+    print(f">>> polling every {args.poll_interval}s (ceiling {args.wall_time}s); "
+          "SSH drops are tolerated", flush=True)
+    offset, t0, misses = 0, time.time(), 0
+    while True:
+        if time.time() - t0 > args.wall_time:
+            print(f"FATAL: ceiling {args.wall_time}s hit; killing remote job")
+            sh(gssh(f"cd {REMOTE_PROJECT} && kill -- -$(cat runs/detached.pid) "
+                    "2>/dev/null || true", args.zone), dry=False, check=False)
+            return 124
+        time.sleep(args.poll_interval)
+        poll = (f"cd {REMOTE_PROJECT} && "
+                "S=$(test -f runs/detached.exit && cat runs/detached.exit || echo RUNNING); "
+                "B=$(wc -c < runs/detached.log); "
+                f"echo \"@@STATUS $S $B\" && tail -c +{offset + 1} runs/detached.log")
+        r = subprocess.run(gssh(poll, args.zone), shell=True,
+                           capture_output=True, text=True, timeout=120)
+        if r.returncode != 0:
+            misses += 1
+            print(f"  (poll ssh failed x{misses} — job unaffected, retrying)", flush=True)
+            if misses >= 10:
+                print("FATAL: 10 consecutive poll failures; job may still be "
+                      "running on the VM — check manually before re-running")
+                return 5
+            continue
+        misses = 0
+        head, _, chunk = r.stdout.partition("\n")
+        if chunk:
+            sys.stdout.write(chunk)
+            sys.stdout.flush()
+        parts = head.split()
+        status, nbytes = parts[1], int(parts[2])
+        offset = max(offset, nbytes)
+        if status != "RUNNING":
+            return int(status)
+
+
 def cmd_run(args) -> int:
     guard_identity(args.dry_run)
     if not args.dry_run and vm_state(args.zone) is None:
@@ -150,22 +205,26 @@ def cmd_run(args) -> int:
     arm_dms(args.zone, args.dry_run)
     if not args.no_sync:
         sync_code(args.zone, args.dry_run, args.with_data)
-    print(f">>> run (ceiling {args.wall_time}s): {args.cmd}")
-    full = gssh(f"cd {REMOTE_PROJECT} && "
-                f"PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src {args.cmd}", args.zone)
-    print(f"  $ {full}", flush=True)
-    code = 0
-    if not args.dry_run:
-        process = subprocess.Popen(full, stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT, text=True, shell=True)
-        threading.Thread(target=_stream, args=(process,), daemon=True).start()
-        try:
-            code = process.wait(timeout=args.wall_time)
-        except subprocess.TimeoutExpired:
-            print(f"FATAL: wall-clock ceiling {args.wall_time}s hit; killing SSH")
-            process.kill()
-            process.wait()
-            code = 124
+    print(f">>> run (ceiling {args.wall_time}s"
+          + (", detached" if args.detach else "") + f"): {args.cmd}")
+    if args.detach:
+        code = _run_detached(args)
+    else:
+        full = gssh(f"cd {REMOTE_PROJECT} && "
+                    f"PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src {args.cmd}", args.zone)
+        print(f"  $ {full}", flush=True)
+        code = 0
+        if not args.dry_run:
+            process = subprocess.Popen(full, stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT, text=True, shell=True)
+            threading.Thread(target=_stream, args=(process,), daemon=True).start()
+            try:
+                code = process.wait(timeout=args.wall_time)
+            except subprocess.TimeoutExpired:
+                print(f"FATAL: wall-clock ceiling {args.wall_time}s hit; killing SSH")
+                process.kill()
+                process.wait()
+                code = 124
     rescue(args.zone, args.dry_run)
     print(f">>> run: exit {code}. VM stays up (DMS backstop armed); `down` to stop.")
     return code
@@ -223,6 +282,9 @@ def main():
     run_like.add_argument("--cmd", default="python3 -m pytest -q")
     run_like.add_argument("--wall-time", type=int, default=7200)
     run_like.add_argument("--no-sync", action="store_true")
+    run_like.add_argument("--detach", action="store_true",
+                          help="reset-proof: run remotely under nohup, poll via short SSH")
+    run_like.add_argument("--poll-interval", type=int, default=30)
 
     sub.add_parser("up", parents=[common, up_like])
     sub.add_parser("run", parents=[common, up_like, run_like])
