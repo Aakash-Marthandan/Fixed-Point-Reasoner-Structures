@@ -93,10 +93,30 @@ def measure_one(family: str, beta: float, seed: int, steps: int, cfg0: Config):
     }
 
 
+def measure_arc(task_id: str, family: str, beta: float, seed: int, steps: int,
+                cfg0: Config):
+    """Real-ARC row: identity-only orbit (a real rule's consistent orbit is
+    unknown a priori — augmentation-validity law, ledger 2026-07-20); episode
+    from the vendored training split."""
+    ep = G.load_task(task_id)[0]
+    transforms = [G.Transform(k=0)]
+    FAMILIES[f"arc:{task_id}"] = (lambda s: ep, transforms)  # reuse the engine
+    try:
+        row = measure_one(f"arc:{task_id}", beta, seed, steps, cfg0)
+    finally:
+        del FAMILIES[f"arc:{task_id}"]
+    row["family"] = family
+    row["task_id"] = task_id
+    return row
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tasks", default="identity,constfill",
                     help=f"comma list from {sorted(FAMILIES)} or 'all'")
+    ap.add_argument("--arc", action="store_true",
+                    help="measure the dev-30 manifest (real tasks) instead of "
+                         "constructed families")
     ap.add_argument("--betas", default="0,1e-4")
     ap.add_argument("--seeds", type=int, default=1)
     ap.add_argument("--steps", type=int, default=600)
@@ -106,23 +126,31 @@ def main():
     args = ap.parse_args()
 
     cfg0 = Config(d=args.d, T=args.T)
-    families = sorted(FAMILIES) if args.tasks == "all" else args.tasks.split(",")
     betas = [float(b) for b in args.betas.split(",")]
+    if args.arc:
+        from dev30 import MANIFEST
+        units = [(tid, fam) for tid, (fam, _) in sorted(MANIFEST.items())]
+    else:
+        fams = sorted(FAMILIES) if args.tasks == "all" else args.tasks.split(",")
+        units = [(f, f) for f in fams]
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{time.strftime('%Y%m%d-%H%M%S')}.jsonl"
 
-    n = len(families) * len(betas) * args.seeds
-    print(f"measure: {len(families)} families x {len(betas)} betas x "
+    n = len(units) * len(betas) * args.seeds
+    print(f"measure: {len(units)} tasks x {len(betas)} betas x "
           f"{args.seeds} seeds = {n} rows -> {out}", flush=True)
     with open(out, "w") as f:
-        for family in families:
+        for unit, fam in units:
             for beta in betas:
                 for seed in range(args.seeds):
-                    row = measure_one(family, beta, seed, args.steps, cfg0)
+                    if args.arc:
+                        row = measure_arc(unit, fam, beta, seed, args.steps, cfg0)
+                    else:
+                        row = measure_one(unit, beta, seed, args.steps, cfg0)
                     f.write(json.dumps(row) + "\n")
                     f.flush()
-                    print(f"  {family:<14} b={beta:<8g} s={seed} exact={row['exact']} "
+                    print(f"  {unit:<14} b={beta:<8g} s={seed} exact={row['exact']} "
                           f"pix={row['pix']:.3f} gap={row['loo_gap']:+.3f} "
                           f"I={row['I_total']:.0f} A={row['A_total']:.0f} "
                           f"({row['wall_s']}s)", flush=True)
