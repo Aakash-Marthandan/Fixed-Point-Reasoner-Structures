@@ -117,6 +117,10 @@ def main():
     ap.add_argument("--arc", action="store_true",
                     help="measure the dev-30 manifest (real tasks) instead of "
                          "constructed families")
+    ap.add_argument("--shard", default=None,
+                    help="'i/K': run rows with grid-index %% K == i (chip-parallel "
+                         "sweeps via tools/shard_run.sh; PI throughput directive "
+                         "2026-07-28)")
     ap.add_argument("--betas", default="0,1e-4")
     ap.add_argument("--seeds", type=int, default=1)
     ap.add_argument("--steps", type=int, default=600)
@@ -135,25 +139,28 @@ def main():
         units = [(f, f) for f in fams]
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / f"{time.strftime('%Y%m%d-%H%M%S')}.jsonl"
+    suffix = ""
+    shard_i, shard_k = 0, 1
+    if args.shard:
+        shard_i, shard_k = (int(v) for v in args.shard.split("/"))
+        suffix = f"-s{shard_i}"
+    out = out_dir / f"{time.strftime('%Y%m%d-%H%M%S')}{suffix}.jsonl"
 
-    n = len(units) * len(betas) * args.seeds
-    print(f"measure: {len(units)} tasks x {len(betas)} betas x "
-          f"{args.seeds} seeds = {n} rows -> {out}", flush=True)
+    grid = [(u, f, b, s) for u, f in units for b in betas for s in range(args.seeds)]
+    grid = [g for i, g in enumerate(grid) if i % shard_k == shard_i]
+    print(f"measure: {len(grid)} rows (shard {shard_i}/{shard_k}) -> {out}", flush=True)
     with open(out, "w") as f:
-        for unit, fam in units:
-            for beta in betas:
-                for seed in range(args.seeds):
-                    if args.arc:
-                        row = measure_arc(unit, fam, beta, seed, args.steps, cfg0)
-                    else:
-                        row = measure_one(unit, beta, seed, args.steps, cfg0)
-                    f.write(json.dumps(row) + "\n")
-                    f.flush()
-                    print(f"  {unit:<14} b={beta:<8g} s={seed} exact={row['exact']} "
-                          f"pix={row['pix']:.3f} gap={row['loo_gap']:+.3f} "
-                          f"I={row['I_total']:.0f} A={row['A_total']:.0f} "
-                          f"({row['wall_s']}s)", flush=True)
+        for unit, fam, beta, seed in grid:
+            if args.arc:
+                row = measure_arc(unit, fam, beta, seed, args.steps, cfg0)
+            else:
+                row = measure_one(unit, beta, seed, args.steps, cfg0)
+            f.write(json.dumps(row) + "\n")
+            f.flush()
+            print(f"  {unit:<14} b={beta:<8g} s={seed} exact={row['exact']} "
+                  f"pix={row['pix']:.3f} gap={row['loo_gap']:+.3f} "
+                  f"I={row['I_total']:.0f} A={row['A_total']:.0f} "
+                  f"({row['wall_s']}s)", flush=True)
     print(f"done -> {out}", flush=True)
 
 
