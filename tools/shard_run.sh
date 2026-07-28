@@ -12,6 +12,7 @@ for i in $(seq 0 $((K - 1))); do
   TPU_CHIPS_PER_PROCESS_BOUNDS=1,1,1 \
   TPU_PROCESS_BOUNDS=1,1,1 \
   TPU_VISIBLE_CHIPS=$i \
+  JAX_DEFAULT_MATMUL_PRECISION=highest \
   python3 tools/measure.py --shard "$i/$K" "$@" > "runs/shard_$i.log" 2>&1 &
   pids+=($!)
 done
