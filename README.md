@@ -25,19 +25,16 @@ load-bearing citations verified (RT-on-trees; CompressARC 76k/20% baseline).
 Note: all-scales attention raises CPU gate cost to ~2 s/step (~20 min per
 600-step task fit); fine on TPU.
 
+**GATE BATTERY: 6/6 (2026-07-28)** — CI-1/2 (pytest, permanent), CI-3a
+(CPU + TPU), CI-4/5/6 (TPU, ledger entry with numbers). Cloud training
+spend is unlocked per the build discipline.
+
 Next, in order:
-1. Rerun `--gate seam,flux,canvas` on TPU (`tools/dispatcher.py up` then
-   `run`; no VM is left running between sessions). The 2026-07-27 TPU
-   battery: CI-3a 3/3 on TPU; seam contrast clean twice (C4 holds); β-warmup
-   validated; three shared protocol/head fixes landed (MDL selection,
-   relative size frame, seam support diversity — ledger night-3 entry).
-   Then implement `dispatcher run --detach` (SSH-reset lesson) before any
-   long run.
-2. Phase 2 per the roadmap (`Divergence_Analysis_2026-07.md` §7): assemble
-   dev-30, then ablations + flux-frontier measurements on constructed
-   families (S1/S2) and the S3 stability check — which must now also probe
-   the measured attention-copy degeneracy (identity pays A₀ > I₀; ledger
-   night-3 (f)). Dev-30 gate: Aug 31.
+1. Phase 2 measurements (`tools/measure.py`): β-frontier sweep on the five
+   constructed families (S1 sandwich data), LoO-gap logging (S2), and the
+   S3 stability check — including the measured attention-copy degeneracy
+   (identity pays A₀ > I₀; ledger 2026-07-28). Then assemble dev-30
+   (gate: Aug 31).
 3. Phase 3: RE-ARC-style pretraining on TPU (GCP project `quantum-llm` is
    fully configured; session-persistent dispatcher `up`/`run`/`down` with
    always-armed dead-man's-switch backstop, spot default; unattended

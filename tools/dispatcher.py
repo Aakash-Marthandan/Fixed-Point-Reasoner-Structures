@@ -150,14 +150,19 @@ def _run_detached(args) -> int:
     nohup on the VM writing to a remote log; the local side POLLS with short
     SSH calls, so a dropped connection can neither kill the job nor re-run it
     (the gcloud auto-retry hazard for non-idempotent training)."""
+    # Launch forensics (2026-07-28): `A && B & C` parses as `(A && B) & C` —
+    # the pid write ran OUTSIDE the project cwd and the background group held
+    # the SSH channel, hanging the launch until a reset (which gcloud then
+    # retried, double-launching). Fix: subshell keeps cwd for the pid write,
+    # and stdin/out/err are ALL detached so sshd closes immediately.
+    inner = shlex.quote(f"PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src {args.cmd}; "
+                        "echo $? > runs/detached.exit")
     launch = (f"cd {REMOTE_PROJECT} && mkdir -p runs && "
-              "rm -f runs/detached.exit && "
-              "setsid nohup sh -c "
-              + shlex.quote(f"PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src {args.cmd}; "
-                            "echo $? > runs/detached.exit")
-              + " > runs/detached.log 2>&1 & echo $! > runs/detached.pid; "
-                "echo detached-launch-ok")
-    sh(gssh(launch, args.zone), dry=args.dry_run)
+              "rm -f runs/detached.exit runs/detached.pid && "
+              f"(setsid nohup sh -c {inner} < /dev/null > runs/detached.log 2>&1 & "
+              "echo $! > runs/detached.pid) && "
+              "echo detached-launch-ok")
+    sh(gssh(launch, args.zone), dry=args.dry_run, timeout=120)
     if args.dry_run:
         print("  (dry-run: poll loop skipped)")
         return 0
@@ -175,8 +180,17 @@ def _run_detached(args) -> int:
                 "S=$(test -f runs/detached.exit && cat runs/detached.exit || echo RUNNING); "
                 "B=$(wc -c < runs/detached.log); "
                 f"echo \"@@STATUS $S $B\" && tail -c +{offset + 1} runs/detached.log")
-        r = subprocess.run(gssh(poll, args.zone), shell=True,
-                           capture_output=True, text=True, timeout=120)
+        try:
+            r = subprocess.run(gssh(poll, args.zone), shell=True,
+                               capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            misses += 1
+            print(f"  (poll ssh timeout x{misses} — job unaffected, retrying)", flush=True)
+            if misses >= 10:
+                print("FATAL: 10 consecutive poll failures; job may still be "
+                      "running on the VM — check manually before re-running")
+                return 5
+            continue
         if r.returncode != 0:
             misses += 1
             print(f"  (poll ssh failed x{misses} — job unaffected, retrying)", flush=True)
