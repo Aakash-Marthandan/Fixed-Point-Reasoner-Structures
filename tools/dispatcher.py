@@ -157,7 +157,12 @@ def _run_detached(args) -> int:
     # and stdin/out/err are ALL detached so sshd closes immediately.
     inner = shlex.quote(f"PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src {args.cmd}; "
                         "echo $? > runs/detached.exit")
+    # Double-launch guard (2026-07-28: a pkill'd LOCAL dispatcher left its
+    # REMOTE job running; the next launch collided on the TPU): refuse if the
+    # pid-file process is still alive.
     launch = (f"cd {REMOTE_PROJECT} && mkdir -p runs && "
+              "if test -f runs/detached.pid && kill -0 $(cat runs/detached.pid) "
+              "2>/dev/null; then echo detached-BUSY; exit 7; fi && "
               "rm -f runs/detached.exit runs/detached.pid && "
               f"(setsid nohup sh -c {inner} < /dev/null > runs/detached.log 2>&1 & "
               "echo $! > runs/detached.pid) && "
