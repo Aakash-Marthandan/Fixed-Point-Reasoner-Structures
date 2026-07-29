@@ -32,9 +32,24 @@ import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 
-ACCOUNT = "aakashemailbox@gmail.com"
-PROJECT = "quantum-llm"
+# Identity comes from the environment (or the git-ignored tools/.gcp_identity,
+# two lines: account then project) so no personal account lands in the public
+# repo; the guard refuses to run without both.
+def _identity():
+    acct = os.environ.get("QHRRN_GCP_ACCOUNT", "")
+    proj = os.environ.get("QHRRN_GCP_PROJECT", "")
+    if not (acct and proj):
+        try:
+            lines = (Path(__file__).parent / ".gcp_identity").read_text().split()
+            acct, proj = acct or lines[0], proj or lines[1]
+        except Exception:
+            pass
+    return acct, proj
+
+
+ACCOUNT, PROJECT = _identity()
 DEFAULT_ZONE = "us-east1-c"
 DEFAULT_ACCEL = "v5litepod-1"
 TPU_NAME = "qhrrn2-tpu"
@@ -60,6 +75,10 @@ def gssh(command: str, zone: str) -> str:
 
 def guard_identity(dry: bool):
     """Refuse to act against the wrong account/project (memory-rule, enforced)."""
+    if not ACCOUNT or not PROJECT:
+        print("identity guard: set QHRRN_GCP_ACCOUNT and QHRRN_GCP_PROJECT "
+              "(the guard refuses to run cloud commands without them)")
+        sys.exit(2)
     acct = subprocess.run("gcloud config get-value account", shell=True,
                           capture_output=True, text=True).stdout.strip()
     proj = subprocess.run("gcloud config get-value project", shell=True,

@@ -1,79 +1,111 @@
 # QHRRN-2 — A Holographic RG Network for ARC-AGI
 
-Physics-grounded architecture for the Abstraction and Reasoning Corpus: an
-equivariant recursive coarse-graining core with **priced boundary streams**
-(information flux across RG cuts is measured and penalized), a discrete rule
-codebook selected by annealed attention, and test-time training that adapts
-only boundary parameters.
+A physics-grounded architecture for the [Abstraction and Reasoning Corpus](https://github.com/fchollet/ARC-AGI):
+an equivariant recursive coarse-graining core in which **every channel that
+moves information is priced**. Information flux across renormalization-group
+cuts — and, since Amendment D, across attention "wormholes" at every scale —
+is measured in nats and penalized, so the optimizer must *buy* exactly the
+information each task needs. The result is a per-task, per-scale **information
+ledger**: a new measurable for studying abstraction, memorization, and
+locality in learned solvers.
 
-**Status: rebuild in progress.** No performance claims live in this README —
-claims belong to the ledger (see below) until evaluation day.
+**New here? Read in this order:**
+1. This file (what & why, 5 minutes)
+2. [`README_PHYSICS.md`](README_PHYSICS.md) — the physics inspiration and the
+   mathematical tools, in depth
+3. [`Documentation/Design_Ledger.md`](Documentation/Design_Ledger.md) — the
+   epistemic source of truth: every design element tagged proven / hypothesis
+   / refuted, with a dated, append-only evidence log
+4. [`Documentation/QHRRN2_Architecture.md`](Documentation/QHRRN2_Architecture.md)
+   — the full architecture specification
 
-## Current status (2026-07-27) & next steps
+## The three load-bearing mechanisms
 
-Done: post-mortem of the April system (measured, `d874427` preserved) · QHRRN-2 core
-implemented at d=12 (45,509 params, 25 tests green incl. CI-1/CI-2 + C14 gates) ·
-**Amendment D implemented** (ledger C14: KL-priced attention at all scales,
-"wormhole tolls" — the `(I_local, A_nonlocal)` decomposition S3 needs is now a
-per-task measurable; ledger §5, 2026-07-27) · **CI-3a 3/3 PASSED** (first full
-triad pass, 2026-07-27, under C14; color-swap exact via orbit voting; the old
-translate one-pixel miss did not recur — seed-ensemble remedy not needed,
-kept queued for CI-3b) ·
-**thesis narrowed to four kill-conditioned statements S1–S4**
-(`Documentation/Thesis_Information_Holography.md` §6; ledger §3c) with two
-load-bearing citations verified (RT-on-trees; CompressARC 76k/20% baseline).
-Note: all-scales attention raises CPU gate cost to ~2 s/step (~20 min per
-600-step task fit); fine on TPU.
+1. **Priced holographic streams.** Each 2×2 coarse-graining step splits its
+   input into a *kept* channel (flows up the hierarchy) and a *boundary
+   stream* (a variational code, retained and re-injected during decoding at
+   the matching scale). Nothing is destroyed; everything transmitted is
+   priced via a KL term — the **flux ledger** `I_s`. Identity-like tasks buy
+   full fine-scale transmission; abstract tasks buy almost nothing.
+2. **Priced attention at every scale** ("wormhole tolls", Amendment D).
+   Long-range correspondence is handled by attention whose messages pass
+   through their own variational bottleneck with flux `A_s`. The pair
+   `(Σ I_s, Σ A_s)` decomposes each task's information demand into
+   hierarchical vs nonlocal — the basis of a measurable locality taxonomy.
+3. **Exact symmetry + discrete rule selection.** Colors 1–9 form an exact
+   S₉-equivariant set axis (weight sharing, not augmentation); translation
+   equivariance is native; D₄ handled by orbit voting. A small rule codebook
+   is selected by temperature-annealed attention — the entropy of the
+   selection distribution is an order parameter, and its collapse during
+   per-task training is measurable symmetry breaking.
 
-**GATE BATTERY: 6/6 (2026-07-28)** — CI-1/2 (pytest, permanent), CI-3a
-(CPU + TPU), CI-4/5/6 (TPU, ledger entry with numbers). Cloud training
-spend is unlocked per the build discipline.
+The model is deliberately tiny (~49k parameters at the toy operating point;
+target ≤400k), betting that exact structure replaces brute capacity.
 
-Next, in order:
-1. Phase 2 measurements (`tools/measure.py`): β-frontier sweep on the five
-   constructed families (S1 sandwich data), LoO-gap logging (S2), and the
-   S3 stability check — including the measured attention-copy degeneracy
-   (identity pays A₀ > I₀; ledger 2026-07-28). Then assemble dev-30
-   (gate: Aug 31).
-3. Phase 3: RE-ARC-style pretraining on TPU (GCP project `quantum-llm` is
-   fully configured; session-persistent dispatcher `up`/`run`/`down` with
-   always-armed dead-man's-switch backstop, spot default; unattended
-   `cycle` mode for pretraining), then CI-3b (triad under frozen-core TTT)
-   with seed-ensemble voting.
-4. Also owed (cheap, paper hygiene): mechanical re-verification pass of the
-   remaining thesis citations; S1 proof-obligation write-up (thesis §2).
+## Current status (2026-07-29) — honest and ledger-governed
 
-Deadline: results freeze **Sep 28, 2026**; AAMAS 2027 submission early October.
-Working constraint: prefer conscious sequential work over agent fleets
-(Max-plan 5-hour token windows). Commits are **local-only** — push to
-`origin/master` when ready to sync GitHub.
+- **No performance claims live in this README.** Claims belong to the ledger
+  until evaluation day (a discipline adopted after the project's first
+  implementation failed its post-mortem; see history below).
+- Architecture complete through Amendment D; **all six pre-cloud CI gates
+  pass** (equivariance bit-exactness, anti-linearity/rank, sanity triad via
+  fitting, seam-boundary task, flux-direction sanity, canvas/no-GT-size),
+  reproduced cross-backend (CPU and TPU).
+- First measurement campaigns done on five constructed task families:
+  per-family accuracy–flux **envelopes**, operational area-law spectra,
+  a binding-before-transport fragility result, and analytic floor analysis
+  (`Documentation/S1_Floors.md`). Stability campaign in progress.
+- Phase 3 (generator pretraining on TPU) and Phase 4 (full ARC evaluation)
+  are next; the compute plan and risk register live in the spec.
 
-## The three governing documents
+## Repository map
 
-| Document | Role |
-|---|---|
-| [`Documentation/Design_Ledger.md`](Documentation/Design_Ledger.md) | **Epistemic source of truth.** Every design element is tagged proven / hypothesis / refuted, with tests and an append-only status log. Read this first. |
-| [`Documentation/QHRRN2_Architecture.md`](Documentation/QHRRN2_Architecture.md) | The architecture spec (v0.2), with the expressivity audit. |
-| [`Documentation/Divergence_Analysis_2026-07.md`](Documentation/Divergence_Analysis_2026-07.md) | Post-mortem of the April 2026 system (preserved at commit `d874427`) — the measured failures this design answers. |
+```
+src/qhrrn2/          the implementation (~1k lines, JAX)
+  grid.py            canvas, VOID state, D4 group, S9 palettes, ARC episodes
+  cell.py            seam mixers, pool/split streams, priced attention, FiLM
+  model.py           encoder → rule codebook → decoder; the flux ledgers
+  objective.py       masked CE + β·ΣI_s + β_nl·ΣA_s + size loss
+  train.py           LoO-validated fitting (MDL selection), orbit voting
+  config.py          every dial, ledger-annotated
+tests/               CI gates + unit tests (pytest; all local, fast)
+tools/
+  run_gates.py       the six pre-cloud gates as runnable protocols
+  measure.py         the measurement harness (flux + LoO-gap JSONL rows)
+  dev30.py           dev-set manifest + terminal task renderer
+  dispatcher.py      TPU session manager (up/run/down; budget-defensive)
+  shard_run.sh       chip-parallel sweep launcher
+Documentation/       governing documents (see reading order above), incl.
+                     Thesis_Information_Holography.md (claims S1–S4 with
+                     kill conditions), S1_Floors.md (analytic floors),
+                     Reflection_2026-07-29.md (research retrospective)
+```
 
-## Build discipline
-
-1. Every module header cites the ledger IDs it implements.
-2. No hypothesis-tagged mechanism ships without its named test in the same change.
-3. CI gates must PASS before any cloud **training** spend:
-   equivariance bit-exactness · anti-linearity/rank · sanity triad via TTT ·
-   seam-boundary task · flux-direction sanity · canvas/no-GT-size.
-   (Amended 2026-07-27, PI-authorized: the gate battery itself may execute on
-   a ≤$5 spot instance when local hardware limits — two thermal incidents in
-   one day; fast tests stay local.)
-
-## Setup
+## Quickstart
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 git clone --depth 1 https://github.com/fchollet/ARC-AGI.git data/ARC-AGI  # vendored, git-ignored
-.venv/bin/pytest                                                          # run the gates
+.venv/bin/pytest                              # unit tests + fast CI gates
+.venv/bin/python tools/run_gates.py --gate triad --steps 600   # slow gates (CPU: ~1h)
+.venv/bin/python tools/dev30.py render 1e0a9b12                # look at a task
 ```
 
-Layout: `src/qhrrn2/` (implementation) · `tests/` (CI gates + unit tests) ·
-`Documentation/` (theory PDFs + governing docs) · `data/` (vendored ARC, ignored).
+## Research discipline (why the ledger exists)
+
+The project's first implementation (April 2026) made confident claims that a
+five-minute probe would have refuted. The rebuild adopted three binding
+rules: every mechanism cites the ledger IDs it implements; no hypothesis
+ships without its named test in the same change; status changes are
+append-only with dated evidence. Failed hypotheses are reported results, not
+silent deletions — several of this project's findings began as gate
+failures. The full post-mortem is preserved in
+[`Documentation/Divergence_Analysis_2026-07.md`](Documentation/Divergence_Analysis_2026-07.md)
+and in git history.
+
+## Provenance
+
+The theory documents that seeded this project (`Documentation/*.pdf`,
+Dec 2025 – Apr 2026) are preserved as-is; the ledger §1 catalogs every
+load-bearing claim from them and its current status. Target venue: AAMAS
+2027 (submission Oct 2026).

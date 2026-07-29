@@ -15,7 +15,6 @@ ENV/
 
 # Data and Checkpoints
 *.pkl
-!core_checkpoint.pkl
 *.npy
 *.npz
 
@@ -28,3 +27,4 @@ Thumbs.db
 data/
 .jax_cache/
 runs/
+tools/.gcp_identity
