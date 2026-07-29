@@ -44,7 +44,9 @@ UPLOADS = ["src", "tests", "tools", "requirements.txt", "pyproject.toml"]
 DMS_MINUTES = 600  # dead man's switch: 10 h, re-armed on every `run`
 
 
-def sh(cmd: str, *, dry: bool, check: bool = True, timeout: int | None = None):
+def sh(cmd: str, *, dry: bool, check: bool = True, timeout: int | None = 600):
+    """Every call bounded (2026-07-29: an unbounded ceiling-kill SSH hung ~7 h
+    overnight and delayed teardown past the DMS window — billing ran on)."""
     print(f"  $ {cmd}", flush=True)
     if dry:
         return None
@@ -176,9 +178,14 @@ def _run_detached(args) -> int:
     offset, t0, misses = 0, time.time(), 0
     while True:
         if time.time() - t0 > args.wall_time:
-            print(f"FATAL: ceiling {args.wall_time}s hit; killing remote job")
-            sh(gssh(f"cd {REMOTE_PROJECT} && kill -- -$(cat runs/detached.pid) "
-                    "2>/dev/null || true", args.zone), dry=False, check=False)
+            print(f"FATAL: ceiling {args.wall_time}s hit; rescuing then killing remote job")
+            rescue(args.zone, False)  # data first — a killed sweep's rows are still rows
+            try:
+                sh(gssh(f"cd {REMOTE_PROJECT} && kill -- -$(cat runs/detached.pid) "
+                        "2>/dev/null || true", args.zone), dry=False, check=False,
+                   timeout=120)
+            except Exception as e:
+                print(f"  WARNING: remote kill failed ({e}); teardown will handle it")
             return 124
         time.sleep(args.poll_interval)
         poll = (f"cd {REMOTE_PROJECT} && "
