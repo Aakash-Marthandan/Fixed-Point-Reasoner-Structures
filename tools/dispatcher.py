@@ -174,9 +174,12 @@ def _run_detached(args) -> int:
         print("  (dry-run: poll loop skipped)")
         return 0
     print(f">>> polling every {args.poll_interval}s (ceiling {args.wall_time}s); "
-          "SSH drops are tolerated", flush=True)
-    offset, t0, misses = 0, time.time(), 0
+          "SSH drops are tolerated; periodic rescue every ~10 min", flush=True)
+    offset, t0, misses, polls = 0, time.time(), 0, 0
     while True:
+        polls += 1
+        if polls % max(600 // args.poll_interval, 1) == 0:
+            rescue(args.zone, False)  # reflection rule 3: data survives any death
         if time.time() - t0 > args.wall_time:
             print(f"FATAL: ceiling {args.wall_time}s hit; rescuing then killing remote job")
             rescue(args.zone, False)  # data first — a killed sweep's rows are still rows
@@ -225,6 +228,12 @@ def _run_detached(args) -> int:
 
 def cmd_run(args) -> int:
     guard_identity(args.dry_run)
+    if args.wall_time > (DMS_MINUTES - 90) * 60:
+        print(f"run: REFUSED — wall-time {args.wall_time}s does not fit inside the "
+              f"dead-man's-switch window ({DMS_MINUTES} min) with 90 min margin. "
+              "The DMS blocks SSH when it fires (and does NOT stop billing); "
+              "everything must finish, rescue, and tear down before it.")
+        return 6
     if not args.dry_run and vm_state(args.zone) is None:
         print(f"run: no VM '{TPU_NAME}' — `up` first")
         return 3
