@@ -57,6 +57,19 @@ Three observations with teeth:
 3. **Envelope-tightening sweep**: free-bits + per-scale β on identity/constfill — tests the coding-rent hypothesis directly (predict ≥10× envelope drop at equal accuracy).
 4. Stability + knee data (running today) feeds the same analysis unchanged.
 
+## 7. S3 decomposition semantics (fixed BEFORE the stability data arrives)
+
+**Definition (binding for the stability analysis):** for a task at its accuracy-qualified priced optimum, **I_local ≡ Σ_s I_s** (stream/bypass ledger) and **A_nonlocal ≡ Σ_s A_s** (attention-message ledger), both on the final recursion pass, MDL-selected params, deterministic decode. Per-scale vectors retained; enc/dec contributions summed per scale (a definitional choice — flagged, revisit only with cause).
+
+**Identifiability threats, named in advance:**
+1. **Substitution degeneracy** (measured 2026-07-28: identity pays A₀ = 41k > I₀ = 11k in one fit, 5.6k vs 3.3k in another): copy-type content can route through either currency. The decomposition may reflect optimizer choice, not task demand.
+2. **Kept-spine leakage**: both ledgers under-count if content rides the unpriced spine (the §2 conditionality; IR-only probe quantifies it).
+3. **β-path dependence**: the (I, A) split at the optimum may depend on the warmup trajectory.
+
+**What the running stability sweep adjudicates (pre-registered predictions):** across 8 seeds × 2 β per family — if the (I, A) *split* varies wildly across seeds while I+A is stable, S3's decomposition is substitutional and the claim must weaken to the total; if the split is family-stable, the decomposition is intrinsic and S3 stands as stated. Either outcome is reportable; the kill condition (thesis §6-S3) triggers only if *neither* the split *nor* the total stratifies families stably.
+
+**The class test the graded measurement cannot give:** S3's architecture-selection law is about *minimal nonlocality demand*. The discriminating instrument is the **attention-absent ablation** (`attn_max_hw=0`): families that still solve are locality-class L; those that fail are class NL; then (I, A) grades within class. Queued as a 10-row sweep (5 families × 2 seeds, one β) — cheap, next session, after the stability verdict defines what to compare it against.
+
 ---
 
-*Companion ledger entry added same date. This document is the S1 section's skeleton for the paper.*
+*Companion ledger entries added same date. This document is the S1 section's skeleton for the paper and the pre-registration of the S3 stability analysis.*
