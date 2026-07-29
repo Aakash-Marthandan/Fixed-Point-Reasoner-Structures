@@ -6,6 +6,10 @@
 # Chip pinning env recipe validated by tools/probe_chips.py BEFORE first use.
 set -u
 K=$1; shift
+# Self-contained env (2026-07-29: `ENV=x cmd1 && cmd2` binds the prefix to
+# cmd1 only — a chained second invocation ran on system python and died).
+export PATH="$PWD/.venv/bin:$PATH"
+export PYTHONPATH=src
 mkdir -p runs
 pids=()
 for i in $(seq 0 $((K - 1))); do
