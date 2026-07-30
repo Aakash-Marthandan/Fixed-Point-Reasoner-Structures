@@ -227,11 +227,16 @@ def _run_detached(args) -> int:
             continue
         if r.returncode != 0:
             misses += 1
-            print(f"  (poll ssh failed x{misses} — job unaffected, retrying)", flush=True)
-            if misses >= 10:
-                print("FATAL: 10 consecutive poll failures; job may still be "
+            backoff = min(args.poll_interval * (2 ** max(misses - 5, 0)), 300)
+            print(f"  (poll ssh failed x{misses} — job unaffected; next try in "
+                  f"~{backoff}s)", flush=True)
+            if misses >= 20:  # ~45+ min of outage with backoff (2026-07-30:
+                # a spot host dropped SSH for minutes and 10 fast misses
+                # aborted supervision of a healthy job)
+                print("FATAL: 20 consecutive poll failures; job may still be "
                       "running on the VM — check manually before re-running")
                 return 5
+            time.sleep(max(backoff - args.poll_interval, 0))
             continue
         misses = 0
         head, _, chunk = r.stdout.partition("\n")
