@@ -17,7 +17,7 @@ def test_place_pads_with_void_not_black():
     assert c.shape == (G.CANVAS, G.CANVAS)
     assert np.array_equal(c[:3, :4], g)
     assert np.all(c[~G.canvas_mask((3, 4))] == G.VOID)
-    assert G.VOID != 0, "VOID must never be black (April failure E4)"
+    assert G.VOID != 0, "VOID must never be black (background/padding conflation hazard)"
 
 
 def test_crop_inverts_place():
@@ -106,7 +106,7 @@ def test_sample_orbit_starts_with_identity():
     assert len(orbit) == 8
 
 
-# ── Vendored data loading (no network — April E8) ──────────────────────────
+# ── Vendored data loading (no network — environment-drift rule) ──────────────────────────
 
 def test_load_real_training_task():
     eps = G.load_task("007bbfb7")

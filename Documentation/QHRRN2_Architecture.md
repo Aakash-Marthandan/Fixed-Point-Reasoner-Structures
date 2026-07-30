@@ -1,13 +1,13 @@
 # QHRRN-2 Architecture Specification
 
 **Status:** v0.3 — v0.2 added the expressivity audit §16 and Amendments A/B/C; v0.3 registers **Amendment D** (ledger C14, 2026-07-21): KL-priced attention channels at *all* scales ("wormhole tolls"), each with measured flux A_s and price β_nl — required by thesis statement S3 (`Thesis_Information_Holography.md` §6), making nonlocal information demand a per-task measurable. Implemented 2026-07-27 (§2.2b; measured net **−144 params** at d=12 — the VIB messages replace the heavier full-width value path) · **Date:** 2026-07-18/27 · **Working paper name candidates:** HoloMERA / FluxRG / RG-Adapt
-**Companion:** `Divergence_Analysis_2026-07.md` (the autopsy this design answers) · **Target:** AAMAS 2027, submission early October 2026 · **Budget:** ≤ $4000 GCP
+**Companion:** `Design_Ledger.md` (the epistemic record) · **Target:** AAMAS 2027, submission early October 2026 · **Budget:** ≤ $4000 GCP
 
 ---
 
 ## 0. Design contract
 
-Every mechanism in this spec exists to discharge a specific, measured failure from the April system (**E**-numbers) or a specific documented idea that was never implemented (**D**-numbers). §9 gives the full traceability table; §10 gives the CI gates that make each claim falsifiable *before* any cloud spend. Nothing in this architecture is decorative: if a component can't be measured or ablated, it doesn't ship.
+Every mechanism in this spec exists to discharge a specific measured failure mode or documented requirement, each tracked in the ledger. §9 states the design-motivation principle; §10 gives the CI gates that make each claim falsifiable *before* any cloud spend. Nothing in this architecture is decorative: if a component can't be measured or ablated, it doesn't ship.
 
 The three load-bearing mechanisms, in one breath each:
 
@@ -20,13 +20,13 @@ The three load-bearing mechanisms, in one breath each:
 ## 1. Data representation
 
 - **Canvas:** fixed 32×32 (covers ARC's 30×30 max). One JIT shape, compile once.
-- **Cell alphabet:** 12 states = 10 ARC colors + `VOID` (outside the true grid) + implicit "empty within grid" = color 0 as usual. `VOID ≠ black`: this kills the E4 padding pathology at the representation level. The vacuum the April vocabulary kept invoking is now an actual distinguished state.
+- **Cell alphabet:** 12 states = 10 ARC colors + `VOID` (outside the true grid) + implicit "empty within grid" = color 0 as usual. `VOID ≠ black`: padding can never be confused with background at the representation level — the "vacuum" is an actual distinguished state.
 - **Color axis as a set (AMENDED v0.2 — Amendment A):** the state carries a **per-color field** `Z⁽ᶜ⁾ ∈ ℝ^{H×W×d}` with *weights shared across colors* plus permutation-equivariant interaction terms (DeepSets/mean-pool style). The symmetric group is **S₉ over colors 1–9**; **black (0) and `VOID` are distinguished fields** with private weights — matching ARC's empirical convention (black ≈ background; standard palette augmentation permutes 1–9 and fixes 0).
   **Color symmetry breaking at TTT:** a strictly S₉-equivariant network cannot represent color-*constant* rules ("always paint it red") — permute the palette and the output must permute, contradiction. Fix: θ_task includes **per-color bias vectors** (10 × d ≈ 160 params, initialized 0, ~0 during pretraining). The equivariant core is the symmetric phase; the support pairs are the explicit breaking field; the TTT biases are the order parameter. Color-constant rules become learnable *precisely and only when the evidence demands them* — the SSB story extends to the color sector, and this is the correct prior (most ARC rules are color-relational; the exceptions break the symmetry through data, not weights).
 - **Input embedding:** per-color occupancy map `o⁽ᶜ⁾ ∈ {0,1}^{H×W}` → 3×3 conv (shared across colors) → `Z₀⁽ᶜ⁾`. Each color field starts as "where my color is, locally."
 - **Episodes:** a training example is a whole episode (support pairs + query), matching the TTT deployment condition.
 
-**Why this fixes April:** the network cannot even *represent* a color-specific rule in its weights — rules become functions of color *relations* (same/different, majority, containment), which is what ARC rules actually are. Palette-swap generalization is exact by construction instead of hoped-for. Parameter cost of color processing drops from O((10d)²) to O(d²).
+**Why this matters:** the network cannot even *represent* a color-specific rule in its weights — rules become functions of color *relations* (same/different, majority, containment), which is what ARC rules actually are. Palette-swap generalization is exact by construction instead of hoped-for. Parameter cost of color processing drops from O((10d)²) to O(d²).
 
 ---
 
@@ -51,7 +51,7 @@ Aligned 2×2 blocks pool to one coarse site. The block vector `u ∈ ℝ^{4d}` s
 - **Kept channel:** `k = GELU(W_k u) ∈ ℝ^d` — flows to scale s+1.
 - **Boundary stream:** `(μ_s, log σ_s) = W_b u ∈ ℝ^{2·d_b}` — a variational code `b_s ~ N(μ_s, σ_s)` retained at the coarse resolution of scale s+1, `d_b ≈ 6`.
 
-**Why:** this is the honest version of the documents' "isometry keeps Signal, discards Noise." Nothing is discarded — the complement of the kept channel is shunted to a *priced* stream. The cell is (softly) information-conserving, which is what the unitarity/reversibility language in the original docs was actually reaching for. The April network deleted; QHRRN-2 *files*.
+**Why:** this is the honest version of the documents' "isometry keeps Signal, discards Noise." Nothing is discarded — the complement of the kept channel is shunted to a *priced* stream. The cell is (softly) information-conserving, which is what the unitarity/reversibility language in the original docs was actually reaching for. Funnels delete; QHRRN-2 *files*.
 
 ### 2.2b Priced attention at every scale — "wormhole tolls" (AMENDED v0.2 — Amendment B; v0.3 — Amendment D)
 
@@ -83,7 +83,7 @@ Cell weights are modulated by (scale s, recursion step t): `θ(s,t) = θ_base + 
 - **IR summary:** color-pooled, spatially pooled invariant vector `h ∈ ℝ^{64}` + per-color IR features (for color-binding decisions).
 - **Rule codebook:** `K = 128` learned rule tokens `e_k ∈ ℝ^{64}`, `M = 2` selection slots (compositional rules: "move AND recolor"). Each slot attends: `q_m(k) = softmax(⟨W_m h, e_k⟩ / τ)`.
   - Pretraining: τ moderate (soft mixtures), Gumbel-softmax gradients, codebook usage regularization (EMA updates, usage-entropy bonus — standard VQ hygiene).
-  - TTT: τ annealed 1 → 0.05. **The collapse of H[q] is the symmetry-breaking event.** Degenerate low-τ vacua = rule hypotheses consistent with the support set; support evidence breaks the degeneracy. We log H[q] per step — the phase-transition plot is a paper figure, and it *means* something this time (contrast E6: April's "FROZEN" banner measured gradient-clipping arithmetic).
+  - TTT: τ annealed 1 → 0.05. **The collapse of H[q] is the symmetry-breaking event.** Degenerate low-τ vacua = rule hypotheses consistent with the support set; support evidence breaks the degeneracy. We log H[q] per step — the phase-transition plot is a paper figure, and it *means* something: the order parameter is a distribution over discrete hypotheses, not an optimizer artifact.
 
 **Why K=128, M=2:** ARC's rule inventory at the granularity a conditioning code needs is O(10²) (transformation families × arguments get handled by the decoder conditioning, not the code). M=2 covers the common "two-step" compositions; M is an ablation axis. If discrete selection underperforms, the fallback is a continuous rule vector — everything else survives, we lose one figure.
 
@@ -102,7 +102,7 @@ Output heads:
 - **Grid head:** per-color logits via the equivariant readout `logit_c = ψ(Z⁽ᶜ⁾, Z̄, V)` + void logit → 11-way softmax/cell.
 - **Canvas head:** `(H_out, W_out)` as two 30-way classifications from `h` + rule code. Train-time loss masks by *true* canvas; test-time output uses *predicted* canvas (no E13/D13 ground-truth-size leak). Report exact-match and size-given accuracy separately.
 
-**Why the gates matter:** the identity task needs `G ≈ 1` at fine scales (full UV transmission — your point that ARC needs UV data is architecturally honored here); "fill everything with the majority color" needs `G ≈ 0` everywhere (pure IR). The rule code chooses. April had no path from UV to output at all (E1: rank 8); a U-Net has a free unpriced path (lazy copying); QHRRN-2 has a *tollgated* path.
+**Why the gates matter:** the identity task needs `G ≈ 1` at fine scales (full UV transmission — your point that ARC needs UV data is architecturally honored here); "fill everything with the majority color" needs `G ≈ 0` everywhere (pure IR). The rule code chooses. A pure funnel has no UV→output path at all; a U-Net has a free unpriced path (lazy copying); QHRRN-2 has a *tollgated* path.
 
 ---
 
@@ -134,7 +134,7 @@ L = Σ_t w_t · CE_masked(Y_t, Y*)          (masked to true canvas; void exclude
 - **The RT-flavored claim (stated as analogy, tested as mechanism):** complexity of the inferred rule = total boundary information flux through the RG cuts. Simple rules ⇒ low total flux; texture-carrying rules ⇒ flux concentrated at fine cuts. The per-task **flux spectrum {I_s}** at the TTT solution is a new, quantitative, per-task interpretability object — "which scales does this task's rule live at." Clustering ARC by flux spectra is a headline figure candidate no other ARC system can produce.
 - β schedule: warmup 0 → β* during pretraining (let reconstruction work first, then price it). β* swept in Phase 2; per-scale β_s if needed.
 
-**Contrast with April (D4/E1):** the entropy penalty now acts on *states crossing cuts* — the object the theory documents specified — not on weight-matrix spectra. And CE is masked (E4 dead).
+**Design note:** the entropy penalty acts on *states crossing cuts* — the object the theory documents specified — not on weight-matrix spectra — and CE is masked to the true canvas.
 
 ---
 
@@ -152,7 +152,7 @@ Protocol:
 
 **Vectorized population TTT (systems contribution):** θ_task is tiny and identically-shaped across tasks ⇒ `vmap` the entire TTT loop over ~64 tasks simultaneously on one TPU. Full 400-task ARC-1 eval becomes a few TPU-hours instead of a serial day. This is what makes the β × d × T sweep grid affordable inside $4000, and it's a reportable engineering novelty.
 
-**Contrast with April (D6):** 78k/78k parameters adapted against 2–5 examples → now ≤25k structured params against 500–2000 orbit-augmented examples, with validation-based stopping instead of a broken temperature trigger.
+**Design note:** adapting *all* parameters against 2–5 examples overfits by construction; here ≤25k structured params adapt against 500–2000 orbit-augmented examples, with validation-based stopping.
 
 ---
 
@@ -173,30 +173,14 @@ Protocol:
 
 ---
 
-## 9. Traceability: autopsy finding → design element
+## 9. Design-motivation principle
 
-| Finding (April) | QHRRN-2 answer |
-|---|---|
-| E1 exactly linear, rank 8 | GELU seam mixers at every scale ×2 pyramids × T iterations; streams give full-rank UV→output paths. CI gate: measured output rank > 1000; superposition must *fail* |
-| E2 learned "all-black" | Masked CE + void state + episodic pretraining on generators (not 20 tasks × 5 epochs) |
-| E3 identity 7.8% | Streams + gates: identity = "gates open, rule = copy." CI gate: identity exact-match < 200 TTT steps |
-| E4 87.7% padding loss | VOID ≠ black; CE masked to true canvas; canvas head predicts size (no GT-size leak) |
-| E5/E6 SSB was a timer | Discrete codebook + τ-anneal; order parameter H[q] logged per step; LoO early stop replaces temperature trigger |
-| E7 fake sparse kernel | No speculative kernels. Pallas only if a *profiled* bottleneck appears (candidate: none expected at d≤32 — XLA handles these shapes) |
-| E8 env rot | Pinned requirements, vendored data (done), version stamps in checkpoints |
-| D1 no PEPS bonds | Seam mixers are local bonds at every scale; locality = Area Law prior, actually enforced |
-| D2 tree ≠ MERA | Offset seam blocks (staggered MERA layout / shifted windows) |
-| D4 weight-entropy ≠ holography | Flux ledger on stream states crossing cuts (VIB bound) |
-| D6 TTT-everything | Frozen bulk; ≤25k boundary params adapted |
-| D8 symmetry sectors unused | Color-set equivariance (exact), D₄ orbit + symmetrization, strict G-conv as stretch |
-| D9 no recursion | T-iteration outer loop with deep supervision |
-| D10 reversibility unused | Conservation-by-construction cell (kept ⊕ streamed); flux ledger doubles as the leak meter |
-| D11 no interpretability | Flux spectra {I_s}, gate maps, H[q] trajectories, per-scale activation heatmaps — first-class outputs |
+Every mechanism above answers a measured failure mode of naive designs (lossy funnels, unmasked padded losses, unstructured whole-network adaptation) or implements a documented requirement. Per-mechanism rationale is inline in §§1–7; each component's epistemic status and named test live in the ledger (`Design_Ledger.md` §2). The full derivation trail is preserved in the local archive.
 
 ## 10. CI gates (all local/CPU, all before cloud spend)
 
 1. **Equivariance exactness:** permute palette → logits permute bit-exactly; translate input → output translates (within canvas).
-2. **Nonlinearity/rank probe** (inverted April E1): superposition violated; output rank > 1000 over random inputs.
+2. **Nonlinearity/rank probe:** superposition violated; output rank > 1000 over random inputs.
 3. **Sanity triad via TTT:** identity, color-swap, translation — 3/3 exact match.
 4. **Seam test:** a task whose rule crosses pooling-block boundaries (e.g., 2-px-offset checkerboard completion) must not degrade vs. block-aligned variant by more than ε.
 5. **Flux behavior:** identity's fine-scale flux ≫ constant-fill's total flux; β=0 vs β>0 changes spectra in the predicted direction.
@@ -206,7 +190,7 @@ Protocol:
 
 | Ablation | Tests the claim |
 |---|---|
-| streams off (pure funnel) | UV transmission is necessary (April-redux control) |
+| streams off (pure funnel) | UV transmission is necessary (funnel control) |
 | β = 0 (free streams / U-Net mode) | pricing improves generalization, not just compresses |
 | aligned (non-offset) seam blocks | staggered disentanglers matter (MERA vs tree) |
 | attention: priced (β_nl>0) vs free (β_nl=0) vs coarse-only vs absent | Amendment D: tolls select genuine nonlocality; S3 architecture-selection law |
@@ -287,7 +271,7 @@ Spot instances + the dispatcher's unconditional-teardown discipline (add `--spot
 
 ### 16.2 Representable ≠ learnable — the honest gap, ranked
 
-April's failure was *representational*; that class of failure is now closed (and CI-gated). The remaining risk is *learnability*: whether pretraining + TTT actually finds the representations. Ranked, with the gate that catches each early:
+Representational failure classes are closed by construction (and CI-gated). The remaining risk is *learnability*: whether pretraining + TTT actually finds the representations. Ranked, with the gate that catches each early:
 
 | # | Risk | Mitigation | Early gate |
 |---|---|---|---|

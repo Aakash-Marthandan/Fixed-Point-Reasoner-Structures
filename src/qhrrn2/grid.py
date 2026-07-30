@@ -4,7 +4,7 @@
 
 Representation decisions (Design_Ledger C1, QHRRN2_Architecture §1):
 - Cell alphabet: 0..9 ARC colors, VOID = 10. VOID is a real state, never
-  conflated with black (April failure E4).
+  conflated with black (the background/padding conflation hazard).
 - Canvas: fixed 32x32; a grid is placed top-left; the rest is VOID.
 - Color symmetry group: S9 over colors 1..9. Black (0) and VOID are fixed
   points of every palette permutation (Amendment A).
@@ -159,7 +159,7 @@ def sample_orbit(rng: np.random.Generator, n: int, use_d4: bool = True,
         out.append(Transform(k=k, lut=lut))
     return out
 
-# ── Local ARC loading (vendored data only — no network, April E8) ──────────
+# ── Local ARC loading (vendored data only — no network; environment-drift rule) ──────────
 
 def task_path(task_id: str, root: Path = ARC_DATA_ROOT) -> Path:
     for split in ("training", "evaluation"):

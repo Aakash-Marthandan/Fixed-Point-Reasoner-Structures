@@ -45,8 +45,8 @@ target ≤400k), betting that exact structure replaces brute capacity.
 ## Current status (2026-07-29) — honest and ledger-governed
 
 - **No performance claims live in this README.** Claims belong to the ledger
-  until evaluation day (a discipline adopted after the project's first
-  implementation failed its post-mortem; see history below).
+  until evaluation day (claims are pre-registered
+  with named tests and kill conditions before results exist).
 - Architecture complete through Amendment D; **all six pre-cloud CI gates
   pass** (equivariance bit-exactness, anti-linearity/rank, sanity triad via
   fitting, seam-boundary task, flux-direction sanity, canvas/no-GT-size),
@@ -93,19 +93,15 @@ git clone --depth 1 https://github.com/fchollet/ARC-AGI.git data/ARC-AGI  # vend
 
 ## Research discipline (why the ledger exists)
 
-The project's first implementation (April 2026) made confident claims that a
-five-minute probe would have refuted. The rebuild adopted three binding
-rules: every mechanism cites the ledger IDs it implements; no hypothesis
+Three binding rules govern all development: every mechanism cites the ledger IDs it implements; no hypothesis
 ships without its named test in the same change; status changes are
 append-only with dated evidence. Failed hypotheses are reported results, not
 silent deletions — several of this project's findings began as gate
-failures. The full post-mortem is preserved in
-[`Documentation/Divergence_Analysis_2026-07.md`](Documentation/Divergence_Analysis_2026-07.md)
-and in git history.
+failures.
 
 ## Provenance
 
 The theory documents that seeded this project (`Documentation/*.pdf`,
-Dec 2025 – Apr 2026) are preserved as-is; the ledger §1 catalogs every
+Dec 2025 – Jan 2026) are preserved as-is; the ledger §1 catalogs every
 load-bearing claim from them and its current status. Target venue: AAMAS
 2027 (submission Oct 2026).

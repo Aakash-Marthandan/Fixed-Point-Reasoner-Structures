@@ -1,4 +1,4 @@
-# Ledger: CI-2 (anti-linearity + rank — April E1 inverted into a permanent gate),
+# Ledger: CI-2 (anti-linearity + rank — funnel-collapse probe inverted into a permanent gate),
 #         CI-1 extension (full-model S9 equivariance), C13 (param budget),
 #         C14 mechanism tests (Amendment D: attention flux measured at all scales,
 #         ablation knobs, toll wired into the objective — CI-5's mechanism half),
@@ -83,7 +83,7 @@ def test_color_bias_breaks_equivariance(params):
     assert err > 1e-3, "color_bias failed to break S9 — color-constant rules would be unrepresentable"
 
 
-# ── CI-2: anti-linearity + rank (the April E1 probe, inverted) ─────────────
+# ── CI-2: anti-linearity + rank (the linearity-collapse probe, inverted) ─────────────
 
 def _f(params, fields):
     return forward_fields(params, CFG, fields, t_norm=0.0, tau=1.0).logits
@@ -97,7 +97,7 @@ def test_ci2_superposition_must_fail(params):
     lhs = _f(params, a * x1 + b * x2)
     rhs = a * _f(params, x1) + b * _f(params, x2)
     rel = float(jnp.max(jnp.abs(lhs - rhs)) / (jnp.max(jnp.abs(lhs)) + 1e-9))
-    assert rel > 1e-2, f"model is (near-)linear: superposition holds to {rel:.2e} — April E1 regression"
+    assert rel > 1e-2, f"model is (near-)linear: superposition holds to {rel:.2e} — linearity-collapse regression"
 
 
 def test_ci2_output_rank_floor(params):
@@ -106,7 +106,7 @@ def test_ci2_output_rank_floor(params):
     outs = jax.vmap(lambda x: _f(params, x))(xs).reshape(n, -1)
     s = np.linalg.svd(np.asarray(outs), compute_uv=False)
     rank = int(np.sum(s > s[0] * 1e-4))
-    assert rank >= n - 2, f"output rank {rank} < {n-2}: bottleneck collapse — April E1 regression"
+    assert rank >= n - 2, f"output rank {rank} < {n-2}: bottleneck collapse — linearity-collapse regression"
 
 
 # ── C14 (Amendment D): priced attention at all scales ──────────────────────

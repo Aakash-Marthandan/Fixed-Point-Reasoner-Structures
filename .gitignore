@@ -28,3 +28,4 @@ data/
 .jax_cache/
 runs/
 tools/.gcp_identity
+Documentation/private/

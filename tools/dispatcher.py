@@ -1,7 +1,7 @@
 # Ledger: §1.4 staged deploy / teardown discipline [P-M], amended twice:
 #   2026-07-27 (ledger §5): --spot default; dead man's switch ALWAYS armed;
 #     identity guard hard-coded; uv-managed Python 3.14 (shakedown-1 lesson).
-#   2026-07-27 night (PI-directed policy change): April's per-run
+#   2026-07-27 night (PI-directed policy change): the prior per-run
 #     provision→teardown cycle replaced by a SESSION-PERSISTENT workflow —
 #     `up` once, many fast `run`s, `down` at session end. The dead man's
 #     switch (re-armed on every run, default +10 h) is the forgetting

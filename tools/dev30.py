@@ -1,4 +1,4 @@
-# Ledger: dev-30 stratified development set (Divergence_Analysis §7 roadmap;
+# Ledger: dev-30 stratified development set (Phase-2 roadmap;
 # audit §16.2 R1/R2 emphasis). Selection rule: REAL training-split tasks only
 # (R5: no generator contact), each classified by eye (rendered grids), family
 # labels from the audit's taxonomy. The manifest is data; tools/measure.py
