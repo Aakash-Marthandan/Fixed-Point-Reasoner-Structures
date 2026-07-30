@@ -215,8 +215,11 @@ def _run_detached(args) -> int:
                 "B=$(wc -c < runs/detached.log); "
                 f"echo \"@@STATUS $S $B\" && tail -c +{offset + 1} runs/detached.log")
         try:
+            # 2026-07-30: SSH handshake to a loaded 4-wide VM can take minutes;
+            # 120s misread latency as death (rescues at 600s succeeded through
+            # the same window). Generous per-poll cap; misses still bounded.
             r = subprocess.run(gssh(poll, args.zone), shell=True,
-                               capture_output=True, text=True, timeout=120)
+                               capture_output=True, text=True, timeout=420)
         except subprocess.TimeoutExpired:
             misses += 1
             print(f"  (poll ssh timeout x{misses} — job unaffected, retrying)", flush=True)
