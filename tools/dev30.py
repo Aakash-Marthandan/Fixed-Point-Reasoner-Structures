@@ -27,6 +27,10 @@ MANIFEST: dict[str, tuple[str, str]] = {
     "0ca9ddb6": ("object-conditional", "decorate each dot with its color-specific surround (2->4-corners, 1->7-plus); R1 family"),
     "3aa6fb7a": ("object-relational", "place a 1 in the concave corner of every 8-L-shape"),
     "25ff71a9": ("translation", "shift the occupied row down by one; real twin of the constructed translate family"),
+    "3631a71a": ("symmetry-completion", "restore 9-occluded patches from the wallpaper pattern's distant mirror content; FIRST NL-CLASS CANDIDATE (R2 family)"),
+    "4258a5f9": ("object-decoration", "ring every 5 with 3x3 of 1s; local"),
+    "496994bd": ("reflection-copy", "mirror the top color band to the far bottom edge; correspondence/NL candidate"),
+    "5521c0d9": ("object-relative-motion", "each block moves up by its own height; per-object measurement drives action (R1-adjacent)"),
 }
 
 _GLYPH = " 123456789▓"  # index = color; VOID -> ▓, 0 -> space
