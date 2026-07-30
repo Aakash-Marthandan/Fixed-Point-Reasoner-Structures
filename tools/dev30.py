@@ -23,16 +23,21 @@ from qhrrn2 import grid as G
 MANIFEST: dict[str, tuple[str, str]] = {
     # verified 2026-07-28 (rendered):
     "1e0a9b12": ("axial-gravity", "columns compact downward; spec §2.2c constructive example"),
+    # verified 2026-07-30 (rendered):
+    "0ca9ddb6": ("object-conditional", "decorate each dot with its color-specific surround (2->4-corners, 1->7-plus); R1 family"),
+    "3aa6fb7a": ("object-relational", "place a 1 in the concave corner of every 8-L-shape"),
+    "25ff71a9": ("translation", "shift the occupied row down by one; real twin of the constructed translate family"),
 }
 
 _GLYPH = " 123456789▓"  # index = color; VOID -> ▓, 0 -> space
 
 
-def render(task_id: str):
+def render(task_id: str, max_pairs: int = 99):
     eps = G.load_task(task_id)
     ep = eps[0]
     print(f"task {task_id}: {len(ep.support)} support pairs + {len(eps)} test")
-    for i, (x, y) in enumerate(list(ep.support) + [(ep.query_x, ep.query_y)]):
+    pairs = (list(ep.support) + [(ep.query_x, ep.query_y)])[:max_pairs]
+    for i, (x, y) in enumerate(pairs):
         tag = "query" if i == len(ep.support) else f"sup{i}"
         print(f"--- {tag}: {x.shape} -> {None if y is None else y.shape}")
         xs = ["".join(_GLYPH[v] for v in row) for row in x]
@@ -47,7 +52,7 @@ def render(task_id: str):
 
 def main():
     if len(sys.argv) >= 3 and sys.argv[1] == "render":
-        render(sys.argv[2])
+        render(sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 99)
     elif len(sys.argv) >= 2 and sys.argv[1] == "list":
         print(f"{len(MANIFEST)} tasks in manifest:")
         for tid, (fam, note) in sorted(MANIFEST.items(), key=lambda kv: kv[1][0]):
