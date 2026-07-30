@@ -31,6 +31,12 @@ MANIFEST: dict[str, tuple[str, str]] = {
     "4258a5f9": ("object-decoration", "ring every 5 with 3x3 of 1s; local"),
     "496994bd": ("reflection-copy", "mirror the top color band to the far bottom edge; correspondence/NL candidate"),
     "5521c0d9": ("object-relative-motion", "each block moves up by its own height; per-object measurement drives action (R1-adjacent)"),
+    "23581191": ("axial-projection", "each dot casts its color as full row+column; intersections recolored 2 (Amendment C family)"),
+    "1cf80156": ("crop-to-content", "output = tight bounding-box crop of the shape; size from content extent"),
+    "445eab21": ("object-argmax", "output 2x2 in the LARGER rectangle's color; R1 canonical select-largest"),
+    "6150a2bd": ("rot180", "output = 180-degree rotation of the input; D4 geometry"),
+    "8be77c9e": ("mirror-extend", "output = input stacked atop its vertical mirror; size x2 transform"),
+    "d631b094": ("counting", "output = 1xN bar of the object color, N = number of colored cells"),
 }
 
 _GLYPH = " 123456789▓"  # index = color; VOID -> ▓, 0 -> space
