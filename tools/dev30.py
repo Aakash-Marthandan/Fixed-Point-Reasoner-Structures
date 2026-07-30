@@ -37,6 +37,9 @@ MANIFEST: dict[str, tuple[str, str]] = {
     "6150a2bd": ("rot180", "output = 180-degree rotation of the input; D4 geometry"),
     "8be77c9e": ("mirror-extend", "output = input stacked atop its vertical mirror; size x2 transform"),
     "d631b094": ("counting", "output = 1xN bar of the object color, N = number of colored cells"),
+    "0d3d703e": ("color-mapping", "fixed color bijection (3<->4, 1<->5, 2<->6, 8<->9) applied per column; color-relational"),
+    "6455b5f5": ("region-argmax-fill", "fill LARGEST 2-bounded region with 1, SMALLEST with 8; conditional + argmax + flood fill"),
+    "08ed6ac7": ("recolor-by-rank", "recolor each column of 5s by its height rank (tallest=1, ...); canonical color-relational"),
 }
 
 _GLYPH = " 123456789▓"  # index = color; VOID -> ▓, 0 -> space
