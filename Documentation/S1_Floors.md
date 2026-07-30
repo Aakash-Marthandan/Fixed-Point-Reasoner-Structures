@@ -70,6 +70,32 @@ Three observations with teeth:
 
 **The class test the graded measurement cannot give:** S3's architecture-selection law is about *minimal nonlocality demand*. The discriminating instrument is the **attention-absent ablation** (`attn_max_hw=0`): families that still solve are locality-class L; those that fail are class NL; then (I, A) grades within class. Queued as a 10-row sweep (5 families × 2 seeds, one β) — cheap, next session, after the stability verdict defines what to compare it against.
 
+## 8. Critical analysis of the class ablation (2026-07-30)
+
+**The observations.** Attention-absent (β=10⁻⁵, 2 seeds × 5 families): 10/10 exact; envelopes tighten 4–9× on four families (identity 5,617→1,124; checkerboard 6,237→809; colorswap 12,438→2,370; translate 13,247→1,475); constfill roughly unchanged (326→422); translate goes 3/8→2/2 exact.
+
+**Why it works (mechanism).** One phenomenon, three views:
+1. **Channel equivalence on local tasks.** For class-L content, streams and attention are *interchangeable carriers*. The stability sweep's "failed" split (f = A/(I+A) ≈ 0.44–0.63, seed-volatile) is exactly what two equivalent channels sharing load arbitrarily produce — the stability failure and the ablation tightening are the same fact seen twice.
+2. **Trajectory reachability, not solution existence.** With both channels present, early gradients recruit both (each reduces CE); once both carry signal, β=10⁻⁵ is too weak to fund the coordinated rerouting that would prune one. MDL selection picks among *visited* checkpoints — it cannot select configurations the trajectory never reaches. The 4–9× is our first quantification of the **optimization-gap term** in the §3(b) gap decomposition.
+3. **Rent on existence.** Priced dimensions pay ~0.2 nats/dim even when barely used; deleting the channel deletes its rent.
+
+Translate's reliability gain has a distinct candidate mechanism — the global softmax pattern (over a mostly-VOID 1024-token canvas) injects diffuse mixing during early training, perturbing a task whose correct solution is purely local composition — but see the statistics below before believing it.
+
+**Is it trustworthy? Named threats:**
+- **T1 (statistics).** Envelope tightening: five families, all the same direction, large effects — strong even at n=2/family. Translate reliability: 2/2 vs 3/8 is Fisher p≈0.11 one-sided — *suggestive, not established*; needs ~6 more seeds per arm (minutes of TPU).
+- **T2 (budget confound).** Same 600 steps both arms; the with-attention arm might prune redundancy given longer priced phases — the 4–9× is "at matched budget," not an asymptotic constant. Testable cheaply.
+- **T3 (asymmetric β coverage — works in our favor).** With-attention envelopes minimized over six β values; attention-absent over ONE. More absent-side β rows can only tighten that side further ⇒ the reported factors are **conservative lower bounds** (and explains constfill's apparent non-improvement: its with-attn envelope came from β=10⁻³, unmeasured on the absent side).
+- **T4 (regime).** Class-L membership is an existence proof and regime-robust; the envelope *numbers* are from-scratch/d=12-specific, as always.
+- **T5 (scope).** "Minimal architecture strictly better" is measured only on the L half; the law needs NL tasks (dev-30 correspondence families) where the prediction *reverses*. Until then, soften to: *better at matched budget on all measured class-L families, large effect.*
+
+**What we learn for future work:**
+1. **Estimator lesson:** envelopes are properties of a *solver family*, not one architecture — protocol v3 (minimize over β × architecture variants) generalizes: treat d_b, d_a, free-bits, attention placement as envelope axes.
+2. **Design lesson → Amendment E candidate (C15):** the decoder streams have rule-conditioned gates; the attention channel does not. A rule-conditioned attention gate (~100 params) would let the network *learn* to close the channel per task — potentially recovering absent-arm economics inside the full architecture, stabilizing translate-like tasks, and making the gate value itself a learned class indicator. To be registered with its test before any implementation.
+3. **S3 sharpened, pre-registered now:** the split's meaninglessness is *class-conditional*. Prediction for dev-30 NL tasks: the (I, A) split becomes stable and A-dominated where attention is necessary. If confirmed, S3 returns as a two-regime law (class L: total only; class NL: split meaningful) — stronger than the original.
+4. **Process lesson:** a $2, 40-minute ablation produced the largest single envelope improvement to date and converted a failed stability test into a mechanism. Small decisive experiments over large sweeps, whenever a hypothesis admits one.
+
+**Queued follow-ups:** F1 absent-arm β-grid + translate seed expansion (~$3); F2 Amendment E registration; F3 the class-conditional S3 pre-registration above stands as written.
+
 ---
 
 *Companion ledger entries added same date. This document is the S1 section's skeleton for the paper and the pre-registration of the S3 stability analysis.*
