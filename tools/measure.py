@@ -126,10 +126,13 @@ def main():
     ap.add_argument("--steps", type=int, default=600)
     ap.add_argument("--d", type=int, default=12)
     ap.add_argument("--T", type=int, default=4)
+    ap.add_argument("--attn-max-hw", type=int, default=32,
+                    help="0 = attention-absent (the S3 locality-CLASS ablation, "
+                         "thesis §6-S3 amendment 2026-07-30)")
     ap.add_argument("--out", default="runs/measure")
     args = ap.parse_args()
 
-    cfg0 = Config(d=args.d, T=args.T)
+    cfg0 = Config(d=args.d, T=args.T, attn_max_hw=args.attn_max_hw)
     betas = [float(b) for b in args.betas.split(",")]
     if args.arc:
         from dev30 import MANIFEST
