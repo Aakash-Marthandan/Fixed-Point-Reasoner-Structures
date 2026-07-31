@@ -42,7 +42,7 @@ locality in learned solvers.
 The model is deliberately tiny (~49k parameters at the toy operating point;
 target ≤400k), betting that exact structure replaces brute capacity.
 
-## Current status (2026-07-29) — honest and ledger-governed
+## Current status (2026-07-31) — honest and ledger-governed
 
 - **No performance claims live in this README.** Claims belong to the ledger
   until evaluation day (claims are pre-registered
@@ -51,12 +51,18 @@ target ≤400k), betting that exact structure replaces brute capacity.
   pass** (equivariance bit-exactness, anti-linearity/rank, sanity triad via
   fitting, seam-boundary task, flux-direction sanity, canvas/no-GT-size),
   reproduced cross-backend (CPU and TPU).
-- First measurement campaigns done on five constructed task families:
-  per-family accuracy–flux **envelopes**, operational area-law spectra,
-  a binding-before-transport fragility result, and analytic floor analysis
-  (`Documentation/S1_Floors.md`). Stability campaign in progress.
-- Phase 3 (generator pretraining on TPU) and Phase 4 (full ARC evaluation)
-  are next; the compute plan and risk register live in the spec.
+- **Constructed-family measurement program v1 CLOSED** (frozen dataset, ledger
+  2026-07-30): per-family accuracy–flux **envelopes** with monotone frontiers,
+  operational area-law spectra, analytic floors (`Documentation/S1_Floors.md`),
+  a full locality-class ablation, and ~100× envelope compression via protocol +
+  architecture-minimization — the closest floor-to-envelope sandwich stands at
+  ~30×. Two early findings were corrected by later data (both artifacts of the
+  redundant attention channel); the corrections are ledger entries, as designed.
+- **Current phase: the solve-rate sprint** — dev-30 evaluation set (17/30
+  tasks verified), then a joint-episodic trainer (shared bulk + per-task
+  embeddings over the public training split), first pretrain at d=16, and the
+  first real-task solve-rate + flux measurements from the same runs. Generator
+  pretraining and full ARC evaluation follow.
 
 ## Repository map
 
@@ -77,8 +83,8 @@ tools/
   shard_run.sh       chip-parallel sweep launcher
 Documentation/       governing documents (see reading order above), incl.
                      Thesis_Information_Holography.md (claims S1–S4 with
-                     kill conditions), S1_Floors.md (analytic floors),
-                     Reflection_2026-07-29.md (research retrospective)
+                     kill conditions) and S1_Floors.md (analytic floors,
+                     gap decomposition, pre-registered analyses)
 ```
 
 ## Quickstart
