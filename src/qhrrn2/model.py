@@ -39,7 +39,7 @@ class StepOutput(NamedTuple):
 # ── Init ───────────────────────────────────────────────────────────────────
 
 def init_params(key, cfg: Config):
-    ks = list(jax.random.split(key, 20))
+    ks = list(jax.random.split(key, 22))
     d, db = cfg.d, cfg.d_b
     r_dim = cfg.M * cfg.d_code
 
@@ -76,6 +76,12 @@ def init_params(key, cfg: Config):
         # objective._step_loss / train.predict) — extent is observable at
         # predict time, no GT leak; the relative frame is what extrapolates.
         "canvas": {"l1": lin(ks[17], cfg.d_ir + r_dim + 60, 64), "h": lin(ks[18], 64, 30), "w": lin(ks[19], 64, 30)},
+        # C16: task-vector entry points. e_ir biases the rule path (S9-safe);
+        # e_cb is the per-task Amendment-A color bias — h_ir is S9-invariant by
+        # construction, so WITHOUT this path a shared bulk cannot represent
+        # task-specific color constants at all. task_vec=None skips both.
+        "task_proj": {"e_ir": lin(ks[20], cfg.d_task, cfg.d_ir),
+                      "e_cb": lin(ks[21], cfg.d_task, N_FIELDS * d, scale=1e-2)},
     }
 
 
@@ -98,14 +104,20 @@ def _embed(params, fields):
 
 
 def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
-                   rng=None) -> StepOutput:
+                   rng=None, task_vec=None) -> StepOutput:
     """One encode→rule→decode pass on continuous occupancy fields.
 
     fields: (N_FIELDS, CANVAS, CANVAS, 2) float32. Exposed at this level so the
     anti-linearity CI gate can probe the map on arbitrary continuous inputs.
+    task_vec: optional (d_task,) program embedding (C16). None skips the task
+    paths entirely — the pre-C16 compute graph, exactly.
     """
     d, db, S = cfg.d, cfg.d_b, cfg.scales
     z = _embed(params, fields)
+    cb_t = None
+    if task_vec is not None:
+        cb_t = cell._linear(params["task_proj"]["e_cb"], task_vec).reshape(N_FIELDS, d)
+        z = z + cb_t[:, None, None, :]
 
     def split(r):
         return jax.random.split(r) if r is not None else (None, None)
@@ -135,6 +147,8 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     sym = jnp.mean(top[jnp.array(SYMMETRIC_FIELDS)], axis=0)
     h_ir = jax.nn.gelu(cell._linear(params["ir_proj"],
                                     jnp.concatenate([sym, top[0], top[VOID]])))
+    if task_vec is not None:  # C16 entry (i): rule-path bias, color-blind
+        h_ir = h_ir + cell._linear(params["task_proj"]["e_ir"], task_vec)
 
     # Rule slots (C8): tau-annealed categorical attention over the codebook.
     E = params["codebook"]
@@ -151,6 +165,8 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     zd = jnp.broadcast_to(zd, (N_FIELDS, 1, 1, d))
     zd = zd + params["role_emb"][ROLE_OF_FIELD][:, None, None, :]
     zd = zd + params["color_bias"][:, None, None, :]
+    if cb_t is not None:  # C16 entry (ii), decoder side
+        zd = zd + cb_t[:, None, None, :]
     for s in reversed(range(S)):
         s_norm = s / max(S - 1, 1)
         s_onehot = jax.nn.one_hot(s, S)
@@ -198,7 +214,8 @@ def build_fields(x_canvas, yprev_canvas):
     return jnp.stack([fx, fy], axis=-1)
 
 
-def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None) -> list[StepOutput]:
+def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
+            task_vec=None) -> list[StepOutput]:
     """T recursion passes (C9). Feedback is the argmax canvas (detached by
     construction); deep supervision trains every pass."""
     yprev = jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
@@ -209,7 +226,8 @@ def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None) -> list[Step
         if rng is not None:
             rng, step_rng = jax.random.split(rng)
         out = forward_fields(params, cfg, build_fields(x_canvas, yprev),
-                             t_norm=t_norm, tau=tau, rng=step_rng)
+                             t_norm=t_norm, tau=tau, rng=step_rng,
+                             task_vec=task_vec)
         outs.append(out)
         yprev = jnp.argmax(out.logits, axis=-1)
     return outs

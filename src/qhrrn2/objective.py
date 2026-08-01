@@ -41,10 +41,11 @@ def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
     return total, ce_in
 
 
-def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None):
+def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
+              task_vec=None):
     """Deep-supervised loss for one (input, output) pair; mask = true output canvas."""
     mask = y_canvas != VOID
-    outs = iterate(params, cfg, x_canvas, tau=tau, rng=rng)
+    outs = iterate(params, cfg, x_canvas, tau=tau, rng=rng, task_vec=task_vec)
     losses, ces = zip(*(_step_loss(o, x_canvas, y_canvas, mask, cfg) for o in outs))
     return jnp.mean(jnp.stack(losses)), {
         "ce_in_last": ces[-1],
@@ -54,14 +55,27 @@ def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None):
     }
 
 
-def batch_loss(params, cfg: Config, x_batch, y_batch, *, tau: float, rng=None):
-    """Mean pair_loss over a batch of canvases (B, 32, 32)."""
-    if rng is None:
-        keys = None
-        f = lambda x, y: pair_loss(params, cfg, x, y, tau=tau)
-        losses, aux = jax.vmap(f)(x_batch, y_batch)
-    else:
-        keys = jax.random.split(rng, x_batch.shape[0])
-        f = lambda x, y, k: pair_loss(params, cfg, x, y, tau=tau, rng=k)
-        losses, aux = jax.vmap(f)(x_batch, y_batch, keys)
+def batch_loss(params, cfg: Config, x_batch, y_batch, *, tau: float, rng=None,
+               task_vecs=None):
+    """Mean pair_loss over a batch of canvases (B, 32, 32).
+
+    task_vecs: optional (B, d_task) — per-example program embeddings (C16),
+    e.g. table rows gathered for a mixed-task joint batch."""
+    keys = None if rng is None else jax.random.split(rng, x_batch.shape[0])
+    args, axes = [x_batch, y_batch], [0, 0]
+    if keys is not None:
+        args.append(keys); axes.append(0)
+    if task_vecs is not None:
+        args.append(task_vecs); axes.append(0)
+
+    def f(x, y, *rest):
+        i = 0
+        k = tv = None
+        if keys is not None:
+            k = rest[i]; i += 1
+        if task_vecs is not None:
+            tv = rest[i]
+        return pair_loss(params, cfg, x, y, tau=tau, rng=k, task_vec=tv)
+
+    losses, aux = jax.vmap(f, in_axes=tuple(axes))(*args)
     return jnp.mean(losses), jax.tree.map(jnp.mean, aux)

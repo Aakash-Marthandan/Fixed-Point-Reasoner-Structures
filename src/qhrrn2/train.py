@@ -75,9 +75,9 @@ def fit(params, cfg: Config, x_batch, y_batch, *, steps: int, lr: float = 3e-3,
     return params, losses
 
 
-def evaluate_pair(params, cfg: Config, x_grid, y_grid, *, tau: float):
+def evaluate_pair(params, cfg: Config, x_grid, y_grid, *, tau: float, task_vec=None):
     """Exact-match + pixel accuracy of the GT-size-free prediction on one pair."""
-    pred, (ph, pw), _ = predict(params, cfg, x_grid, tau=tau)
+    pred, (ph, pw), _ = predict(params, cfg, x_grid, tau=tau, task_vec=task_vec)
     size_ok = (ph, pw) == tuple(y_grid.shape)
     exact = bool(size_ok and np.array_equal(pred, y_grid))
     if size_ok:
@@ -148,8 +148,10 @@ def _step_and_opt(cfg: Config, lr: float, weight_decay: float, tau: float):
 @functools.lru_cache(maxsize=8)
 def _predict_core(cfg: Config, tau: float):
     @jax.jit
-    def core(params, x_can):
-        outs = iterate(params, cfg, x_can, tau=tau, rng=None)
+    def core(params, x_can, task_vec):
+        # task_vec=None is a valid (empty) pytree: that call traces the exact
+        # pre-C16 graph; a (d_task,) vector traces the task-conditioned one.
+        outs = iterate(params, cfg, x_can, tau=tau, rng=None, task_vec=task_vec)
         last = outs[-1]
         return last.logits, last.size_h, last.size_w
     return core
@@ -170,13 +172,14 @@ def predict_voted(params, cfg: Config, x_grid: np.ndarray, transforms, *, tau: f
     return voted.astype(np.int8), maj_shape
 
 
-def predict(params, cfg: Config, x_grid: np.ndarray, *, tau: float = 1.0):
+def predict(params, cfg: Config, x_grid: np.ndarray, *, tau: float = 1.0,
+            task_vec=None):
     """Deterministic prediction at the SAME tau used in fitting (the first triad
     run predicted at tau=0.05 after fitting at 1.0 — a distribution shift).
     Returns (grid cropped to the PREDICTED canvas, predicted (H, W), full canvas
     argmax) — no ground-truth size anywhere (C1)."""
     x_can = jnp.asarray(G.place(np.asarray(x_grid)), dtype=jnp.int32)
-    logits, size_h, size_w = _predict_core(cfg, tau)(params, x_can)
+    logits, size_h, size_w = _predict_core(cfg, tau)(params, x_can, task_vec)
     canvas = np.asarray(jnp.argmax(logits, axis=-1))
     # Relative size decode (C1 v2): head classes are offsets delta+15 from the
     # input extent — size-preservation extrapolates to unseen extents.

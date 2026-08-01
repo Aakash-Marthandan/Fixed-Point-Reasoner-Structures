@@ -19,6 +19,9 @@ class Config:
     attn_max_hw: int = 32  # attention active when grid side <= this; 32 = all scales
     #                        (C14, Amendment D); 8 = coarse-only (Amendment-B ablation);
     #                        0 = absent (ablation)
+    d_task: int = 32     # per-task program embedding width (C16); the task vector
+    #                      is OPTIONAL at forward time — None reproduces the
+    #                      pre-C16 model exactly
     beta_flux: float = 0.0     # H-4 dial; 0 during Phase-1 trainability gates
     beta_flux_nl: float = 0.0  # C14 wormhole toll on attention flux A_s; 0 in Phase 1
     w_void: float = 0.1      # weight of VOID-region CE relative to canvas region (C1)
