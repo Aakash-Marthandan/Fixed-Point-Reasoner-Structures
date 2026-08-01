@@ -116,10 +116,19 @@ def _stream(process):
 def sync_code(zone: str, dry: bool, with_data: bool):
     print(">>> Sync code")
     sh(gssh(f"mkdir -p {REMOTE_PROJECT}", zone), dry=dry)
-    for item in UPLOADS + (["data/ARC-AGI/data"] if with_data else []):
+    for item in UPLOADS:
         sh(f"gcloud compute tpus tpu-vm scp --recurse {item} "
            f"{TPU_NAME}:{REMOTE_PROJECT}/ --zone={zone} --project={PROJECT}",
            dry=dry)
+    if with_data:
+        # 2026-08-01: recursive scp of ~800 small JSONs blew the 600 s sh()
+        # ceiling (per-file overhead) AND landed at ~/qhrrn2/data — the loader
+        # wants data/ARC-AGI/data relative to repo root. One tar stream fixes
+        # both: single connection, relative paths preserved end-to-end.
+        print(">>> Sync data (tar stream)")
+        sh("tar czf - data/ARC-AGI/data | "
+           + gssh(f"rm -rf {REMOTE_PROJECT}/data && tar xzf - -C {REMOTE_PROJECT}",
+                  zone), dry=dry, timeout=300)
 
 
 def rescue(zone: str, dry: bool):
