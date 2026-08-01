@@ -198,7 +198,11 @@ def main():
             sys.exit("arms A/B/C need --ckpt")
         saved = E.load_ckpt(a.ckpt)
         ckpt_state = saved["state"]
-        cfg = Config(**saved["config"])
+        # Coerce to the dataclass's scalar types: checkpoints written before
+        # the save_ckpt scalar fix carry 0-d ndarrays here (unhashable Config).
+        defaults = Config()
+        cfg = Config(**{k: type(getattr(defaults, k))(v)
+                        for k, v in saved["config"].items()})
     cfg_d = cfg if cfg is not None else Config(d=a.d)
 
     task_ids = (a.tasks.split(",") if a.tasks else sorted(dev30.MANIFEST))

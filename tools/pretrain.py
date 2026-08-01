@@ -128,7 +128,7 @@ def main():
     if latest.exists():
         saved = E.load_ckpt(latest)
         state, opt_state = saved["state"], saved["opt_state"]
-        start_step, rng = saved["step"], jnp.asarray(saved["rng"])
+        start_step, rng = int(saved["step"]), jnp.asarray(saved["rng"])
         print(f"RESUMED from {latest} at step {start_step}", flush=True)
 
     config_rec = {

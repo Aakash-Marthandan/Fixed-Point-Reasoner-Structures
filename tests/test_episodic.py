@@ -176,10 +176,18 @@ def test_joint_smoke_and_checkpoint(tmp_path):
         f"joint loss did not decrease: {losses[:5]} -> {losses[-5:]}")
 
     path = tmp_path / "ckpt.pkl"
-    E.save_ckpt(path, {"state": state, "step": 30})
+    import dataclasses
+    E.save_ckpt(path, {"state": state, "step": 30,
+                       "config": dataclasses.asdict(cfg)})
     loaded = E.load_ckpt(path)
     flat_a = jax.tree.leaves(state)
     flat_b = jax.tree.leaves(loaded["state"])
     assert len(flat_a) == len(flat_b)
     for a, b in zip(flat_a, flat_b):
         assert np.array_equal(np.asarray(a), np.asarray(b))
+    # Scalar metadata must survive as PYTHON scalars (2026-08-01: np.asarray
+    # over the whole payload made Config(**config) unhashable, killing the
+    # lru_cache'd step factories downstream).
+    assert type(loaded["step"]) is int
+    assert all(type(v) in (int, float) for v in loaded["config"].values())
+    assert hash(Config(**loaded["config"])) is not None

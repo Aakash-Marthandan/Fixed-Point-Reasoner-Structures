@@ -133,9 +133,13 @@ def corpus_to_device(corpus: Corpus) -> dict:
 # ── Checkpointing (host-side pickle of pure array pytrees) ──────────────────
 
 def save_ckpt(path, tree):
-    """Pickle a pytree with all leaves pulled to host numpy."""
+    """Pickle a pytree with DEVICE arrays pulled to host numpy. Non-array
+    leaves (ints, floats, strings in metadata like the config dict) pass
+    through untouched — 2026-08-01: np.asarray(16) is an unhashable 0-d
+    array, and a Config rebuilt from such leaves broke lru_cache hashing."""
     import pickle
-    host = jax.tree.map(lambda a: np.asarray(a), tree)
+    host = jax.tree.map(lambda a: np.asarray(a) if isinstance(a, jax.Array) else a,
+                        tree)
     with open(path, "wb") as f:
         pickle.dump(host, f)
 
