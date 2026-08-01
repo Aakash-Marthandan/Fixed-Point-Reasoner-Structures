@@ -25,21 +25,26 @@ ROLE_OF_FIELD = jnp.array([1] + [0] * 9 + [2], dtype=jnp.int32)
 SYMMETRIC_FIELDS = tuple(range(1, NUM_COLORS))  # 1..9
 
 
+N_SIZE_CANDS = 8  # C1-v3: measured size candidates per axis
+
+
 class StepOutput(NamedTuple):
     logits: jax.Array        # (H, W, VOCAB)
-    size_h: jax.Array        # (30,) logits for H_out-1
+    size_h: jax.Array        # (30,) OFFSET logits relative to the selected candidate (C1 v3)
     size_w: jax.Array        # (30,)
     flux: jax.Array          # (scales,) nats per RG cut — I_local (C5)
     flux_attn: jax.Array     # (scales,) nats through nonlocal channels — A_nonlocal (C14);
     #                          index s = enc + dec attention at resolution 32/2^s
     rule_q: jax.Array        # (M, K) slot distributions
     h_ir: jax.Array          # (d_ir,)
+    size_sel_h: jax.Array    # (N_SIZE_CANDS,) candidate-selection logits (C1 v3)
+    size_sel_w: jax.Array    # (N_SIZE_CANDS,)
 
 
 # ── Init ───────────────────────────────────────────────────────────────────
 
 def init_params(key, cfg: Config):
-    ks = list(jax.random.split(key, 22))
+    ks = list(jax.random.split(key, 23))
     d, db = cfg.d, cfg.d_b
     r_dim = cfg.M * cfg.d_code
 
@@ -75,7 +80,12 @@ def init_params(key, cfg: Config):
         # and the heads classify size OFFSETS relative to that extent (see
         # objective._step_loss / train.predict) — extent is observable at
         # predict time, no GT leak; the relative frame is what extrapolates.
-        "canvas": {"l1": lin(ks[17], cfg.d_ir + r_dim + 60, 64), "h": lin(ks[18], 64, 30), "w": lin(ks[19], 64, 30)},
+        # C1 v3 (ledger 2026-08-02): "h"/"w" are OFFSET heads relative to a
+        # SELECTED measured candidate; "sel" picks the candidate per axis.
+        # Selection over measurements extrapolates by construction — v2 is
+        # the special case sel = δ(candidate 0 = input extent).
+        "canvas": {"l1": lin(ks[17], cfg.d_ir + r_dim + 60, 64), "h": lin(ks[18], 64, 30), "w": lin(ks[19], 64, 30),
+                   "sel": lin(ks[22], 64, 2 * N_SIZE_CANDS)},
         # C16: task-vector entry points. e_ir biases the rule path (S9-safe);
         # e_cb is the per-task Amendment-A color bias — h_ir is S9-invariant by
         # construction, so WITHOUT this path a shared bulk cannot represent
@@ -196,6 +206,7 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
 
     hc = jax.nn.gelu(cell._linear(params["canvas"]["l1"],
                                   jnp.concatenate([h_ir, r, extent])))
+    sel = cell._linear(params["canvas"]["sel"], hc)
     return StepOutput(
         logits=logits,
         size_h=cell._linear(params["canvas"]["h"], hc),
@@ -204,7 +215,44 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
         flux_attn=jnp.stack(flux_nl),
         rule_q=jnp.stack(rule_q),
         h_ir=h_ir,
+        size_sel_h=sel[:N_SIZE_CANDS],
+        size_sel_w=sel[N_SIZE_CANDS:],
     )
+
+
+def size_candidates(x_canvas):
+    """C1 v3: the (2, N_SIZE_CANDS) measured size candidates, all observable
+    from the INPUT canvas at predict time (no GT anywhere). Per axis:
+    [own extent, other extent, 2x, 3x, ceil(/2), ceil(/3),
+     occupied lines along the axis, top-color cell count]."""
+    mask = x_canvas != VOID
+    h_in = jnp.sum(jnp.any(mask, axis=1)).astype(jnp.int32)
+    w_in = jnp.sum(jnp.any(mask, axis=0)).astype(jnp.int32)
+    colored = mask & (x_canvas != 0)
+    occ_r = jnp.sum(jnp.any(colored, axis=1)).astype(jnp.int32)
+    occ_c = jnp.sum(jnp.any(colored, axis=0)).astype(jnp.int32)
+    counts = jnp.stack([jnp.sum(x_canvas == c) for c in range(1, NUM_COLORS)])
+    top1 = jnp.max(counts).astype(jnp.int32)
+
+    def axis(a, b, occ):
+        return jnp.stack([a, b, 2 * a, 3 * a, (a + 1) // 2, (a + 2) // 3, occ, top1])
+    cands = jnp.stack([axis(h_in, w_in, occ_r), axis(w_in, h_in, occ_c)])
+    return jnp.clip(cands, 1, 30)
+
+
+def size_mixture_probs(sel_logits, off_logits, cands):
+    """p(out_size = s), s in 1..30: sum_c q_c * p_off(s - cand_c + 15).
+
+    sel_logits (N_SIZE_CANDS,), off_logits (30,), cands (N_SIZE_CANDS,) ->
+    (30,) probabilities over sizes 1..30 (index s-1). Pure function shared by
+    the objective, the decoder, and the C1-v3 expressibility tests."""
+    q = jax.nn.softmax(sel_logits)
+    poff = jax.nn.softmax(off_logits)
+    sizes = jnp.arange(1, 31)                       # (30,)
+    idx = sizes[None, :] - cands[:, None] + 15      # (C, 30) offset index
+    valid = (idx >= 0) & (idx < 30)
+    contrib = jnp.where(valid, jnp.take(poff, jnp.clip(idx, 0, 29)), 0.0)
+    return q @ contrib                              # (30,)
 
 
 def build_fields(x_canvas, yprev_canvas):

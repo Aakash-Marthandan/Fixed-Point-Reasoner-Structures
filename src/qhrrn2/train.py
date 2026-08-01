@@ -18,6 +18,7 @@ jax.config.update("jax_compilation_cache_dir", os.path.abspath(_CACHE))
 jax.config.update("jax_persistent_cache_min_compile_time_secs", 5.0)
 
 from qhrrn2 import grid as G
+from qhrrn2 import model as M
 from qhrrn2.config import Config
 from qhrrn2.model import iterate
 from qhrrn2.objective import batch_loss
@@ -153,7 +154,11 @@ def _predict_core(cfg: Config, tau: float):
         # pre-C16 graph; a (d_task,) vector traces the task-conditioned one.
         outs = iterate(params, cfg, x_can, tau=tau, rng=None, task_vec=task_vec)
         last = outs[-1]
-        return last.logits, last.size_h, last.size_w
+        # C1 v3 decode happens here so callers get final size distributions.
+        cands = M.size_candidates(x_can)
+        p_h = M.size_mixture_probs(last.size_sel_h, last.size_h, cands[0])
+        p_w = M.size_mixture_probs(last.size_sel_w, last.size_w, cands[1])
+        return last.logits, p_h, p_w
     return core
 
 
@@ -179,12 +184,11 @@ def predict(params, cfg: Config, x_grid: np.ndarray, *, tau: float = 1.0,
     Returns (grid cropped to the PREDICTED canvas, predicted (H, W), full canvas
     argmax) — no ground-truth size anywhere (C1)."""
     x_can = jnp.asarray(G.place(np.asarray(x_grid)), dtype=jnp.int32)
-    logits, size_h, size_w = _predict_core(cfg, tau)(params, x_can, task_vec)
+    logits, p_h, p_w = _predict_core(cfg, tau)(params, x_can, task_vec)
     canvas = np.asarray(jnp.argmax(logits, axis=-1))
-    # Relative size decode (C1 v2): head classes are offsets delta+15 from the
-    # input extent — size-preservation extrapolates to unseen extents.
-    h_in, w_in = np.asarray(x_grid).shape
-    h = int(np.clip(h_in + int(jnp.argmax(size_h)) - 15, 1, 30))
-    w = int(np.clip(w_in + int(jnp.argmax(size_w)) - 15, 1, 30))
+    # C1 v3 decode: argmax of the candidate-mixture size distribution
+    # (candidates measured from the input inside the core — no GT anywhere).
+    h = int(jnp.argmax(p_h)) + 1
+    w = int(jnp.argmax(p_w)) + 1
     pred = np.where(canvas[:h, :w] == G.VOID, 0, canvas[:h, :w]).astype(np.int8)
     return pred, (h, w), canvas

@@ -8,7 +8,7 @@ import jax.numpy as jnp
 
 from qhrrn2.config import Config
 from qhrrn2.grid import VOID
-from qhrrn2.model import iterate
+from qhrrn2.model import iterate, size_candidates, size_mixture_probs
 
 
 def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
@@ -19,20 +19,18 @@ def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
     ce_in = jnp.sum(ce_map * mask) / n_in
     ce_out = jnp.sum(ce_map * ~mask) / n_out
 
-    # RELATIVE size targets (C1 v2, ledger 2026-07-27 TPU battery): the heads
-    # classify the OFFSET output-minus-input in [-15, 14] (class = delta + 15).
-    # Absolute classes cannot extrapolate to unseen extents by construction
-    # (one-hot column never trained — measured: query (9,6) -> (4,6));
-    # size-preservation is ONE shared class under this frame.
-    mask_x = x_canvas != VOID
-    h_in = jnp.sum(jnp.any(mask_x, axis=1))
-    w_in = jnp.sum(jnp.any(mask_x, axis=0))
+    # C1 v3 (ledger 2026-08-02): size = mixture over MEASURED candidates,
+    # offsets applied relative to the selected candidate. v2's relative frame
+    # is the candidate-0 slice; content-derived sizes (counting bars, x2/x3
+    # tiling) get their own candidates — selection extrapolates by
+    # construction where absolute classes provably could not.
+    cands = size_candidates(x_canvas)
     h_true = jnp.sum(jnp.any(mask, axis=1))
     w_true = jnp.sum(jnp.any(mask, axis=0))
-    kh = jnp.clip(h_true - h_in + 15, 0, 29)
-    kw = jnp.clip(w_true - w_in + 15, 0, 29)
-    size_ce = (-jax.nn.log_softmax(out.size_h)[kh]
-               - jax.nn.log_softmax(out.size_w)[kw])
+    p_h = size_mixture_probs(out.size_sel_h, out.size_h, cands[0])
+    p_w = size_mixture_probs(out.size_sel_w, out.size_w, cands[1])
+    size_ce = (-jnp.log(p_h[jnp.clip(h_true - 1, 0, 29)] + 1e-9)
+               - jnp.log(p_w[jnp.clip(w_true - 1, 0, 29)] + 1e-9))
 
     total = (ce_in + cfg.w_void * ce_out
              + cfg.lambda_size * size_ce
