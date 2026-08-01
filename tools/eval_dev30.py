@@ -21,6 +21,7 @@ finished (task, arm) pairs are skipped.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import functools
 import json
 import sys
@@ -56,6 +57,9 @@ def parse_args():
     p.add_argument("--wd", type=float, default=1e-4)
     p.add_argument("--tau", type=float, default=1.0)
     p.add_argument("--seed", type=int, default=0)
+    # TTT-time prices (ledger 2026-08-02 val-20 ablation; None = checkpoint cfg)
+    p.add_argument("--beta", type=float, default=None)
+    p.add_argument("--beta-nl", type=float, default=None)
     p.add_argument("--d", type=int, default=16, help="model width for arm D / no-ckpt")
     p.add_argument("--tasks", default=None, help="comma list; default = dev-30")
     return p.parse_args()
@@ -205,6 +209,16 @@ def main():
                         for k, v in saved["config"].items()})
     cfg_d = cfg if cfg is not None else Config(d=a.d)
 
+    if a.beta is not None or a.beta_nl is not None:
+        repl = {}
+        if a.beta is not None:
+            repl["beta_flux"] = a.beta
+        if a.beta_nl is not None:
+            repl["beta_flux_nl"] = a.beta_nl
+        if cfg is not None:
+            cfg = dataclasses.replace(cfg, **repl)
+        cfg_d = dataclasses.replace(cfg_d, **repl)
+
     task_ids = (a.tasks.split(",") if a.tasks else sorted(dev30.MANIFEST))
     fam = {t: dev30.MANIFEST.get(t, ("?", ""))[0] for t in task_ids}
 
@@ -221,7 +235,8 @@ def main():
                               val_every=a.val_every, wd=a.wd, tau=a.tau, seed=a.seed)
                 res.update({"task": task_id, "arm": arm, "family": fam[task_id],
                             "wall_s": round(time.time() - t0, 1),
-                            "steps": a.steps, "seed": a.seed})
+                            "steps": a.steps, "seed": a.seed,
+                            "beta": a.beta, "beta_nl": a.beta_nl})
                 f.write(json.dumps(res) + "\n")
                 f.flush()
                 print(f"{task_id} {fam[task_id]:<22} {arm}: "
