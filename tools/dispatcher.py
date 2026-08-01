@@ -125,9 +125,15 @@ def sync_code(zone: str, dry: bool, with_data: bool):
         # ceiling (per-file overhead) AND landed at ~/qhrrn2/data — the loader
         # wants data/ARC-AGI/data relative to repo root. One tar stream fixes
         # both: single connection, relative paths preserved end-to-end.
+        # Same day, second bite: macOS bsdtar writes mac-metadata PAX entries
+        # that bsdtar's OWN listing hides but GNU tar extracts as literal
+        # ._*.json files (AppleDouble), which the *.json glob then loads.
+        # COPYFILE_DISABLE=1 suppresses them at create; --exclude at extract
+        # is defense in depth against a foreign-made archive.
         print(">>> Sync data (tar stream)")
-        sh("tar czf - data/ARC-AGI/data | "
-           + gssh(f"rm -rf {REMOTE_PROJECT}/data && tar xzf - -C {REMOTE_PROJECT}",
+        sh("COPYFILE_DISABLE=1 tar czf - data/ARC-AGI/data | "
+           + gssh(f"rm -rf {REMOTE_PROJECT}/data && "
+                  f"tar xzf - -C {REMOTE_PROJECT} --exclude \"._*\"",
                   zone), dry=dry, timeout=300)
 
 

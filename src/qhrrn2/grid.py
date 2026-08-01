@@ -189,4 +189,7 @@ def load_task(task_id: str, root: Path = ARC_DATA_ROOT) -> list[Episode]:
 
 
 def list_task_ids(split: str, root: Path = ARC_DATA_ROOT) -> list[str]:
-    return sorted(p.stem for p in (root / split).glob("*.json"))
+    # Hidden-file guard (2026-08-01): a macOS->Linux tar sync materialized
+    # AppleDouble ._*.json companions; task ids are bare hex names only.
+    return sorted(p.stem for p in (root / split).glob("*.json")
+                  if not p.name.startswith("."))
