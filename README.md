@@ -42,7 +42,7 @@ locality in learned solvers.
 The model is deliberately tiny (~49k parameters at the toy operating point;
 target ≤400k), betting that exact structure replaces brute capacity.
 
-## Current status (2026-07-31) — honest and ledger-governed
+## Current status (2026-08-01) — honest and ledger-governed
 
 - **No performance claims live in this README.** Claims belong to the ledger
   until evaluation day (claims are pre-registered
@@ -58,11 +58,18 @@ target ≤400k), betting that exact structure replaces brute capacity.
   architecture-minimization — the closest floor-to-envelope sandwich stands at
   ~30×. Two early findings were corrected by later data (both artifacts of the
   redundant attention channel); the corrections are ledger entries, as designed.
-- **Current phase: the solve-rate sprint** — dev-30 evaluation set (17/30
-  tasks verified), then a joint-episodic trainer (shared bulk + per-task
-  embeddings over the public training split), first pretrain at d=16, and the
-  first real-task solve-rate + flux measurements from the same runs. Generator
-  pretraining and full ARC evaluation follow.
+- **Solve-rate sprint, first full cycle DONE (2026-08-01)**: dev-30 frozen at
+  30/30 (pretraining holdout); joint-episodic trainer built (C16, CI-7 gate
+  green; d=16 bulk = 76,937 params); pretrain-1 (20k steps, 28 min on a
+  v5e-1) and the pre-registered eval-1 both ran the same day. First real
+  solve rates: **2/30 pass@2**, both by boundary-only TTT (one task solved by
+  fitting 32 parameters); pretrained-vs-scratch transfer confirmed on
+  held-out pixel accuracy (20/5 task wins) but exactness — not learning — is
+  the measured bottleneck (ledger 2026-08-01 carries the full critical
+  analysis and the registered next levers). The from-scratch baseline also
+  produced the first real-task flux pathology: ~9.6e11 nats through the free
+  attention channel vs ~1.4e6 for boundary-restricted fits from the
+  pretrained bulk. Generator pretraining and full ARC evaluation follow.
 
 ## Repository map
 
