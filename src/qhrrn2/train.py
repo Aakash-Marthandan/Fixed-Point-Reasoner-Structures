@@ -162,13 +162,15 @@ def _predict_core(cfg: Config, tau: float):
     return core
 
 
-def predict_voted(params, cfg: Config, x_grid: np.ndarray, transforms, *, tau: float = 1.0):
+def predict_voted(params, cfg: Config, x_grid: np.ndarray, transforms, *, tau: float = 1.0,
+                  task_vec=None):
     """Test-time orbit voting (spec §, symmetrization): predict under each
     rule-consistent transform, invert, majority-vote cells among predictions
     that agree with the majority shape."""
     preds = []
     for t in transforms:
-        pred, _, _ = predict(params, cfg, t.apply(np.asarray(x_grid)), tau=tau)
+        pred, _, _ = predict(params, cfg, t.apply(np.asarray(x_grid)), tau=tau,
+                             task_vec=task_vec)
         preds.append(t.invert_output(pred))
     shapes = [p.shape for p in preds]
     maj_shape = max(set(shapes), key=shapes.count)

@@ -63,6 +63,8 @@ def parse_args():
     # TTT-time prices (ledger 2026-08-02 val-20 ablation; None = checkpoint cfg)
     p.add_argument("--beta", type=float, default=None)
     p.add_argument("--beta-nl", type=float, default=None)
+    p.add_argument("--vote", action="store_true",
+                   help="eval-4: D4 orbit voting on attempt 1 (inference only)")
     p.add_argument("--d", type=int, default=16, help="model width for arm D / no-ckpt")
     p.add_argument("--tasks", default=None, help="comma list; default = dev-30")
     return p.parse_args()
@@ -120,7 +122,8 @@ def measure_flux(params, cfg, x_b, y_b, tau, tv):
     return np.asarray(I.mean(0)).tolist(), np.asarray(A.mean(0)).tolist()
 
 
-def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed):
+def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
+            vote=False):
     """LoO/MDL fit of one arm on one task; returns (result dict, per-attempt preds)."""
     support = list(episodes[0].support)
     train_pairs, (val_x, val_y) = support[:-1], support[-1]
@@ -173,9 +176,17 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed):
     per_pair = []
     for ep in episodes:
         bits = []
-        for att in attempts:
-            pred, shape, _ = T.predict(att["model"], cfg, ep.query_x, tau=tau,
-                                       task_vec=tv_of(att))
+        for i_att, att in enumerate(attempts):
+            if vote and i_att == 0:
+                # eval-4 (ledger 2026-08-02): inference-side D4 orbit voting at
+                # the attempt-1 checkpoint — invert-then-vote is rule-consistent
+                # under the joint transform; fit-time supervision untouched.
+                d4 = [G.Transform(k=k) for k in range(8)]
+                pred, shape = T.predict_voted(att["model"], cfg, ep.query_x,
+                                              d4, tau=tau, task_vec=tv_of(att))
+            else:
+                pred, shape, _ = T.predict(att["model"], cfg, ep.query_x, tau=tau,
+                                           task_vec=tv_of(att))
             ok = bool(ep.query_y is not None and shape == ep.query_y.shape
                       and np.array_equal(pred, ep.query_y))
             bits.append(ok)
@@ -250,11 +261,12 @@ def main():
                 use_cfg = cfg_d if arm == "D" else cfg
                 t0 = time.time()
                 res = fit_arm(arm, use_cfg, ckpt_state, episodes, steps=a.steps,
-                              val_every=a.val_every, wd=a.wd, tau=a.tau, seed=a.seed)
+                              val_every=a.val_every, wd=a.wd, tau=a.tau, seed=a.seed,
+                              vote=a.vote)
                 res.update({"task": task_id, "arm": arm, "family": fam[task_id],
                             "wall_s": round(time.time() - t0, 1),
                             "steps": a.steps, "seed": a.seed,
-                            "beta": a.beta, "beta_nl": a.beta_nl})
+                            "beta": a.beta, "beta_nl": a.beta_nl, "vote": a.vote})
                 f.write(json.dumps(res) + "\n")
                 f.flush()
                 print(f"{task_id} {fam[task_id]:<22} {arm}: "
