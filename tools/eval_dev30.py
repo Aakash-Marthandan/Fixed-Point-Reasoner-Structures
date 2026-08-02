@@ -44,7 +44,10 @@ from qhrrn2.config import Config
 from qhrrn2.model import init_params
 from qhrrn2.objective import batch_loss, pair_loss
 
-ARM_LR = {"A": 1e-2, "B": 1e-2, "C": 3e-3, "D": 3e-3}
+ARM_LR = {"A": 1e-2, "B": 1e-2, "B2": 1e-2, "C": 3e-3, "D": 3e-3}
+# B2 (eval-3, ledger 2026-08-02): B + canvas.sel unfrozen — the sel-saturation
+# probe showed the pretrained selection prior never flips through the e_t
+# path; B2 optimizes the ~1k selection logits directly.
 
 
 def parse_args():
@@ -73,7 +76,9 @@ def _label_tree(tree, arm: str):
             return "train"
         if keys and keys[0] == "tv":
             return "train"
-        if arm == "B" and len(keys) >= 2 and keys[1] == "color_bias":
+        if arm in ("B", "B2") and len(keys) >= 2 and keys[1] == "color_bias":
+            return "train"
+        if arm == "B2" and len(keys) >= 3 and keys[1] == "canvas" and keys[2] == "sel":
             return "train"
         return "freeze"
     return jax.tree_util.tree_map_with_path(lab, tree)
@@ -138,6 +143,7 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed):
     rng = jax.random.PRNGKey(seed)
     best = {"trainable": trainable, "val_pix": -1.0, "val_exact": False,
             "step": 0, "loss": float("inf")}
+    first_exact = None  # (trainable, step) at the EARLIEST val-exact checkpoint
     losses, val_curve = [], []
     for i in range(steps):
         rng, sub = jax.random.split(rng)
@@ -147,13 +153,23 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed):
             exact, pix, _ = T.evaluate_pair(trainable["model"], cfg, val_x, val_y,
                                             tau=tau, task_vec=tv_of(trainable))
             val_curve.append((i + 1, round(pix, 4), bool(exact)))
+            if exact and first_exact is None:
+                first_exact = (trainable, i + 1)
             if (exact, pix, -losses[-1]) > (best["val_exact"], best["val_pix"],
                                             -best["loss"]):
                 best = {"trainable": trainable, "val_pix": pix, "val_exact": exact,
                         "step": i + 1, "loss": losses[-1]}
 
-    # Pass@2: attempt 1 = LoO/MDL-selected, attempt 2 = final params.
-    attempts = [best["trainable"], trainable]
+    # Pass@2 (eval-3 rule, ledger 2026-08-02): attempt 1 = EARLIEST-val-exact
+    # checkpoint (eval-2 measured MDL walking past the generalizing solution:
+    # exact@50 -> selected@2000 -> query fail), attempt 2 = MDL-best; fallbacks
+    # keep the eval-1/2 pair when no val-exact checkpoint exists.
+    if first_exact is not None and first_exact[1] != best["step"]:
+        attempts, attempt_rule = [first_exact[0], best["trainable"]], "earliest+mdl"
+    elif first_exact is not None:
+        attempts, attempt_rule = [first_exact[0], trainable], "earliest+final"
+    else:
+        attempts, attempt_rule = [best["trainable"], trainable], "mdl+final"
     per_pair = []
     for ep in episodes:
         bits = []
@@ -169,13 +185,15 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed):
 
     I_sel, A_sel = measure_flux(best["trainable"]["model"], cfg, x_b, y_b, tau,
                                 tv_of(best["trainable"]))
-    first_exact = next((s for s, _, e in val_curve if e), None)
     return {
         "solved_pass2": solved_pass2, "solved_at1": solved_at1,
         "per_pair_bits": per_pair, "best_step": best["step"],
         "best_val_pix": round(best["val_pix"], 4), "best_val_exact": best["val_exact"],
         "train_loss_at_best": round(best["loss"], 5),
-        "steps_to_val_exact": first_exact, "val_curve": val_curve,
+        "attempt_rule": attempt_rule,
+        "first_exact_step": None if first_exact is None else first_exact[1],
+        "steps_to_val_exact": next((s for s, _, e in val_curve if e), None),
+        "val_curve": val_curve,
         "I_s_selected": I_sel, "A_s_selected": A_sel,
     }
 
@@ -197,9 +215,9 @@ def main():
 
     arms = [s.strip().upper() for s in a.arms.split(",") if s.strip()]
     ckpt_state = cfg = None
-    if any(arm in ("A", "B", "C") for arm in arms):
+    if any(arm != "D" for arm in arms):
         if not a.ckpt:
-            sys.exit("arms A/B/C need --ckpt")
+            sys.exit("all arms except D need --ckpt")
         saved = E.load_ckpt(a.ckpt)
         ckpt_state = saved["state"]
         # Coerce to the dataclass's scalar types: checkpoints written before
@@ -229,7 +247,7 @@ def main():
                 if (task_id, arm) in done:
                     print(f"skip {task_id} {arm} (done)", flush=True)
                     continue
-                use_cfg = cfg if arm in ("A", "B", "C") else cfg_d
+                use_cfg = cfg_d if arm == "D" else cfg
                 t0 = time.time()
                 res = fit_arm(arm, use_cfg, ckpt_state, episodes, steps=a.steps,
                               val_every=a.val_every, wd=a.wd, tau=a.tau, seed=a.seed)
