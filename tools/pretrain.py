@@ -59,6 +59,8 @@ def parse_args():
     p.add_argument("--val-every", type=int, default=1000)
     p.add_argument("--log-every", type=int, default=50)
     p.add_argument("--limit", type=int, default=None, help="corpus size cap (smoke)")
+    p.add_argument("--val-ids-file", default=None,
+                   help="json with {'val40': [...]} — explicit val holdout (CC#2)")
     p.add_argument("--smoke", action="store_true")
     return p.parse_args()
 
@@ -103,7 +105,11 @@ def main():
     cfg = Config(d=a.d, K=a.K, T=a.T)
 
     exclude = frozenset(dev30.MANIFEST)
-    corpus, val = E.build_corpus(exclude, n_val=a.n_val, seed=a.seed, limit=a.limit)
+    val_ids = None
+    if a.val_ids_file:
+        val_ids = json.load(open(a.val_ids_file))["val40"]
+    corpus, val = E.build_corpus(exclude, n_val=a.n_val, seed=a.seed, limit=a.limit,
+                                 val_ids=val_ids)
     dev = E.corpus_to_device(corpus)
     n_tasks = len(corpus.task_ids)
     n_pairs = int(corpus.x.shape[0])
