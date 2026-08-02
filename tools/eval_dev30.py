@@ -65,6 +65,8 @@ def parse_args():
     p.add_argument("--beta-nl", type=float, default=None)
     p.add_argument("--vote", action="store_true",
                    help="eval-4: D4 orbit voting on attempt 1 (inference only)")
+    p.add_argument("--save-preds", action="store_true",
+                   help="record predicted grids per attempt (error taxonomy, CC#2 D1)")
     p.add_argument("--d", type=int, default=16, help="model width for arm D / no-ckpt")
     p.add_argument("--tasks", default=None, help="comma list; default = dev-30")
     return p.parse_args()
@@ -123,7 +125,7 @@ def measure_flux(params, cfg, x_b, y_b, tau, tv):
 
 
 def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
-            vote=False):
+            vote=False, save_preds=False):
     """LoO/MDL fit of one arm on one task; returns (result dict, per-attempt preds)."""
     support = list(episodes[0].support)
     train_pairs, (val_x, val_y) = support[:-1], support[-1]
@@ -173,9 +175,10 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
         attempts, attempt_rule = [first_exact[0], trainable], "earliest+final"
     else:
         attempts, attempt_rule = [best["trainable"], trainable], "mdl+final"
-    per_pair = []
+    per_pair, preds_rec = [], []
     for ep in episodes:
         bits = []
+        pair_preds = []
         for i_att, att in enumerate(attempts):
             if vote and i_att == 0:
                 # eval-4 (ledger 2026-08-02): inference-side D4 orbit voting at
@@ -190,7 +193,11 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
             ok = bool(ep.query_y is not None and shape == ep.query_y.shape
                       and np.array_equal(pred, ep.query_y))
             bits.append(ok)
+            if save_preds:
+                pair_preds.append(np.asarray(pred).tolist())
         per_pair.append(bits)
+        if save_preds:
+            preds_rec.append(pair_preds)
     solved_at1 = all(b[0] for b in per_pair)
     solved_pass2 = all(b[0] or b[1] for b in per_pair)
 
@@ -199,6 +206,7 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
     return {
         "solved_pass2": solved_pass2, "solved_at1": solved_at1,
         "per_pair_bits": per_pair, "best_step": best["step"],
+        **({"preds": preds_rec} if save_preds else {}),
         "best_val_pix": round(best["val_pix"], 4), "best_val_exact": best["val_exact"],
         "train_loss_at_best": round(best["loss"], 5),
         "attempt_rule": attempt_rule,
@@ -262,7 +270,7 @@ def main():
                 t0 = time.time()
                 res = fit_arm(arm, use_cfg, ckpt_state, episodes, steps=a.steps,
                               val_every=a.val_every, wd=a.wd, tau=a.tau, seed=a.seed,
-                              vote=a.vote)
+                              vote=a.vote, save_preds=a.save_preds)
                 res.update({"task": task_id, "arm": arm, "family": fam[task_id],
                             "wall_s": round(time.time() - t0, 1),
                             "steps": a.steps, "seed": a.seed,
