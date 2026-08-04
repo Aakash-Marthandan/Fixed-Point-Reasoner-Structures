@@ -3,7 +3,7 @@
 set -e
 V=$(python -c "import json; print(','.join(json.load(open('tools/val40.json'))['val40']))")
 python tools/eval_dev30.py --ckpt runs/pretrain2/ckpt_latest.pkl \
-  --arms A,B --steps 2000 --save-preds --tasks "$V" --out runs/fact_base16
+  --arms A --steps 600 --save-preds --tasks "$V" --out runs/fact2_base16
 python tools/eval_dev30.py --ckpt runs/pretrain3_d24/ckpt_latest.pkl \
-  --arms A,B --steps 2000 --save-preds --tasks "$V" --out runs/fact_d24
+  --arms A --steps 600 --save-preds --tasks "$V" --out runs/fact2_d24
 echo "LANE-B FACTORIAL LEG DONE"
