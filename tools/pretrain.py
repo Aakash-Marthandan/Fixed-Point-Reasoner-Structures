@@ -61,6 +61,7 @@ def parse_args():
     p.add_argument("--limit", type=int, default=None, help="corpus size cap (smoke)")
     p.add_argument("--val-ids-file", default=None,
                    help="json with {'val40': [...]} — explicit val holdout (CC#2)")
+    p.add_argument("--obj", action="store_true", help="C17 cluster layers on")
     p.add_argument("--smoke", action="store_true")
     return p.parse_args()
 
@@ -76,19 +77,29 @@ def git_rev():
 
 def val20_eval(state, cfg, val, tau):
     """Exact-match on held-out QUERY pairs of val tasks, using each task's
-    trained embedding — the within-task generalization monitor (R1 signal)."""
+    trained embedding — the within-task generalization monitor (R1 signal).
+    Also reports CI-8b within-object consistency (C17 gate-collapse early
+    warning, monitored DURING pretraining per the 2026-08-02 registration)."""
+    from taxonomy import within_object_consistency
     n_exact = n_total = 0
     pix_sum = 0.0
+    c_ok = c_tot = 0
     for t, task_id, queries in val:
         tv = state["table"][t]
         for qx, qy in queries:
             exact, pix, _ = T.evaluate_pair(state["model"], cfg, qx, qy,
                                             tau=tau, task_vec=tv)
+            pred, shape, _ = T.predict(state["model"], cfg, qx, tau=tau, task_vec=tv)
+            ok, tot = within_object_consistency(pred, qy)
+            c_ok += ok
+            c_tot += tot
             n_exact += int(exact)
             pix_sum += pix
             n_total += 1
     return {"val_exact": n_exact, "val_total": n_total,
-            "val_pix_mean": pix_sum / max(n_total, 1)}
+            "val_pix_mean": pix_sum / max(n_total, 1),
+            "obj_consistency": round(c_ok / max(c_tot, 1), 4),
+            "obj_consistency_n": c_tot}
 
 
 def main():
@@ -102,7 +113,7 @@ def main():
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    cfg = Config(d=a.d, K=a.K, T=a.T)
+    cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj)
 
     exclude = frozenset(dev30.MANIFEST)
     val_ids = None
@@ -195,7 +206,8 @@ def main():
             metrics_f.write(json.dumps({"val": v}) + "\n")
             metrics_f.flush()
             print(f"  VAL step {i+1}: exact {v['val_exact']}/{v['val_total']} "
-                  f"pix {v['val_pix_mean']:.3f}", flush=True)
+                  f"pix {v['val_pix_mean']:.3f} objcons {v['obj_consistency']:.3f}"
+                  f"(n={v['obj_consistency_n']})", flush=True)
             t_block = time.time()
 
         if (i + 1) % a.ckpt_every == 0 or i + 1 == a.steps:

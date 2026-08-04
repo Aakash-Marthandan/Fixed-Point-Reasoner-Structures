@@ -189,5 +189,5 @@ def test_joint_smoke_and_checkpoint(tmp_path):
     # over the whole payload made Config(**config) unhashable, killing the
     # lru_cache'd step factories downstream).
     assert type(loaded["step"]) is int
-    assert all(type(v) in (int, float) for v in loaded["config"].values())
+    assert all(type(v) in (int, float, bool) for v in loaded["config"].values())
     assert hash(Config(**loaded["config"])) is not None

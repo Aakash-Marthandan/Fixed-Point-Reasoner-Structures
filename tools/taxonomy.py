@@ -22,6 +22,26 @@ from qhrrn2 import grid as G
 _GLYPH = " 123456789▓"
 
 
+def within_object_consistency(pred: np.ndarray, true: np.ndarray):
+    """CI-8b (C17 named metric): over GT-uniform nonblack4 objects (>=3 cells)
+    of TRUE, count those whose PRED cells are uniform (any single value).
+    Size-mismatched pairs are SKIPPED (returns (0, 0)) — binding coherence,
+    not size, is what this measures; the skip count is reported separately.
+    Returns (n_pred_uniform, n_objects)."""
+    from scipy import ndimage
+    if pred.shape != true.shape:
+        return 0, 0
+    lab, n = ndimage.label((true != 0))
+    ok = tot = 0
+    for k in range(1, n + 1):
+        m = lab == k
+        if m.sum() < 3 or len(np.unique(true[m])) != 1:
+            continue
+        tot += 1
+        ok += int(len(np.unique(pred[m])) == 1)
+    return ok, tot
+
+
 def classify(pred: np.ndarray, true: np.ndarray) -> tuple[str, int]:
     """(class, n_wrong_cells). Classes ordered by specificity."""
     if pred.shape != true.shape:

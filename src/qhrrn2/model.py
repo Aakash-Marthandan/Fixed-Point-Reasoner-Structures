@@ -16,6 +16,7 @@ import jax
 import jax.numpy as jnp
 
 from qhrrn2 import cell
+from qhrrn2 import objects as OBJ
 from qhrrn2.config import Config
 from qhrrn2.grid import CANVAS, NUM_COLORS, VOCAB, VOID
 
@@ -26,6 +27,13 @@ SYMMETRIC_FIELDS = tuple(range(1, NUM_COLORS))  # 1..9
 
 
 N_SIZE_CANDS = 8  # C1-v3: measured size candidates per axis
+# C17 stream layout: encoder aggregates over the 3 input segmentations;
+# decoder over the same 3 plus the model's own yprev (nonblack4) — the
+# shared-per-object variable on the OUTPUT side, per recursion step.
+OBJ_ENC_MODES = ("color4", "color8", "nonblack4")
+OBJ_DEC_MODES = ("color4", "color8", "nonblack4", "yprev")
+N_OBJ_STREAMS = len(OBJ_ENC_MODES) + len(OBJ_DEC_MODES)
+D_OBJ = 6  # VIB message width per cluster stream (C14 convention)
 
 
 class StepOutput(NamedTuple):
@@ -39,12 +47,13 @@ class StepOutput(NamedTuple):
     h_ir: jax.Array          # (d_ir,)
     size_sel_h: jax.Array    # (N_SIZE_CANDS,) candidate-selection logits (C1 v3)
     size_sel_w: jax.Array    # (N_SIZE_CANDS,)
+    flux_obj: jax.Array      # (N_OBJ_STREAMS,) nats through cluster channels (C17)
 
 
 # ── Init ───────────────────────────────────────────────────────────────────
 
 def init_params(key, cfg: Config):
-    ks = list(jax.random.split(key, 23))
+    ks = list(jax.random.split(key, 24))
     d, db = cfg.d, cfg.d_b
     r_dim = cfg.M * cfg.d_code
 
@@ -92,7 +101,31 @@ def init_params(key, cfg: Config):
         # task-specific color constants at all. task_vec=None skips both.
         "task_proj": {"e_ir": lin(ks[20], cfg.d_task, cfg.d_ir),
                       "e_cb": lin(ks[21], cfg.d_task, N_FIELDS * d, scale=1e-2)},
-    }
+    } | _init_obj(ks[23], cfg, d, r_dim, lin)
+
+
+def _init_obj(key, cfg: Config, d, r_dim, lin):
+    """C17 cluster streams. VIB emission (d -> 2*D_OBJ) + small return
+    (D_OBJ -> d, scale 1e-2) per stream; gates INIT OPEN (bias +2 — the
+    sel-saturation lesson: closed priors never reopen under TTT)."""
+    if not cfg.use_obj:
+        return {}
+    kk = list(jax.random.split(key, 2 * N_OBJ_STREAMS + 2))
+    streams = []
+    for i in range(N_OBJ_STREAMS):
+        streams.append({
+            "vib": lin(kk[2 * i], d, 2 * D_OBJ),
+            "out": lin(kk[2 * i + 1], D_OBJ, d, scale=1e-2),
+        })
+    return {"obj": {
+        "streams": streams,
+        # encoder gates see the task vector (rule code not yet computed);
+        # decoder gates see the rule vector r
+        "gate_enc": {"w": jax.random.normal(kk[-2], (len(OBJ_ENC_MODES), cfg.d_task)) * 0.1,
+                     "b": jnp.full((len(OBJ_ENC_MODES),), 2.0)},
+        "gate_dec": {"w": jax.random.normal(kk[-1], (len(OBJ_DEC_MODES), r_dim)) * 0.1,
+                     "b": jnp.full((len(OBJ_DEC_MODES),), 2.0)},
+    }}
 
 
 def count_params(tree) -> int:
@@ -113,14 +146,32 @@ def _embed(params, fields):
     return z
 
 
+def _obj_stream(p_s, z, labels, rng):
+    """C17: component-mean -> VIB emission -> small return. The KL is the
+    stream's I_object contribution (same variational status as I_s/A_s).
+    log_sigma clipped to the house bounds (cell.py C5/C14 convention) —
+    unbounded logs overflowed exp() at decoder magnitudes (found at smoke)."""
+    agg = OBJ.component_mean(z, labels)
+    mu_ls = cell._linear(p_s["vib"], agg)
+    mu = mu_ls[..., :D_OBJ]
+    log_sigma = jnp.clip(mu_ls[..., D_OBJ:], -6.0, 2.0)
+    if rng is not None:
+        b = mu + jnp.exp(log_sigma) * jax.random.normal(rng, mu.shape)
+    else:
+        b = mu
+    return cell._linear(p_s["out"], b), cell.stream_kl(mu, log_sigma)
+
+
 def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
-                   rng=None, task_vec=None) -> StepOutput:
+                   rng=None, task_vec=None, labels_obj=None) -> StepOutput:
     """One encode→rule→decode pass on continuous occupancy fields.
 
     fields: (N_FIELDS, CANVAS, CANVAS, 2) float32. Exposed at this level so the
     anti-linearity CI gate can probe the map on arbitrary continuous inputs.
     task_vec: optional (d_task,) program embedding (C16). None skips the task
     paths entirely — the pre-C16 compute graph, exactly.
+    labels_obj: C17 label maps {mode: (H, W) int32} incl. "yprev"; required
+    when cfg.use_obj (iterate supplies them), ignored otherwise.
     """
     d, db, S = cfg.d, cfg.d_b, cfg.scales
     z = _embed(params, fields)
@@ -128,6 +179,20 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     if task_vec is not None:
         cb_t = cell._linear(params["task_proj"]["e_cb"], task_vec).reshape(N_FIELDS, d)
         z = z + cb_t[:, None, None, :]
+
+    flux_obj = [jnp.zeros(())] * N_OBJ_STREAMS
+    use_obj = cfg.use_obj and labels_obj is not None
+    if use_obj:  # C17 encoder side: shared per-object variables on the input
+        ge = params["obj"]["gate_enc"]
+        g_enc = jax.nn.sigmoid(ge["b"] + (ge["w"] @ task_vec if task_vec is not None
+                                          else jnp.zeros((len(OBJ_ENC_MODES),))))
+        for i, mode in enumerate(OBJ_ENC_MODES):
+            sub = None
+            if rng is not None:
+                rng, sub = jax.random.split(rng)
+            upd, kl = _obj_stream(params["obj"]["streams"][i], z, labels_obj[mode], sub)
+            z = z + g_enc[i] * upd
+            flux_obj[i] = kl
 
     def split(r):
         return jax.random.split(r) if r is not None else (None, None)
@@ -192,6 +257,19 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
             flux_nl[s] = flux_nl[s] + a_s
         zd = cell.film(zd, gammas[1], betas[1])
 
+    if use_obj:  # C17 decoder side: one-decision-per-object where output lands
+        gd = params["obj"]["gate_dec"]
+        g_dec = jax.nn.sigmoid(gd["b"] + gd["w"] @ r)
+        n_e = len(OBJ_ENC_MODES)
+        for j, mode in enumerate(OBJ_DEC_MODES):
+            sub = None
+            if rng is not None:
+                rng, sub = jax.random.split(rng)
+            upd, kl = _obj_stream(params["obj"]["streams"][n_e + j], zd,
+                                  labels_obj[mode], sub)
+            zd = zd + g_dec[j] * upd
+            flux_obj[n_e + j] = kl
+
     # Equivariant readout: shared vector + role bias -> (H, W, N_FIELDS) logits.
     logits = jnp.einsum("chwd,d->chw", zd, params["readout"]["w"])
     logits = logits + params["readout"]["role_b"][ROLE_OF_FIELD][:, None, None]
@@ -217,6 +295,7 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
         h_ir=h_ir,
         size_sel_h=sel[:N_SIZE_CANDS],
         size_sel_w=sel[N_SIZE_CANDS:],
+        flux_obj=jnp.stack(flux_obj),
     )
 
 
@@ -267,15 +346,21 @@ def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
     """T recursion passes (C9). Feedback is the argmax canvas (detached by
     construction); deep supervision trains every pass."""
     yprev = jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
+    labs_x = None
+    if cfg.use_obj:  # input segmentations are iteration-invariant
+        labs_x = {m: OBJ.connected_components(x_canvas, m) for m in OBJ_ENC_MODES}
     outs = []
     for t in range(cfg.T):
         t_norm = t / max(cfg.T - 1, 1)
         step_rng = None
         if rng is not None:
             rng, step_rng = jax.random.split(rng)
+        labels_obj = None
+        if cfg.use_obj:  # yprev re-segmented each step: cohere what was painted
+            labels_obj = labs_x | {"yprev": OBJ.connected_components(yprev, "nonblack4")}
         out = forward_fields(params, cfg, build_fields(x_canvas, yprev),
                              t_norm=t_norm, tau=tau, rng=step_rng,
-                             task_vec=task_vec)
+                             task_vec=task_vec, labels_obj=labels_obj)
         outs.append(out)
         yprev = jnp.argmax(out.logits, axis=-1)
     return outs
