@@ -41,10 +41,11 @@ def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
 
 
 def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
-              task_vec=None):
+              task_vec=None, labels_x=None):
     """Deep-supervised loss for one (input, output) pair; mask = true output canvas."""
     mask = y_canvas != VOID
-    outs = iterate(params, cfg, x_canvas, tau=tau, rng=rng, task_vec=task_vec)
+    outs = iterate(params, cfg, x_canvas, tau=tau, rng=rng, task_vec=task_vec,
+                   labels_x=labels_x)
     losses, ces = zip(*(_step_loss(o, x_canvas, y_canvas, mask, cfg) for o in outs))
     return jnp.mean(jnp.stack(losses)), {
         "ce_in_last": ces[-1],
@@ -56,26 +57,33 @@ def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
 
 
 def batch_loss(params, cfg: Config, x_batch, y_batch, *, tau: float, rng=None,
-               task_vecs=None):
+               task_vecs=None, labels_x=None):
     """Mean pair_loss over a batch of canvases (B, 32, 32).
 
     task_vecs: optional (B, d_task) — per-example program embeddings (C16),
-    e.g. table rows gathered for a mixed-task joint batch."""
+    e.g. table rows gathered for a mixed-task joint batch.
+    labels_x: optional (B, 3, 32, 32) precomputed input segmentations (C17
+    speed pipeline) in OBJ_ENC_MODES order."""
     keys = None if rng is None else jax.random.split(rng, x_batch.shape[0])
     args, axes = [x_batch, y_batch], [0, 0]
     if keys is not None:
         args.append(keys); axes.append(0)
     if task_vecs is not None:
         args.append(task_vecs); axes.append(0)
+    if labels_x is not None:
+        args.append(labels_x); axes.append(0)
 
     def f(x, y, *rest):
         i = 0
-        k = tv = None
+        k = tv = lx = None
         if keys is not None:
             k = rest[i]; i += 1
         if task_vecs is not None:
-            tv = rest[i]
-        return pair_loss(params, cfg, x, y, tau=tau, rng=k, task_vec=tv)
+            tv = rest[i]; i += 1
+        if labels_x is not None:
+            lx = rest[i]
+        return pair_loss(params, cfg, x, y, tau=tau, rng=k, task_vec=tv,
+                         labels_x=lx)
 
     losses, aux = jax.vmap(f, in_axes=tuple(axes))(*args)
     return jnp.mean(losses), jax.tree.map(jnp.mean, aux)

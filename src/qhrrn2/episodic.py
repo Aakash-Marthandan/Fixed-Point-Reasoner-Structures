@@ -102,11 +102,27 @@ def init_table(key, n_tasks: int, d_task: int):
     return jax.random.normal(key, (n_tasks, d_task)) * 0.1
 
 
+def precompute_labels(corpus: Corpus) -> jnp.ndarray:
+    """(P, 3, 32, 32) input segmentations in OBJ_ENC_MODES order, computed
+    once at startup (speed pipeline 2026-08-02: labels depend only on the
+    sample; recomputing them per training step was the C17 5x tax)."""
+    from qhrrn2.model import OBJ_ENC_MODES
+    from qhrrn2.objects import connected_components
+
+    @jax.jit
+    def one(x):
+        return jnp.stack([connected_components(x, m) for m in OBJ_ENC_MODES])
+    return jax.lax.map(one, jnp.asarray(corpus.x))
+
+
 def sample_batch(rng, corpus_dev: dict, n_tasks: int, batch: int):
     """Task-balanced batch with placement augmentation, fully on device.
 
-    corpus_dev: the Corpus arrays as jnp (x, y, starts, bound_h, bound_w).
-    Returns (x_b, y_b, t_b) — canvases rolled to a valid random offset.
+    corpus_dev: the Corpus arrays as jnp (x, y, starts, bound_h, bound_w),
+    plus optional "labels" (P, 3, 32, 32) from precompute_labels.
+    Returns (x_b, y_b, t_b, labels_b_or_None) — canvases AND labels rolled by
+    the same offset: rolled labels remain valid partitions (segment ids need
+    uniqueness, not canonicality; all pre-roll ids are distinct).
     """
     k_task, k_pair, k_oy, k_ox = jax.random.split(rng, 4)
     t_b = jax.random.randint(k_task, (batch,), 0, n_tasks)
@@ -127,7 +143,12 @@ def sample_batch(rng, corpus_dev: dict, n_tasks: int, batch: int):
                 jnp.roll(y, (dy, dx), axis=(0, 1)))
 
     x_b, y_b = jax.vmap(roll)(x_b, y_b, oy, ox)
-    return x_b, y_b, t_b
+    labels_b = None
+    if "labels" in corpus_dev:
+        lab = corpus_dev["labels"][p_b]
+        labels_b = jax.vmap(lambda l, dy, dx: jnp.roll(l, (dy, dx), axis=(1, 2)))(
+            lab, oy, ox)
+    return x_b, y_b, t_b, labels_b
 
 
 def corpus_to_device(corpus: Corpus) -> dict:

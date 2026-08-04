@@ -144,8 +144,9 @@ def rescue(zone: str, dry: bool):
     try:
         sh(gssh(f"cd {REMOTE_PROJECT} && tar czf /tmp/qhrrn2_runs.tgz runs "
                 "2>/dev/null || true", zone), dry=dry, check=False, timeout=120)
+        # fleet mode: rescue files carry the VM name so lanes never collide
         sh(f"gcloud compute tpus tpu-vm scp {TPU_NAME}:/tmp/qhrrn2_runs.tgz "
-           f"runs/cloud/{stamp}.tgz --zone={zone} --project={PROJECT}",
+           f"runs/cloud/{TPU_NAME}-{stamp}.tgz --zone={zone} --project={PROJECT}",
            dry=dry, check=False, timeout=120)
     except Exception as e:  # rescue must never block anything
         print(f"  WARNING: rescue failed: {e}")
@@ -327,6 +328,13 @@ def cmd_status(args) -> int:
     state = vm_state(args.zone)
     print(f"status: {TPU_NAME} in {args.zone}: "
           + (f"state={state}" if state else "not found"))
+    # fleet awareness: teardown vigilance must see EVERY lane, not just --name
+    r = subprocess.run(
+        f"gcloud compute tpus tpu-vm list --zone={args.zone} --project={PROJECT} "
+        "--format='value(name,state)'", shell=True, capture_output=True, text=True)
+    fleet = [l for l in r.stdout.strip().splitlines() if l]
+    print(f"fleet: {len(fleet)} VM(s) in {args.zone}"
+          + (": " + "; ".join(fleet) if fleet else ""))
     return 0
 
 
@@ -344,12 +352,16 @@ def cmd_cycle(args) -> int:
 
 
 def main():
+    global TPU_NAME
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="verb", required=True)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--zone", default=DEFAULT_ZONE)
     common.add_argument("--dry-run", action="store_true")
+    common.add_argument("--name", default=TPU_NAME,
+                        help="VM name (fleet mode 2026-08-02: run several "
+                             "lanes concurrently, e.g. qhrrn2-a/-b/-c)")
     up_like = argparse.ArgumentParser(add_help=False)
     up_like.add_argument("--accelerator", default=DEFAULT_ACCEL)
     up_like.add_argument("--on-demand", action="store_true", help="disable --spot")
@@ -370,6 +382,7 @@ def main():
     sub.add_parser("cycle", parents=[common, up_like, run_like])
 
     args = ap.parse_args()
+    TPU_NAME = args.name  # every helper reads the module global
     sys.exit({"up": cmd_up, "run": cmd_run, "down": cmd_down,
               "status": cmd_status, "cycle": cmd_cycle}[args.verb](args))
 

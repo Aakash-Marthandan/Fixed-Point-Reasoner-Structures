@@ -131,7 +131,7 @@ def test_sample_batch_valid_and_balanced():
     corpus, _ = E.build_corpus(frozenset(), n_val=0, seed=0, limit=12)
     dev = E.corpus_to_device(corpus)
     n = len(corpus.task_ids)
-    x_b, y_b, t_b = E.sample_batch(jax.random.PRNGKey(0), dev, n, 256)
+    x_b, y_b, t_b, _ = E.sample_batch(jax.random.PRNGKey(0), dev, n, 256)
     t_np = np.asarray(t_b)
     assert t_np.min() >= 0 and t_np.max() < n
     assert len(np.unique(t_np)) > n // 2, "task-balanced sampling looks degenerate"
@@ -157,7 +157,7 @@ def test_joint_smoke_and_checkpoint(tmp_path):
     @jax.jit
     def step(state, opt_state, rng):
         k_batch, k_loss = jax.random.split(rng)
-        x_b, y_b, t_b = E.sample_batch(k_batch, dev, n, 8)
+        x_b, y_b, t_b, _ = E.sample_batch(k_batch, dev, n, 8)
 
         def loss_fn(st):
             return batch_loss(st["model"], cfg, x_b, y_b, tau=1.0, rng=k_loss,

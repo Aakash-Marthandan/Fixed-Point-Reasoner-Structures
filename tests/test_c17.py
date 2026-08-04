@@ -61,6 +61,27 @@ def test_c17_channel_live(params_obj):
     assert float(jnp.sum(out_a.flux_obj)) > 0.0, "cluster VIB emitting zero information"
 
 
+def test_c17_precomputed_labels_match_ingraph():
+    """Speed-pipeline keystone: precomputed + ROLLED labels must produce the
+    SAME loss as in-graph segmentation of the rolled canvas (partitions are
+    roll-covariant; ids non-canonical but unique)."""
+    from qhrrn2 import episodic as E
+    from qhrrn2.objective import pair_loss
+
+    corpus, _ = E.build_corpus(frozenset(), n_val=0, seed=0, limit=3)
+    dev = E.corpus_to_device(corpus)
+    dev["labels"] = E.precompute_labels(corpus)
+    params = init_params(jax.random.PRNGKey(0), CFG_OBJ)
+    x_b, y_b, t_b, lab_b = E.sample_batch(jax.random.PRNGKey(7), dev,
+                                          len(corpus.task_ids), 4)
+    for i in range(4):
+        l_pre, _ = pair_loss(params, CFG_OBJ, x_b[i], y_b[i], tau=1.0,
+                             labels_x=lab_b[i])
+        l_ing, _ = pair_loss(params, CFG_OBJ, x_b[i], y_b[i], tau=1.0)
+        assert abs(float(l_pre) - float(l_ing)) < 1e-5, (
+            f"precomputed labels change the loss: {float(l_pre)} vs {float(l_ing)}")
+
+
 def test_c17_off_is_base_graph():
     p_base = init_params(jax.random.PRNGKey(0), CFG_BASE)
     assert "obj" not in p_base

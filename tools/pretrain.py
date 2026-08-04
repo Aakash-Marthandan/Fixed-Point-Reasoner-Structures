@@ -160,14 +160,21 @@ def main():
     print(f"corpus: {n_tasks} tasks / {n_pairs} pairs; params bulk={n_bulk} "
           f"table={n_table}; backend={jax.default_backend()}", flush=True)
 
+    if cfg.use_obj:
+        t0 = time.time()
+        dev["labels"] = E.precompute_labels(corpus)
+        dev["labels"].block_until_ready()
+        print(f"labels precomputed for {n_pairs} pairs in {time.time()-t0:.1f}s",
+              flush=True)
+
     @jax.jit
     def step_fn(state, opt_state, rng):
         rng, k_batch, k_loss = jax.random.split(rng, 3)
-        x_b, y_b, t_b = E.sample_batch(k_batch, dev, n_tasks, a.batch)
+        x_b, y_b, t_b, lab_b = E.sample_batch(k_batch, dev, n_tasks, a.batch)
 
         def loss_fn(st):
             return batch_loss(st["model"], cfg, x_b, y_b, tau=a.tau, rng=k_loss,
-                              task_vecs=st["table"][t_b])
+                              task_vecs=st["table"][t_b], labels_x=lab_b)
         (loss, aux), grads = jax.value_and_grad(loss_fn, has_aux=True)(state)
         updates, opt_state2 = opt.update(grads, opt_state, state)
         return optax.apply_updates(state, updates), opt_state2, loss, aux, rng

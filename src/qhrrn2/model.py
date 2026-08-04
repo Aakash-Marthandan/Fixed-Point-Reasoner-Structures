@@ -342,13 +342,22 @@ def build_fields(x_canvas, yprev_canvas):
 
 
 def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
-            task_vec=None) -> list[StepOutput]:
+            task_vec=None, labels_x=None) -> list[StepOutput]:
     """T recursion passes (C9). Feedback is the argmax canvas (detached by
     construction); deep supervision trains every pass."""
     yprev = jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
     labs_x = None
-    if cfg.use_obj:  # input segmentations are iteration-invariant
-        labs_x = {m: OBJ.connected_components(x_canvas, m) for m in OBJ_ENC_MODES}
+    if cfg.use_obj:
+        if labels_x is not None:
+            # Precomputed input segmentations (speed pipeline, 2026-08-02):
+            # (3, H, W) stacked in OBJ_ENC_MODES order. Rolled labels are valid
+            # partitions — segment ids need uniqueness, not canonicality.
+            labs_x = {m: labels_x[i] for i, m in enumerate(OBJ_ENC_MODES)}
+        else:  # eval/TTT path: segment in-graph, iteration-invariant
+            labs_x = {m: OBJ.connected_components(x_canvas, m) for m in OBJ_ENC_MODES}
+    # t=0 feedback is all-VOID: every cell a singleton — aggregation is the
+    # identity by construction, so skip the (expensive) in-graph CC there.
+    identity_labels = jnp.arange(CANVAS * CANVAS, dtype=jnp.int32).reshape(CANVAS, CANVAS)
     outs = []
     for t in range(cfg.T):
         t_norm = t / max(cfg.T - 1, 1)
@@ -357,7 +366,8 @@ def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
             rng, step_rng = jax.random.split(rng)
         labels_obj = None
         if cfg.use_obj:  # yprev re-segmented each step: cohere what was painted
-            labels_obj = labs_x | {"yprev": OBJ.connected_components(yprev, "nonblack4")}
+            lab_y = identity_labels if t == 0 else OBJ.connected_components(yprev, "nonblack4")
+            labels_obj = labs_x | {"yprev": lab_y}
         out = forward_fields(params, cfg, build_fields(x_canvas, yprev),
                              t_norm=t_norm, tau=tau, rng=step_rng,
                              task_vec=task_vec, labels_obj=labels_obj)
