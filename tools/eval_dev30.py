@@ -53,6 +53,9 @@ ARM_LR = {"A": 1e-2, "B": 1e-2, "B2": 1e-2, "C": 3e-3, "D": 3e-3}
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--ckpt", default=None, help="pretrain checkpoint (arms A/B/C)")
+    p.add_argument("--ckpt2", default=None,
+                   help="secondary bulk for the layered two-prior protocol "
+                        "(eval-5); implies arm L replacing --arms")
     p.add_argument("--arms", default="A,B,C,D")
     p.add_argument("--out", required=True)
     p.add_argument("--steps", type=int, default=600)
@@ -128,9 +131,9 @@ def measure_flux(params, cfg, x_b, y_b, tau, tv):
     return np.asarray(I.mean(0)).tolist(), np.asarray(A.mean(0)).tolist()
 
 
-def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
-            vote=False, save_preds=False, alt_size=False):
-    """LoO/MDL fit of one arm on one task; returns (result dict, per-attempt preds)."""
+def _fit(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed):
+    """The fitting core: LoO-validated arm fit. Returns a dict with the
+    earliest-exact/best/final trainables, curves, and tv accessor."""
     support = list(episodes[0].support)
     train_pairs, (val_x, val_y) = support[:-1], support[-1]
     x_b, y_b = T.pairs_to_batch(train_pairs, transforms=None, seed=seed)
@@ -168,6 +171,19 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
                                             -best["loss"]):
                 best = {"trainable": trainable, "val_pix": pix, "val_exact": exact,
                         "step": i + 1, "loss": losses[-1]}
+    return {"best": best, "first_exact": first_exact, "final": trainable,
+            "losses": losses, "val_curve": val_curve, "tv_of": tv_of,
+            "x_b": x_b, "y_b": y_b}
+
+
+def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
+            vote=False, save_preds=False, alt_size=False):
+    """LoO/MDL fit of one arm on one task; returns (result dict, per-attempt preds)."""
+    F = _fit(arm, cfg, ckpt_state, episodes, steps=steps, val_every=val_every,
+             wd=wd, tau=tau, seed=seed)
+    best, first_exact, trainable = F["best"], F["first_exact"], F["final"]
+    losses, val_curve, tv_of = F["losses"], F["val_curve"], F["tv_of"]
+    x_b, y_b = F["x_b"], F["y_b"]
 
     # Pass@2 (eval-3 rule, ledger 2026-08-02): attempt 1 = EARLIEST-val-exact
     # checkpoint (eval-2 measured MDL walking past the generalizing solution:
@@ -238,6 +254,67 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
     }
 
 
+def fit_task_layered(cfg1, state1, cfg2, state2, episodes, *, steps, val_every,
+                     wd, tau, seed, save_preds=False):
+    """Eval-5 layered two-prior pass@2 (ledger 2026-08-05): attempt 1 = the
+    PRIMARY bulk's earliest-exact/MDL checkpoint at primary size; attempt 2 =
+    the SECONDARY bulk's prediction IF its fit reached LoO-exactness, ELSE the
+    primary's runner-up-size variant, ELSE the primary MDL/final prediction."""
+    F1 = _fit("A", cfg1, state1, episodes, steps=steps, val_every=val_every,
+              wd=wd, tau=tau, seed=seed)
+    F2 = _fit("A", cfg2, state2, episodes, steps=steps, val_every=val_every,
+              wd=wd, tau=tau, seed=seed)
+    tr1 = F1["first_exact"][0] if F1["first_exact"] else F1["best"]["trainable"]
+    tr1_rule = "earliest" if F1["first_exact"] else "mdl"
+
+    per_pair, preds_rec, att2_rules = [], [], []
+    for ep in episodes:
+        p1, s1, p1a, s1a = T.predict_alt_size(tr1["model"], cfg1, ep.query_x,
+                                              tau=tau, task_vec=F1["tv_of"](tr1))
+        if F2["first_exact"] is not None:
+            tr2 = F2["first_exact"][0]
+            p2, s2, _, _ = T.predict_alt_size(tr2["model"], cfg2, ep.query_x,
+                                              tau=tau, task_vec=F2["tv_of"](tr2))
+            rule2 = "bulk2-earliest"
+        elif p1a is not None:
+            p2, s2, rule2 = p1a, s1a, "alt-size"
+        else:
+            b = F1["best"]["trainable"]
+            p2, s2, _ = T.predict(b["model"], cfg1, ep.query_x, tau=tau,
+                                  task_vec=F1["tv_of"](b))
+            s2 = tuple(p2.shape)
+            rule2 = "mdl-fallback"
+        att2_rules.append(rule2)
+        bits = []
+        for pred, shape in ((p1, s1), (p2, s2)):
+            ok = bool(ep.query_y is not None and tuple(shape) == ep.query_y.shape
+                      and np.array_equal(pred, ep.query_y))
+            bits.append(ok)
+        per_pair.append(bits)
+        if save_preds:
+            preds_rec.append([np.asarray(p1).tolist(), np.asarray(p2).tolist()])
+
+    I_sel, A_sel = measure_flux(tr1["model"], cfg1, F1["x_b"], F1["y_b"], tau,
+                                F1["tv_of"](tr1))
+    return {
+        "solved_pass2": all(b[0] or b[1] for b in per_pair),
+        "solved_at1": all(b[0] for b in per_pair),
+        "per_pair_bits": per_pair,
+        **({"preds": preds_rec} if save_preds else {}),
+        "attempt_rule": f"{tr1_rule}+{'/'.join(att2_rules)}",
+        "first_exact_step": None if F1["first_exact"] is None else F1["first_exact"][1],
+        "bulk2_first_exact_step": None if F2["first_exact"] is None else F2["first_exact"][1],
+        "best_step": F1["best"]["step"],
+        "best_val_pix": round(F1["best"]["val_pix"], 4),
+        "best_val_exact": F1["best"]["val_exact"],
+        "bulk2_best_val_pix": round(F2["best"]["val_pix"], 4),
+        "train_loss_at_best": round(F1["best"]["loss"], 5),
+        "steps_to_val_exact": next((s for s, _, e in F1["val_curve"] if e), None),
+        "val_curve": F1["val_curve"],
+        "I_s_selected": I_sel, "A_s_selected": A_sel,
+    }
+
+
 def main():
     a = parse_args()
     out = Path(a.out)
@@ -254,17 +331,26 @@ def main():
                 pass
 
     arms = [s.strip().upper() for s in a.arms.split(",") if s.strip()]
-    ckpt_state = cfg = None
+
+    def _load(path):
+        saved = E.load_ckpt(path)
+        defaults = Config()
+        # Coerce to the dataclass's scalar types: checkpoints written before
+        # the save_ckpt scalar fix carry 0-d ndarrays here (unhashable Config).
+        c = Config(**{k: type(getattr(defaults, k))(v)
+                      for k, v in saved["config"].items()})
+        return saved["state"], c
+
+    ckpt_state = cfg = state2 = cfg2 = None
+    if a.ckpt2:
+        arms = ["L"]  # layered two-prior protocol (eval-5)
+        if not a.ckpt:
+            sys.exit("--ckpt2 needs --ckpt (primary bulk)")
+        state2, cfg2 = _load(a.ckpt2)
     if any(arm != "D" for arm in arms):
         if not a.ckpt:
             sys.exit("all arms except D need --ckpt")
-        saved = E.load_ckpt(a.ckpt)
-        ckpt_state = saved["state"]
-        # Coerce to the dataclass's scalar types: checkpoints written before
-        # the save_ckpt scalar fix carry 0-d ndarrays here (unhashable Config).
-        defaults = Config()
-        cfg = Config(**{k: type(getattr(defaults, k))(v)
-                        for k, v in saved["config"].items()})
+        ckpt_state, cfg = _load(a.ckpt)
     cfg_d = cfg if cfg is not None else Config(d=a.d)
 
     if a.beta is not None or a.beta_nl is not None:
@@ -289,10 +375,17 @@ def main():
                     continue
                 use_cfg = cfg_d if arm == "D" else cfg
                 t0 = time.time()
-                res = fit_arm(arm, use_cfg, ckpt_state, episodes, steps=a.steps,
-                              val_every=a.val_every, wd=a.wd, tau=a.tau, seed=a.seed,
-                              vote=a.vote, save_preds=a.save_preds,
-                              alt_size=a.alt_size)
+                if arm == "L":
+                    res = fit_task_layered(cfg, ckpt_state, cfg2, state2,
+                                           episodes, steps=a.steps,
+                                           val_every=a.val_every, wd=a.wd,
+                                           tau=a.tau, seed=a.seed,
+                                           save_preds=a.save_preds)
+                else:
+                    res = fit_arm(arm, use_cfg, ckpt_state, episodes, steps=a.steps,
+                                  val_every=a.val_every, wd=a.wd, tau=a.tau,
+                                  seed=a.seed, vote=a.vote,
+                                  save_preds=a.save_preds, alt_size=a.alt_size)
                 res.update({"task": task_id, "arm": arm, "family": fam[task_id],
                             "wall_s": round(time.time() - t0, 1),
                             "steps": a.steps, "seed": a.seed,
