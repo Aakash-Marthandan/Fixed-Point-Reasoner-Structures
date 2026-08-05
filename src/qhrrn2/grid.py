@@ -170,7 +170,13 @@ def task_path(task_id: str, root: Path = ARC_DATA_ROOT) -> Path:
 
 
 def load_task(task_id: str, root: Path = ARC_DATA_ROOT) -> list[Episode]:
-    """One Episode per test pair (most tasks have exactly one)."""
+    """One Episode per test pair (most tasks have exactly one). ca_ ids route
+    to the vendored ConceptARC corpus (val-hard gate, 2026-08-06)."""
+    if task_id.startswith("ca_"):
+        for tid, path, _ in list_conceptarc():
+            if tid == task_id:
+                return load_task_file(path, tid)
+        raise FileNotFoundError(f"ConceptARC task {task_id} not vendored")
     with open(task_path(task_id, root)) as f:
         raw = json.load(f)
     support = tuple(
