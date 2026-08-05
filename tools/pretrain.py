@@ -62,6 +62,8 @@ def parse_args():
     p.add_argument("--val-ids-file", default=None,
                    help="json with {'val40': [...]} — explicit val holdout (CC#2)")
     p.add_argument("--obj", action="store_true", help="C17 cluster layers on")
+    p.add_argument("--d-task", type=int, default=32,
+                   help="boundary program width (H-17 co-scaling)")
     p.add_argument("--remat", action="store_true",
                    help="gradient-checkpoint recursion steps (HBM relief)")
     p.add_argument("--smoke", action="store_true")
@@ -115,7 +117,8 @@ def main():
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat)
+    cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat,
+                 d_task=a.d_task)
 
     exclude = frozenset(dev30.MANIFEST)
     val_ids = None
