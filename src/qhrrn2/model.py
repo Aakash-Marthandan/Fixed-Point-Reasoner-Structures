@@ -368,9 +368,19 @@ def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
         if cfg.use_obj:  # yprev re-segmented each step: cohere what was painted
             lab_y = identity_labels if t == 0 else OBJ.connected_components(yprev, "nonblack4")
             labels_obj = labs_x | {"yprev": lab_y}
-        out = forward_fields(params, cfg, build_fields(x_canvas, yprev),
-                             t_norm=t_norm, tau=tau, rng=step_rng,
-                             task_vec=task_vec, labels_obj=labels_obj)
+        if cfg.remat:
+            # Rematerialize each recursion step's activations on the backward
+            # pass: memory drops ~T-fold for ~30% extra compute. Positional
+            # closure per t (t_norm/tau are Python constants of this step).
+            def _fwd(p, f, r, tv, lo, _t=t_norm):
+                return forward_fields(p, cfg, f, t_norm=_t, tau=tau, rng=r,
+                                      task_vec=tv, labels_obj=lo)
+            out = jax.checkpoint(_fwd)(params, build_fields(x_canvas, yprev),
+                                       step_rng, task_vec, labels_obj)
+        else:
+            out = forward_fields(params, cfg, build_fields(x_canvas, yprev),
+                                 t_norm=t_norm, tau=tau, rng=step_rng,
+                                 task_vec=task_vec, labels_obj=labels_obj)
         outs.append(out)
         yprev = jnp.argmax(out.logits, axis=-1)
     return outs

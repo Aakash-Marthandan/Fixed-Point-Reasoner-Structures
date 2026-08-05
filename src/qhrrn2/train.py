@@ -179,6 +179,34 @@ def predict_voted(params, cfg: Config, x_grid: np.ndarray, transforms, *, tau: f
     return voted.astype(np.int8), maj_shape
 
 
+def predict_alt_size(params, cfg: Config, x_grid: np.ndarray, *, tau: float = 1.0,
+                     task_vec=None):
+    """Primary prediction + the runner-up-size variant (C1-v3 aliasing
+    mitigation, ledger 2026-08-02/05): multiple size candidates can be
+    support-consistent; spend the second attempt on the axis with the
+    smallest posterior margin. Returns (pred1, shape1, pred2_or_None, shape2)."""
+    x_can = jnp.asarray(G.place(np.asarray(x_grid)), dtype=jnp.int32)
+    logits, p_h, p_w = _predict_core(cfg, tau)(params, x_can, task_vec)
+    canvas = np.asarray(jnp.argmax(logits, axis=-1))
+    ph = np.asarray(p_h)
+    pw = np.asarray(p_w)
+    h1, w1 = int(ph.argmax()) + 1, int(pw.argmax()) + 1
+
+    def runner_up(p):
+        order = np.argsort(p)[::-1]
+        return int(order[1]) + 1, float(p[order[0]] - p[order[1]])
+    h2, mh = runner_up(ph)
+    w2, mw = runner_up(pw)
+    h_alt, w_alt = (h2, w1) if mh <= mw else (h1, w2)
+
+    def crop(h, w):
+        return np.where(canvas[:h, :w] == G.VOID, 0, canvas[:h, :w]).astype(np.int8)
+    pred1 = crop(h1, w1)
+    if (h_alt, w_alt) == (h1, w1):
+        return pred1, (h1, w1), None, None
+    return pred1, (h1, w1), crop(h_alt, w_alt), (h_alt, w_alt)
+
+
 def predict(params, cfg: Config, x_grid: np.ndarray, *, tau: float = 1.0,
             task_vec=None):
     """Deterministic prediction at the SAME tau used in fitting (the first triad

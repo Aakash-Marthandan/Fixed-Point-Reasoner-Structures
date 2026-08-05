@@ -27,5 +27,8 @@ class Config:
     use_obj: bool = False      # C17 cluster-update layers (ledger 2026-08-02);
     #                            False = exact pre-C17 graph, zero overhead
     beta_flux_obj: float = 0.0  # price on the I_object channel (logged free in v1)
+    remat: bool = False        # gradient-checkpoint each recursion step
+    #                            (~30% compute for ~T-fold activation memory;
+    #                            unlocks B=64 at d>=24+C17 — 2026-08-05)
     w_void: float = 0.1      # weight of VOID-region CE relative to canvas region (C1)
     lambda_size: float = 0.3  # canvas-head loss weight

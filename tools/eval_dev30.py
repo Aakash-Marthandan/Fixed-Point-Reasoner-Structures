@@ -65,6 +65,10 @@ def parse_args():
     p.add_argument("--beta-nl", type=float, default=None)
     p.add_argument("--vote", action="store_true",
                    help="eval-4: D4 orbit voting on attempt 1 (inference only)")
+    p.add_argument("--alt-size", action="store_true",
+                   help="attempt 2 = runner-up size at the attempt-1 checkpoint "
+                        "(aliasing mitigation; measured: old attempt-2 added 0 "
+                        "solves in 240 cells)")
     p.add_argument("--save-preds", action="store_true",
                    help="record predicted grids per attempt (error taxonomy, CC#2 D1)")
     p.add_argument("--d", type=int, default=16, help="model width for arm D / no-ckpt")
@@ -125,7 +129,7 @@ def measure_flux(params, cfg, x_b, y_b, tau, tv):
 
 
 def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
-            vote=False, save_preds=False):
+            vote=False, save_preds=False, alt_size=False):
     """LoO/MDL fit of one arm on one task; returns (result dict, per-attempt preds)."""
     support = list(episodes[0].support)
     train_pairs, (val_x, val_y) = support[:-1], support[-1]
@@ -179,6 +183,23 @@ def fit_arm(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
     for ep in episodes:
         bits = []
         pair_preds = []
+        if alt_size:
+            # both attempts from the attempt-1 checkpoint: primary size, then
+            # the runner-up-size crop (falls back to primary when identical)
+            att0 = attempts[0]
+            p1, s1, p2, s2 = T.predict_alt_size(att0["model"], cfg, ep.query_x,
+                                                tau=tau, task_vec=tv_of(att0))
+            for pred, shape in ((p1, s1), (p2 if p2 is not None else p1,
+                                           s2 if s2 is not None else s1)):
+                ok = bool(ep.query_y is not None and shape == ep.query_y.shape
+                          and np.array_equal(pred, ep.query_y))
+                bits.append(ok)
+                if save_preds:
+                    pair_preds.append(np.asarray(pred).tolist())
+            per_pair.append(bits)
+            if save_preds:
+                preds_rec.append(pair_preds)
+            continue
         for i_att, att in enumerate(attempts):
             if vote and i_att == 0:
                 # eval-4 (ledger 2026-08-02): inference-side D4 orbit voting at
@@ -270,7 +291,8 @@ def main():
                 t0 = time.time()
                 res = fit_arm(arm, use_cfg, ckpt_state, episodes, steps=a.steps,
                               val_every=a.val_every, wd=a.wd, tau=a.tau, seed=a.seed,
-                              vote=a.vote, save_preds=a.save_preds)
+                              vote=a.vote, save_preds=a.save_preds,
+                              alt_size=a.alt_size)
                 res.update({"task": task_id, "arm": arm, "family": fam[task_id],
                             "wall_s": round(time.time() - t0, 1),
                             "steps": a.steps, "seed": a.seed,

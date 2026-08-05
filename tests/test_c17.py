@@ -82,6 +82,26 @@ def test_c17_precomputed_labels_match_ingraph():
             f"precomputed labels change the loss: {float(l_pre)} vs {float(l_ing)}")
 
 
+def test_remat_grad_equality():
+    """cfg.remat must change memory, not math: loss and grads equal (2026-08-05)."""
+    import dataclasses
+    from qhrrn2.objective import pair_loss
+    x = _random_grid(9)
+    y = _random_grid(10)
+    xc = jnp.asarray(G.place(x), dtype=jnp.int32)
+    yc = jnp.asarray(G.place(y), dtype=jnp.int32)
+    for cfg in (CFG_OBJ, dataclasses.replace(CFG_OBJ, remat=True)):
+        p = init_params(jax.random.PRNGKey(0), CFG_OBJ)
+        (l, _), g = jax.value_and_grad(pair_loss, has_aux=True)(
+            p, cfg, xc, yc, tau=1.0, rng=jax.random.PRNGKey(4))
+        if cfg.remat:
+            assert abs(float(l) - l0) < 1e-5
+            for a, b in zip(jax.tree.leaves(g), g0):
+                assert float(jnp.max(jnp.abs(a - b))) < 1e-4
+        else:
+            l0, g0 = float(l), jax.tree.leaves(g)
+
+
 def test_c17_off_is_base_graph():
     p_base = init_params(jax.random.PRNGKey(0), CFG_BASE)
     assert "obj" not in p_base
