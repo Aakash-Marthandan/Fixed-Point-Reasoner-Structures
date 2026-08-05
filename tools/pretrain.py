@@ -130,6 +130,9 @@ def main():
         val_ids = json.load(open(a.val_ids_file))["val40"]
     exclude_ca = frozenset()
     if a.conceptarc:
+        from qhrrn2.grid import list_conceptarc
+        if not list_conceptarc():
+            sys.exit("--conceptarc: data/ConceptARC not vendored on this host")
         vh_path = Path(__file__).resolve().parent / "valhard.json"
         exclude_ca = frozenset(json.load(open(vh_path))["valhard"])
     corpus, val = E.build_corpus(exclude, n_val=a.n_val, seed=a.seed, limit=a.limit,

@@ -131,7 +131,8 @@ def sync_code(zone: str, dry: bool, with_data: bool):
         # COPYFILE_DISABLE=1 suppresses them at create; --exclude at extract
         # is defense in depth against a foreign-made archive.
         print(">>> Sync data (tar stream)")
-        sh("COPYFILE_DISABLE=1 tar czf - data/ARC-AGI/data | "
+        extra = " data/ConceptARC" if os.path.isdir("data/ConceptARC") else ""
+        sh(f"COPYFILE_DISABLE=1 tar czf - data/ARC-AGI/data{extra} | "
            + gssh(f"rm -rf {REMOTE_PROJECT}/data && "
                   f"tar xzf - -C {REMOTE_PROJECT} --exclude \"._*\"",
                   zone), dry=dry, timeout=300)
