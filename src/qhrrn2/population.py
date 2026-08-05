@@ -7,6 +7,8 @@
 """Vectorized population TTT: M members = views × seeds, one vmapped fit."""
 from __future__ import annotations
 
+import functools
+
 import numpy as np
 import jax
 import jax.numpy as jnp
@@ -56,11 +58,29 @@ def fit_population(ckpt_state, cfg: Config, episodes, *, n_views: int = 8,
 
     x_mb, y_mb, val = build_member_batches(episodes, n_views, n_seeds, seed)
 
-    opt = optax.adamw(lr, weight_decay=wd)
+    # Module-level cached step (the _step_and_opt house pattern): a jitted
+    # closure defined per task RETAINS its graph — after ~1 task of distinct
+    # shapes the accumulation segfaulted libtpu (2026-08-06). Model rides as
+    # an ARGUMENT so the cache key is shapes/hparams only.
+    step, opt = _pop_step(cfg, tau, lr, wd, M)
     opt_state = jax.vmap(opt.init)(tv)
 
+    rng = jax.random.PRNGKey(seed)
+    snaps = []
+    for i in range(steps):
+        tv, opt_state, losses, rng = step(model, tv, opt_state, rng, x_mb, y_mb)
+        if (i + 1) % val_every == 0 or i + 1 == steps:
+            snaps.append((i + 1, np.asarray(tv)))
+    return {"model": model, "snaps": snaps, "val": val, "cfg": cfg, "tau": tau,
+            "n_views": n_views, "n_seeds": n_seeds}
+
+
+@functools.lru_cache(maxsize=8)
+def _pop_step(cfg: Config, tau: float, lr: float, wd: float, M: int):
+    opt = optax.adamw(lr, weight_decay=wd)
+
     @jax.jit
-    def step(tv, opt_state, rng):
+    def step(model, tv, opt_state, rng, x_mb, y_mb):
         keys = jax.random.split(rng, M + 1)
 
         def one(tv_m, os_m, x_b, y_b, key):
@@ -74,15 +94,7 @@ def fit_population(ckpt_state, cfg: Config, episodes, *, n_views: int = 8,
             return optax.apply_updates(tv_m, upd), os2, loss
         tv2, os2, losses = jax.vmap(one)(tv, opt_state, x_mb, y_mb, keys[:M])
         return tv2, os2, losses, keys[M]
-
-    rng = jax.random.PRNGKey(seed)
-    snaps = []
-    for i in range(steps):
-        tv, opt_state, losses, rng = step(tv, opt_state, rng)
-        if (i + 1) % val_every == 0 or i + 1 == steps:
-            snaps.append((i + 1, np.asarray(tv)))
-    return {"model": model, "snaps": snaps, "val": val, "cfg": cfg, "tau": tau,
-            "n_views": n_views, "n_seeds": n_seeds}
+    return step, opt
 
 
 def score_population(F, episodes, *, max_snap_evals: int = 6):
