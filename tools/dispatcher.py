@@ -192,7 +192,9 @@ def _run_detached(args) -> int:
     # the SSH channel, hanging the launch until a reset (which gcloud then
     # retried, double-launching). Fix: subshell keeps cwd for the pid write,
     # and stdin/out/err are ALL detached so sshd closes immediately.
-    inner = shlex.quote(f"PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src {args.cmd}; "
+    # export form (2026-08-05): `VAR=x cmd1 && cmd2` binds VAR to cmd1 ONLY —
+    # a chained cmd2 silently ran under system python (no numpy).
+    inner = shlex.quote(f"export PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src; {args.cmd}; "
                         "echo $? > runs/detached.exit")
     # Double-launch guard (2026-07-28: a pkill'd LOCAL dispatcher left its
     # REMOTE job running; the next launch collided on the TPU): refuse if the
@@ -289,7 +291,7 @@ def cmd_run(args) -> int:
         code = _run_detached(args)
     else:
         full = gssh(f"cd {REMOTE_PROJECT} && "
-                    f"PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src {args.cmd}", args.zone)
+                    f"export PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src; {args.cmd}", args.zone)
         print(f"  $ {full}", flush=True)
         code = 0
         if not args.dry_run:
