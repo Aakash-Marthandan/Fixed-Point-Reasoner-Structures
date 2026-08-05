@@ -47,36 +47,72 @@ def _task_pairs(task_id: str, include_queries: bool):
 
 def build_corpus(exclude: frozenset[str], *, n_val: int = 20, seed: int = 0,
                  split: str = "training", limit: int | None = None,
-                 val_ids: list[str] | None = None):
-    """Corpus over `split` minus `exclude`, plus the val slice.
+                 val_ids: list[str] | None = None, orbit_n: int = 1,
+                 conceptarc: bool = False,
+                 exclude_ca: frozenset[str] = frozenset()):
+    """Corpus over `split` minus `exclude` (+ optionally ConceptARC minus
+    `exclude_ca`), orbit-expanded, plus the val slice.
 
-    Returns (corpus, val) where val is a list of (task_index, task_id,
-    [(query_x, query_y), ...]) whose QUERY pairs were withheld from the pair
-    pool (their supports remain) — the within-task generalization monitor.
-    val_ids: explicit val membership (CC#2 val-40 manifest) overriding the
-    seeded draw — REQUIRED when the val set must be stable across pretrains.
+    orbit_n (assembly doctrine 2026-08-06): each base task additionally
+    contributes orbit_n-1 VIRTUAL tasks — a seeded joint D4×palette transform
+    of all its pairs, with its OWN task row/embedding (the augmentation
+    validity law: a transformed copy may never share the base embedding).
+    Val tasks' queries are excluded from ALL their copies (a transformed query
+    is trivially recoverable). val is the base-copy monitor list, as before.
     """
     ids = [t for t in G.list_task_ids(split) if t not in exclude]
     if limit is not None:
         ids = ids[:limit]
     if val_ids is not None:
         wanted = set(val_ids)
-        val_set = {i for i, t in enumerate(ids) if t in wanted}
-        missing = wanted - {ids[i] for i in val_set}
+        val_flags = [t in wanted for t in ids]
+        missing = wanted - {t for t in ids if t in wanted}
         if missing:
             raise ValueError(f"val_ids not in corpus: {sorted(missing)}")
     else:
         rng = np.random.default_rng(seed)
         n_val = min(n_val, len(ids))
-        val_set = set(rng.choice(len(ids), size=n_val, replace=False).tolist())
+        vs = set(rng.choice(len(ids), size=n_val, replace=False).tolist())
+        val_flags = [i in vs for i in range(len(ids))]
+
+    # base tasks: (tid, pairs, is_val, queries_for_monitor)
+    base = []
+    for task_id, is_val in zip(ids, val_flags):
+        pairs = _task_pairs(task_id, include_queries=not is_val)
+        qs = []
+        if is_val:
+            eps = G.load_task(task_id)
+            qs = [(ep.query_x, ep.query_y) for ep in eps if ep.query_y is not None]
+        base.append((task_id, pairs, is_val, qs))
+    if conceptarc:
+        for tid, path, concept in G.list_conceptarc():
+            if tid in exclude_ca:
+                continue
+            eps = G.load_task_file(path, tid)
+            pairs = list(eps[0].support) + [(e.query_x, e.query_y) for e in eps
+                                            if e.query_y is not None]
+            base.append((tid, pairs, False, []))
+
+    # orbit expansion: virtual tasks with their own rows
+    expanded = []
+    for tid, pairs, is_val, qs in base:
+        expanded.append((tid, pairs, is_val, qs))
+        for k in range(1, orbit_n):
+            # zlib.crc32, NOT hash(): Python's hash is salted per process —
+            # a resumed pretrain would silently re-derive different transforms
+            # for the same virtual rows (caught at build, 2026-08-06)
+            import zlib
+            trng = np.random.default_rng(zlib.crc32(f"{tid}|{k}".encode()))
+            tr = G.sample_orbit(trng, 2)[1]  # one non-identity joint transform
+            vpairs = [(tr.apply(x), tr.apply(y)) for x, y in pairs]
+            expanded.append((f"{tid}@o{k}", vpairs, False, []))
 
     xs, ys, tidx, starts, bh, bw, val = [], [], [], [0], [], [], []
-    for t, task_id in enumerate(ids):
-        pairs = _task_pairs(task_id, include_queries=t not in val_set)
-        if t in val_set:
-            eps = G.load_task(task_id)
-            val.append((t, task_id,
-                        [(ep.query_x, ep.query_y) for ep in eps if ep.query_y is not None]))
+    out_ids = []
+    for t, (tid, pairs, is_val, qs) in enumerate(expanded):
+        out_ids.append(tid)
+        if is_val:
+            val.append((t, tid, qs))
         for x, y in pairs:
             xs.append(G.place(x))
             ys.append(G.place(y))
@@ -85,7 +121,7 @@ def build_corpus(exclude: frozenset[str], *, n_val: int = 20, seed: int = 0,
             bw.append(G.CANVAS - max(x.shape[1], y.shape[1]))
         starts.append(len(xs))
     corpus = Corpus(
-        task_ids=tuple(ids),
+        task_ids=tuple(out_ids),
         x=np.stack(xs).astype(np.int32),
         y=np.stack(ys).astype(np.int32),
         tidx=np.asarray(tidx, dtype=np.int32),

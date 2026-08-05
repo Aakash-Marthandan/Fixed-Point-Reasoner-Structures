@@ -127,6 +127,46 @@ def test_corpus_excludes_holdout_and_val_queries():
         assert (seg == t).all()
 
 
+def test_orbit_and_conceptarc_expansion():
+    """Assembly doctrine (2026-08-06): virtual tasks carry their own rows with
+    correctly transformed pairs; val queries stay excluded in copies;
+    ConceptARC merges under ca_ ids; val-hard exclusion honored."""
+    import json
+    vh = frozenset(json.load(open(os.path.join(os.path.dirname(__file__), "..",
+                                               "tools", "valhard.json")))["valhard"])
+    corpus, val = E.build_corpus(frozenset(), n_val=2, seed=0, limit=6,
+                                 orbit_n=3, conceptarc=True, exclude_ca=vh)
+    ids = corpus.task_ids
+    n_base_arc = 6
+    n_ca = len(G.list_conceptarc()) - len(vh)
+    assert len(ids) == (n_base_arc + n_ca) * 3
+    assert not (set(ids) & vh), "val-hard leaked into the corpus"
+    assert any(t.startswith("ca_") for t in ids)
+    # virtual copy of a VAL task must contribute MORE pairs than its base
+    # (base excludes queries; the copy is not a val member but ALSO must
+    # exclude them — equal pair counts prove the exclusion carried over)
+    for t, tid, qs in val:
+        n_base = int(corpus.starts[t + 1] - corpus.starts[t])
+        i_copy = ids.index(tid + "@o1")
+        n_copy = int(corpus.starts[i_copy + 1] - corpus.starts[i_copy])
+        assert n_copy == n_base, f"{tid}: val-query leaked into orbit copy"
+    # transformed pairs verify against the seeded transform
+    import zlib
+    tid0 = ids[0]
+    i_copy = ids.index(tid0 + "@o1")
+    trng = np.random.default_rng(zlib.crc32(f"{tid0}|1".encode()))
+    tr = G.sample_orbit(trng, 2)[1]
+    base_x = corpus.x[corpus.starts[0]]
+    h, w = 32, 32
+    # recover the raw grid from the placed canvas via VOID mask
+    mask = base_x != G.VOID
+    hh = mask.any(axis=1).sum(); ww = mask.any(axis=0).sum()
+    raw = base_x[:hh, :ww].astype(np.int8)
+    want = G.place(tr.apply(raw))
+    got = corpus.x[corpus.starts[i_copy]]
+    assert np.array_equal(want, got), "orbit copy pair does not match the seeded transform"
+
+
 def test_sample_batch_valid_and_balanced():
     corpus, _ = E.build_corpus(frozenset(), n_val=0, seed=0, limit=12)
     dev = E.corpus_to_device(corpus)

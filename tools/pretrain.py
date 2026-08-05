@@ -64,6 +64,10 @@ def parse_args():
     p.add_argument("--obj", action="store_true", help="C17 cluster layers on")
     p.add_argument("--d-task", type=int, default=32,
                    help="boundary program width (H-17 co-scaling)")
+    p.add_argument("--orbit", type=int, default=1,
+                   help="orbit expansion factor: virtual tasks per base task")
+    p.add_argument("--conceptarc", action="store_true",
+                   help="merge vendored ConceptARC (minus val-hard) into the corpus")
     p.add_argument("--remat", action="store_true",
                    help="gradient-checkpoint recursion steps (HBM relief)")
     p.add_argument("--smoke", action="store_true")
@@ -124,8 +128,13 @@ def main():
     val_ids = None
     if a.val_ids_file:
         val_ids = json.load(open(a.val_ids_file))["val40"]
+    exclude_ca = frozenset()
+    if a.conceptarc:
+        vh_path = Path(__file__).resolve().parent / "valhard.json"
+        exclude_ca = frozenset(json.load(open(vh_path))["valhard"])
     corpus, val = E.build_corpus(exclude, n_val=a.n_val, seed=a.seed, limit=a.limit,
-                                 val_ids=val_ids)
+                                 val_ids=val_ids, orbit_n=a.orbit,
+                                 conceptarc=a.conceptarc, exclude_ca=exclude_ca)
     dev = E.corpus_to_device(corpus)
     n_tasks = len(corpus.task_ids)
     n_pairs = int(corpus.x.shape[0])

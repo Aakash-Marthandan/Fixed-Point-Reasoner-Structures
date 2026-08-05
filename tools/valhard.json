@@ -1,0 +1,136 @@
+{
+ "valhard": [
+  "ca_AboveBelow5",
+  "ca_AboveBelow6",
+  "ca_AboveBelow7",
+  "ca_Center2",
+  "ca_Center6",
+  "ca_Center7",
+  "ca_CleanUp2",
+  "ca_CleanUp7",
+  "ca_CleanUp9",
+  "ca_CompleteShape10",
+  "ca_CompleteShape6",
+  "ca_CompleteShape7",
+  "ca_Copy2",
+  "ca_Copy3",
+  "ca_Copy6",
+  "ca_Count2",
+  "ca_Count4",
+  "ca_Count8",
+  "ca_ExtendToBoundary4",
+  "ca_ExtendToBoundary5",
+  "ca_ExtendToBoundary8",
+  "ca_ExtractObjects6",
+  "ca_ExtractObjects8",
+  "ca_ExtractObjects9",
+  "ca_FilledNotFilled10",
+  "ca_FilledNotFilled3",
+  "ca_FilledNotFilled8",
+  "ca_HorizontalVertical1",
+  "ca_HorizontalVertical10",
+  "ca_HorizontalVertical4",
+  "ca_InsideOutside10",
+  "ca_InsideOutside4",
+  "ca_InsideOutside9",
+  "ca_MoveToBoundary6",
+  "ca_MoveToBoundary7",
+  "ca_MoveToBoundary8",
+  "ca_Order2",
+  "ca_Order3",
+  "ca_Order4",
+  "ca_SameDifferent1",
+  "ca_SameDifferent10",
+  "ca_SameDifferent8",
+  "ca_TopBottom2D10",
+  "ca_TopBottom2D7",
+  "ca_TopBottom2D9",
+  "ca_TopBottom3D1",
+  "ca_TopBottom3D5",
+  "ca_TopBottom3D8"
+ ],
+ "by_concept": {
+  "AboveBelow": [
+   "ca_AboveBelow5",
+   "ca_AboveBelow6",
+   "ca_AboveBelow7"
+  ],
+  "Center": [
+   "ca_Center2",
+   "ca_Center6",
+   "ca_Center7"
+  ],
+  "CleanUp": [
+   "ca_CleanUp2",
+   "ca_CleanUp7",
+   "ca_CleanUp9"
+  ],
+  "CompleteShape": [
+   "ca_CompleteShape10",
+   "ca_CompleteShape6",
+   "ca_CompleteShape7"
+  ],
+  "Copy": [
+   "ca_Copy2",
+   "ca_Copy3",
+   "ca_Copy6"
+  ],
+  "Count": [
+   "ca_Count2",
+   "ca_Count4",
+   "ca_Count8"
+  ],
+  "ExtendToBoundary": [
+   "ca_ExtendToBoundary4",
+   "ca_ExtendToBoundary5",
+   "ca_ExtendToBoundary8"
+  ],
+  "ExtractObjects": [
+   "ca_ExtractObjects6",
+   "ca_ExtractObjects8",
+   "ca_ExtractObjects9"
+  ],
+  "FilledNotFilled": [
+   "ca_FilledNotFilled10",
+   "ca_FilledNotFilled3",
+   "ca_FilledNotFilled8"
+  ],
+  "HorizontalVertical": [
+   "ca_HorizontalVertical1",
+   "ca_HorizontalVertical10",
+   "ca_HorizontalVertical4"
+  ],
+  "InsideOutside": [
+   "ca_InsideOutside10",
+   "ca_InsideOutside4",
+   "ca_InsideOutside9"
+  ],
+  "MoveToBoundary": [
+   "ca_MoveToBoundary6",
+   "ca_MoveToBoundary7",
+   "ca_MoveToBoundary8"
+  ],
+  "Order": [
+   "ca_Order2",
+   "ca_Order3",
+   "ca_Order4"
+  ],
+  "SameDifferent": [
+   "ca_SameDifferent1",
+   "ca_SameDifferent10",
+   "ca_SameDifferent8"
+  ],
+  "TopBottom2D": [
+   "ca_TopBottom2D10",
+   "ca_TopBottom2D7",
+   "ca_TopBottom2D9"
+  ],
+  "TopBottom3D": [
+   "ca_TopBottom3D1",
+   "ca_TopBottom3D5",
+   "ca_TopBottom3D8"
+  ]
+ },
+ "seed": 7,
+ "note": "CC assembly doctrine 2026-08-06: ConceptARC val-hard, 3/concept, FULLY excluded from all training; remainder of ConceptARC joins the corpus"
+}

@@ -188,6 +188,39 @@ def load_task(task_id: str, root: Path = ARC_DATA_ROOT) -> list[Episode]:
     return episodes
 
 
+CONCEPTARC_ROOT = Path(__file__).resolve().parents[2] / "data" / "ConceptARC" / "corpus"
+
+
+def list_conceptarc() -> list[tuple[str, Path, str]]:
+    """[(task_id 'ca_<Name>', path, concept)] — ConceptARC corpus (vendored;
+    assembly doctrine 2026-08-06). Empty when not vendored."""
+    out = []
+    if CONCEPTARC_ROOT.exists():
+        for p in sorted(CONCEPTARC_ROOT.glob("*/*.json")):
+            if not p.name.startswith("."):
+                out.append(("ca_" + p.stem, p, p.parent.name))
+    return out
+
+
+def load_task_file(path: Path, task_id: str) -> list[Episode]:
+    """One Episode per test pair from an explicit ARC-format JSON path."""
+    with open(path) as f:
+        raw = json.load(f)
+    support = tuple(
+        (np.asarray(p["input"], dtype=np.int8), np.asarray(p["output"], dtype=np.int8))
+        for p in raw["train"]
+    )
+    episodes = []
+    for p in raw["test"]:
+        episodes.append(Episode(
+            task_id=task_id,
+            support=support,
+            query_x=np.asarray(p["input"], dtype=np.int8),
+            query_y=np.asarray(p["output"], dtype=np.int8) if "output" in p else None,
+        ))
+    return episodes
+
+
 def list_task_ids(split: str, root: Path = ARC_DATA_ROOT) -> list[str]:
     # Hidden-file guard (2026-08-01): a macOS->Linux tar sync materialized
     # AppleDouble ._*.json companions; task ids are bare hex names only.
