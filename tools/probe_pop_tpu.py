@@ -27,6 +27,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--ckpt", required=True)
 ap.add_argument("--mode", required=True)
 ap.add_argument("--tasks", default="ca_AboveBelow5,ca_AboveBelow6,ca_AboveBelow7")
+ap.add_argument("--steps", type=int, default=100)
+ap.add_argument("--snaps", type=int, default=2)
 a = ap.parse_args()
 
 saved = E.load_ckpt(a.ckpt)
@@ -37,13 +39,13 @@ state = saved["state"]
 for tid in a.tasks.split(","):
     eps = G.load_task(tid)
     if a.mode == "fit_only":
-        F = P.fit_population(state, cfg, eps, n_views=8, n_seeds=2, steps=100,
+        F = P.fit_population(state, cfg, eps, n_views=8, n_seeds=2, steps=a.steps,
                              val_every=50)
         print(f"fit ok {tid}", flush=True)
     elif a.mode == "m1":
-        F = P.fit_population(state, cfg, eps, n_views=1, n_seeds=1, steps=100,
+        F = P.fit_population(state, cfg, eps, n_views=1, n_seeds=1, steps=a.steps,
                              val_every=50)
-        _ = P.score_population(F, eps, max_snap_evals=2)
+        _ = P.score_population(F, eps, max_snap_evals=a.snaps)
         print(f"m1 ok {tid}", flush=True)
     elif a.mode == "closure":
         # closed-over model (pre-refactor form), fresh jit per task
@@ -76,8 +78,8 @@ for tid in a.tasks.split(","):
         jnp.asarray(ls).block_until_ready()
         print(f"closure ok {tid}", flush=True)
     elif a.mode == "full":
-        F = P.fit_population(state, cfg, eps, n_views=8, n_seeds=2, steps=100,
+        F = P.fit_population(state, cfg, eps, n_views=8, n_seeds=2, steps=a.steps,
                              val_every=50)
-        _ = P.score_population(F, eps, max_snap_evals=2)
+        _ = P.score_population(F, eps, max_snap_evals=a.snaps)
         print(f"full ok {tid}", flush=True)
 print(f"PROBE-OK {a.mode}", flush=True)
