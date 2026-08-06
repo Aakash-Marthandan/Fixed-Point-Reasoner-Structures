@@ -97,7 +97,7 @@ def _pop_step(cfg: Config, tau: float, lr: float, wd: float, M: int):
     return step, opt
 
 
-def score_population(F, episodes, *, max_snap_evals: int = 6):
+def score_population(F, episodes, *, max_snap_evals: int = 0):
     """Host-side: per member, find the earliest LoO-exact snapshot (subsampled);
     qualifying members predict their view of each query, invert, vote.
 
@@ -105,8 +105,14 @@ def score_population(F, episodes, *, max_snap_evals: int = 6):
     all-members vote / best-by-pix when no member reaches exactness."""
     model, cfg, tau = F["model"], F["cfg"], F["tau"]
     snaps = F["snaps"]
-    idxs = np.linspace(0, len(snaps) - 1, min(max_snap_evals, len(snaps)))
-    idxs = sorted({int(round(i)) for i in idxs})
+    # max_snap_evals=0 -> scan ALL snapshots (2026-08-06: subsampling missed
+    # exactness — members at 0.99+ pix never qualified and the vote degraded
+    # to disagreeing near-missers)
+    if max_snap_evals and max_snap_evals < len(snaps):
+        idxs = sorted({int(round(i)) for i in
+                       np.linspace(0, len(snaps) - 1, max_snap_evals)})
+    else:
+        idxs = list(range(len(snaps)))
     M = snaps[0][1].shape[0]
 
     chosen = []  # per member: (tv, step, exact, pix)
