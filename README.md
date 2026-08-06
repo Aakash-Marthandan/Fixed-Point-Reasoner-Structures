@@ -42,7 +42,7 @@ locality in learned solvers.
 The model is deliberately tiny (~49k parameters at the toy operating point;
 target ≤400k), betting that exact structure replaces brute capacity.
 
-## Current status (2026-08-02) — honest and ledger-governed
+## Current status (2026-08-06) — honest and ledger-governed
 
 - **No performance claims live in this README.** Claims belong to the ledger
   until evaluation day (claims are pre-registered
@@ -58,23 +58,26 @@ target ≤400k), betting that exact structure replaces brute capacity.
   architecture-minimization — the closest floor-to-envelope sandwich stands at
   ~30×. Two early findings were corrected by later data (both artifacts of the
   redundant attention channel); the corrections are ledger entries, as designed.
-- **Solve-rate sprint, four pre-registered eval cycles run**: dev-30 frozen
-  at 30/30 before any training; joint-episodic trainer (C16) and the
-  candidate-mixture size head (C1-v3, count-extrapolation verified) built
-  with their CI gates; two pretrains (~28 min each on a v5e-1) and evals 1–4
-  executed against a clean holdout. Solve rate stands at **2/30 pass@2**,
-  every solve from boundary-only TTT (one task solved by fitting 32
-  parameters). The discipline's product so far is a five-link falsification
-  chain on the exactness gap (fit budget, TTT-time pricing, late MDL
-  selection, selection-head unfreezing, inference-only orbit voting — each
-  registered, run, and refuted or bounded same-day), plus a stable S2 result:
-  boundary-restricted fits from a pretrained bulk move ~6 orders of magnitude
-  less information through the free attention channel than from-scratch fits
-  at equal-or-better accuracy. Measured bottleneck: **query transfer** —
-  supports reach leave-one-out exactness routinely; queries fail. Registered
-  next: per-view TTT with population fitting (C11), bulk-seed variance study,
-  selection-head fit-trace probe. Generator pretraining and full ARC
-  evaluation follow.
+- **Current state (2026-08-06 close)**: the corpus is expanded 5.6×
+  (orbit-virtual tasks + vendored ConceptARC; val-hard = 48 ConceptARC tasks
+  fully held out as the matched-hard gate); a four-bulk prior portfolio is
+  pretrained on it (d16 / d24 / d24+C17 / d24+dt64); **population TTT (C11)
+  is built and debugged** — 16 view×seed members vmapped against a frozen
+  bulk. Headline numbers: task-level solves on curated-hard val-hard remain
+  0 under every single-bulk protocol, but population fitting produced the
+  project's **first nonzero curated-hard result: ~6% of individual test
+  outputs exactly solved** (ConceptARC's own reporting convention), with
+  rotated-view members beating single fits on most tasks measured. The
+  measured wall is **query transfer with correlated member error** ([H-18]);
+  the registered next builds attack it directly: agreement-regularized
+  populations (transduction unified with voting), cross-bulk members,
+  temporal members, and measured routing — see the ledger's 2026-08-06
+  idea-registry entry, which is the authoritative pickup point. The physics
+  instruments delivered independently: channel substitution (attention
+  transport halves when the object channel exists), coherence-decay as a
+  visible memorization transition, and a six-order information-compression
+  ordering across fit protocols. CompressARC comparison, when run, will be
+  same-split (ARC-1 public eval) at matched scoring.
 
 ## Repository map
 
