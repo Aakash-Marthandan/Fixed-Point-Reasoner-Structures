@@ -177,6 +177,14 @@ def cmd_up(args) -> int:
             "uv pip install --python .venv/bin/python -q -r requirements.txt "
             "'jax[tpu]==0.10.2' "
             "-f https://storage.googleapis.com/jax-releases/libtpu_releases.html "
+            # libtpu OVERRIDE pin (2026-08-07): jax 0.10.2 resolves
+            # libtpu==0.0.42.1, which stack-overflows in the XLA fusion cost
+            # estimator (FusedSpatialMajorConvolution) on fresh VMs built from
+            # the rolled tpu-ubuntu2204-base image — identical wheels ran clean
+            # on the 08-05/06 fleet (env-rot data point #2; ulimit -s no cure:
+            # fiber stacks are fixed-size). 0.0.43.1 (released 08-04) fixes it.
+            "&& uv pip install --python .venv/bin/python -q --no-deps "
+            "libtpu==0.0.43.1 "
             "&& touch .venv/.boot_ok)", args.zone), dry=args.dry_run)
     print(f">>> up: READY. DMS fires in {DMS_MINUTES} min unless re-armed; "
           f"`down` when finished.")
