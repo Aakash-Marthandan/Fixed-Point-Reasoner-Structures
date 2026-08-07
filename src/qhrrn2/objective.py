@@ -57,13 +57,17 @@ def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
 
 
 def batch_loss(params, cfg: Config, x_batch, y_batch, *, tau: float, rng=None,
-               task_vecs=None, labels_x=None):
+               task_vecs=None, labels_x=None, weights=None):
     """Mean pair_loss over a batch of canvases (B, 32, 32).
 
     task_vecs: optional (B, d_task) — per-example program embeddings (C16),
     e.g. table rows gathered for a mixed-task joint batch.
     labels_x: optional (B, 3, 32, 32) precomputed input segmentations (C17
-    speed pipeline) in OBJ_ENC_MODES order."""
+    speed pipeline) in OBJ_ENC_MODES order.
+    weights: optional (B,) per-row loss weights (agreement-regularized
+    population, ledger 2026-08-07: support rows 1.0, consensus-pseudo-labeled
+    query rows λ). Normalized by sum(weights), so weights=None is the plain
+    mean; zero-weight rows contribute nothing (but still cost a forward)."""
     keys = None if rng is None else jax.random.split(rng, x_batch.shape[0])
     args, axes = [x_batch, y_batch], [0, 0]
     if keys is not None:
@@ -86,4 +90,7 @@ def batch_loss(params, cfg: Config, x_batch, y_batch, *, tau: float, rng=None,
                          labels_x=lx)
 
     losses, aux = jax.vmap(f, in_axes=tuple(axes))(*args)
-    return jnp.mean(losses), jax.tree.map(jnp.mean, aux)
+    if weights is None:
+        return jnp.mean(losses), jax.tree.map(jnp.mean, aux)
+    w = weights / jnp.maximum(jnp.sum(weights), 1e-9)
+    return jnp.sum(losses * w), jax.tree.map(jnp.mean, aux)
