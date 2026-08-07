@@ -338,7 +338,7 @@ def cmd_status(args) -> int:
     guard_identity(True)
     state = vm_state(args.zone)
     print(f"status: {TPU_NAME} in {args.zone}: "
-          + (f"state={state}" if state else "not found"))
+          + (f"state={state}" if state else "state=not found"))
     # fleet awareness: teardown vigilance must see EVERY lane, not just --name
     r = subprocess.run(
         f"gcloud compute tpus tpu-vm list --zone={args.zone} --project={PROJECT} "
@@ -346,7 +346,57 @@ def cmd_status(args) -> int:
     fleet = [l for l in r.stdout.strip().splitlines() if l]
     print(f"fleet: {len(fleet)} VM(s) in {args.zone}"
           + (": " + "; ".join(fleet) if fleet else ""))
+    if state and args.jobs:
+        # Detached-job forensics (2026-08-07 incident: manual kills left local
+        # pollers aimed at a REUSED pid file; job state must be inspectable
+        # before any launch/kill decision).
+        try:
+            sh(gssh(f"cd {REMOTE_PROJECT} 2>/dev/null && "
+                    "if test -f runs/detached.pid && "
+                    "kill -0 $(cat runs/detached.pid) 2>/dev/null; then "
+                    "echo \"job: RUNNING pid=$(cat runs/detached.pid)\"; "
+                    "tail -1 runs/detached.log 2>/dev/null | cut -c1-100; else "
+                    "echo \"job: idle exit=$(cat runs/detached.exit 2>/dev/null "
+                    "|| echo none)\"; fi; "
+                    "for f in runs/*/results.jsonl; do test -f \"$f\" && "
+                    "echo \"  $f: $(wc -l < \"$f\") rows\"; done",
+                    args.zone), dry=False, timeout=120)
+        except Exception as e:
+            print(f"  job probe failed: {e}")
     return 0
+
+
+def cmd_canary(args) -> int:
+    """Known-good-command gate (STANDING PRACTICE, ledger 2026-08-07): after
+    any provision/re-provision and BEFORE any campaign, run one short
+    single-bulk population fit and verify the completion sentinel. The 08-07
+    incident (host image rolled under identical wheels; 96 cells lost) is the
+    reason this exists. Exit 0 = lane certified; anything else = STOP."""
+    guard_identity(args.dry_run)
+    if vm_state(args.zone) is None:
+        print(f"canary: no VM '{TPU_NAME}' — `up` first")
+        return 3
+    arm_dms(args.zone, args.dry_run)
+    marker = "CANARY-PASS"
+    cmd = (f"rm -rf runs/_canary && python tools/eval_pop.py "
+           f"--ckpt {args.canary_ckpt} --tasks {args.canary_task} "
+           f"--steps 60 --val-every 30 --out runs/_canary "
+           f"&& echo {marker}")
+    full = gssh(f"cd {REMOTE_PROJECT} && "
+                f"export PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src; {cmd}",
+                args.zone)
+    print(f">>> canary ({args.canary_task}, 60 steps): {TPU_NAME}")
+    if args.dry_run:
+        print(f"  $ {full}")
+        return 0
+    r = subprocess.run(full, shell=True, capture_output=True, text=True,
+                       timeout=1800)
+    passed = marker in r.stdout
+    tail = "\n".join((r.stdout + r.stderr).strip().splitlines()[-3:])
+    print(tail)
+    print(f">>> canary: {'PASS' if passed else 'FAIL'} "
+          f"(sentinel {'found' if passed else 'MISSING'}, ssh exit {r.returncode})")
+    return 0 if passed else 5
 
 
 def cmd_cycle(args) -> int:
@@ -389,13 +439,20 @@ def main():
     sub.add_parser("up", parents=[common, up_like])
     sub.add_parser("run", parents=[common, up_like, run_like])
     sub.add_parser("down", parents=[common])
-    sub.add_parser("status", parents=[common])
+    status_p = sub.add_parser("status", parents=[common])
+    status_p.add_argument("--jobs", action="store_true",
+                          help="also probe detached-job state + results rows")
+    canary_p = sub.add_parser("canary", parents=[common])
+    canary_p.add_argument("--canary-ckpt",
+                          default="runs/pretrain6_d24/ckpt_latest.pkl")
+    canary_p.add_argument("--canary-task", default="ca_AboveBelow5")
     sub.add_parser("cycle", parents=[common, up_like, run_like])
 
     args = ap.parse_args()
     TPU_NAME = args.name  # every helper reads the module global
     sys.exit({"up": cmd_up, "run": cmd_run, "down": cmd_down,
-              "status": cmd_status, "cycle": cmd_cycle}[args.verb](args))
+              "status": cmd_status, "cycle": cmd_cycle,
+              "canary": cmd_canary}[args.verb](args))
 
 
 if __name__ == "__main__":

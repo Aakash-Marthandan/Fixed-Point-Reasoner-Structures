@@ -79,16 +79,39 @@ def summarize(name, rows):
 
 
 def main():
-    base_union = None
-    sets = {}
+    # Analysis-integrity gates (ledger 2026-08-07 run-execution standard):
+    # (1) arms are comparable ONLY on identical task sets — assert, don't
+    # assume; (2) absent rows are counted and named, never silently skipped
+    # (the per-task retry wrapper converts failures into missing rows).
+    expected = set(json.load(open("tools/valhard.json"))["valhard"])
+    sets, tasksets = {}, {}
     for path in sys.argv[1:]:
         name = Path(path).parent.name
         rows = load(path)
+        dup = len(rows) - len({r["task"] for r in rows})
+        if dup:
+            print(f"WARNING {name}: {dup} duplicate task rows (retry residue) — "
+                  "keeping last per task")
+            rows = list({r["task"]: r for r in rows}.values())
+        tasksets[name] = {r["task"] for r in rows}
+        missing = expected - tasksets[name]
+        if missing:
+            print(f"WARNING {name}: {len(missing)} expected tasks ABSENT "
+                  f"(failed or unfinished): {sorted(missing)[:8]}"
+                  f"{'…' if len(missing) > 8 else ''}")
         sets[name] = summarize(name, rows)
     if len(sets) > 1:
         names = list(sets)
+        common = set.intersection(*tasksets.values())
         for a, b in combinations(names, 2):
-            print(f"{a} ∩ {b} = {len(sets[a] & sets[b])}; union {len(sets[a] | sets[b])}")
+            if tasksets[a] != tasksets[b]:
+                print(f"NOTE: {a} vs {b} task sets differ — head-to-head "
+                      f"restricted to the {len(common)} common tasks")
+        for a, b in combinations(names, 2):
+            A = {o for o in sets[a] if o[0] in common}
+            B = {o for o in sets[b] if o[0] in common}
+            print(f"{a} ∩ {b} = {len(A & B)}; union {len(A | B)} "
+                  f"(on {len(common)} common tasks)")
         print("all-arm union:", len(set().union(*sets.values())))
     # vs the 2026-08-06 baselines (ledger): best single 12/144; six-way union 24/144
     print("baselines (08-06): best single protocol 12/144; six-protocol union 24/144")
