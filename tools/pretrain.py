@@ -45,6 +45,12 @@ def parse_args():
     p.add_argument("--out", required=True)
     p.add_argument("--steps", type=int, default=20_000)
     p.add_argument("--d", type=int, default=16)
+    p.add_argument("--equilibrium", action="store_true",
+                   help="E10: continuous-state equilibrium core")
+    p.add_argument("--anchor-p", type=float, default=0.0,
+                   help="E10 Phase B: fraction of batch rows given corrupted-"
+                        "target yprev init (basin training at corpus scale)")
+    p.add_argument("--anchor-eps", type=float, default=0.15)
     p.add_argument("--K", type=int, default=64)
     p.add_argument("--T", type=int, default=4)
     p.add_argument("--batch", type=int, default=64)
@@ -122,7 +128,7 @@ def main():
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat,
-                 d_task=a.d_task)
+                 d_task=a.d_task, equilibrium=a.equilibrium)
 
     exclude = frozenset(dev30.MANIFEST)
     val_ids = None
@@ -186,12 +192,23 @@ def main():
 
     @jax.jit
     def step_fn(state, opt_state, rng):
-        rng, k_batch, k_loss = jax.random.split(rng, 3)
+        rng, k_batch, k_loss, k_a1, k_a2, k_a3 = jax.random.split(rng, 6)
         x_b, y_b, t_b, lab_b = E.sample_batch(k_batch, dev, n_tasks, a.batch)
+        yp_b = None
+        if a.anchor_p > 0:  # E10 Phase B ([H-23] at corpus scale): some rows
+            # start from corrupt(y) instead of VOID — trains restoration.
+            import jax.numpy as jnp
+            row = jax.random.bernoulli(k_a1, a.anchor_p, (x_b.shape[0], 1, 1))
+            cell_m = jax.random.bernoulli(k_a2, a.anchor_eps, y_b.shape)
+            rand = jax.random.randint(k_a3, y_b.shape, 0, 10)
+            ycor = jnp.where(cell_m, rand, y_b)
+            void = jnp.full_like(y_b, 10)
+            yp_b = jnp.where(row, ycor, void)
 
         def loss_fn(st):
             return batch_loss(st["model"], cfg, x_b, y_b, tau=a.tau, rng=k_loss,
-                              task_vecs=st["table"][t_b], labels_x=lab_b)
+                              task_vecs=st["table"][t_b], labels_x=lab_b,
+                              yprev_batch=yp_b)
         (loss, aux), grads = jax.value_and_grad(loss_fn, has_aux=True)(state)
         updates, opt_state2 = opt.update(grads, opt_state, state)
         return optax.apply_updates(state, updates), opt_state2, loss, aux, rng

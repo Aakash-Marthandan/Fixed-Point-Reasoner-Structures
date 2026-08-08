@@ -48,6 +48,7 @@ class StepOutput(NamedTuple):
     size_sel_h: jax.Array    # (N_SIZE_CANDS,) candidate-selection logits (C1 v3)
     size_sel_w: jax.Array    # (N_SIZE_CANDS,)
     flux_obj: jax.Array      # (N_OBJ_STREAMS,) nats through cluster channels (C17)
+    z_fine: jax.Array        # (N_FIELDS, H, W, d) pre-readout decoder state (E10 A.2 carry)
 
 
 # ── Init ───────────────────────────────────────────────────────────────────
@@ -60,7 +61,8 @@ def init_params(key, cfg: Config):
     def lin(k, i, o, scale=None):
         return cell._linear_init(k, i, o, scale)
 
-    eq = ({"eq": {"eta": jnp.zeros(())}}  # sigmoid(0)=0.5 damped step (E10)
+    eq = ({"eq": {"eta": jnp.zeros(()), "eta_z": jnp.zeros(()),
+                  "alpha_z": jnp.zeros(())}}  # 0-init gate: A.2 carry inert at start
           if cfg.equilibrium else {})
     return {**eq,
         "embed": {  # shared 3x3 conv over each field's 2 channels (x, y_prev)
@@ -165,7 +167,8 @@ def _obj_stream(p_s, z, labels, rng):
 
 
 def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
-                   rng=None, task_vec=None, labels_obj=None) -> StepOutput:
+                   rng=None, task_vec=None, labels_obj=None,
+                   z_in=None) -> StepOutput:
     """One encode→rule→decode pass on continuous occupancy fields.
 
     fields: (N_FIELDS, CANVAS, CANVAS, 2) float32. Exposed at this level so the
@@ -177,6 +180,8 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     """
     d, db, S = cfg.d, cfg.d_b, cfg.scales
     z = _embed(params, fields)
+    if z_in is not None:  # E10 A.2: carried latent enters through a 0-init gate
+        z = z + params["eq"]["alpha_z"] * z_in
     cb_t = None
     if task_vec is not None:
         cb_t = cell._linear(params["task_proj"]["e_cb"], task_vec).reshape(N_FIELDS, d)
@@ -298,6 +303,7 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
         size_sel_h=sel[:N_SIZE_CANDS],
         size_sel_w=sel[N_SIZE_CANDS:],
         flux_obj=jnp.stack(flux_obj),
+        z_fine=zd,
     )
 
 
@@ -363,7 +369,9 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
     y = (jax.nn.one_hot(void_can, VOCAB).transpose(2, 0, 1)
          if y0_probs is None else y0_probs)
     eta = jax.nn.sigmoid(params["eq"]["eta"])
+    eta_z = jax.nn.sigmoid(params["eq"]["eta_z"])
     outs, residuals = [], []
+    z_c = None
     for t in range(T):
         t_norm = min(t, cfg.T - 1) / max(cfg.T - 1, 1)
         step_rng = None
@@ -371,7 +379,9 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
             rng, step_rng = jax.random.split(rng)
         out = forward_fields(params, cfg, build_fields_soft(x_canvas, y),
                              t_norm=t_norm, tau=tau, rng=step_rng,
-                             task_vec=task_vec)
+                             task_vec=task_vec, z_in=z_c)
+        z_c = (out.z_fine if z_c is None
+               else z_c + eta_z * (out.z_fine - z_c))
         p = jax.nn.softmax(out.logits, axis=-1).transpose(2, 0, 1)
         y_new = y + eta * (p - y)
         residuals.append(jnp.mean(jnp.abs(y_new - y)))
