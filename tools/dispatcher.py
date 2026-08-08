@@ -371,7 +371,10 @@ def cmd_canary(args) -> int:
     any provision/re-provision and BEFORE any campaign, run one short
     single-bulk population fit and verify the completion sentinel. The 08-07
     incident (host image rolled under identical wheels; 96 cells lost) is the
-    reason this exists. Exit 0 = lane certified; anything else = STOP."""
+    reason this exists. Exit 0 = lane certified; anything else = STOP.
+    PREREQS on the lane: the canary ckpt uploaded AND data synced (the
+    default task is ConceptARC) — 2026-08-08: a canary sequenced before the
+    data sync fails on load_task, correctly but uninformatively."""
     guard_identity(args.dry_run)
     if vm_state(args.zone) is None:
         print(f"canary: no VM '{TPU_NAME}' — `up` first")
