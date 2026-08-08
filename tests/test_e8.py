@@ -64,7 +64,28 @@ def test_e8_fit_smoke(setup):
                              anchor=True, restarts=True, anneal=True,
                              restart_every=6)
     assert len(snaps) == 2
-    assert snaps[-1][2] == E8.TAU_PLATEAUS[-1]  # anneal reached final plateau
+    assert snaps[-1][3] == E8.TAU_PLATEAUS[-1]  # anneal reached final plateau
+    assert snaps[-1][1] is None  # e_t-only arms carry no model snapshot
     ok = E8.retention(model, cfg, sup[0][0], sup[0][1],
-                      jnp.asarray(snaps[-1][1]), snaps[-1][2], k=2)
+                      jnp.asarray(snaps[-1][2]), snaps[-1][3], k=2)
     assert isinstance(ok, bool)
+
+
+def test_e8_full_arm_smoke(setup):
+    """B4: model+tv fit — model changes, snapshots carry per-step models."""
+    cfg, params, x = setup
+    rng = np.random.default_rng(5)
+    sup = []
+    for _ in range(3):
+        g = np.asarray(rng.integers(0, 10, (4, 5)), dtype=np.int8)
+        sup.append((g, g.copy()))
+    eps_list = [G.Episode(task_id="t", support=tuple(sup), query_x=sup[0][0],
+                          query_y=sup[0][1])]
+    state = {"model": params, "table": np.zeros((2, cfg.d_task), np.float32)}
+    model, snaps = E8.fit_e8(state, cfg, eps_list, steps=6, val_every=3,
+                             anchor=True, restarts=False, anneal=False,
+                             full=True)
+    assert snaps[-1][1] is not None
+    ref = np.asarray(jax.tree.leaves(params)[0])
+    new = np.asarray(jax.tree.leaves(model)[0])
+    assert not np.allclose(ref, new)  # the model actually trained

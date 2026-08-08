@@ -47,26 +47,37 @@ def corrupt(y: np.ndarray, eps: float, rng: np.random.Generator) -> np.ndarray:
 
 
 @functools.lru_cache(maxsize=32)
-def _e8_step(cfg: Config, tau: float, lr: float, wd: float, beta: float):
+def _e8_step(cfg: Config, tau: float, lr: float, wd: float, beta: float,
+             full: bool = False):
+    """full=False: e_t-only (B1-B3). full=True (B4, ledger 2026-08-08 NIGHT
+    amendment): AdamW over {model, tv} jointly at arm-C lr — the
+    capacity × basin cell."""
     from dataclasses import replace
     cfg_b = replace(cfg, beta_flux=beta) if beta else cfg
     opt = optax.adamw(lr, weight_decay=wd)
 
     @jax.jit
     def step(model, tv, opt_state, rng, x_b, y_b, yp_b):
-        def loss_fn(v):
+        def loss_fn(tr):
+            m, v = (tr["model"], tr["tv"]) if full else (model, tr)
             tvs = jnp.broadcast_to(v, (x_b.shape[0],) + v.shape)
-            loss, _ = batch_loss(model, cfg_b, x_b, y_b, tau=tau, rng=rng,
+            loss, _ = batch_loss(m, cfg_b, x_b, y_b, tau=tau, rng=rng,
                                  task_vecs=tvs, yprev_batch=yp_b)
             return loss
-        g = jax.grad(loss_fn)(tv)
-        upd, os2 = opt.update(g, opt_state, tv)
-        return optax.apply_updates(tv, upd), os2
+        tr0 = {"model": model, "tv": tv} if full else tv
+        g = jax.grad(loss_fn)(tr0)
+        upd, os2 = opt.update(g, opt_state, tr0)
+        tr1 = optax.apply_updates(tr0, upd)
+        if full:
+            return tr1["model"], tr1["tv"], os2
+        return model, tr1, os2
     return step, opt
 
 
 def fit_e8(state, cfg, eps_list, *, steps, val_every, anchor, restarts, anneal,
-           seed=0, lr=1e-2, wd=1e-4, restart_every=25):
+           full=False, seed=0, lr=1e-2, wd=1e-4, restart_every=25):
+    if full:
+        lr = 3e-3  # arm-C value (eval_dev30 ARM_LR["C"])
     model = jax.tree.map(jnp.asarray, state["model"])
     tv = jnp.asarray(np.asarray(state["table"]).mean(0))
     train_pairs = list(eps_list[0].support[:-1])
@@ -102,9 +113,9 @@ def fit_e8(state, cfg, eps_list, *, steps, val_every, anchor, restarts, anneal,
     for i in range(steps):
         tau = (TAU_PLATEAUS[min(int(i / (steps / len(TAU_PLATEAUS))),
                                 len(TAU_PLATEAUS) - 1)] if anneal else 1.0)
-        step_fn, opt = _e8_step(cfg, tau, lr, wd, beta)
-        if opt_state is None or tau != cur_tau:
-            opt_state = opt.init(tv) if opt_state is None else opt_state
+        step_fn, opt = _e8_step(cfg, tau, lr, wd, beta, full)
+        if opt_state is None:
+            opt_state = opt.init({"model": model, "tv": tv} if full else tv)
             cur_tau = tau
         if restarts and i % restart_every == 0:
             rows = []
@@ -118,9 +129,10 @@ def fit_e8(state, cfg, eps_list, *, steps, val_every, anchor, restarts, anneal,
                 [np.asarray(YP[:X.shape[0] - n_restart]), np.stack(rows)]),
                 dtype=jnp.int32)
         rng, sub = jax.random.split(rng)
-        tv, opt_state = step_fn(model, tv, opt_state, sub, X, Y, YP)
+        model, tv, opt_state = step_fn(model, tv, opt_state, sub, X, Y, YP)
         if (i + 1) % val_every == 0 or i + 1 == steps:
-            snaps.append((i + 1, np.asarray(tv), tau))
+            snaps.append((i + 1, (jax.tree.map(np.asarray, model) if full
+                                  else None), np.asarray(tv), tau))
     return model, snaps
 
 
@@ -143,6 +155,8 @@ def main():
     ap.add_argument("--anchor", action="store_true")
     ap.add_argument("--restarts", action="store_true")
     ap.add_argument("--anneal", action="store_true")
+    ap.add_argument("--full", action="store_true",
+                    help="B4: fit model+tv jointly at arm-C lr (capacity cell)")
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
 
@@ -166,19 +180,24 @@ def main():
             model, snaps = fit_e8(saved["state"], cfg, eps_list,
                                   steps=a.steps, val_every=a.val_every,
                                   anchor=a.anchor, restarts=a.restarts,
-                                  anneal=a.anneal, seed=a.seed)
+                                  anneal=a.anneal, full=a.full, seed=a.seed)
             vx, vy = eps_list[0].support[-1]
-            # selection: earliest LoO-exact at that snapshot's tau, else last
+            # selection: earliest LoO-exact at that snapshot's tau, else last;
+            # full arm (B4): each snapshot carries its own model
+            def snap_model(m_snap):
+                return (jax.tree.map(jnp.asarray, m_snap)
+                        if m_snap is not None else model)
             sel = None
-            for step_i, tv, tau in snaps:
-                tr = P.trace(model, cfg, vx, tau=tau, task_vec=jnp.asarray(tv),
-                             t_total=cfg.T)
+            for step_i, m_snap, tv, tau in snaps:
+                tr = P.trace(snap_model(m_snap), cfg, vx, tau=tau,
+                             task_vec=jnp.asarray(tv), t_total=cfg.T)
                 if tr[-1]["pred"].shape == vy.shape and \
                         np.array_equal(tr[-1]["pred"], vy):
-                    sel = (step_i, tv, tau); break
+                    sel = (step_i, m_snap, tv, tau); break
             if sel is None:
                 sel = snaps[-1]
-            step_i, tv, tau = sel
+            step_i, m_snap, tv, tau = sel
+            model = snap_model(m_snap)
             tvj = jnp.asarray(tv)
             rng_np = np.random.default_rng(a.seed + 13)
 
