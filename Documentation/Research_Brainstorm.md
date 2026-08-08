@@ -160,3 +160,84 @@ by later evidence.
 - [ARC Prize 2025 technical report](https://arxiv.org/html/2601.10904v1) · [ARC Prize 2024 report](https://arxiv.org/pdf/2412.04604)
 - [CompressARC — ARC-AGI without pretraining](https://arxiv.org/pdf/2512.06104)
 - [ARC-AGI-2 benchmark](https://arxiv.org/pdf/2505.11831)
+
+---
+
+# Freethink 2026-08-08 — after the E1/E3 verdicts: attractor engineering
+
+*Inputs: the E1/E3/E3b measurements (ledger 2026-08-08), two literature
+sweeps (attractor-shaping mechanisms; ARC TTT/recursion mechanics 2024-26),
+and two same-day analyses from saved data. Nothing below is registered until
+it moves to the ledger; the companion ledger entry registers the subset we
+commit to.*
+
+## 0. New same-day data
+- **Dynamics collapse (cluster G's datum):** 53-58% of val-hard pairs
+  produce exactly ONE distinct state across 16 iterations; median 1; ≥4
+  states only 10-20%. The recursion does no computation for most inputs.
+- **Wedge-gap probe (cluster C): NEGATIVE.** Solved outputs sit at *higher*
+  support↔query statistical distance (med 1.63 vs 1.00); no low-gap
+  enrichment (5/14 vs 7 uniform). The crude distance is wrong or the wedge
+  framing is; cluster C demoted until someone proposes a better metric.
+
+## 1. The convergent diagnosis (ours ⊕ the field's)
+Our E3b (truth erased 92-94%; own wrong answers stable 72-84%) is the
+literature's inverted-exposure-bias pathology, measured directly: **no loss
+term ever demanded F(x, y*) = y*** — deep supervision only maps
+self-produced states → y*, so basins form around trajectory states, never
+around targets. The field hit the same wall and named its repairs:
+- **TRM measured HRM's residuals never vanishing** (the fixed-point gradient
+  was a fiction); TRM abandoned equilibria; **FPRM instead made them real**
+  (pre-norm + learnable residual scaling + damped iteration +
+  residual-gated halt) and beats TRM at 7M params: ARC-1 47.5%. [H-2] is
+  not wrong physics; it was unbuilt engineering.
+- **ARChitects-25**: refinement loop never trained ("not trained to
+  re-iterate upon its own first guess" — their words, our measurement);
+  works only because random-rate masked training accidentally builds basins
+  at all corruption scales; limits untrustworthy → they vote by
+  **trajectory visit counts**.
+- **ARC Prize HRM ablation**: the outer refinement loop IS the driver
+  (+13pp from one extra loop; train-with-16-loops > test-with-16). value of
+  iteration is front-loaded and largely a *training-time* signal.
+- **Answer/latent split**: every recursive winner carries a decodable
+  answer register y AND a separate latent z; merging costs ~15pp (TRM
+  ablation). We carry only argmax(y) — no latent survives between steps.
+- **Per-task capacity**: task-embedding-only adaptation is measured-dead
+  across the field (TRM: blank puzzle_id → 0%; TRM-TTA: full-net FT works,
+  LoRA/embedding-only fails; CompressARC fits everything). Our 64-float e_t
+  is the field's known-dead configuration — independent confirmation of E6's
+  premise before we run it.
+- **Aggregation**: PoE's ladder (+26 TTT, +18 vote, +5 PoE, +4 DFS) — the
+  augmentation orbit used three ways (TTT data / candidate generator /
+  product-of-experts verifier). Selection-side, for when generation moves.
+
+## 2. Mechanism shortlist for basin construction (from the survey, ranked)
+1. **Corrupted-target anchoring**: with prob p per supervision sample, set
+   yprev = corrupt(y*) at rate ε ~ U[0, ε_max] **including ε=0** (explicit
+   idempotence F(x,y*)=y*). Basin radius programmable via ε_max. Near-zero
+   cost. (Alain-Bengio 1211.4246; GNS 2002.09405; Growing-NCA damage
+   training; the ARChitects' accidental version.)
+2. **Self-rollout restarts** (SUNDAE 2112.06749; deep-thinking
+   incremental-progress 2202.05826): start supervised segments from k
+   gradient-free self-iterations (k random, sometimes from converged wrong
+   states) — trains ESCAPE from own attractors; the only mechanism aimed at
+   the 72-84% wrong-stability half.
+3. **Local contraction + path independence** (Jacobian penalty at (x,y*),
+   2106.14342; init-randomization for path independence, 2211.09961) — the
+   2000-5000-step arm.
+4. **FPRM stabilizer kit** (2606.18206) as the architecture-side fix when we
+   next touch src/: residual scaling, damped iteration, residual-gated halt.
+5. Schedule multipliers, untested-at-TTT anywhere (open niche): weight
+   decay + shrunk-init + Grokfast-EMA (2405.20233) on per-task fits.
+
+## 3. What is publishable regardless of solve-rate
+- **The E3b instrument + repair curve**: nobody in the ARC literature
+  *measures* basin structure directly (the field infers it from residuals or
+  oscillations). GT-retention and the corruption-ladder = a quantitative
+  "code distance for reasoning solutions" — thesis S4 made operational —
+  with before/after curves under each training mechanism.
+- **The order-parameter split** (E1): commitment level vs commitment
+  identity — a mechanistic account of why per-input rule re-inference
+  fails, with H[q] as the measured variable.
+- **The falsification map**: H-2 as-deployed falsified → FPRM-informed
+  restatement → repaired-or-not, all pre-registered. Method paper spine.
