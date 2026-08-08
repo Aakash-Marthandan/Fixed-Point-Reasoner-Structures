@@ -41,11 +41,13 @@ def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
 
 
 def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
-              task_vec=None, labels_x=None):
-    """Deep-supervised loss for one (input, output) pair; mask = true output canvas."""
+              task_vec=None, labels_x=None, yprev_init=None):
+    """Deep-supervised loss for one (input, output) pair; mask = true output canvas.
+
+    yprev_init: optional initial feedback canvas ([H-23] basin rows)."""
     mask = y_canvas != VOID
     outs = iterate(params, cfg, x_canvas, tau=tau, rng=rng, task_vec=task_vec,
-                   labels_x=labels_x)
+                   labels_x=labels_x, yprev_init=yprev_init)
     losses, ces = zip(*(_step_loss(o, x_canvas, y_canvas, mask, cfg) for o in outs))
     return jnp.mean(jnp.stack(losses)), {
         "ce_in_last": ces[-1],
@@ -57,7 +59,7 @@ def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
 
 
 def batch_loss(params, cfg: Config, x_batch, y_batch, *, tau: float, rng=None,
-               task_vecs=None, labels_x=None, weights=None):
+               task_vecs=None, labels_x=None, weights=None, yprev_batch=None):
     """Mean pair_loss over a batch of canvases (B, 32, 32).
 
     task_vecs: optional (B, d_task) — per-example program embeddings (C16),
@@ -76,18 +78,22 @@ def batch_loss(params, cfg: Config, x_batch, y_batch, *, tau: float, rng=None,
         args.append(task_vecs); axes.append(0)
     if labels_x is not None:
         args.append(labels_x); axes.append(0)
+    if yprev_batch is not None:
+        args.append(yprev_batch); axes.append(0)
 
     def f(x, y, *rest):
         i = 0
-        k = tv = lx = None
+        k = tv = lx = yp = None
         if keys is not None:
             k = rest[i]; i += 1
         if task_vecs is not None:
             tv = rest[i]; i += 1
         if labels_x is not None:
-            lx = rest[i]
+            lx = rest[i]; i += 1
+        if yprev_batch is not None:
+            yp = rest[i]
         return pair_loss(params, cfg, x, y, tau=tau, rng=k, task_vec=tv,
-                         labels_x=lx)
+                         labels_x=lx, yprev_init=yp)
 
     losses, aux = jax.vmap(f, in_axes=tuple(axes))(*args)
     if weights is None:

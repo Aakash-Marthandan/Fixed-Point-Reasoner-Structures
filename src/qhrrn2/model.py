@@ -342,10 +342,16 @@ def build_fields(x_canvas, yprev_canvas):
 
 
 def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
-            task_vec=None, labels_x=None) -> list[StepOutput]:
+            task_vec=None, labels_x=None, yprev_init=None) -> list[StepOutput]:
     """T recursion passes (C9). Feedback is the argmax canvas (detached by
-    construction); deep supervision trains every pass."""
-    yprev = jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
+    construction); deep supervision trains every pass.
+
+    yprev_init (ledger 2026-08-08, [H-23] basin training): optional initial
+    feedback canvas — corrupted targets / self-rollout states enter here so
+    the map is trained to restore/progress from them. None = the deployed
+    all-VOID start, bit-identical (tests/test_e8.py::test_yprev_init_inert)."""
+    yprev = (jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
+             if yprev_init is None else jnp.asarray(yprev_init, dtype=jnp.int32))
     labs_x = None
     if cfg.use_obj:
         if labels_x is not None:
