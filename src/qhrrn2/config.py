@@ -32,3 +32,8 @@ class Config:
     #                            unlocks B=64 at d>=24+C17 — 2026-08-05)
     w_void: float = 0.1      # weight of VOID-region CE relative to canvas region (C1)
     lambda_size: float = 0.3  # canvas-head loss weight
+    # E10 equilibrium core (ledger 2026-08-09; [H-2'], FPRM-informed).
+    # equilibrium=False reproduces the pre-E10 graph exactly.
+    equilibrium: bool = False
+    t_max: int = 16          # inference iteration ceiling (probes/halt)
+    res_tau: float = 0.05    # relative-residual halt threshold

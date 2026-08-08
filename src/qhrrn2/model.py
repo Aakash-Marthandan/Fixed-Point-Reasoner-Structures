@@ -60,7 +60,9 @@ def init_params(key, cfg: Config):
     def lin(k, i, o, scale=None):
         return cell._linear_init(k, i, o, scale)
 
-    return {
+    eq = ({"eq": {"eta": jnp.zeros(())}}  # sigmoid(0)=0.5 damped step (E10)
+          if cfg.equilibrium else {})
+    return {**eq,
         "embed": {  # shared 3x3 conv over each field's 2 channels (x, y_prev)
             "w": jax.random.normal(ks[0], (d, 2, 3, 3)) * 0.3,
             "b": jnp.zeros((d,)),
@@ -341,6 +343,43 @@ def build_fields(x_canvas, yprev_canvas):
     return jnp.stack([fx, fy], axis=-1)
 
 
+def build_fields_soft(x_canvas, y_probs):
+    """E10: int input canvas + CONTINUOUS carried answer (N_FIELDS, H, W)
+    probability canvas -> fields. The y slot never sees an argmax."""
+    fx = jax.nn.one_hot(x_canvas, VOCAB).transpose(2, 0, 1)
+    return jnp.stack([fx, y_probs], axis=-1)
+
+
+def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
+               task_vec=None, t_total=None, y0_probs=None):
+    """E10 equilibrium loop ([H-2'], ledger 2026-08-09): continuous carried
+    answer register with a damped update y <- y + eta*(softmax(logits) - y);
+    eta = sigmoid(params['eq']['eta']) (FPRM-style learnable step). Steps
+    beyond cfg.T repeat the final map (t_norm frozen at 1). Returns
+    (outs, residuals, y_final); residuals are mean |Delta y| per step —
+    the inference halt (res < cfg.res_tau) is applied by callers/probes."""
+    T = t_total if t_total is not None else cfg.T
+    void_can = jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
+    y = (jax.nn.one_hot(void_can, VOCAB).transpose(2, 0, 1)
+         if y0_probs is None else y0_probs)
+    eta = jax.nn.sigmoid(params["eq"]["eta"])
+    outs, residuals = [], []
+    for t in range(T):
+        t_norm = min(t, cfg.T - 1) / max(cfg.T - 1, 1)
+        step_rng = None
+        if rng is not None:
+            rng, step_rng = jax.random.split(rng)
+        out = forward_fields(params, cfg, build_fields_soft(x_canvas, y),
+                             t_norm=t_norm, tau=tau, rng=step_rng,
+                             task_vec=task_vec)
+        p = jax.nn.softmax(out.logits, axis=-1).transpose(2, 0, 1)
+        y_new = y + eta * (p - y)
+        residuals.append(jnp.mean(jnp.abs(y_new - y)))
+        y = y_new
+        outs.append(out)
+    return outs, residuals, y
+
+
 def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
             task_vec=None, labels_x=None, yprev_init=None) -> list[StepOutput]:
     """T recursion passes (C9). Feedback is the argmax canvas (detached by
@@ -349,7 +388,17 @@ def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
     yprev_init (ledger 2026-08-08, [H-23] basin training): optional initial
     feedback canvas — corrupted targets / self-rollout states enter here so
     the map is trained to restore/progress from them. None = the deployed
-    all-VOID start, bit-identical (tests/test_e8.py::test_yprev_init_inert)."""
+    all-VOID start, bit-identical (tests/test_e8.py::test_yprev_init_inert).
+
+    cfg.equilibrium (E10): dispatch to the continuous-state loop; the outs
+    contract (list of StepOutput, deep supervision per step) is preserved."""
+    if cfg.equilibrium:
+        y0 = (None if yprev_init is None else
+              jax.nn.one_hot(jnp.asarray(yprev_init, dtype=jnp.int32),
+                             VOCAB).transpose(2, 0, 1))
+        outs, _, _ = iterate_eq(params, cfg, x_canvas, tau=tau, rng=rng,
+                                task_vec=task_vec, y0_probs=y0)
+        return outs
     yprev = (jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
              if yprev_init is None else jnp.asarray(yprev_init, dtype=jnp.int32))
     labs_x = None
