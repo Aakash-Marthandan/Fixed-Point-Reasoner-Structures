@@ -131,9 +131,15 @@ def measure_flux(params, cfg, x_b, y_b, tau, tv):
     return np.asarray(I.mean(0)).tolist(), np.asarray(A.mean(0)).tolist()
 
 
-def _fit(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed):
+def _fit(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
+         snapshots=None):
     """The fitting core: LoO-validated arm fit. Returns a dict with the
-    earliest-exact/best/final trainables, curves, and tv accessor."""
+    earliest-exact/best/final trainables, curves, and tv accessor.
+
+    snapshots: optional list — when given, (step, tv_numpy) is appended at
+    every validation point (E1 instrument, ledger 2026-08-08; default None
+    leaves the deployed path byte-identical — equivalence test
+    tests/test_probe_e1e3.py::test_snapshot_flag_inert)."""
     support = list(episodes[0].support)
     train_pairs, (val_x, val_y) = support[:-1], support[-1]
     x_b, y_b = T.pairs_to_batch(train_pairs, transforms=None, seed=seed)
@@ -165,6 +171,8 @@ def _fit(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed):
             exact, pix, _ = T.evaluate_pair(trainable["model"], cfg, val_x, val_y,
                                             tau=tau, task_vec=tv_of(trainable))
             val_curve.append((i + 1, round(pix, 4), bool(exact)))
+            if snapshots is not None and tv_of(trainable) is not None:
+                snapshots.append((i + 1, np.asarray(tv_of(trainable))))
             if exact and first_exact is None:
                 first_exact = (trainable, i + 1)
             if (exact, pix, -losses[-1]) > (best["val_exact"], best["val_pix"],
