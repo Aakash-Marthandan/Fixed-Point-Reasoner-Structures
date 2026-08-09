@@ -221,7 +221,18 @@ def main():
                 exact = bool(ep.query_y is not None
                              and q[cfg.T - 1]["pred"].shape == ep.query_y.shape
                              and np.array_equal(q[cfg.T - 1]["pred"], ep.query_y))
-                qrec = {"exact_T": exact,
+                qlad = {}
+                if ep.query_y is not None:  # C.2: query eps-ladder (basin radius)
+                    for e in LADDER_EPS:
+                        cy = corrupt(np.asarray(ep.query_y), e, rng_np)
+                        st2 = P.trace(model, cfg, np.asarray(ep.query_x),
+                                      tau=tau, task_vec=tvj, t_total=8,
+                                      yprev_init=G.place(cy), skip_trained=True)
+                        gt = np.asarray(ep.query_y)
+                        qlad[str(e)] = bool(
+                            st2[-1]["pred"].shape == gt.shape
+                            and np.array_equal(st2[-1]["pred"], gt))
+                qrec = {"exact_T": exact, "q_ladder": qlad,
                         "Hq": q[cfg.T - 1]["H_q"],
                         "n_distinct": len({s["pred"].tobytes() + bytes(s["pred"].shape)
                                            for s in q}),
