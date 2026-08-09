@@ -120,3 +120,19 @@ def test_ci9d_convergence_correctness(fitted):
             ok_conv += bool(float(res[-1]) < CFG.res_tau)
     if n:
         assert ok_conv / n > 0.8, f"converged {ok_conv}/{n} solved"
+
+
+def test_p9_dials_inert_by_default():
+    """eta_floor=0 / z_gate_init=0 reproduce the pretrain-8 graph exactly;
+    set dials change init/dynamics as specified."""
+    p0 = init_params(jax.random.PRNGKey(7), CFG)
+    assert float(p0["eq"]["alpha_z"]) == 0.0
+    from dataclasses import replace
+    cfg9 = replace(CFG, eta_floor=0.2, z_gate_init=0.3)
+    p9 = init_params(jax.random.PRNGKey(7), cfg9)
+    assert float(p9["eq"]["alpha_z"]) == pytest.approx(0.3)
+    x = jnp.asarray(G.place(np.ones((4, 4), np.int8)), dtype=jnp.int32)
+    o0 = iterate_eq(p0, CFG, x, tau=1.0, t_total=2)
+    o9 = iterate_eq(p9, cfg9, x, tau=1.0, t_total=2)
+    # floor: effective eta >= 0.2 -> first-step residual strictly larger
+    assert float(o9[1][0]) > float(o0[1][0])

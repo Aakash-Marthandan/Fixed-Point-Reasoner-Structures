@@ -51,6 +51,11 @@ def parse_args():
                    help="E10 Phase B: fraction of batch rows given corrupted-"
                         "target yprev init (basin training at corpus scale)")
     p.add_argument("--anchor-eps", type=float, default=0.15)
+    p.add_argument("--beta-flux", type=float, default=0.0,
+                   help="P9-C: the RT toll shaping the landscape (S1/S2)")
+    p.add_argument("--beta-flux-nl", type=float, default=0.0)
+    p.add_argument("--eta-floor", type=float, default=0.0)
+    p.add_argument("--z-gate-init", type=float, default=0.0)
     p.add_argument("--K", type=int, default=64)
     p.add_argument("--T", type=int, default=4)
     p.add_argument("--batch", type=int, default=64)
@@ -128,7 +133,9 @@ def main():
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat,
-                 d_task=a.d_task, equilibrium=a.equilibrium)
+                 d_task=a.d_task, equilibrium=a.equilibrium,
+                 beta_flux=a.beta_flux, beta_flux_nl=a.beta_flux_nl,
+                 eta_floor=a.eta_floor, z_gate_init=a.z_gate_init)
 
     exclude = frozenset(dev30.MANIFEST)
     val_ids = None

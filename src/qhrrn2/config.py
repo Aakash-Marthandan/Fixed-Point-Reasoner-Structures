@@ -37,3 +37,10 @@ class Config:
     equilibrium: bool = False
     t_max: int = 16          # inference iteration ceiling (probes/halt)
     res_tau: float = 0.05    # relative-residual halt threshold
+    # pretrain-9 dials (ledger 2026-08-10; defaults reproduce pretrain-8
+    # exactly). eta_floor = the annealing/temperature dial ([H-5] reading:
+    # quasi-static was LEARNED, not chosen — the floor keeps flow finite);
+    # z_gate_init warm-opens the bulk scratchpad ([H-24]; 0-init never
+    # engaged under anchor training).
+    eta_floor: float = 0.0
+    z_gate_init: float = 0.0

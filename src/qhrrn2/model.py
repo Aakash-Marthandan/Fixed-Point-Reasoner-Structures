@@ -62,7 +62,8 @@ def init_params(key, cfg: Config):
         return cell._linear_init(k, i, o, scale)
 
     eq = ({"eq": {"eta": jnp.zeros(()), "eta_z": jnp.zeros(()),
-                  "alpha_z": jnp.zeros(())}}  # 0-init gate: A.2 carry inert at start
+                  "alpha_z": jnp.asarray(cfg.z_gate_init)}}  # 0-init = A.2
+          # carry inert at start; z_gate_init>0 warm-opens it (pretrain-9)
           if cfg.equilibrium else {})
     return {**eq,
         "embed": {  # shared 3x3 conv over each field's 2 channels (x, y_prev)
@@ -368,7 +369,7 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
     void_can = jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
     y = (jax.nn.one_hot(void_can, VOCAB).transpose(2, 0, 1)
          if y0_probs is None else y0_probs)
-    eta = jax.nn.sigmoid(params["eq"]["eta"])
+    eta = cfg.eta_floor + (1.0 - cfg.eta_floor) * jax.nn.sigmoid(params["eq"]["eta"])
     eta_z = jax.nn.sigmoid(params["eq"]["eta_z"])
     outs, residuals = [], []
     z_c = None
