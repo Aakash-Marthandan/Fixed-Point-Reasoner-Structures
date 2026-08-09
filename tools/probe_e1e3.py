@@ -47,6 +47,39 @@ def trace(params, cfg: Config, x_grid, *, tau: float, task_vec, t_total: int,
     Returns per-step dicts: cropped pred, (h,w), H[q], canvas hash."""
     assert not cfg.use_obj, "probe v1 covers non-obj configs (registered)"
     x_can = jnp.asarray(G.place(np.asarray(x_grid)), dtype=jnp.int32)
+    if cfg.equilibrium:  # E10 Phase C: continuous-state trace (iterate_eq
+        # semantics; skip_trained = final-map-only steps from the given state)
+        y = (jax.nn.one_hot(jnp.full((G.CANVAS, G.CANVAS), G.VOID, jnp.int32),
+                            M.VOCAB).transpose(2, 0, 1)
+             if yprev_init is None else
+             jax.nn.one_hot(jnp.asarray(yprev_init, dtype=jnp.int32),
+                            M.VOCAB).transpose(2, 0, 1))
+        eta = jax.nn.sigmoid(params["eq"]["eta"])
+        eta_z = jax.nn.sigmoid(params["eq"]["eta_z"])
+        z_c = None
+        steps = []
+        for t in range(t_total):
+            t_norm = 1.0 if skip_trained else                 min(t, cfg.T - 1) / max(cfg.T - 1, 1)
+            out = _traced_fwd_eq(cfg, tau, float(t_norm))(
+                params, x_can, y, task_vec,
+                z_c if z_c is not None else jnp.zeros(1))
+            if z_c is None:
+                z_c = out.z_fine
+            else:
+                z_c = z_c + eta_z * (out.z_fine - z_c)
+            pcan = jax.nn.softmax(out.logits, axis=-1).transpose(2, 0, 1)
+            y = y + eta * (pcan - y)
+            canvas = np.asarray(jnp.argmax(out.logits, axis=-1))
+            cands = M.size_candidates(x_can)
+            p_h = M.size_mixture_probs(out.size_sel_h, out.size_h, cands[0])
+            p_w = M.size_mixture_probs(out.size_sel_w, out.size_w, cands[1])
+            h = int(jnp.argmax(p_h)) + 1
+            w = int(jnp.argmax(p_w)) + 1
+            pred = np.where(canvas[:h, :w] == G.VOID, 0,
+                            canvas[:h, :w]).astype(np.int8)
+            steps.append({"pred": pred, "hw": (h, w),
+                          "H_q": entropy(out.rule_q)})
+        return steps
     yprev = (jnp.full((G.CANVAS, G.CANVAS), G.VOID, dtype=jnp.int32)
              if yprev_init is None else jnp.asarray(yprev_init, dtype=jnp.int32))
     steps = []
@@ -68,6 +101,18 @@ def trace(params, cfg: Config, x_grid, *, tau: float, task_vec, t_total: int,
         steps.append({"pred": pred, "hw": (h, w), "H_q": entropy(out.rule_q)})
         yprev = canvas
     return steps
+
+
+@functools.lru_cache(maxsize=64)
+def _traced_fwd_eq(cfg: Config, tau: float, t_norm: float):
+    @jax.jit
+    def fwd(params, x_can, y_probs, task_vec, z_c):
+        z_in = None if z_c.ndim == 1 else z_c
+        return M.forward_fields(params, cfg,
+                                M.build_fields_soft(x_can, y_probs),
+                                t_norm=t_norm, tau=tau, rng=None,
+                                task_vec=task_vec, z_in=z_in)
+    return fwd
 
 
 @functools.lru_cache(maxsize=64)
