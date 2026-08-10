@@ -51,3 +51,20 @@ def test_c20a_difficulty_dial_moves_complexity():
             hard.append(h[0].size)
     assert np.mean(hard) > np.mean(easy), (
         f"difficulty dial inert: easy {np.mean(easy):.0f} vs hard {np.mean(hard):.0f}")
+
+
+def test_c20c_gate_loader_route():
+    eps = G.load_task("rg_00d62c1b")
+    assert len(eps) == 3 and len(eps[0].support) == 3
+    assert all(e.query_y is not None for e in eps)
+
+
+def test_c20a_corpus_mixing_and_no_orbit_on_re_rows():
+    import qhrrn2.episodic as E
+    corpus, _val = E.build_corpus(frozenset(), limit=3, n_val=0, orbit_n=2,
+                                  rearc_families=["00d62c1b"],
+                                  rearc_per_family=4, rearc_seed=1)
+    tids = list(corpus.task_ids)
+    assert any(t == "re_00d62c1b" for t in tids), tids
+    assert not any(t.startswith("re_") and "@o" in t for t in tids)
+    assert any("@o1" in t for t in tids)  # base rows still orbit

@@ -49,7 +49,9 @@ def build_corpus(exclude: frozenset[str], *, n_val: int = 20, seed: int = 0,
                  split: str = "training", limit: int | None = None,
                  val_ids: list[str] | None = None, orbit_n: int = 1,
                  conceptarc: bool = False,
-                 exclude_ca: frozenset[str] = frozenset()):
+                 exclude_ca: frozenset[str] = frozenset(),
+                 rearc_families: list[str] | None = None,
+                 rearc_per_family: int = 20, rearc_seed: int = 0):
     """Corpus over `split` minus `exclude` (+ optionally ConceptARC minus
     `exclude_ca`), orbit-expanded, plus the val slice.
 
@@ -59,6 +61,16 @@ def build_corpus(exclude: frozenset[str], *, n_val: int = 20, seed: int = 0,
     validity law: a transformed copy may never share the base embedding).
     Val tasks' queries are excluded from ALL their copies (a transformed query
     is trivially recoverable). val is the base-copy monitor list, as before.
+
+    rearc_families (C20a, 2026-08-10): generator families contributing
+    rearc_per_family sampled verified instances each, as `re_<fam>` rows —
+    SEPARATE rows from any base task of the same id (RE-ARC generators
+    occasionally broaden the original rule; sharing a row would blur two
+    nearby programs into one embedding). Family-holdout law (C20b) and the
+    dev-30/gate-original exclusions are the CALLER's contract via `exclude`
+    and the family list; this function only mixes what it is given. RE-ARC
+    rows are never val and take no orbit expansion (the generator's own
+    sampling is the diversity source).
     """
     ids = [t for t in G.list_task_ids(split) if t not in exclude]
     if limit is not None:
@@ -92,11 +104,24 @@ def build_corpus(exclude: frozenset[str], *, n_val: int = 20, seed: int = 0,
             pairs = list(eps[0].support) + [(e.query_x, e.query_y) for e in eps
                                             if e.query_y is not None]
             base.append((tid, pairs, False, []))
+    if rearc_families:
+        from qhrrn2 import rearc as R
+        rrng = np.random.default_rng(rearc_seed)
+        for fam in rearc_families:
+            got = []
+            for _ in range(rearc_per_family):
+                p = R.sample_instance(fam, rrng)
+                if p is not None:
+                    got.append(p)
+            if got:
+                base.append((f"re_{fam}", got, False, []))
 
     # orbit expansion: virtual tasks with their own rows
     expanded = []
     for tid, pairs, is_val, qs in base:
         expanded.append((tid, pairs, is_val, qs))
+        if tid.startswith("re_"):   # C20a: generator sampling is the
+            continue                # diversity source; no orbit rows
         for k in range(1, orbit_n):
             # zlib.crc32, NOT hash(): Python's hash is salted per process —
             # a resumed pretrain would silently re-derive different transforms

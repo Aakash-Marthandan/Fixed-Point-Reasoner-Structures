@@ -77,6 +77,12 @@ def parse_args():
                    help="boundary program width (H-17 co-scaling)")
     p.add_argument("--orbit", type=int, default=1,
                    help="orbit expansion factor: virtual tasks per base task")
+    p.add_argument("--rearc", action="store_true",
+                   help="C20a: mix RE-ARC train-family instances into the "
+                        "corpus; enforces C20b family-holdout + dev-30 "
+                        "exclusion + gate-original exclusion (pretrain-10 law)")
+    p.add_argument("--rearc-per-family", type=int, default=20)
+    p.add_argument("--rearc-seed", type=int, default=0)
     p.add_argument("--conceptarc", action="store_true",
                    help="merge vendored ConceptARC (minus val-hard) into the corpus")
     p.add_argument("--remat", action="store_true",
@@ -138,6 +144,18 @@ def main():
                  eta_floor=a.eta_floor, z_gate_init=a.z_gate_init)
 
     exclude = frozenset(dev30.MANIFEST)
+    rearc_families = None
+    if a.rearc:
+        # C20b contamination laws (ledger 2026-08-10): gate families never
+        # pretrain in ANY form (originals excluded too); dev-30 families
+        # never enter as generator instances.
+        from qhrrn2 import rearc as R
+        train_fams, gate_fams = R.family_split()
+        exclude = exclude | frozenset(gate_fams)
+        rearc_families = sorted(set(train_fams) - set(dev30.MANIFEST))
+        print(f"C20 corpus law: {len(rearc_families)} RE-ARC train families "
+              f"({len(set(train_fams) & set(dev30.MANIFEST))} dev-30 removed); "
+              f"{len(gate_fams)} gate-family originals excluded", flush=True)
     val_ids = None
     if a.val_ids_file:
         val_ids = json.load(open(a.val_ids_file))["val40"]
@@ -150,7 +168,10 @@ def main():
         exclude_ca = frozenset(json.load(open(vh_path))["valhard"])
     corpus, val = E.build_corpus(exclude, n_val=a.n_val, seed=a.seed, limit=a.limit,
                                  val_ids=val_ids, orbit_n=a.orbit,
-                                 conceptarc=a.conceptarc, exclude_ca=exclude_ca)
+                                 conceptarc=a.conceptarc, exclude_ca=exclude_ca,
+                                 rearc_families=rearc_families,
+                                 rearc_per_family=a.rearc_per_family,
+                                 rearc_seed=a.rearc_seed)
     dev = E.corpus_to_device(corpus)
     n_tasks = len(corpus.task_ids)
     n_pairs = int(corpus.x.shape[0])

@@ -171,12 +171,19 @@ def task_path(task_id: str, root: Path = ARC_DATA_ROOT) -> Path:
 
 def load_task(task_id: str, root: Path = ARC_DATA_ROOT) -> list[Episode]:
     """One Episode per test pair (most tasks have exactly one). ca_ ids route
-    to the vendored ConceptARC corpus (val-hard gate, 2026-08-06)."""
+    to the vendored ConceptARC corpus (val-hard gate, 2026-08-06); rg_ ids
+    route to the frozen RE-ARC family-transfer gate set (C20c, 2026-08-10)."""
     if task_id.startswith("ca_"):
         for tid, path, _ in list_conceptarc():
             if tid == task_id:
                 return load_task_file(path, tid)
         raise FileNotFoundError(f"ConceptARC task {task_id} not vendored")
+    if task_id.startswith("rg_"):
+        p = ARC_DATA_ROOT.parents[1] / "re_gate48" / f"{task_id}.json"
+        if not p.exists():
+            raise FileNotFoundError(
+                f"gate task {task_id} not built (tools/build_regate.py)")
+        return load_task_file(p, task_id)
     with open(task_path(task_id, root)) as f:
         raw = json.load(f)
     support = tuple(
