@@ -68,3 +68,17 @@ def test_c20a_corpus_mixing_and_no_orbit_on_re_rows():
     assert any(t == "re_00d62c1b" for t in tids), tids
     assert not any(t.startswith("re_") and "@o" in t for t in tids)
     assert any("@o1" in t for t in tids)  # base rows still orbit
+
+
+def test_c20c_rt_train_set_route_and_disjointness():
+    import pathlib
+    rt_dir = pathlib.Path(rearc.REARC_ROOT).parents[1] / "re_train48"
+    if not rt_dir.exists():
+        pytest.skip("rt set not built")
+    rt = sorted(p.stem for p in rt_dir.glob("*.json"))
+    assert len(rt) == 48
+    eps = G.load_task(rt[0])
+    assert len(eps) == 3 and eps[0].query_y is not None
+    train, gate = rearc.family_split()
+    fams = {t[3:] for t in rt}
+    assert fams <= set(train) and not (fams & set(gate))

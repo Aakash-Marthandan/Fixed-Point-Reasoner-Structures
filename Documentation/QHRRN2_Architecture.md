@@ -327,8 +327,8 @@ CompressARC-convergent move on our substrate with our instruments.
 
 | Stage | What | Named test | Kill condition |
 |---|---|---|---|
-| **B1-lite** [H-25] | TTT-side only: add T(x_q) (query flux toll + rule-consistency KL) to keyhole fits; ~30 lines in the fit, cfg-gated | keyhole battery ± B1-lite on one eq substrate: GT-retention, exact@sel, ε-ladder; mechanism variable pre-measured by probe_e4 (fraction of pairs where query self-codes ≠ committed codes) | retention or exact drop vs baseline fits |
-| **B1-full** [H-26] | pretrain-10 objective: CL(rule) with learned usage prior + β from the P9-C knee + T(x_q) on episodic queries | the pretrain-9 battery protocol (retention, ladders, spectra) vs P9-C; flux spectra must compress at equal-or-better retention | retention transfer worsens vs P9-C, or codebook collapses (R4 hygiene gates) |
+| **B1-lite** [H-28] | TTT-side only: add T(x_q) (query flux toll + rule-consistency KL) to keyhole fits; ~30 lines in the fit, cfg-gated | keyhole battery ± B1-lite on one eq substrate: GT-retention, exact@sel, ε-ladder; mechanism variable pre-measured by probe_e4 (fraction of pairs where query self-codes ≠ committed codes) | retention or exact drop vs baseline fits |
+| **B1-full** [H-29] | pretrain-10 objective: CL(rule) with learned usage prior + β from the P9-C knee + T(x_q) on episodic queries | the pretrain-9 battery protocol (retention, ladders, spectra) vs P9-C; flux spectra must compress at equal-or-better retention | retention transfer worsens vs P9-C, or codebook collapses (R4 hygiene gates) |
 
 **Why now.** Three 2026-08-10 measurements make B1 the ranked next build: the
 priced landscape survived its first load-bearing test (P9-C); the pool-MI

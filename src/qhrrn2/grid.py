@@ -178,8 +178,9 @@ def load_task(task_id: str, root: Path = ARC_DATA_ROOT) -> list[Episode]:
             if tid == task_id:
                 return load_task_file(path, tid)
         raise FileNotFoundError(f"ConceptARC task {task_id} not vendored")
-    if task_id.startswith("rg_"):
-        p = ARC_DATA_ROOT.parents[1] / "re_gate48" / f"{task_id}.json"
+    if task_id.startswith(("rg_", "rt_")):
+        sub = "re_gate48" if task_id.startswith("rg_") else "re_train48"
+        p = ARC_DATA_ROOT.parents[1] / sub / f"{task_id}.json"
         if not p.exists():
             raise FileNotFoundError(
                 f"gate task {task_id} not built (tools/build_regate.py)")

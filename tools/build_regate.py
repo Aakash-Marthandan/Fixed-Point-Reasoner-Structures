@@ -27,25 +27,38 @@ SEED = 20260810
 N_TASKS = 48
 N_SUPPORT = 3
 N_QUERY = 3
-OUT = Path(__file__).resolve().parents[1] / "data" / "re_gate48"
-SHA_FILE = Path(__file__).resolve().parent / "re_gate48.sha256"
+# --set gate (default): unseen families (C20c). --set train: TRAINED families,
+# fresh instances (the Q2 attribution cell, registered 2026-08-11) — an
+# independent rng chain from the corpus sampler's (SEED+7 vs corpus seed 0),
+# so instances are disjoint from pretraining draws.
+SETS = {
+    "gate": dict(prefix="rg", out="re_gate48", sha="re_gate48.sha256",
+                 seed=SEED),
+    "train": dict(prefix="rt", out="re_train48", sha="re_train48.sha256",
+                  seed=SEED + 7),
+}
 
 
-def gate_families():
+def families_for(which: str):
     import dev30
-    _, gate = rearc.family_split()
-    pool = [f for f in gate if f not in set(dev30.MANIFEST)]
-    rng = np.random.default_rng(SEED)
+    train, gate = rearc.family_split()
+    if which == "gate":
+        pool = [f for f in gate if f not in set(dev30.MANIFEST)]
+    else:
+        pool = sorted(set(train) - set(dev30.MANIFEST))  # = the 271 trained
+    rng = np.random.default_rng(SETS[which]["seed"])
     idx = rng.permutation(len(pool))[:N_TASKS]
     return sorted(pool[i] for i in idx)
 
 
-def build():
-    OUT.mkdir(parents=True, exist_ok=True)
-    rng = np.random.default_rng(SEED + 1)
+def build(which: str = "gate"):
+    cfg = SETS[which]
+    out_dir = Path(__file__).resolve().parents[1] / "data" / cfg["out"]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(cfg["seed"] + 1)
     digest = hashlib.sha256()
     built = []
-    for fam in gate_families():
+    for fam in families_for(which):
         pairs = []
         tries = 0
         while len(pairs) < N_SUPPORT + N_QUERY and tries < 40:
@@ -63,28 +76,32 @@ def build():
                      for x, y in pairs[N_SUPPORT:]],
         }
         blob = json.dumps(task, sort_keys=True, separators=(",", ":"))
-        (OUT / f"rg_{fam}.json").write_text(blob)
-        digest.update(f"rg_{fam}:".encode() + blob.encode())
-        built.append(f"rg_{fam}")
+        pref = cfg["prefix"]
+        (out_dir / f"{pref}_{fam}.json").write_text(blob)
+        digest.update(f"{pref}_{fam}:".encode() + blob.encode())
+        built.append(f"{pref}_{fam}")
     sha = digest.hexdigest()
-    print(f"built {len(built)} gate tasks -> {OUT}")
+    print(f"built {len(built)} {which} tasks -> {out_dir}")
     print(f"sha256 {sha}")
     return built, sha
 
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--set", default="gate", choices=list(SETS))
     ap.add_argument("--check", action="store_true",
                     help="verify existing build against the committed sha")
     a = ap.parse_args()
-    built, sha = build()
+    cfg = SETS[a.set]
+    sha_file = Path(__file__).resolve().parent / cfg["sha"]
+    built, sha = build(a.set)
     if a.check:
-        want = SHA_FILE.read_text().split()[0]
-        assert sha == want, f"gate set drifted: {sha} != committed {want}"
+        want = sha_file.read_text().split()[0]
+        assert sha == want, f"{a.set} set drifted: {sha} != committed {want}"
         print("CHECK OK: matches committed sha")
     else:
-        SHA_FILE.write_text(sha + f"  re_gate48 seed={SEED} n={len(built)}\n")
-        print(f"sha written to {SHA_FILE}")
+        sha_file.write_text(sha + f"  {cfg['out']} seed={cfg['seed']} n={len(built)}\n")
+        print(f"sha written to {sha_file}")
     print(",".join(built))
 
 
