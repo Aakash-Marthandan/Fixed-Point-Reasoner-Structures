@@ -169,7 +169,7 @@ def _obj_stream(p_s, z, labels, rng):
 
 def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
                    rng=None, task_vec=None, labels_obj=None,
-                   z_in=None) -> StepOutput:
+                   z_in=None, rule_override=None) -> StepOutput:
     """One encode→rule→decode pass on continuous occupancy fields.
 
     fields: (N_FIELDS, CANVAS, CANVAS, 2) float32. Exposed at this level so the
@@ -178,6 +178,11 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     paths entirely — the pre-C16 compute graph, exactly.
     labels_obj: C17 label maps {mode: (H, W) int32} incl. "yprev"; required
     when cfg.use_obj (iterate supplies them), ignored otherwise.
+    rule_override: optional (M, K) distributions — E4 committed-rule boundary
+    condition ([H-6']/CI-10): the rule slots are CLAMPED to the given q's
+    (everything downstream — decoder init, gates, canvas head — conditions on
+    the committed rule) instead of re-inferred from this input. None = the
+    pre-E4 graph, exactly.
     """
     d, db, S = cfg.d, cfg.d_b, cfg.scales
     z = _embed(params, fields)
@@ -234,11 +239,16 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
         h_ir = h_ir + cell._linear(params["task_proj"]["e_ir"], task_vec)
 
     # Rule slots (C8): tau-annealed categorical attention over the codebook.
+    # E4 (CI-10): rule_override clamps q — the committed rule transports from
+    # the supports; the query no longer re-infers it.
     E = params["codebook"]
     rule_q, rule_vecs = [], []
     for m in range(cfg.M):
-        logits_k = (h_ir @ params["rule_query"][m]) @ E.T / tau
-        q = jax.nn.softmax(logits_k)
+        if rule_override is not None:
+            q = rule_override[m]
+        else:
+            logits_k = (h_ir @ params["rule_query"][m]) @ E.T / tau
+            q = jax.nn.softmax(logits_k)
         rule_q.append(q)
         rule_vecs.append(q @ E)
     r = jnp.concatenate(rule_vecs)                        # (M * d_code,)

@@ -292,3 +292,48 @@ The solve-rate bet deliberately does **not** ride on the novel physics. It decom
 4. **Honest expectation:** target band **30–50% ARC-1 public-eval** at ≤400k params (TRM-competitive at 17–70× fewer params); floor scenario ~15–25% if R1/R2 bite hard — detectable by Aug 31 at the dev-30 gate with time to descope; upside >50% if priced composition genuinely helps. Any point in the target band is a new params-accuracy frontier point, which is the paper's efficiency claim; the physics deliverables (flux spectra, SSB transitions) do not depend on beating TRM.
 
 **Efficiency, quantified:** ~100k params (d=16); pretraining ≈ one v5e-8-spot day; vectorized TTT ≈ $0.10–0.20 per task at evaluation (compare: frontier-LLM refinement harnesses at ~$31/task on ARC-2) — three orders of magnitude cheaper per task, at 70× fewer parameters than the smallest strong baseline.
+
+---
+
+## 17. Amendment F — B1: the MDL-native episode objective (registered 2026-08-10, unbuilt)
+
+**Debt being paid.** S1/S2 have been instruments, not objectives, since v0.2: the
+flux ledgers *measure* description length but the loss optimizes distortion
+(masked CE) plus, since pretrain-9C, a small channel toll (β_flux=3e-5 — the
+first load-bearing rate term, +5–7 retained pairs over unpriced seeds, arm-pair
+overlap showing a *reshuffled* retained set: pricing perturbs the landscape, it
+does not yet organize it). B1 makes the objective itself a two-part code, the
+CompressARC-convergent move on our substrate with our instruments.
+
+**Form (per episode, K supports + query x_q):**
+
+    L_B1 = Σ_k CE(y_k | x_k, rule)                    [data | rule]
+         + λ_rule · CL(rule)                          [rule cost]
+         + Σ β_s I_s + β_nl Σ A_s   (all forwards)    [channel usage]
+         + λ_tx · T(x_q)                              [query co-compression]
+
+- **CL(rule)** — two-part-code rule cost: −log P(codes) under a *learned
+  usage prior* over the codebook (M×K logit table, EMA-updated at corpus
+  scale). A rule used by many episodes is cheap; an episode-private rule is
+  expensive — memorization priced where it actually lives (H-4's original
+  intent, finally at the rule level rather than only the channel level).
+- **T(x_q)** — transduction terms needing no query labels:
+  (a) the query forward's channel usage priced identically (the rule must
+  route the query cheaply too), and (b) **rule-transport consistency**
+  KL(q(x_q) ‖ q̄_supports) — the E4/CI-10 committed rule and the cluster-L
+  stationary-flux meter promoted from instrument to loss term.
+
+**Staging (each stage carries its named test; ledger discipline):**
+
+| Stage | What | Named test | Kill condition |
+|---|---|---|---|
+| **B1-lite** [H-25] | TTT-side only: add T(x_q) (query flux toll + rule-consistency KL) to keyhole fits; ~30 lines in the fit, cfg-gated | keyhole battery ± B1-lite on one eq substrate: GT-retention, exact@sel, ε-ladder; mechanism variable pre-measured by probe_e4 (fraction of pairs where query self-codes ≠ committed codes) | retention or exact drop vs baseline fits |
+| **B1-full** [H-26] | pretrain-10 objective: CL(rule) with learned usage prior + β from the P9-C knee + T(x_q) on episodic queries | the pretrain-9 battery protocol (retention, ladders, spectra) vs P9-C; flux spectra must compress at equal-or-better retention | retention transfer worsens vs P9-C, or codebook collapses (R4 hygiene gates) |
+
+**Why now.** Three 2026-08-10 measurements make B1 the ranked next build: the
+priced landscape survived its first load-bearing test (P9-C); the pool-MI
+analysis found a 26pp correlation cost with a hard core of 36/144 pairs no
+candidate machinery covers (better *selection* cannot reach them — only a
+better landscape or transport can); and probe_e4 gives B1-lite's mechanism
+variable for free. B1-lite is one fit-code change measurable in a day locally;
+B1-full is pretrain-10's headline arm.

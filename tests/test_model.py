@@ -169,3 +169,50 @@ def test_fit_smoke_loss_decreases():
     x = jnp.asarray(np.stack([G.place(g)] * 2), dtype=jnp.int32)
     params, losses = fit(params, cfg, x, x, steps=25, lr=3e-3, seed=0)
     assert losses[-1] < losses[0] * 0.8, f"loss did not descend: {losses[0]:.3f} -> {losses[-1]:.3f}"
+
+
+# ── CI-10: E4 committed-rule boundary condition (transport, [H-6']) ────────
+
+def test_ci10_rule_override_inert_when_none(params):
+    """rule_override=None must reproduce the pre-E4 graph bit-exactly."""
+    x = jnp.asarray(G.place(_random_grid(11)), dtype=jnp.int32)
+    yprev = jnp.full((G.CANVAS, G.CANVAS), G.VOID, dtype=jnp.int32)
+    f = build_fields(x, yprev)
+    a = forward_fields(params, CFG, f, t_norm=0.0, tau=1.0)
+    b = forward_fields(params, CFG, f, t_norm=0.0, tau=1.0, rule_override=None)
+    assert float(jnp.max(jnp.abs(a.logits - b.logits))) == 0.0
+    assert float(jnp.max(jnp.abs(a.rule_q - b.rule_q))) == 0.0
+
+
+def test_ci10_rule_override_conditions_decode(params):
+    """A clamped rule must (a) surface in rule_q verbatim and (b) actually
+    change the decode when it differs from the self-inferred rule."""
+    x = jnp.asarray(G.place(_random_grid(12)), dtype=jnp.int32)
+    yprev = jnp.full((G.CANVAS, G.CANVAS), G.VOID, dtype=jnp.int32)
+    f = build_fields(x, yprev)
+    base = forward_fields(params, CFG, f, t_norm=0.0, tau=1.0)
+    far = jnp.argmin(base.rule_q, axis=-1)  # least-selected code per slot
+    q_hard = jax.nn.one_hot(far, CFG.K)
+    out = forward_fields(params, CFG, f, t_norm=0.0, tau=1.0,
+                         rule_override=q_hard)
+    assert float(jnp.max(jnp.abs(out.rule_q - q_hard))) == 0.0
+    assert float(jnp.max(jnp.abs(out.logits - base.logits))) > 1e-6, (
+        "override left the decode unchanged — rule path not conditioning")
+
+
+def test_ci10_rule_override_preserves_equivariance(params):
+    """Transport must not break S9: permuted input + SAME committed rule ⇒
+    permuted logits (the rule code is color-blind by construction)."""
+    x = _random_grid(13)
+    lut = G.random_palette(np.random.default_rng(14))
+    xc = jnp.asarray(G.place(x), dtype=jnp.int32)
+    xp = jnp.asarray(G.place(G.apply_palette(x, lut)), dtype=jnp.int32)
+    yprev = jnp.full((G.CANVAS, G.CANVAS), G.VOID, dtype=jnp.int32)
+    q = jax.nn.one_hot(jnp.array([3 % CFG.K, 7 % CFG.K]), CFG.K)
+    out = forward_fields(params, CFG, build_fields(xc, yprev), t_norm=0.0,
+                         tau=1.0, rule_override=q)
+    out_p = forward_fields(params, CFG, build_fields(xp, yprev), t_norm=0.0,
+                           tau=1.0, rule_override=q)
+    gathered = out_p.logits[..., jnp.asarray(lut)]
+    err = float(jnp.max(jnp.abs(gathered - out.logits)))
+    assert err < 1e-4, f"S9 broken under committed rule: max err {err}"
