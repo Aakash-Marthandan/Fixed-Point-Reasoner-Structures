@@ -241,3 +241,77 @@ around targets. The field hit the same wall and named its repairs:
   fails, with H[q] as the measured variable.
 - **The falsification map**: H-2 as-deployed falsified → FPRM-informed
   restatement → repaired-or-not, all pre-registered. Method paper spine.
+
+---
+
+# Freethink 2026-08-10 — post-pivot: the landscape is real; now govern it
+
+*Inputs: the pivot week's measured facts (basins trainable 29→38-49%; β
+IMPROVES retention; portfolio law thrice-confirmed; C.3‴ near-parity with
+the Center2 loss; transport still open). QG/holography/information theory as
+the lens on what to build next. Nothing registered until it moves to the
+ledger.*
+
+## New clusters (I–M)
+
+### I. Replica repulsion: train the portfolio FOR complementarity **[T2, high leverage]**
+The Center2 lesson: different pretrains are different CODES with different
+correctable-error sets; the union decodes more because the sets are
+complementary — and we currently get complementarity by ACCIDENT (seeds).
+Gravity read: replica wormholes couple copies; we want the opposite — an
+explicit ANTI-coupling on errors. Design: pretrain portfolio members with a
+pairwise error-overlap penalty (the H-18 matrix machinery, promoted from
+instrument to LOSS — members may agree on answers but must not agree on
+MISTAKES). Prediction: portfolio union grows faster than seed-replication
+(union 26 → ?), snap yield rises. Cheapest form: fine-tune P9-A/B briefly
+with the repulsion term against each other's frozen errors.
+
+### J. Basin thermodynamics: the equation of state **[T1 NOW — memo figure from existing data]**
+The corruption ladder IS a microcanonical entropy measurement: S(ε) =
+log #(ε-corruptions retained). We hold S(ε) curves for five substrates and
+two β values. Analysis (zero compute): plot S(ε) per arm; extract dS/dβ
+(pricing's effect on basin geometry — measured +7 retention at fixed ε) and
+dS/dη (the floor's effect). If the curves collapse under a scaling, we have
+an empirical equation of state for reasoning landscapes — the physics
+centerpiece figure, and a principled way to choose β/η for pretrain-10
+instead of grid search.
+
+### K. Pool mutual information: buy the right portfolio **[T1, from saved preds]**
+The candidate pool's value saturates as members correlate (C.3″/‴ measured
+it qualitatively). Island-formula flavor: pool information = Σ members −
+correlation corrections. Operational: estimate pool→answer MI proxies
+(coverage-within-ε vs pool size/composition, marginal gain per added bulk)
+from ALL saved member preds. Deliverable: a pre-run predictor of snap yield
+per candidate source — decides portfolio purchases (which pretrain arm to
+replicate) before spending lanes.
+
+### L. Stationary-flux transport test **[T1→T2; E4's instrument]**
+At equilibrium the information flow is stationary — the flux spectrum on
+the QUERY forward should MATCH the supports' spectrum when the same rule
+transports ([H-15] reborn with equilibrium semantics; bit-threads: same
+source, same flow). Instrument: |I_s(query) − I_s(supports)| per scale as a
+transport-failure meter; then E4's frozen-rule decode should REDUCE it
+where it converts. Doubles as candidate-rule selection (min flux mismatch).
+
+### M. Langevin candidates: the decoder as its own generator **[T2]**
+Still missing a native sampling axis (H-5 unbuilt at inference). With real
+basins, noise-injected trajectories (Langevin at temperature T, annealed)
+sample candidates FROM the decoder itself — possibly recovering
+Center2-class diversity without the old architecture. One cell: T>0
+trajectory ensembles × snap, vs the old-member pool. Kill: eq-sampled
+candidates no more diverse than eq-members ⇒ diversity must come from
+weights (cluster I), not dynamics.
+
+## Updated shortlist (merges with the standing queue)
+1. **[queued] Attribution cell** — P9-D decoder × OLD candidates (isolates
+   the C.3‴ confound; one lane-hour).
+2. **[T1 now] J: S(ε) equation-of-state analysis** + **K: pool-MI
+   predictor** — both from disk, memo-grade figures.
+3. **[builds, unchanged top] B1 (MDL-native objective, query co-compression)
+   and E4/L (transport + its flux instrument)** — the foundational debt.
+4. **[T2] I: replica-repulsion portfolio** — the first portfolio-as-code
+   design.
+5. **[T2] M: Langevin candidates.**
+6. **Protocol: next task-level claims move OFF val-hard** (≈12
+   adjudications; evidentiary decay) — eval-6 dev-30 single shot per the
+   holdout law once the attribution cell picks the champion.
