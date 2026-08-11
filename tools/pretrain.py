@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import functools
 import json
 import subprocess
 import sys
@@ -88,6 +89,9 @@ def parse_args():
     p.add_argument("--remat", action="store_true",
                    help="gradient-checkpoint recursion steps (HBM relief)")
     p.add_argument("--smoke", action="store_true")
+    p.add_argument("--dp", action="store_true",
+                   help="data-parallel pmap over local devices (P11-EXT "
+                        "2026-08-11); global batch preserved, grads pmean'd")
     return p.parse_args()
 
 
@@ -218,14 +222,16 @@ def main():
         print(f"labels precomputed for {n_pairs} pairs in {time.time()-t0:.1f}s",
               flush=True)
 
-    @jax.jit
-    def step_fn(state, opt_state, rng):
-        rng, k_batch, k_loss, k_a1, k_a2, k_a3 = jax.random.split(rng, 6)
-        x_b, y_b, t_b, lab_b = E.sample_batch(k_batch, dev, n_tasks, a.batch)
+    def _sample_and_loss(st, rng_step, batch_sz):
+        """Shared batch-construction + loss core (single-device and DP paths
+        MUST stay in lockstep — the DP gradient-equivalence test in
+        tests/test_dp.py guards it)."""
+        import jax.numpy as jnp
+        k_batch, k_loss, k_a1, k_a2, k_a3 = jax.random.split(rng_step, 5)
+        x_b, y_b, t_b, lab_b = E.sample_batch(k_batch, dev, n_tasks, batch_sz)
         yp_b = None
         if a.anchor_p > 0:  # E10 Phase B ([H-23] at corpus scale): some rows
             # start from corrupt(y) instead of VOID — trains restoration.
-            import jax.numpy as jnp
             row = jax.random.bernoulli(k_a1, a.anchor_p, (x_b.shape[0], 1, 1))
             cell_m = jax.random.bernoulli(k_a2, a.anchor_eps, y_b.shape)
             rand = jax.random.randint(k_a3, y_b.shape, 0, 10)
@@ -233,18 +239,59 @@ def main():
             void = jnp.full_like(y_b, 10)
             yp_b = jnp.where(row, ycor, void)
 
-        def loss_fn(st):
-            return batch_loss(st["model"], cfg, x_b, y_b, tau=a.tau, rng=k_loss,
-                              task_vecs=st["table"][t_b], labels_x=lab_b,
+        def loss_fn(s):
+            return batch_loss(s["model"], cfg, x_b, y_b, tau=a.tau, rng=k_loss,
+                              task_vecs=s["table"][t_b], labels_x=lab_b,
                               yprev_batch=yp_b)
-        (loss, aux), grads = jax.value_and_grad(loss_fn, has_aux=True)(state)
+        return jax.value_and_grad(loss_fn, has_aux=True)(st)
+
+    @jax.jit
+    def step_fn(state, opt_state, rng):
+        rng, rng_step = jax.random.split(rng)
+        (loss, aux), grads = _sample_and_loss(state, rng_step, a.batch)
         updates, opt_state2 = opt.update(grads, opt_state, state)
         return optax.apply_updates(state, updates), opt_state2, loss, aux, rng
 
+    # DP path (P11-EXT registration 2026-08-11): pmap over local devices,
+    # per-device batch shard (global batch preserved: a.batch // n_dev rows
+    # each), gradients pmean'd, replicas updated in lockstep. Enabler for
+    # litepod-8/16 single-model pretrains (the 5-75M track).
+    n_dev = jax.local_device_count() if a.dp else 1
+    if a.dp:
+        assert a.batch % n_dev == 0, f"batch {a.batch} % devices {n_dev} != 0"
+
+        @functools.partial(jax.pmap, axis_name="dp")
+        def step_fn_dp(state, opt_state, rng):
+            rng, rng_step = jax.random.split(rng)
+            rng_step = jax.random.fold_in(rng_step, jax.lax.axis_index("dp"))
+            (loss, aux), grads = _sample_and_loss(
+                state, rng_step, a.batch // n_dev)
+            grads = jax.lax.pmean(grads, "dp")
+            loss = jax.lax.pmean(loss, "dp")
+            aux = jax.lax.pmean(aux, "dp")
+            updates, opt_state2 = opt.update(grads, opt_state, state)
+            return optax.apply_updates(state, updates), opt_state2, loss, aux, rng
+
+    if a.dp:
+        rep = lambda tree: jax.tree.map(
+            lambda x: jnp.stack([x] * n_dev), tree)
+        state_r, opt_r = rep(state), rep(opt_state)
+        rng_r = jax.random.split(rng, n_dev)
+        print(f"DP: {n_dev} devices, {a.batch // n_dev} rows/device", flush=True)
     metrics_f = open(out / "metrics.jsonl", "a")
     t_block = time.time()
     for i in range(start_step, a.steps):
-        state, opt_state, loss, aux, rng = step_fn(state, opt_state, rng)
+        if a.dp:
+            state_r, opt_r, loss_r, aux_r, rng_r = step_fn_dp(state_r, opt_r, rng_r)
+            loss = jax.tree.map(lambda x: x[0], loss_r)
+            aux = jax.tree.map(lambda x: x[0], aux_r)
+            if (i + 1) % a.val_every == 0 or (i + 1) % a.ckpt_every == 0 \
+                    or i + 1 == a.steps:
+                state = jax.tree.map(lambda x: x[0], state_r)
+                opt_state = jax.tree.map(lambda x: x[0], opt_r)
+                rng = rng_r[0]
+        else:
+            state, opt_state, loss, aux, rng = step_fn(state, opt_state, rng)
 
         if (i + 1) % a.log_every == 0 or i + 1 == a.steps:
             dt = time.time() - t_block
