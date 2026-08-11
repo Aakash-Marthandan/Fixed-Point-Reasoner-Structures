@@ -1,0 +1,64 @@
+==================================================================================
+T3 SCALE SWEEP — d x pricing (registered predictions P1-P4)
+==================================================================================
+
+### val-hard
+cell          S(0)  S.05   S.1   S.2   S.4  S.2/S0  exact  hops   cov     I_med      A_med
+d16 plain       49    36    35    26    14    0.53     10     4    82    157558  1123513.3
+d16 priced      44    37    29    24    15    0.55     11     6    85       785       -0.2
+d24 plain       51    41    38    29    18    0.57     11     2    87    156170   957207.8
+d24 priced      50    46    37    27    20    0.54      9     3    92       663       -0.2
+d32 plain       38    29    25    24    17    0.63     11     4    85    167211  1156888.0
+d32 priced      47    37    42    33    24    0.70     12     2    84       639       -0.2
+
+### rg-48
+cell          S(0)  S.05   S.1   S.2   S.4  S.2/S0  exact  hops   cov     I_med      A_med
+d16 plain       13     3     3     2     2    0.15      1     0    69    155248   647263.5
+d16 priced      16     9     5     2     1    0.12      1     0    64      1266       -0.2
+d24 plain       10     6     3     0     2    0.00      0     0    64    143282   712518.6
+d24 priced      13     8     5     3     1    0.23      0     0    62      1285       -0.2
+d32 plain        4     2     3     1     1    0.25      0     0    67    151581   821418.5
+d32 priced      10     5     7     4     3    0.40      1     0    70      1201       -0.2
+
+### rt-48
+cell          S(0)  S.05   S.1   S.2   S.4  S.2/S0  exact  hops   cov     I_med      A_med
+d16 plain       21    11     6     4     2    0.19      2     0    65    155291   712422.4
+d16 priced      14    10     6     1     1    0.07      1     1    65      1255       -0.2
+d24 plain       16     8     7     3     1    0.19      1     1    55    140754   697694.1
+d24 priced      19     9     7     2     2    0.11      2     0    61      1198       -0.2
+d32 plain       14    10     4     2     0    0.14      1     0    57    147579   845324.8
+d32 priced      18    11    13     7     1    0.39      2     0    62      1209       -0.2
+
+==================================================================================
+P1 THROAT SCALE-INVARIANCE (priced I_med ~ d-invariant; free grows?)
+==================================================================================
+  val-hard  d16 plain=157558  d16 priced=785  d24 plain=156170  d24 priced=663  d32 plain=167211  d32 priced=639
+  rg-48     d16 plain=155248  d16 priced=1266  d24 plain=143282  d24 priced=1285  d32 plain=151581  d32 priced=1201
+  rt-48     d16 plain=155291  d16 priced=1255  d24 plain=140754  d24 priced=1198  d32 plain=147579  d32 priced=1209
+
+==================================================================================
+P2/P3 RADIUS & RETENTION vs d (val-hard; paired McNemar within pricing)
+==================================================================================
+  -- plain:
+     d24 vs d16 @eps=   0: 19/17 p=0.868
+     d24 vs d16 @eps= 0.2: 14/11 p=0.690
+     d32 vs d24 @eps=   0: 8/21 p=0.024
+     d32 vs d24 @eps= 0.2: 9/14 p=0.405
+  -- priced:
+     d24 vs d16 @eps=   0: 19/13 p=0.377
+     d24 vs d16 @eps= 0.2: 12/9 p=0.664
+     d32 vs d24 @eps=   0: 14/17 p=0.720
+     d32 vs d24 @eps= 0.2: 15/9 p=0.307
+
+==================================================================================
+P4 FAMILY-TRANSFER FLOOR vs d (rt trained-family vs rg unseen-family)
+==================================================================================
+cell          rt S(0)  rg S(0)    gap  rt hops  rg hops
+d16 plain          21       13      8        0        0
+d16 priced         14       16     -2        1        0
+d24 plain          16       10      6        1        0
+d24 priced         19       13      6        0        0
+d32 plain          14        4     10        0        0
+d32 priced         18       10      8        0        0
+
+  [decision: rt >> rg => family NOVELTY binds; rt ~ rg => instance hardness / fit-limit binds]

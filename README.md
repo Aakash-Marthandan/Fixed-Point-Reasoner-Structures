@@ -42,43 +42,45 @@ locality in learned solvers.
 The model is deliberately tiny (~49k parameters at the toy operating point;
 target ≤400k), betting that exact structure replaces brute capacity.
 
-## Current status (2026-08-06) — honest and ledger-governed
+## Current status (2026-08-12) — honest and ledger-governed
 
 - **No performance claims live in this README.** Claims belong to the ledger
-  until evaluation day (claims are pre-registered
-  with named tests and kill conditions before results exist).
-- Architecture complete through Amendment D; **all six pre-cloud CI gates
-  pass** (equivariance bit-exactness, anti-linearity/rank, sanity triad via
-  fitting, seam-boundary task, flux-direction sanity, canvas/no-GT-size),
-  reproduced cross-backend (CPU and TPU).
-- **Constructed-family measurement program v1 CLOSED** (frozen dataset, ledger
-  2026-07-30): per-family accuracy–flux **envelopes** with monotone frontiers,
-  operational area-law spectra, analytic floors (`Documentation/S1_Floors.md`),
-  a full locality-class ablation, and ~100× envelope compression via protocol +
-  architecture-minimization — the closest floor-to-envelope sandwich stands at
-  ~30×. Two early findings were corrected by later data (both artifacts of the
-  redundant attention channel); the corrections are ledger entries, as designed.
-- **Current state (2026-08-06 close)**: the corpus is expanded 5.6×
-  (orbit-virtual tasks + vendored ConceptARC; val-hard = 48 ConceptARC tasks
-  fully held out as the matched-hard gate); a four-bulk prior portfolio is
-  pretrained on it (d16 / d24 / d24+C17 / d24+dt64); **population TTT (C11)
-  is built and debugged** — 16 view×seed members vmapped against a frozen
-  bulk. Headline numbers: task-level solves on curated-hard val-hard remain
-  0 under every single-bulk protocol, but population fitting produced the
-  project's **first nonzero curated-hard result: ~6% of individual test
-  outputs exactly solved** (ConceptARC's own reporting convention), with
-  rotated-view members beating single fits on most tasks measured. The
-  measured wall is **query transfer with correlated member error** ([H-18]);
-  the registered next builds attack it directly: agreement-regularized
-  populations (transduction unified with voting), cross-bulk members,
-  temporal members, and measured routing — see the ledger's 2026-08-06
-  idea-registry entry, which is the authoritative pickup point. The physics
-  instruments delivered independently: channel substitution (attention
-  transport halves when the object channel exists), coherence-decay as a
-  visible memorization transition, and a six-order information-compression
-  ordering across fit protocols. CompressARC comparison, when run, will be
-  same-split (ARC-1 public eval) at matched scoring.
-
+  (`Documentation/Design_Ledger.md`) until evaluation day: every claim is
+  pre-registered with named tests and kill conditions before results exist,
+  and every correction is an append-only dated entry. The ledger is the
+  paper's evidentiary spine; start there.
+- **Architecture: the equilibrium line (E10, QHRRN-2.1).** The projective
+  T-loop was falsified as deployed (92% of stable limits were wrong answers;
+  handed the truth, the old map erased it) and replaced by a continuous-state
+  equilibrium core trained *for* basin structure (damped learnable updates,
+  corrupted-target anchor rows, carried latent). Ten CI gates pass, suite
+  ~90 tests green, all cross-backend.
+- **The measured program (seeded, 2026-08-10..12): a 16-substrate scale grid
+  (d16..d48 × free/priced × depth, 2-3 seeds per claim-bearing cell) under
+  basin instruments** (GT-retention, corruption-ladder code-distance spectra,
+  Langevin hop rates, frozen family-transfer gates on a vendored RE-ARC
+  corpus with enforced contamination laws). Four seeded regularities
+  (ledger 2026-08-12, artifacts in `runs/analysis/`):
+  1. **Throat law** — priced per-episode information declines 785→602 nats
+     across a 4× parameter range while free models carry ~200× more with no
+     measured benefit: the task sets the information; capacity improves the
+     code.
+  2. **Count-vs-radius dissociation (4 axes)** — depth/corpus/dials/free-width
+     multiply basins; pricing at mid-width widens them. Codebook size and
+     code distance have separate physical controls.
+  3. **Priced transfer-radius plateau** at d24-d32 on never-pretrained
+     generator families (top uncertainty — step-matched budget vs dimensional
+     dilution — carries a registered discriminating experiment).
+  4. **Pricing's dividend is transfer-specific**: priced > free on
+     unseen-family retention at every width; in-distribution deltas are
+     seed noise.
+- **Conversion machinery**: basin-snapped population voting produced the
+  project's first curated-hard task-level solves (attribution completed
+  across a decoder×pool 2×2); basin-preserving LoRA-TTT, PoE candidate
+  scoring, a data-parallel trainer, and Langevin candidate sampling are
+  built and test-gated. Deployed-protocol solve rates remain modest and are
+  stated only in the ledger; the reserved holdouts (dev-30, ARC-1 eval) are
+  untouched pending the registered single-shot gates.
 ## Repository map
 
 ```

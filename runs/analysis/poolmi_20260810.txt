@@ -1,0 +1,51 @@
+==========================================================================
+K: POOL-MI PREDICTOR (radius eps=0.2; pairs = query pairs w/ GT)
+==========================================================================
+
+POOL XA: 32 members, 144 pairs
+  best-member distance: median 0.078 mean 0.271
+  any-member-exact: 18.8%
+  coverage within eps: 72.2%
+  coverage within eps | no exact member: 65.8% (n=117)
+  -- per-bulk (8 views each):
+     pretrain6_d16      cov 65.3%
+     pretrain6_d24      cov 63.2%
+     pretrain6_d24obj   cov 66.0%
+     pretrain6_d24t64   cov 65.3%
+  -- bulk-count curve (avg over subsets):
+     1 bulk(s): 64.9%
+     2 bulk(s): 68.1%  (+3.1%)
+     3 bulk(s): 70.3%  (+2.3%)
+     4 bulk(s): 72.2%  (+1.9%)
+  island correction: independent-union 98.5% vs actual 72.2%  (correlation cost +26.3%)
+  -- view-count curve (avg over bulks, views 1,2,4,8):
+     1 view(s): 56.9%
+     2 view(s): 61.6%
+     4 view(s): 63.0%
+     8 view(s): 64.9%
+
+POOL EQ: 32 members, 144 pairs
+  best-member distance: median 0.069 mean 0.268
+  any-member-exact: 17.4%
+  coverage within eps: 71.5%
+  coverage within eps | no exact member: 65.5% (n=119)
+  -- per-bulk (8 views each):
+     pretrain8_d16      cov 63.9%
+     pretrain9_a        cov 66.0%
+     pretrain9_b        cov 64.6%
+     pretrain9_c        cov 63.9%
+  -- bulk-count curve (avg over subsets):
+     1 bulk(s): 64.6%
+     2 bulk(s): 68.8%  (+4.2%)
+     3 bulk(s): 70.7%  (+1.9%)
+     4 bulk(s): 71.5%  (+0.9%)
+  island correction: independent-union 98.4% vs actual 71.5%  (correlation cost +26.9%)
+  -- view-count curve (avg over bulks, views 1,2,4,8):
+     1 view(s): 54.9%
+     2 view(s): 59.5%
+     4 view(s): 62.2%
+     8 view(s): 64.6%
+
+==========================================================================
+CROSS-POOL UNION (XA u EQ): coverage 75.0% over 144 shared pairs
+  covered only by XA: 5   only by EQ: 4

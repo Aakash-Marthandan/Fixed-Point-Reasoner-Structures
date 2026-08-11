@@ -1,0 +1,55 @@
+========================================================================
+J-1: BASIN EQUATION OF STATE — stage-1 (from saved batteries)
+========================================================================
+
+old_b4@2000            old pretrain6_d16, full-fit@2000
+  query ladder (n=144): eps=0.0:7
+  LoO ladder   (n=48): eps=0.0:2  eps=0.05:2  eps=0.1:2  eps=0.2:2  eps=0.4:1
+
+p8_keyhole             pretrain8_d16, e_t-only@600 (Phase-C battery)
+  S(0) retention: 42/144 = 29.2%  CI95 [22.4%,37.1%]
+  per-step retained counts (k=1..8): 49 50 50 50 47 46 45 43
+
+p8_full@2000(C.2)      pretrain8_d16, full-fit@2000 (eroded)
+  query ladder (n=144): eps=0.0:18  eps=0.05:17  eps=0.1:16  eps=0.2:14  eps=0.4:10
+  LoO ladder   (n=48): eps=0.0:3  eps=0.05:3  eps=0.1:3  eps=0.2:3  eps=0.4:1
+
+p9a_s1                 pretrain9_a seed1 plain, e_t-only@600
+  S(0) retention: 43/144 = 29.9%  CI95 [23.0%,37.8%]
+  per-step retained counts (k=1..8): 52 52 50 48 47 46 44 44
+
+p9b_s2                 pretrain9_b seed2 plain, e_t-only@600
+  S(0) retention: 45/144 = 31.2%  CI95 [24.2%,39.2%]
+  per-step retained counts (k=1..8): 58 57 55 51 49 48 47 45
+
+p9c_priced             pretrain9_c beta_flux 3e-5 + nl 1e-5, e_t-only@600
+  S(0) retention: 49/144 = 34.0%  CI95 [26.8%,42.1%]
+  per-step retained counts (k=1..8): 62 59 56 55 52 51 50 49
+
+p9d_dials              pretrain9_d eta_floor .2 + z_gate .3, e_t-only@600
+  S(0) retention: 55/144 = 38.2%  CI95 [30.7%,46.3%]
+  per-step retained counts (k=1..8): 67 63 63 60 60 59 58 57
+
+old_b4@2000            LoO-side ladder (n=48): eps=0.0:2  eps=0.05:2  eps=0.1:2  eps=0.2:2  eps=0.4:1
+
+========================================================================
+ARM-PAIR DECOMPOSITION at eps=0 (same-pairs vs portfolio effect)
+========================================================================
+  p8_keyhole     vs p9a_s1        : both  28  onlyL  14  onlyR  15  union  57
+  p8_keyhole     vs p9b_s2        : both  27  onlyL  15  onlyR  18  union  60
+  p8_keyhole     vs p9c_priced    : both  30  onlyL  12  onlyR  19  union  61
+  p8_keyhole     vs p9d_dials     : both  31  onlyL  11  onlyR  24  union  66
+  p9a_s1         vs p9b_s2        : both  27  onlyL  16  onlyR  18  union  61
+  p9a_s1         vs p9c_priced    : both  27  onlyL  16  onlyR  22  union  65
+  p9a_s1         vs p9d_dials     : both  30  onlyL  13  onlyR  25  union  68
+  p9b_s2         vs p9c_priced    : both  34  onlyL  11  onlyR  15  union  60
+  p9b_s2         vs p9d_dials     : both  30  onlyL  15  onlyR  25  union  70
+  p9c_priced     vs p9d_dials     : both  34  onlyL  15  onlyR  21  union  70
+
+========================================================================
+EOS DERIVATIVES at eps=0 (units: retained pairs /144; seed spread = noise floor)
+========================================================================
+  seed noise floor: |P9A-P9B| = 2 pairs
+  dS/dbeta  (P9-C 49 vs seed-mean 44.0): +5.0 pairs at beta_flux=3e-5
+  dS/d(eta,z) (P9-D 55 vs seed-mean 44.0): +11.0 pairs at eta_floor=.2, z_gate=.3
+  reference p8 keyhole: 42 (P9 plain-arm delta vs p8 = arch/data drift, same protocol)

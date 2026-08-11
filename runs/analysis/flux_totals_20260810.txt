@@ -1,0 +1,16 @@
+pretrain9_a @  5000: loss   0.479  I_total  119080.8  A_total  718516.5  rule_H  0.640
+pretrain9_a @ 10000: loss   0.343  I_total  145205.8  A_total  898408.7  rule_H  0.451
+pretrain9_a @ 20000: loss   0.269  I_total  165697.4  A_total 1174656.8  rule_H  0.500
+
+pretrain9_b @  5000: loss   0.396  I_total  129991.9  A_total  677931.7  rule_H  0.332
+pretrain9_b @ 10000: loss   0.407  I_total  158032.8  A_total  896665.2  rule_H  0.315
+pretrain9_b @ 20000: loss   0.324  I_total  183172.9  A_total 1158049.3  rule_H  0.390
+
+pretrain9_c @  5000: loss   0.579  I_total    1024.0  A_total      12.1  rule_H  0.005
+pretrain9_c @ 10000: loss   0.422  I_total     915.6  A_total       0.1  rule_H  0.052
+pretrain9_c @ 20000: loss   0.391  I_total     878.1  A_total      -0.2  rule_H  0.041
+
+pretrain9_d @  5000: loss   0.545  I_total  137073.8  A_total  640319.3  rule_H  0.234
+pretrain9_d @ 10000: loss   0.334  I_total  156245.1  A_total  850739.7  rule_H  0.234
+pretrain9_d @ 20000: loss   0.317  I_total  172864.6  A_total 1002031.6  rule_H  0.233
+

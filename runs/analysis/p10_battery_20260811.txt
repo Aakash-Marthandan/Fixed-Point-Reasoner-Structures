@@ -1,0 +1,17 @@
+==============================================================================
+PRETRAIN-10 BATTERY: Q1 dose-response (val-hard) | Q2 family-transfer (rg-48)
+==============================================================================
+arm          S(0)  S(.05)  S(.1)  S(.2)  S(.4)  S.2/S0  hops   cov     I_med
+plain s0       49      36     35     26     14    0.53     4    82    157558
+plain s1       48      33     28     20     11    0.42     2    81    178348
+beta 3e-5      44      37     29     24     15    0.55     6    85       785
+beta 1e-4      44      36     31     21     14    0.48     2    91       380
+  [pretrain-9 val-hard rows: p9a 43, p9b 45, p9c 49 S.2/S0=.49, p9d 55; p8 42 | cluster-M hops: p8 3, p9c 5]
+
+Q2: rg gate-48 (TRUE family transfer — gate families never pretrained)
+arm          S(0)  S(.05)  S(.1)  S(.2)  S(.4)  hops   cov
+plain s0       13       3      3      2      2     0    69
+plain s1       12       4      2      2      1     0    63
+beta 3e-5      16       9      5      2      1     0    64
+beta 1e-4       8       5      5      1      1     0    70
+  [baselines (instance-gen only, corpus hole): p8 13/144 ret, p9c 9/144; exact 0-1/144]
