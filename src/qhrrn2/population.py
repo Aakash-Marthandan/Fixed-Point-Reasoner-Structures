@@ -209,6 +209,71 @@ def consensus_vote(preds_flat):
     return voted.astype(np.int8)
 
 
+# ── [H-27] PoE candidate scoring (first build, phase-plan 2026-08-11) ──────
+# Product-of-experts over the population: score each CANONICAL candidate grid
+# by the summed log-likelihood of its cells (+ its shape) under every
+# member's final-step distributions, each member seeing the candidate in ITS
+# OWN view frame (tr.apply before placement). Additive instrument: callers
+# record poe_att1/att2 ALONGSIDE the cellwise vote; no deployed selection
+# changes until the rg-gate comparison adjudicates (steering law).
+
+@functools.lru_cache(maxsize=8)
+def _pop_forward_logp(cfg: Config, tau: float):
+    from qhrrn2.model import iterate
+    from qhrrn2 import model as Mod
+
+    @jax.jit
+    def fwd(model, tv, xq):
+        def one_member(tv_m, xq_m):
+            def one_query(x_can):
+                outs = iterate(model, cfg, x_can, tau=tau, rng=None,
+                               task_vec=tv_m)
+                last = outs[-1]
+                cands = Mod.size_candidates(x_can)
+                p_h = Mod.size_mixture_probs(last.size_sel_h, last.size_h,
+                                             cands[0])
+                p_w = Mod.size_mixture_probs(last.size_sel_w, last.size_w,
+                                             cands[1])
+                return (jax.nn.log_softmax(last.logits, axis=-1),
+                        jnp.log(p_h + 1e-9), jnp.log(p_w + 1e-9))
+            return jax.vmap(one_query)(xq_m)
+        return jax.vmap(one_member)(tv, xq)
+    return fwd
+
+
+def poe_rank(groups, tvs_per_group, candidates_per_q):
+    """candidates_per_q: [q] -> list of canonical np.int8 grids.
+    Returns [q] -> list of (total_logp, cand_idx), best first."""
+    logps = []  # per group: (M, Q, 32, 32, V), (M, Q, 30), (M, Q, 30)
+    for g, tv_g in zip(groups, tvs_per_group):
+        lp, lph, lpw = _pop_forward_logp(g["cfg"], g["tau"])(
+            g["model"], tv_g, g["x_query"])
+        logps.append((np.asarray(lp), np.asarray(lph), np.asarray(lpw)))
+    n_q = len(candidates_per_q)
+    ranked = []
+    for q in range(n_q):
+        scores = []
+        for ci, cand in enumerate(candidates_per_q[q]):
+            total = 0.0
+            for g, (lp, lph, lpw) in zip(groups, logps):
+                for m in range(lp.shape[0]):
+                    tr = g["val"][m][2]
+                    tc = tr.apply(np.asarray(cand, dtype=np.int8))
+                    h, w = tc.shape
+                    if h > G.CANVAS or w > G.CANVAS or h < 1 or w < 1:
+                        total += -1e9
+                        continue
+                    placed = G.place(tc)
+                    cell_lp = np.take_along_axis(
+                        lp[m, q, :h, :w], placed[:h, :w, None].astype(np.int64),
+                        axis=2)[..., 0].sum()
+                    total += float(cell_lp) + float(lph[m, q, h - 1]) \
+                        + float(lpw[m, q, w - 1])
+            scores.append((total, ci))
+        ranked.append(sorted(scores, reverse=True))
+    return ranked
+
+
 def fit_population_cross(bulks, episodes, *, n_views: int = 8, n_seeds: int = 1,
                          steps: int = 600, val_every: int = 50,
                          agree_lambda: float = 0.0, agree_every: int = 25,
