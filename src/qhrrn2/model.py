@@ -388,9 +388,22 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
         step_rng = None
         if rng is not None:
             rng, step_rng = jax.random.split(rng)
-        out = forward_fields(params, cfg, build_fields_soft(x_canvas, y),
-                             t_norm=t_norm, tau=tau, rng=step_rng,
-                             task_vec=task_vec, z_in=z_c)
+        if cfg.remat:
+            # Rematerialize per eq step (P11-EXT 2026-08-11: the original
+            # remat covered only the projective iterate — d48/B64 OOM'd at
+            # an unchanged 17.72G because this loop never checkpointed).
+            # z sentinel keeps the closure signature fixed across t=0/t>0.
+            def _fwd(p, yp, r, tv, zc, _t=t_norm):
+                return forward_fields(p, cfg, build_fields_soft(x_canvas, yp),
+                                      t_norm=_t, tau=tau, rng=r, task_vec=tv,
+                                      z_in=None if zc.ndim == 1 else zc)
+            out = jax.checkpoint(_fwd)(
+                params, y, step_rng, task_vec,
+                z_c if z_c is not None else jnp.zeros(1))
+        else:
+            out = forward_fields(params, cfg, build_fields_soft(x_canvas, y),
+                                 t_norm=t_norm, tau=tau, rng=step_rng,
+                                 task_vec=task_vec, z_in=z_c)
         z_c = (out.z_fine if z_c is None
                else z_c + eta_z * (out.z_fine - z_c))
         p = jax.nn.softmax(out.logits, axis=-1).transpose(2, 0, 1)

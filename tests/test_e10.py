@@ -136,3 +136,32 @@ def test_p9_dials_inert_by_default():
     o9 = iterate_eq(p9, cfg9, x, tau=1.0, t_total=2)
     # floor: effective eta >= 0.2 -> first-step residual strictly larger
     assert float(o9[1][0]) > float(o0[1][0])
+
+
+def test_eq_remat_matches_no_remat():
+    """P11-EXT (2026-08-11): cfg.remat on the eq loop must be a pure memory
+    optimization — losses identical to the un-checkpointed path."""
+    import jax
+    import jax.numpy as jnp
+    import numpy as np
+    from qhrrn2.config import Config
+    from qhrrn2.model import init_params
+    from qhrrn2.objective import pair_loss
+    from qhrrn2 import grid as G
+
+    rng = np.random.default_rng(9)
+    x = jnp.asarray(G.place(rng.integers(0, 10, (6, 6)).astype(np.int8)),
+                    dtype=jnp.int32)
+    y = jnp.asarray(G.place(rng.integers(0, 10, (6, 6)).astype(np.int8)),
+                    dtype=jnp.int32)
+    base = dict(d=8, K=8, T=2, equilibrium=True)
+    p = init_params(jax.random.PRNGKey(0), Config(**base))
+    l0, _ = pair_loss(p, Config(**base), x, y, tau=1.0)
+    l1, _ = pair_loss(p, Config(**base, remat=True), x, y, tau=1.0)
+    assert abs(float(l0) - float(l1)) < 1e-6, (float(l0), float(l1))
+    g0 = jax.grad(lambda q: pair_loss(q, Config(**base), x, y, tau=1.0)[0])(p)
+    g1 = jax.grad(lambda q: pair_loss(q, Config(**base, remat=True), x, y,
+                                      tau=1.0)[0])(p)
+    md = max(jax.tree.leaves(jax.tree.map(
+        lambda a, b: float(jnp.max(jnp.abs(a - b))), g0, g1)))
+    assert md < 1e-5, f"remat changed gradients: {md}"
