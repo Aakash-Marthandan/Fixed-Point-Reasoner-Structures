@@ -53,10 +53,31 @@ ACCOUNT, PROJECT = _identity()
 DEFAULT_ZONE = "us-east1-c"
 DEFAULT_ACCEL = "v5litepod-1"
 TPU_NAME = "qhrrn2-tpu"
-TPU_VERSION = "tpu-ubuntu2204-base"
+TPU_VERSION = "tpu-ubuntu2204-base"   # v5e family; see accel_profile()
 REMOTE_PROJECT = "~/qhrrn2"
 UPLOADS = ["src", "tests", "tools", "requirements.txt", "pyproject.toml"]
 DMS_MINUTES = 600  # dead man's switch: 10 h, re-armed on every `run`
+
+
+def accel_profile(accel: str) -> dict:
+    """Per-family runtime image + bootstrap policy.
+
+    v6e (Trillium) POD INDUCTION, 2026-08-12 (ledger §5): three deviations
+    from the v5e recipe, each of which cost one diagnostic cycle and is now
+    standing knowledge for the 5-75M track —
+      (1) IMAGE — v6e boots on `tpu-ubuntu2204-base` but jax cannot get the
+          TPU topology there; it REQUIRES its native `v6e-ubuntu-2404`
+          runtime (the v3-style vestigial trap, now at the image level).
+      (2) PEP-668 — ubuntu-24.04 blocks the system pip, so the uv seed needs
+          `--break-system-packages`; uv owns .venv from then on.
+      (3) libtpu — the v5e-era 0.0.43.1 pin PREDATES Trillium; LATEST libtpu
+          with jax 0.10.2 drives v6e (verified: 8 x 'TPU v6 lite').
+    Until this profile existed the pod was hand-bootstrapped as a noted
+    deviation; the canary remains the gate either way.
+    """
+    if accel.startswith("v6e"):
+        return {"version": "v6e-ubuntu-2404", "libtpu": "", "pep668": True}
+    return {"version": TPU_VERSION, "libtpu": "==0.0.43.1", "pep668": False}
 
 
 def sh(cmd: str, *, dry: bool, check: bool = True, timeout: int | None = 600):
@@ -155,36 +176,43 @@ def rescue(zone: str, dry: bool):
 
 def cmd_up(args) -> int:
     guard_identity(args.dry_run)
+    prof = accel_profile(args.accelerator)
     state = None if args.dry_run else vm_state(args.zone)
     if state:
         print(f">>> up: '{TPU_NAME}' already exists (state={state}) — reusing")
     else:
         spot = "" if args.on_demand else " --spot"
-        print(f">>> up: provisioning {args.accelerator}{spot or ' (ON-DEMAND)'}")
+        print(f">>> up: provisioning {args.accelerator} [{prof['version']}]"
+              f"{spot or ' (ON-DEMAND)'}")
         sh(f"gcloud compute tpus tpu-vm create {TPU_NAME} --zone={args.zone} "
            f"--project={PROJECT} --accelerator-type={args.accelerator} "
-           f"--version={TPU_VERSION}{spot}", dry=args.dry_run)
+           f"--version={prof['version']}{spot}", dry=args.dry_run)
     arm_dms(args.zone, args.dry_run)
     sync_code(args.zone, args.dry_run, args.with_data)
     # Idempotent bootstrap: uv-managed CPython 3.14 (parity with local venv),
     # exact pins incl. jax[tpu]==0.10.2 (shakedown-1: system Python too old).
     print(">>> Bootstrap (skipped if .venv/.boot_ok present)")
+    # PEP-668 (v6e/ubuntu-24.04): the system pip refuses to seed uv without it.
+    seed = "python3 -m pip install -q uv" + (
+        " --break-system-packages" if prof["pep668"] else "")
     sh(gssh(f"export PATH=~/.local/bin:$PATH && cd {REMOTE_PROJECT} && "
             "test -f .venv/.boot_ok && echo 'bootstrap: already done' || ("
-            "python3 -m pip install -q uv && "
+            f"{seed} && "
             "uv python install 3.14 && "
             "uv venv --python 3.14 .venv && "
             "uv pip install --python .venv/bin/python -q -r requirements.txt "
             "'jax[tpu]==0.10.2' "
             "-f https://storage.googleapis.com/jax-releases/libtpu_releases.html "
-            # libtpu OVERRIDE pin (2026-08-07): jax 0.10.2 resolves
-            # libtpu==0.0.42.1, which stack-overflows in the XLA fusion cost
-            # estimator (FusedSpatialMajorConvolution) on fresh VMs built from
-            # the rolled tpu-ubuntu2204-base image — identical wheels ran clean
-            # on the 08-05/06 fleet (env-rot data point #2; ulimit -s no cure:
-            # fiber stacks are fixed-size). 0.0.43.1 (released 08-04) fixes it.
-            "&& uv pip install --python .venv/bin/python -q --no-deps "
-            "libtpu==0.0.43.1 "
+            # libtpu OVERRIDE (2026-08-07): jax 0.10.2 resolves libtpu==0.0.42.1,
+            # which stack-overflows in the XLA fusion cost estimator
+            # (FusedSpatialMajorConvolution) on fresh VMs built from the rolled
+            # tpu-ubuntu2204-base image — identical wheels ran clean on the
+            # 08-05/06 fleet (env-rot data point #2; ulimit -s no cure: fiber
+            # stacks are fixed-size). 0.0.43.1 (released 08-04) fixes it on v5e.
+            # v6e (2026-08-12): that pin predates Trillium — profile asks for
+            # LATEST instead (-U with an empty spec), which drives v6 lite.
+            "&& uv pip install --python .venv/bin/python -q --no-deps -U "
+            f"libtpu{prof['libtpu']} "
             "&& touch .venv/.boot_ok)", args.zone), dry=args.dry_run)
     print(f">>> up: READY. DMS fires in {DMS_MINUTES} min unless re-armed; "
           f"`down` when finished.")
