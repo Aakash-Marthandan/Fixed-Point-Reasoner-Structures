@@ -40,6 +40,9 @@ K_SAMPLES = 16        # registered ensemble size
 RADIUS = 0.2          # K's pull radius
 T_TOTAL = 16          # anneal 12 + quench 4 (horizon data: capture is fast)
 T_ANNEAL = 12
+RI_SIGMA = 2.0        # --init random: y0 = softmax(RI_SIGMA * N(0,1)) per cell
+                      # (cluster S / EqR multi-init variant, 2026-08-12; the
+                      # substrate is NOT RI-trained yet — breadth-at-inference)
 
 
 def dist(pred, gt) -> float:
@@ -50,15 +53,24 @@ def dist(pred, gt) -> float:
 
 
 def trace_langevin(params, cfg: Config, x_grid, *, task_vec, T0: float,
-                   seed: int, t_total: int = T_TOTAL, t_anneal: int = T_ANNEAL):
+                   seed: int, t_total: int = T_TOTAL, t_anneal: int = T_ANNEAL,
+                   init: str = "void"):
     """Eq trace with STATE-SPACE Langevin at the canonical sqrt(2*T*eta)
     scale ([R-4]'s lesson: any other scale fails silently). Noise is
     per-cell mean-subtracted (simplex-tangent); T holds at T0 through the
-    anneal phase, then quenches to 0 so basins capture. Returns final pred."""
+    anneal phase, then quenches to 0 so basins capture. init='random' draws
+    y0 = softmax(RI_SIGMA*N(0,1)) per cell — multi-init breadth (T0=0 with
+    random init is the pure EqR-style deterministic-breadth variant).
+    Returns final pred."""
     assert cfg.equilibrium
     x_can = jnp.asarray(G.place(np.asarray(x_grid)), dtype=jnp.int32)
-    y = jax.nn.one_hot(jnp.full((G.CANVAS, G.CANVAS), G.VOID, jnp.int32),
-                       M.VOCAB).transpose(2, 0, 1)
+    if init == "random":
+        g = np.random.default_rng(seed ^ 0x5EED).standard_normal(
+            (M.VOCAB, G.CANVAS, G.CANVAS)).astype(np.float32)
+        y = jax.nn.softmax(jnp.asarray(RI_SIGMA * g), axis=0)
+    else:
+        y = jax.nn.one_hot(jnp.full((G.CANVAS, G.CANVAS), G.VOID, jnp.int32),
+                           M.VOCAB).transpose(2, 0, 1)
     eta = float(jax.nn.sigmoid(params["eq"]["eta"]))
     eta_z = jax.nn.sigmoid(params["eq"]["eta_z"])
     rng = np.random.default_rng(seed)
@@ -99,7 +111,14 @@ def main():
     ap.add_argument("--val-every", type=int, default=50)
     ap.add_argument("--k", type=int, default=K_SAMPLES)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--temps", default=None,
+                    help="comma floats; default = registered grid 0.1,0.4")
+    ap.add_argument("--init", choices=("void", "random"), default="void")
+    ap.add_argument("--save-preds", action="store_true",
+                    help="store distinct endpoint grids + visit counts per "
+                         "sigma (candidate source for cluster S / PoE)")
     a = ap.parse_args()
+    temps = tuple(float(t) for t in a.temps.split(",")) if a.temps else TEMPS
 
     saved = E.load_ckpt(a.ckpt)
     defaults = Config()
@@ -139,26 +158,39 @@ def main():
                 det = P.trace(model, cfg, ep.query_x, tau=1.0, task_vec=tvj,
                               t_total=cfg.T)[-1]["pred"]
                 qrec = {"det_dist": round(dist(det, gt), 4), "sigmas": {}}
-                for T0 in TEMPS:
-                    ds, seen = [], set()
+                if a.save_preds:
+                    qrec["det_pred"] = np.asarray(det).tolist()
+                for T0 in temps:
+                    ds, seen = [], {}
                     for k in range(a.k):
                         pr = trace_langevin(
                             model, cfg, ep.query_x, task_vec=tvj, T0=T0,
                             seed=(a.seed * 100003 + qi * 1009 + k
-                                  + int(T0 * 10) * 31))
-                        ds.append(dist(pr, gt))
-                        seen.add(pr.tobytes() + bytes(pr.shape))
-                    qrec["sigmas"][str(T0)] = {
+                                  + int(T0 * 10) * 31), init=a.init)
+                        d = dist(pr, gt)
+                        ds.append(d)
+                        key = pr.tobytes() + bytes(pr.shape)
+                        if key in seen:
+                            seen[key]["n"] += 1
+                        else:
+                            seen[key] = {"n": 1, "dist": round(d, 4),
+                                         "grid": pr.tolist()}
+                    rec = {
                         "n_distinct": len(seen),
                         "best_dist": round(min(ds), 4),
                         "within_radius": bool(min(ds) <= RADIUS),
                         "dists": [round(d, 4) for d in ds]}
+                    if a.save_preds:
+                        rec["cands"] = [{"n": v["n"], "dist": v["dist"],
+                                         "grid": v["grid"]}
+                                        for v in seen.values()]
+                    qrec["sigmas"][str(T0)] = rec
                 row["queries"].append(qrec)
             row["wall_s"] = round(time.time() - t0, 1)
             f.write(json.dumps(row) + "\n")
             f.flush()
             summ = {s: sum(q["sigmas"][s]["within_radius"]
-                           for q in row["queries"]) for s in map(str, TEMPS)}
+                           for q in row["queries"]) for s in map(str, temps)}
             print(f"{tid} sel@{sel[0]} within-radius {summ} "
                   f"({row['wall_s']:.0f}s)", flush=True)
     print("SAMPLE PROBE DONE", flush=True)
