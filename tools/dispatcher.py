@@ -158,10 +158,19 @@ def sync_code(zone: str, dry: bool, with_data: bool):
         # re_arc + re_gate48 joined 2026-08-12: --rearc corpus builds and
         # ladrg batteries need them; the P10/P11 lanes got them by manual
         # payload scp — a standing trap until this line.
-        sh(f"COPYFILE_DISABLE=1 tar czf - data/ARC-AGI/data{extra} | "
+        # 2026-08-12 (lane-b/c incident, same evening as the re_arc addition):
+        # the raw re_arc dir is 121MB of which the runtime needs only the
+        # python modules — re_arc.zip/demo.ipynb/__pycache__ blew the 300s
+        # ceiling, cmd_up died mid-sync, and a `| tail` on the caller masked
+        # the failure to exit 0 (the run-execution standard's masking sin,
+        # committed locally). Excludes trim the stream ~15x; ceiling doubled
+        # for tunnel-weather margin.
+        sh(f"COPYFILE_DISABLE=1 tar czf - --exclude='*.zip' "
+           f"--exclude='*.ipynb' --exclude=__pycache__ "
+           f"data/ARC-AGI/data{extra} | "
            + gssh(f"rm -rf {REMOTE_PROJECT}/data && "
                   f"tar xzf - -C {REMOTE_PROJECT} --exclude \"._*\"",
-                  zone), dry=dry, timeout=300)
+                  zone), dry=dry, timeout=600)
 
 
 def rescue(zone: str, dry: bool):
