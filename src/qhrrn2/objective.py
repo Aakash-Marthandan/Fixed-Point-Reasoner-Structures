@@ -32,9 +32,19 @@ def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
     size_ce = (-jnp.log(p_h[jnp.clip(h_true - 1, 0, 29)] + 1e-9)
                - jnp.log(p_w[jnp.clip(w_true - 1, 0, 29)] + 1e-9))
 
+    # B1-full free-bits form (pretrain-13, ledger 2026-08-12; the Q1 dose-kill
+    # consequence): with flux_floors set, only per-scale EXCESS above the
+    # floor is tolled — price the cuts that carry excess, floor the cuts that
+    # carry structure. () = the global toll, expression untouched.
+    if cfg.flux_floors:
+        floors = [float(x) for x in cfg.flux_floors.split(",")]
+        assert len(floors) == cfg.scales, "one floor per scale"
+        flux_toll = jnp.sum(jax.nn.relu(out.flux - jnp.asarray(floors)))
+    else:
+        flux_toll = jnp.sum(out.flux)
     total = (ce_in + cfg.w_void * ce_out
              + cfg.lambda_size * size_ce
-             + cfg.beta_flux * jnp.sum(out.flux)
+             + cfg.beta_flux * flux_toll
              + cfg.beta_flux_nl * jnp.sum(out.flux_attn)
              + cfg.beta_flux_obj * jnp.sum(out.flux_obj))
     return total, ce_in

@@ -52,6 +52,21 @@ def parse_args():
                    help="E10 Phase B: fraction of batch rows given corrupted-"
                         "target yprev init (basin training at corpus scale)")
     p.add_argument("--anchor-eps", type=float, default=0.15)
+    p.add_argument("--ri-p", type=float, default=0.0,
+                   help="pretrain-13 RI rows (EqR): fraction of rows starting "
+                        "from a full uniform random color canvas — trains "
+                        "path-independence; 0 = pre-13 stream bit-exact")
+    p.add_argument("--ni-sigma", type=float, default=0.0,
+                   help="pretrain-13 NI (EqR): per-step training noise std "
+                        "in state space (simplex-tangent); 0 = off")
+    p.add_argument("--eq-coupled", action="store_true",
+                   help="pretrain-13: FPRM coupled residual scaling a1/a2 "
+                        "(learnable, init contractive .75/.25) instead of "
+                        "the damped y+eta*(p-y) update")
+    p.add_argument("--flux-floors", default=None,
+                   help="pretrain-13 B1-full: comma nats per scale, e.g. "
+                        "'350,75,50,15,30' — free-bits floors; only excess "
+                        "above the floor is beta-priced")
     p.add_argument("--beta-flux", type=float, default=0.0,
                    help="P9-C: the RT toll shaping the landscape (S1/S2)")
     p.add_argument("--beta-flux-nl", type=float, default=0.0)
@@ -145,7 +160,9 @@ def main():
     cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat,
                  d_task=a.d_task, equilibrium=a.equilibrium,
                  beta_flux=a.beta_flux, beta_flux_nl=a.beta_flux_nl,
-                 eta_floor=a.eta_floor, z_gate_init=a.z_gate_init)
+                 eta_floor=a.eta_floor, z_gate_init=a.z_gate_init,
+                 eq_coupled=a.eq_coupled, ni_sigma=a.ni_sigma,
+                 flux_floors=a.flux_floors or "")
 
     exclude = frozenset(dev30.MANIFEST)
     rearc_families = None
@@ -227,17 +244,18 @@ def main():
         MUST stay in lockstep — the DP gradient-equivalence test in
         tests/test_dp.py guards it)."""
         import jax.numpy as jnp
-        k_batch, k_loss, k_a1, k_a2, k_a3 = jax.random.split(rng_step, 5)
+        # pretrain-13: the ri_p>0 branch draws 2 extra keys; at ri_p=0 the
+        # split count and every downstream key match pretrain-12 bit-exactly.
+        nk = 7 if a.ri_p > 0 else 5
+        keys = jax.random.split(rng_step, nk)
+        k_batch, k_loss, k_a1, k_a2, k_a3 = keys[:5]
         x_b, y_b, t_b, lab_b = E.sample_batch(k_batch, dev, n_tasks, batch_sz)
-        yp_b = None
-        if a.anchor_p > 0:  # E10 Phase B ([H-23] at corpus scale): some rows
-            # start from corrupt(y) instead of VOID — trains restoration.
-            row = jax.random.bernoulli(k_a1, a.anchor_p, (x_b.shape[0], 1, 1))
-            cell_m = jax.random.bernoulli(k_a2, a.anchor_eps, y_b.shape)
-            rand = jax.random.randint(k_a3, y_b.shape, 0, 10)
-            ycor = jnp.where(cell_m, rand, y_b)
-            void = jnp.full_like(y_b, 10)
-            yp_b = jnp.where(row, ycor, void)
+        # [H-23] anchor rows + pretrain-13 RI rows (builder + named tests in
+        # episodic.build_y0_rows / tests/test_p13.py).
+        yp_b = E.build_y0_rows(
+            k_a1, k_a2, k_a3, y_b, a.anchor_p, a.anchor_eps, ri_p=a.ri_p,
+            k_r1=keys[5] if a.ri_p > 0 else None,
+            k_r2=keys[6] if a.ri_p > 0 else None)
 
         def loss_fn(s):
             return batch_loss(s["model"], cfg, x_b, y_b, tau=a.tau, rng=k_loss,

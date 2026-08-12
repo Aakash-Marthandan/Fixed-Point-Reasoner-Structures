@@ -212,6 +212,36 @@ def sample_batch(rng, corpus_dev: dict, n_tasks: int, batch: int):
     return x_b, y_b, t_b, labels_b
 
 
+def build_y0_rows(k_a1, k_a2, k_a3, y_b, anchor_p: float, anchor_eps: float,
+                  ri_p: float = 0.0, k_r1=None, k_r2=None):
+    """y0 row-type assembly for the eq trainer: [H-23] anchor rows +
+    pretrain-13 RI rows (ledger 2026-08-12, EqR deep-read).
+
+    Anchor block (2026-08-09, key usage bit-preserved): with prob anchor_p a
+    row starts from corrupt(y) — anchor_eps of its cells resampled — else
+    VOID. RI block: with prob ri_p a row starts from a FULL uniform random
+    color canvas (the eps=1 limit of the same corruption family) — training
+    path-independence from far starts, the init-distribution sibling of the
+    anchor rows. RI overrides an anchor draw on the same row, so marginal
+    anchor probability is anchor_p*(1-ri_p). ri_p=0 uses no extra keys and
+    reproduces the pre-13 formula bit-exactly (tests/test_p13.py).
+    Returns (B, 32, 32) int canvases, or None when both probs are 0."""
+    yp_b = None
+    if anchor_p > 0:
+        row = jax.random.bernoulli(k_a1, anchor_p, (y_b.shape[0], 1, 1))
+        cell_m = jax.random.bernoulli(k_a2, anchor_eps, y_b.shape)
+        rand = jax.random.randint(k_a3, y_b.shape, 0, 10)
+        ycor = jnp.where(cell_m, rand, y_b)
+        void = jnp.full_like(y_b, 10)
+        yp_b = jnp.where(row, ycor, void)
+    if ri_p > 0:
+        row_ri = jax.random.bernoulli(k_r1, ri_p, (y_b.shape[0], 1, 1))
+        rand_ri = jax.random.randint(k_r2, y_b.shape, 0, 10)
+        base = yp_b if yp_b is not None else jnp.full_like(y_b, 10)
+        yp_b = jnp.where(row_ri, rand_ri, base)
+    return yp_b
+
+
 def corpus_to_device(corpus: Corpus) -> dict:
     return {
         "x": jnp.asarray(corpus.x),

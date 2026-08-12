@@ -44,3 +44,20 @@ class Config:
     # engaged under anchor training).
     eta_floor: float = 0.0
     z_gate_init: float = 0.0
+    # pretrain-13 dials (ledger 2026-08-12, EqR/FPRM deep-read; defaults
+    # reproduce pretrain-12 exactly — each mechanism is branch-inert at its
+    # default and carries its named test in tests/test_p13.py).
+    eq_coupled: bool = False   # FPRM coupled residual scaling: y <- a1*y + a2*p,
+    #                            a1/a2 learnable, init contractive .75/.25
+    #                            (their Thm-1 recipe); False = the damped
+    #                            y + eta*(p-y) update, untouched
+    ni_sigma: float = 0.0      # EqR per-step TRAINING noise (state-space,
+    #                            simplex-tangent, canonical scale); active only
+    #                            when an rng is threaded (training) — inference
+    #                            probes (rng=None) never see it
+    flux_floors: str = ""      # B1-full free-bits floors: comma nats per scale
+    #                            ("350,75,50,15,30"); priced term becomes
+    #                            beta * sum_s relu(I_s - F_s); "" = global toll.
+    #                            STRING, not tuple: ckpt config values must
+    #                            survive as python scalars (2026-08-01 law,
+    #                            tests/test_episodic.py) — parsed at trace time

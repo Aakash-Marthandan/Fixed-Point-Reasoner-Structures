@@ -62,8 +62,14 @@ def init_params(key, cfg: Config):
         return cell._linear_init(k, i, o, scale)
 
     eq = ({"eq": {"eta": jnp.zeros(()), "eta_z": jnp.zeros(()),
-                  "alpha_z": jnp.asarray(cfg.z_gate_init)}}  # 0-init = A.2
-          # carry inert at start; z_gate_init>0 warm-opens it (pretrain-9)
+                  "alpha_z": jnp.asarray(cfg.z_gate_init),  # 0-init = A.2
+                  # carry inert at start; z_gate_init>0 warm-opens it (pretrain-9)
+                  **({"alpha1": jnp.asarray(1.0986123),   # sigmoid -> .75
+                      "alpha2": jnp.asarray(-1.0986123)}  # sigmoid -> .25
+                     # FPRM coupled residual scaling (pretrain-13): learnable,
+                     # initialized contractive per their Thm-1 recipe; keys
+                     # exist only when eq_coupled (old ckpts stay loadable)
+                     if cfg.eq_coupled else {})}}
           if cfg.equilibrium else {})
     return {**eq,
         "embed": {  # shared 3x3 conv over each field's 2 channels (x, y_prev)
@@ -381,6 +387,10 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
          if y0_probs is None else y0_probs)
     eta = cfg.eta_floor + (1.0 - cfg.eta_floor) * jax.nn.sigmoid(params["eq"]["eta"])
     eta_z = jax.nn.sigmoid(params["eq"]["eta_z"])
+    if cfg.eq_coupled:  # pretrain-13: y <- a1*y + a2*p (FPRM two-scalar form;
+        #               the damped update is the a1=1-eta, a2=eta special case)
+        a1 = jax.nn.sigmoid(params["eq"]["alpha1"])
+        a2 = jax.nn.sigmoid(params["eq"]["alpha2"])
     outs, residuals = [], []
     z_c = None
     for t in range(T):
@@ -407,7 +417,20 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
         z_c = (out.z_fine if z_c is None
                else z_c + eta_z * (out.z_fine - z_c))
         p = jax.nn.softmax(out.logits, axis=-1).transpose(2, 0, 1)
-        y_new = y + eta * (p - y)
+        y_new = (a1 * y + a2 * p) if cfg.eq_coupled else (y + eta * (p - y))
+        if cfg.ni_sigma > 0 and rng is not None:
+            # pretrain-13 NI (EqR per-step training noise, raw std ni_sigma):
+            # simplex-tangent draw + clip/renorm ([R-4]: state-space, never
+            # logits). rng is threaded only by training callers, so probes
+            # and deployment (rng=None) never see noise. The extra split
+            # exists only on this branch — ni_sigma=0 leaves the registered
+            # rng stream untouched.
+            rng, k_ni = jax.random.split(rng)
+            xi = jax.random.normal(k_ni, y_new.shape)
+            xi = xi - xi.mean(axis=0, keepdims=True)
+            y_new = jnp.clip(y_new + cfg.ni_sigma * xi, 0.0, None)
+            y_new = y_new / jnp.maximum(
+                jnp.sum(y_new, axis=0, keepdims=True), 1e-6)
         residuals.append(jnp.mean(jnp.abs(y_new - y)))
         y = y_new
         outs.append(out)

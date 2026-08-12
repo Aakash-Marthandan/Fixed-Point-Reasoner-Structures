@@ -40,9 +40,10 @@ K_SAMPLES = 16        # registered ensemble size
 RADIUS = 0.2          # K's pull radius
 T_TOTAL = 16          # anneal 12 + quench 4 (horizon data: capture is fast)
 T_ANNEAL = 12
-RI_SIGMA = 2.0        # --init random: y0 = softmax(RI_SIGMA * N(0,1)) per cell
-                      # (cluster S / EqR multi-init variant, 2026-08-12; the
-                      # substrate is NOT RI-trained yet — breadth-at-inference)
+# --init random: y0 = uniform random COLOR canvas (0..9), one-hot — exactly
+# the pretrain-13 RI-row training distribution (full-resample anchor), so
+# multi-init inference and RI training share one init measure (EqR trains
+# and tests the same distribution; 2026-08-12).
 
 
 def dist(pred, gt) -> float:
@@ -65,9 +66,10 @@ def trace_langevin(params, cfg: Config, x_grid, *, task_vec, T0: float,
     assert cfg.equilibrium
     x_can = jnp.asarray(G.place(np.asarray(x_grid)), dtype=jnp.int32)
     if init == "random":
-        g = np.random.default_rng(seed ^ 0x5EED).standard_normal(
-            (M.VOCAB, G.CANVAS, G.CANVAS)).astype(np.float32)
-        y = jax.nn.softmax(jnp.asarray(RI_SIGMA * g), axis=0)
+        rc = np.random.default_rng(seed ^ 0x5EED).integers(
+            0, 10, size=(G.CANVAS, G.CANVAS))
+        y = jax.nn.one_hot(jnp.asarray(rc, jnp.int32),
+                           M.VOCAB).transpose(2, 0, 1)
     else:
         y = jax.nn.one_hot(jnp.full((G.CANVAS, G.CANVAS), G.VOID, jnp.int32),
                            M.VOCAB).transpose(2, 0, 1)

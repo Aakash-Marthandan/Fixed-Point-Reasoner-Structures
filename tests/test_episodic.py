@@ -229,5 +229,8 @@ def test_joint_smoke_and_checkpoint(tmp_path):
     # over the whole payload made Config(**config) unhashable, killing the
     # lru_cache'd step factories downstream).
     assert type(loaded["step"]) is int
-    assert all(type(v) in (int, float, bool) for v in loaded["config"].values())
+    # str joined the set 2026-08-12 (flux_floors): save_ckpt passes strings
+    # through untouched (its docstring names them), and str is hashable —
+    # the invariant's substance is python-scalar-and-hashable, never-numpy.
+    assert all(type(v) in (int, float, bool, str) for v in loaded["config"].values())
     assert hash(Config(**loaded["config"])) is not None
