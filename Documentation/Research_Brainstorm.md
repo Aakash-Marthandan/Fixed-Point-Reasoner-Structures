@@ -315,3 +315,111 @@ weights (cluster I), not dynamics.
 6. **Protocol: next task-level claims move OFF val-hard** (≈12
    adjudications; evidentiary decay) — eval-6 dev-30 single shot per the
    holdout law once the attribution cell picks the champion.
+
+---
+
+# Freethink 2026-08-12 — post-grid: the landscape is a code; now BOUND it
+
+*Inputs: the complete seeded grid (four laws + the budget amendment), the
+[H-12] hard-negative, the v6e pod, and tonight's literature sweep
+(equilibrium reasoners; modern-Hopfield capacity theory; kernel-Hopfield
+basin-boundary geometry). Nothing here is registered until it moves to the
+ledger with a named test. Lettering continues from cluster M.*
+
+## 0. The organizing observation
+
+Every measured regularity now factors through TWO code parameters with
+SEPARATE physical controls: **codebook size N** (count movers: depth,
+corpus, dials — "more dynamical capacity") and **code distance d** (radius
+movers: pricing, width×budget — "more optimization under constraint").
+Coding theory says these two cannot be independent forever: sphere packing
+bounds N·V(d/2) by the volume of state space. The freethink's spine: find
+the frontier, test whether pricing pushes us toward it, and use the bound's
+SHAPE as the next generation of falsifiable predictions.
+
+## N. The packing frontier: are priced landscapes near-optimal codes? **[T1 — zero new compute]**
+From every substrate's ladder we hold (N, d) estimates. Coding theory gives
+Hamming/GV-style bounds on achievable (N, d) at fixed blocklength. Analysis:
+plot all 17 substrates in the (log N, d) plane against the packing bound for
+the task-relevant state space; measure "packing efficiency" per substrate.
+**Prediction: priced substrates sit measurably closer to the frontier than
+free ones at matched N; dials/depth move N along the frontier, not off it.**
+If confirmed: priced training = approximate optimal-code construction — the
+paper's strongest theoretical claim, from data already on disk. Kill: no
+ordering, or efficiency anti-correlates with transfer (frontier proximity
+would then be memorization-flavored, not generalization-flavored).
+
+## O. Spectral shape universality: an RG scaling function **[T1 — zero new compute + one big-d check]**
+Priced per-scale spectra at different widths look SHAPE-similar (d24:
+458/103/62/26/22; d32: 433/92/58/24/28 — near-identical after I_total
+normalization) while free spectra steepen with d. **Hypothesis: under
+pricing, the normalized information distribution across RG cuts
+Î(s) = I_s/I_total is a d-INVARIANT scaling function** — universality of
+the information geometry under the flow, the holographic reading being that
+the boundary theory (task) fixes the bulk profile regardless of bulk
+resolution. Test: collapse plot over all priced substrates (disk); then the
+5-75M models must land on the SAME curve — deviation becomes a scaling
+diagnostic ("when big models break, the spectrum says where"). Kill: no
+collapse at matched β.
+
+## P. The retention metric: anisotropy of basin-destruction **[T2 — the principled TTT]**
+[H-12]'s lesson: spine motion at fit-scale destroys basins; e_t motion does
+not. Information-geometric reading: retention defines a metric on weight
+space (sensitivity of basin structure to perturbation direction); TTT should
+move in its NULL directions. Probe (cheap): random unit perturbations of
+fixed norm in different parameter subspaces (spine mixers / heads / gates /
+e_t / codebook) × retention drop ⇒ the anisotropy spectrum. **Prediction:
+orders-of-magnitude anisotropy; the low-sensitivity subspace ⊇ {e_t, gates,
+biases} and excludes mixers.** Then the convert-phase TTT = adapt ONLY in
+measured-flat directions (a natural-gradient with the retention metric; the
+KL-anchor arm is its crude isotropic shadow). This turns the [H-12] negative
+into a design principle: *fit where the code isn't stored.*
+
+## Q. Barrier spectroscopy: hop thermodynamics **[T1.5 — one sampling battery]**
+Kernel-Hopfield theory (2605.00366) finds attractors separated by sharp,
+phase-transition-like barriers with critical slowing — our substrate should
+show the same. We hold hop rates at exactly two temperatures (T0=0.1, 0.4 —
+nearly equal rates). A proper T-sweep {0.05..1.6, k=64} on the record-radius
+40k substrate: **if hop rate follows Arrhenius exp(−ΔF/T), the slope
+measures per-task-family BARRIER HEIGHTS** — "reasoning barrier
+spectroscopy," a measurable nobody else has. Prediction: barrier heights
+anti-correlate with snap-convertibility (low-barrier families are where
+candidates/self-decoding work). Kill: rate flat in T (barriers either ≪ or
+≫ the accessible T range — itself informative for sampler design).
+
+## R. Boundary sufficiency at scale: the holographic dictionary test **[T2 — rides pretrain-13]**
+The throat law says the task fixes information regardless of bulk capacity —
+the boundary (e_t, 64 floats) has never been re-examined on the equilibrium
+line (H-17 was falsified on the OLD architecture only). **At d64+: sweep
+d_task {16, 32, 64, 128}. Prediction (holographic): radius/transfer flat in
+d_task — the boundary is task-determined, not capacity-determined; the
+minimal sufficient boundary rank per task ≈ the code dimension (measurable
+via rank-restricted e_t fits).** Kill: d_task binds at scale ⇒ a
+bulk-boundary dictionary constraint (equally interesting: the dictionary
+has a measurable capacity law).
+
+## S. The all-eq conversion attempt: self-decoding at record radius **[T1.5 — the convert-phase opener]**
+The .80-radius / exact-14 substrate (pretrain12_48c_40k) is the best decoder
+candidate ever measured. One cell: the C.3′ stack with THIS decoder ×
+eq-native candidates (multi-init trajectories per EqR — registered variant —
+plus Langevin at the Q-informed temperature), scored by PoE. **Prediction:
+first all-eq task-level conversions; the heirloom (old-arch pool) becomes
+optional.** This is the experiment that decides whether the geometry program
+cashes out as solves — run FIRST in the convert phase, before eval-6.
+
+## Literature anchors (tonight)
+- Equilibrium reasoners (2605.21488): attractor-reasoning at scale, multi-init
+  breadth — our differentiation = instruments + pricing + family gates.
+- Modern Hopfield capacity (exponential attractors, basins stay large) — the
+  count/radius separability has associative-memory theory kin; connect the
+  count-movers to capacity-scaling results in the paper's related work.
+- Kernel Hopfield basin boundaries (2605.00366): sharp barriers + critical
+  slowing — cluster Q's theoretical twin.
+- Reasoning-as-compression CIB (2603.08462): B1's LLM-world cousin.
+
+## Priority for the scaling sessions
+1. **N + O from disk** (the frontier + the collapse — paper-grade, $0).
+2. **S** (the all-eq conversion opener) with **Q** riding its sampler.
+3. **P** (retention-metric probe) before ANY 5-75M TTT commitment.
+4. **R** rides pretrain-13's d64 pilot; steps(d) calibration from the
+   20k/40k pair is its sibling calibration.
