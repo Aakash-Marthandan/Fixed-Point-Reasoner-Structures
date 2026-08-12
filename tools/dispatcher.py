@@ -166,7 +166,7 @@ def sync_code(zone: str, dry: bool, with_data: bool):
         # committed locally). Excludes trim the stream ~15x; ceiling doubled
         # for tunnel-weather margin.
         sh(f"COPYFILE_DISABLE=1 tar czf - --exclude='*.zip' "
-           f"--exclude='*.ipynb' --exclude=__pycache__ "
+           f"--exclude='*.ipynb' --exclude=__pycache__ --exclude=.git "
            f"data/ARC-AGI/data{extra} | "
            + gssh(f"rm -rf {REMOTE_PROJECT}/data && "
                   f"tar xzf - -C {REMOTE_PROJECT} --exclude \"._*\"",
