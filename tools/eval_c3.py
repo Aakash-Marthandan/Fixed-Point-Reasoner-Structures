@@ -34,13 +34,22 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--steps", type=int, default=600)
     ap.add_argument("--snap-k", type=int, default=8)
+    ap.add_argument("--alt-rank", choices=("none", "residual"), default="none",
+                    help="cluster S rider (2026-08-12): ALSO rank snapped "
+                         "limits by fixed-point residual (EqR mechanism-6 "
+                         "retest, post-shaping) — recorded alongside the "
+                         "vote, protocol fields untouched")
     a = ap.parse_args()
     saved = E.load_ckpt(a.ckpt)
     defaults = Config()
     cfg = Config(**{k: type(getattr(defaults, k))(v)
                     for k, v in saved["config"].items()})
-    mem = {json.loads(l)["task"]: json.loads(l)
-           for l in Path(a.members).read_text().splitlines()}
+    mtxt = Path(a.members).read_text()
+    if mtxt.lstrip().startswith("{"):
+        mem = json.loads(mtxt)   # samp_to_members dict form (cluster S)
+    else:
+        mem = {json.loads(l)["task"]: json.loads(l)
+               for l in mtxt.splitlines()}
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     results = out / "results.jsonl"
     done = {json.loads(l)["task"] for l in results.read_text().splitlines()} \
@@ -56,7 +65,7 @@ def main():
             model, snaps_fit, sel, F = P.fit_arm_a(
                 saved["state"], cfg, eps, steps=a.steps, val_every=50)
             tvj = jnp.asarray(sel[1])
-            per_pair, atts = [], []
+            per_pair, atts, per_pair_alt = [], [], []
             for qi, ep in enumerate(eps):
                 cands = []
                 own = P.trace(model, cfg, ep.query_x, tau=1.0, task_vec=tvj,
@@ -84,11 +93,35 @@ def main():
                         for att in (att1, att2)]
                 per_pair.append(bits)
                 atts.append([att1.tolist(), att2.tolist()])
+                if a.alt_rank == "residual":
+                    # EqR mechanism-6 retest: unique snapped limits ranked by
+                    # self-drift under snap_k more map steps (stability
+                    # first, visit count as tiebreak). The 08-08 rejection of
+                    # stability-scoring predates basin shaping — this records
+                    # whether it discriminates on shaped substrates.
+                    scored = []
+                    for cnt, s_ in counts.values():
+                        r2 = snap(model, cfg, ep.query_x, s_, tvj, a.snap_k)
+                        drift = (1.0 if r2.shape != s_.shape
+                                 else float((r2 != s_).mean()))
+                        scored.append((drift, -cnt, s_))
+                    scored.sort(key=lambda t: (t[0], t[1]))
+                    a1r = scored[0][2]
+                    a2r = scored[1][2] if len(scored) > 1 else scored[0][2]
+                    per_pair_alt.append(
+                        [bool(gt is not None and att.shape == gt.shape
+                              and np.array_equal(att, np.asarray(gt)))
+                         for att in (a1r, a2r)])
             row = {"task": tid, "sel_step": sel[0],
                    "solved_pass2": all(b[0] or b[1] for b in per_pair),
                    "per_pair_bits": per_pair, "preds": atts,
                    "n_members": len(mem.get(tid, {}).get("member_query_preds", [])),
                    "wall_s": round(time.time() - t0, 1)}
+            if a.alt_rank != "none":
+                row["alt_rank"] = a.alt_rank
+                row["per_pair_bits_alt"] = per_pair_alt
+                row["solved_pass2_alt"] = all(b[0] or b[1]
+                                              for b in per_pair_alt)
             f.write(json.dumps(row) + "\n"); f.flush()
             print(f"{tid} pass2={row['solved_pass2']} "
                   f"bits={per_pair} ({row['wall_s']}s)", flush=True)
