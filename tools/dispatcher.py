@@ -152,7 +152,12 @@ def sync_code(zone: str, dry: bool, with_data: bool):
         # COPYFILE_DISABLE=1 suppresses them at create; --exclude at extract
         # is defense in depth against a foreign-made archive.
         print(">>> Sync data (tar stream)")
-        extra = " data/ConceptARC" if os.path.isdir("data/ConceptARC") else ""
+        extra = "".join(f" {p}" for p in
+                        ("data/ConceptARC", "data/re_arc", "data/re_gate48")
+                        if os.path.isdir(p))
+        # re_arc + re_gate48 joined 2026-08-12: --rearc corpus builds and
+        # ladrg batteries need them; the P10/P11 lanes got them by manual
+        # payload scp — a standing trap until this line.
         sh(f"COPYFILE_DISABLE=1 tar czf - data/ARC-AGI/data{extra} | "
            + gssh(f"rm -rf {REMOTE_PROJECT}/data && "
                   f"tar xzf - -C {REMOTE_PROJECT} --exclude \"._*\"",
