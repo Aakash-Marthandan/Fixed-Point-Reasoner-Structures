@@ -35,6 +35,11 @@ run_arm () {
   # shellcheck disable=SC2086
   python3 tools/pretrain.py --out "runs/pretrain13_$NAME" $COMMON \
     --steps "$STEPS" "$@" && echo "ARM-$NAME-PRETRAIN-OK"
+  # ckpt staged IMMEDIATELY (2nd preemption of the night beat arm B to the
+  # post-battery rescue): the expensive artifact is durable before batteries
+  gsutil -q cp "runs/pretrain13_$NAME/ckpt_latest.pkl" \
+    "$GCS/${NAME}_ckpt.pkl" && echo "CKPT-STAGE-$NAME-OK" \
+    || echo "CKPT-STAGE-$NAME-FAILED"
   echo "=== ARM $NAME batteries $(date -u +%H:%M) ==="
   $PIN0 python3 tools/probe_ladder.py \
     --ckpt "runs/pretrain13_$NAME/ckpt_latest.pkl" --tasks "$VH" \
