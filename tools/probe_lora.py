@@ -91,11 +91,26 @@ def merge(params, lora):
     return out
 
 
+def ewc_penalty(lora, NU):
+    """Cluster V (ledger 2026-08-13): Fisher-weighted shrinkage on the
+    EFFECTIVE weight drift — sum over targets of mean(v * (scale*b@a)^2),
+    v = the pretrain ckpt's Adam second moment (a free Fisher diagonal,
+    'Fishers for Free'), normalized per target. Penalizes movement exactly
+    along the directions training used — the P-verdict's gradient-directed
+    damage, anchored."""
+    scale = LORA_ALPHA / RANK
+    pen = 0.0
+    for key, ab in lora.items():
+        delta = scale * (ab["b"] @ ab["a"])
+        pen = pen + jnp.mean(NU[key] * jnp.square(delta))
+    return pen
+
+
 @functools.lru_cache(maxsize=8)
-def _lora_step(cfg: Config, lr: float, wd: float, kl: float):
+def _lora_step(cfg: Config, lr: float, wd: float, kl: float, ewc: float = 0.0):
     opt = optax.adamw(lr, weight_decay=wd)
 
-    def loss_fn(train, base, X, Y, YP, rng):
+    def loss_fn(train, base, NU, X, Y, YP, rng):
         eff = merge(base, train["lora"])
         tvs = jnp.broadcast_to(train["tv"], (X.shape[0], train["tv"].shape[0]))
         loss, _ = batch_loss(eff, cfg, X, Y, tau=1.0, rng=rng,
@@ -105,15 +120,34 @@ def _lora_step(cfg: Config, lr: float, wd: float, kl: float):
             bloss, _ = batch_loss(base, cfg, X, Y, tau=1.0, rng=rng,
                                   task_vecs=base_tvs, yprev_batch=YP)
             loss = loss + kl * jnp.square(loss - bloss)
+        if ewc > 0:
+            loss = loss + ewc * ewc_penalty(train["lora"], NU)
         return loss
 
     @jax.jit
-    def step(train, opt_state, base, X, Y, YP, rng):
-        loss, grads = jax.value_and_grad(loss_fn)(train, base, X, Y, YP, rng)
+    def step(train, opt_state, base, NU, X, Y, YP, rng):
+        loss, grads = jax.value_and_grad(loss_fn)(train, base, NU, X, Y, YP, rng)
         updates, opt_state = opt.update(grads, opt_state, train)
         return optax.apply_updates(train, updates), opt_state, loss
 
     return step, opt
+
+
+def extract_nu(opt_state, targets=None):
+    """Adam second-moment tree for the model, keyed per LoRA target and
+    mean-normalized (scale-free weighting). Works on pickled optax states:
+    finds the chain element carrying .nu."""
+    flat = jax.tree_util.tree_flatten(
+        opt_state, is_leaf=lambda x: hasattr(x, "nu"))[0]
+    for el in flat:
+        if hasattr(el, "nu"):
+            nu_model = el.nu["model"]
+            out = {}
+            for p in (targets or TARGETS):
+                v = np.asarray(_get(nu_model, p)["w"])
+                out["/".join(p)] = jnp.asarray(v / (v.mean() + 1e-12))
+            return out
+    raise ValueError("no Adam nu found in opt_state")
 
 
 def corrupt(y, eps, rng):
@@ -126,8 +160,10 @@ def corrupt(y, eps, rng):
 
 
 def fit_lora(state, cfg: Config, eps_list, *, steps, val_every, kl=0.0,
-             lr=3e-3, wd=1e-4, seed=0):
+             ewc=0.0, nu_map=None, lr=3e-3, wd=1e-4, seed=0):
     base = jax.tree.map(jnp.asarray, state["model"])
+    NU = nu_map if nu_map is not None else {
+        "/".join(p): jnp.zeros_like(_get(base, p)["w"]) for p in TARGETS}
     tv0 = jnp.asarray(np.asarray(state["table"]).mean(0))
     lora0 = lora_init(base, jax.random.PRNGKey(seed + 11))
     train = {"lora": lora0, "tv": tv0}
@@ -151,13 +187,13 @@ def fit_lora(state, cfg: Config, eps_list, *, steps, val_every, kl=0.0,
     Y = jnp.asarray(np.concatenate(ys), dtype=jnp.int32)
     YP = jnp.asarray(np.concatenate(yps), dtype=jnp.int32)
 
-    step, opt = _lora_step(cfg, lr, wd, kl)
+    step, opt = _lora_step(cfg, lr, wd, kl, ewc)
     opt_state = opt.init(train)
     rng = jax.random.PRNGKey(seed)
     sel, first_exact = None, None
     for i in range(steps):
         rng, sub = jax.random.split(rng)
-        train, opt_state, loss = step(train, opt_state, base, X, Y, YP, sub)
+        train, opt_state, loss = step(train, opt_state, base, NU, X, Y, YP, sub)
         if (i + 1) % val_every == 0 and first_exact is None:
             eff = merge(base, train["lora"])
             tr = P.trace(eff, cfg, val_x, tau=1.0, task_vec=train["tv"],
@@ -177,6 +213,9 @@ def main():
     ap.add_argument("--steps", type=int, default=2000)
     ap.add_argument("--val-every", type=int, default=100)
     ap.add_argument("--kl", type=float, default=0.0)
+    ap.add_argument("--ewc", type=float, default=0.0,
+                    help="cluster V: Fisher-anchored drift penalty, weights "
+                         "= ckpt Adam-v (free Fisher); 0 = off")
     ap.add_argument("--stab-steps", type=int, default=8)
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
@@ -185,6 +224,9 @@ def main():
     defaults = Config()
     cfg = Config(**{k: type(getattr(defaults, k))(v)
                     for k, v in saved["config"].items()})
+    nu_map = extract_nu(saved["opt_state"]) if a.ewc > 0 else None
+    if nu_map is not None:
+        print(f"ewc: nu extracted for {len(nu_map)} targets", flush=True)
     import dev30
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -202,7 +244,8 @@ def main():
             eps_list = G.load_task(tid)
             train, sel_step, base = fit_lora(
                 saved["state"], cfg, eps_list, steps=a.steps,
-                val_every=a.val_every, kl=a.kl, seed=a.seed)
+                val_every=a.val_every, kl=a.kl, ewc=a.ewc,
+                nu_map=nu_map, seed=a.seed)
             eff = merge(base, train["lora"])
             tvj = jnp.asarray(train["tv"])
             row = {"task": tid, "sel_step": sel_step,

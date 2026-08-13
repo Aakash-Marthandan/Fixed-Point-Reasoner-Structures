@@ -54,3 +54,38 @@ def test_lora_nonzero_changes_decode(params):
     a = forward_fields(params, CFG, build_fields(x, yprev), t_norm=0.0, tau=1.0)
     b = forward_fields(eff, CFG, build_fields(x, yprev), t_norm=0.0, tau=1.0)
     assert float(jnp.max(jnp.abs(a.logits - b.logits))) > 1e-6
+
+
+def test_ewc_penalty_math(params):
+    """Cluster V (2026-08-13): zero-b lora -> penalty 0 (inert at init);
+    nonzero effective drift -> positive; NU zeros -> 0 regardless."""
+    lora = L.lora_init(params, jax.random.PRNGKey(3))
+    NU1 = {k: jnp.ones_like(params_at(params, k)) for k in lora}
+    NU0 = {k: jnp.zeros_like(params_at(params, k)) for k in lora}
+    assert float(L.ewc_penalty(lora, NU1)) == 0.0          # b starts at zero
+    lora2 = jax.tree.map(lambda x: x + 0.1, lora)
+    assert float(L.ewc_penalty(lora2, NU1)) > 0.0
+    assert float(L.ewc_penalty(lora2, NU0)) == 0.0
+
+
+def params_at(params, key):
+    node = params
+    for k in key.split("/"):
+        node = node[k]
+    return node["w"]
+
+
+def test_ewc_nu_extraction(params):
+    """extract_nu finds Adam's second moment in a real optax state and
+    returns TARGETS-keyed, shape-matched, nonnegative weights."""
+    import optax
+    state = {"model": params, "table": jnp.zeros((4, 32))}
+    opt = optax.adamw(1e-3, weight_decay=1e-4)
+    ost = opt.init(state)
+    grads = jax.tree.map(lambda x: jnp.ones_like(x) * 0.1, state)
+    _, ost = opt.update(grads, ost, state)
+    nu = L.extract_nu(ost)
+    assert set(nu) == {"/".join(p) for p in L.TARGETS}
+    for k, v in nu.items():
+        assert v.shape == params_at(params, k).shape
+        assert float(jnp.min(v)) >= 0.0
