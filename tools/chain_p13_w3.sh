@@ -64,6 +64,13 @@ run_waves () {
     rc=0
     for p in "${pids[@]}"; do wait "$p" || rc=1; done
     echo "wave done rc=$rc $(date -u +%H:%M)"
+    # batch-across-spots mode (PI directive 2026-08-13): stage partial
+    # battery results after EVERY wave — probes resume per-task from
+    # results.jsonl, so a mid-phase-2 preemption costs one wave at most
+    tar czf /tmp/p13_partial.tgz runs/lad_p13* runs/ladrg_p13* \
+      runs/samp_p13* runs/ttt_* 2>/dev/null || true
+    gsutil -q cp /tmp/p13_partial.tgz "$GCS/partial_results.tgz" \
+      2>/dev/null || true
   done
 }
 
@@ -72,6 +79,11 @@ run_waves () {
 # split plan (v5e-8 on-demand fallback, 2026-08-13) runs {B Dri C53} and
 # {Dcoup Dfloor C80} on separate pods.
 ARMS=${P13_ARMS:-"B Dri C53 Dcoup Dfloor C80"}
+# batch-mode resume: restore any staged partial battery results so phase-2
+# probes skip completed tasks (their per-task results.jsonl resume logic)
+if gsutil -q cp "$GCS/partial_results.tgz" /tmp/pr.tgz 2>/dev/null; then
+  tar xzf /tmp/pr.tgz -C . 2>/dev/null && echo "RESUME-PARTIAL-RESULTS"
+fi
 arm_args () {
   case $1 in
     B)      echo "53333 --ri-p 0.15 --eq-coupled --flux-floors 350,75,50,15,30 --ni-sigma 0.01" ;;
