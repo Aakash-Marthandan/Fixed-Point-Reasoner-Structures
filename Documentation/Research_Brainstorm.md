@@ -423,3 +423,74 @@ cashes out as solves — run FIRST in the convert phase, before eval-6.
 3. **P** (retention-metric probe) before ANY 5-75M TTT commitment.
 4. **R** rides pretrain-13's d64 pilot; steps(d) calibration from the
    20k/40k pair is its sibling calibration.
+
+# Freethink 2026-08-13 — consolidation-pass design round (clusters T-W)
+
+*Inputs: the frontier-consolidation report (same date), the family-vacancy
+table, wave-2 in flight, and a four-query literature sweep. Lettering
+continues from S. Nothing registered until it moves to the ledger.*
+
+## T. Coarsening thermodynamics: is consolidation a ripening flow? **[$0]**
+Count falls monotonically under budget/scale (51→42→32) while radius and
+compression improve — the signature of coarsening (fewer, larger domains).
+Lit twin: dynamical condensation / cluster-coarsening in self-attention
+(arXiv 2608.08922, this month). Analysis from disk: retention-count vs
+effective optimization (steps × width) across all 20+ substrates — power-law
+or saturating? PREDICTION: coarsening saturates at a task-set-determined
+terminal codebook (the "true" rule count), not N→1. KILL: count keeps
+falling through the 80k/quadratic cells — consolidation would then be a
+pathology to bound, not a flow to ride.
+
+## U. Water-filling optimality of the knee profile **[$0 — theory-grade if it fits]**
+VIB theory: optimal per-channel capacity under a total constraint is a
+WATER-FILLING allocation. We hold the universal knee profile
+(.69/.14/.085/.035/.048) and the free-arm spectra (the unconstrained
+"channel demands"). Fit: is the knee profile the water-filling solution
+given the free spectrum's per-scale levels and the measured throat total?
+If yes: (i) the priced objective performs constrained rate allocation
+optimally — S1/S2's strongest theoretical statement; (ii) FLOORS AT ANY
+SCALE become derivable (water-fill at the target throat) instead of copied
+from the nearest measured profile. KILL: allocation matches neither
+water-filling nor any monotone transform of it.
+
+## V. Fisher-anchored TTT — P2 in buildable form **[convert-phase arm]**
+P's verdict: damage is gradient-directed. The Fisher diagonal IS the
+gradient second-moment — and Adam's v accumulator in every saved
+opt_state is a FREE Fisher approximation (the "Fishers for Free" trick,
+arXiv 2507.18807). Build: probe_lora --ewc — parameter-space anchor
+lambda * sum v_i (theta_i - theta0_i)^2 alongside the function-space --kl
+arm. PREDICTION: Fisher-weighted >= KL >= none on retention-preserving
+adaptation (it penalizes exactly the directions training uses to destroy).
+KILL: EWC <= plain at matched exactness — curvature-then != damage-now,
+and the KL arm stands alone.
+
+## W. Representational basin creation for the vacancy floor **[the family-structure consequence]**
+ExtractObjects 0%/11 substrates, Copy ~2%, Count ~7% — no amount of scale,
+price, corpus, or dials creates these basins. W-alpha ($0): correlate
+vacancy with output geometry (extent ratio, content-cell count, palette
+size) — the anchor-row mechanism plausibly under-trains SMALL-output
+families (corrupt-target rows on tiny extents carry little basin signal;
+masked CE weights shrink with extent). W-beta (C22 candidate,
+registered-unbuilt): basins BY CONSTRUCTION — a learned potential/Lyapunov
+term shaping the update (Ghost Attractor Networks, arXiv 2606.18315, build
+basin structure architecturally rather than by training alone). Gate:
+W-alpha's correlate decides whether the lever is loss-side (reweight small
+extents) or architectural (C22).
+
+## Scale-regression flag (rides wave-2 analysis)
+HorizontalVertical: 78-89% retention at d16-d48 → 0% on BOTH d64 arms. A
+family lost to scale for the first time. Slice the d64 spectra/gate values
+on HV tasks vs d48's when wave-2 lands; if d64's IR profile starved the
+axial summaries (C7's channel), the 5-75M track needs a floor on that
+channel class.
+
+## Lit anchors (this pass)
+- Ghost Attractor Networks 2606.18315 — basin-structured decoders by
+  construction (W-beta/C22).
+- Clustered attractor manifolds / dynamical condensation 2608.08922 —
+  coarsening theory twin (T).
+- Solve the Loop 2605.12466 — implicit-diff attractor module (Neumann-K
+  cousin; deep-T memory).
+- Fishers for Free 2507.18807 — Adam-v as Fisher diagonal (V).
+- FIESTA 2503.23257 — Fisher-selective test-time adaptation (V's TTA kin).
+- VIB water-filling allocation (classic) — U's frame.
