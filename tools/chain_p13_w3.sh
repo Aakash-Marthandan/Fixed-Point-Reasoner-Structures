@@ -67,23 +67,40 @@ run_waves () {
   done
 }
 
-# ---- PHASE 1: six pretrains, zero idle ----
-pretrain_arm B      53333 --ri-p 0.15 --eq-coupled --flux-floors 350,75,50,15,30 --ni-sigma 0.01
-pretrain_arm Dri    53333 --ri-p 0.15
-pretrain_arm C53    53333
-pretrain_arm Dcoup  53333 --eq-coupled
-pretrain_arm Dfloor 53333 --flux-floors 350,75,50,15,30
-pretrain_arm C80    80000
+# ---- PHASE 1: pretrains, zero idle ----
+# P13_ARMS env (default all six) parametrizes the arm set — the two-pod
+# split plan (v5e-8 on-demand fallback, 2026-08-13) runs {B Dri C53} and
+# {Dcoup Dfloor C80} on separate pods.
+ARMS=${P13_ARMS:-"B Dri C53 Dcoup Dfloor C80"}
+arm_args () {
+  case $1 in
+    B)      echo "53333 --ri-p 0.15 --eq-coupled --flux-floors 350,75,50,15,30 --ni-sigma 0.01" ;;
+    Dri)    echo "53333 --ri-p 0.15" ;;
+    C53)    echo "53333" ;;
+    Dcoup)  echo "53333 --eq-coupled" ;;
+    Dfloor) echo "53333 --flux-floors 350,75,50,15,30" ;;
+    C80)    echo "80000" ;;
+    *)      echo "UNKNOWN-ARM $1" >&2; return 1 ;;
+  esac
+}
+for A in $ARMS; do
+  # shellcheck disable=SC2046
+  pretrain_arm "$A" $(arm_args "$A")
+done
 
 # ---- PHASE 2: consolidated batteries + RI readout, 8-way waves ----
 echo "=== PHASE 2 batteries $(date -u +%H:%M) ==="
 Q=()
-for A in B Dri C53 Dcoup Dfloor C80; do
+for A in $ARMS; do
   Q+=("lad_$A|python3 tools/probe_ladder.py --ckpt runs/pretrain13_$A/ckpt_latest.pkl --tasks $VH --out runs/lad_p13$A")
   Q+=("ladrg_$A|python3 tools/probe_ladder.py --ckpt runs/pretrain13_$A/ckpt_latest.pkl --tasks $RG --out runs/ladrg_p13$A")
 done
-Q+=("sampDri|python3 tools/probe_sample.py --ckpt runs/pretrain13_Dri/ckpt_latest.pkl --tasks $VH --out runs/samp_p13Dri_mi --k 16 --temps 0.0 --init random")
-Q+=("sampC53|python3 tools/probe_sample.py --ckpt runs/pretrain13_C53/ckpt_latest.pkl --tasks $VH --out runs/samp_p13C53_mi --k 16 --temps 0.0 --init random")
+case " $ARMS " in *" Dri "*)
+  case " $ARMS " in *" C53 "*)
+    Q+=("sampDri|python3 tools/probe_sample.py --ckpt runs/pretrain13_Dri/ckpt_latest.pkl --tasks $VH --out runs/samp_p13Dri_mi --k 16 --temps 0.0 --init random")
+    Q+=("sampC53|python3 tools/probe_sample.py --ckpt runs/pretrain13_C53/ckpt_latest.pkl --tasks $VH --out runs/samp_p13C53_mi --k 16 --temps 0.0 --init random")
+  ;; esac
+;; esac
 run_waves "${Q[@]}"
 echo "PHASE2-OK"
 tar czf /tmp/p13_batteries.tgz runs/lad_p13* runs/ladrg_p13* runs/samp_p13* \
@@ -92,7 +109,9 @@ gsutil -q cp /tmp/p13_batteries.tgz "$GCS/batteries.tgz" \
   && echo "RESCUE-BATTERIES-OK" || echo "RESCUE-BATTERIES-FAILED"
 
 # ---- PHASE 3 (optional): convert-phase TTT retest on the record substrate ----
-if [ -f tools/.p13w3_phase3 ]; then
+# gated on BOTH the repo flag file and P13_PHASE3=1 (two-pod split: exactly
+# one pod runs it)
+if [ -f tools/.p13w3_phase3 ] && [ "${P13_PHASE3:-0}" = "1" ]; then
   echo "=== PHASE 3 TTT retest $(date -u +%H:%M) ==="
   Q3=()
   for MODE in plain kl ewc; do
