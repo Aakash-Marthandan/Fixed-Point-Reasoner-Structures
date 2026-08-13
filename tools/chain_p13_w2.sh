@@ -32,9 +32,24 @@ rescue_arm () {
 run_arm () {
   NAME=$1; STEPS=$2; shift 2
   echo "=== ARM $NAME pretrain ($STEPS steps) $(date -u +%H:%M) ==="
+  # 5-MINUTE DURABILITY (4th preemption, 08-13: churn now beats per-arm
+  # staging — arm B died 3x without reaching a stage point). A live sync
+  # loop ships ckpt_latest to GCS every 300s during training, and the arm
+  # RESUMES from the GCS live ckpt when one exists (pretrain.py resumes
+  # from ckpt_latest natively): max preemption loss = 5 min + reprovision.
+  mkdir -p "runs/pretrain13_$NAME"
+  if gsutil -q cp "$GCS/${NAME}_ckpt_live.pkl" \
+      "runs/pretrain13_$NAME/ckpt_latest.pkl" 2>/dev/null; then
+    echo "RESUME-$NAME-FROM-GCS"
+  fi
+  ( while true; do sleep 300; gsutil -q cp \
+      "runs/pretrain13_$NAME/ckpt_latest.pkl" \
+      "$GCS/${NAME}_ckpt_live.pkl" 2>/dev/null || true; done ) &
+  SYNC_PID=$!
   # shellcheck disable=SC2086
   python3 tools/pretrain.py --out "runs/pretrain13_$NAME" $COMMON \
     --steps "$STEPS" "$@" && echo "ARM-$NAME-PRETRAIN-OK"
+  kill "$SYNC_PID" 2>/dev/null || true
   # ckpt staged IMMEDIATELY (2nd preemption of the night beat arm B to the
   # post-battery rescue): the expensive artifact is durable before batteries
   gsutil -q cp "runs/pretrain13_$NAME/ckpt_latest.pkl" \
