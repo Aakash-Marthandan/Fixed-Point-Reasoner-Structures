@@ -80,38 +80,59 @@ def main():
         say("no data yet — nothing to conclude")
         return
 
+    # Rows carry givens_level (the paired difficulty ladder). Pooling levels
+    # would mix regimes — an easy level the substrate solves and a hard one it
+    # cannot — so every readout is computed PER LEVEL, with the pooled row
+    # kept only as a summary.
+    def cell(rows):
+        n = len(rows)
+        return dict(
+            n=n,
+            solve=sum(r["solved"] for r in rows),
+            ret=sum(r["gt_retention"] for r in rows),
+            s2=sum(r["q_ladder"]["0.2"] for r in rows),
+            viol=float(np.median([r["violations"] for r in rows])),
+            cells=float(np.median([r["cells_correct"] for r in rows])),
+            gk=sum(r["givens_kept"] for r in rows)
+               / max(sum(r["givens_total"] for r in rows), 1),
+            mi=sum(r["multi_init_hits"] > 0 for r in rows),
+            solve_bits={r["task"]: bool(r["solved"]) for r in rows},
+            rows=rows)
+
     say()
-    say(f'{"arm":6s} {"n":>3s} {"solve":>6s} {"reten":>6s} {"S(.2)":>6s} {"viol_med":>8s} '
-        f'{"cells_med":>9s} {"givens_kept":>11s} {"mi_hit":>7s}')
-    stats = {}
+    say(f'{"arm":6s} {"givens":>7s} {"n":>3s} {"solve":>6s} {"reten":>6s} {"S(.2)":>6s} '
+        f'{"viol_med":>8s} {"cells_med":>9s} {"givens_kept":>11s} {"mi_hit":>7s}')
+    stats = {}          # (arm, level) -> cell ; (arm, "all") -> pooled
+    levels = sorted({r.get("givens_level", 0) for a in ARMS if data[a]
+                     for r in data[a]}, reverse=True)
     for a in ARMS:
         rows = data[a]
         if not rows:
             continue
-        n = len(rows)
-        solve = sum(r["solved"] for r in rows)
-        ret = sum(r["gt_retention"] for r in rows)
-        s2 = sum(r["q_ladder"]["0.2"] for r in rows)
-        viol = np.median([r["violations"] for r in rows])
-        cells = np.median([r["cells_correct"] for r in rows])
-        gk = sum(r["givens_kept"] for r in rows) / max(sum(r["givens_total"] for r in rows), 1)
-        mi = sum(r["multi_init_hits"] > 0 for r in rows)
-        stats[a] = dict(n=n, solve=solve, ret=ret, s2=s2,
-                        solve_bits={r["task"]: bool(r["solved"]) for r in rows},
-                        rows=rows)
-        say(f'{a:6s} {n:>3d} {solve:>6d} {ret:>6d} {s2:>6d} {viol:>8.0f} '
-            f'{cells:>9.0f} {gk:>10.1%} {mi:>7d}')
-    say(f'   (ARC comparators: retention 29%, solve ~5.5% of 144 pairs)')
+        for lv in levels:
+            sub = [r for r in rows if r.get("givens_level", 0) == lv]
+            if not sub:
+                continue
+            c = cell(sub)
+            stats[(a, lv)] = c
+            say(f'{a:6s} {lv:>7d} {c["n"]:>3d} {c["solve"]:>6d} {c["ret"]:>6d} '
+                f'{c["s2"]:>6d} {c["viol"]:>8.0f} {c["cells"]:>9.0f} '
+                f'{c["gk"]:>10.1%} {c["mi"]:>7d}')
+        stats[(a, "all")] = cell(rows)
+    say(f'   (ARC comparators: retention 29%, solve ~5.5% of 144 pairs;')
+    say(f'    more givens = easier — a solve falloff across levels locates the')
+    say(f'    substrate\'s propagation limit, which is the ladder\'s purpose)')
 
     # ---- S-R1 ----
     say()
     say("S-R1 (H-33-i) — does the retention/solve dissociation COLLAPSE here?")
-    for a in ARMS:
-        if a not in stats:
-            continue
-        st = stats[a]
+    for (a, lv) in sorted([k for k in stats if k[1] != "all"],
+                          key=lambda k: (k[0], -k[1])):
+        st = stats[(a, lv)]
         R, S = st["ret"] / st["n"], st["solve"] / st["n"]
-        say(f'  {a}: retention {R:.1%}, solve {S:.1%}  (ARC: {ARC_R:.1%} vs {ARC_S:.1%}, ratio {ARC_R/ARC_S:.1f}x)')
+        say(f'  --- {a} @ {lv} givens ---')
+        say(f'      retention {R:.1%}, solve {S:.1%}  (ARC: {ARC_R:.1%} vs '
+            f'{ARC_S:.1%}, ratio {ARC_R/ARC_S:.1f}x)')
         if R < 0.15:
             say("       VOID — substrate too weak (R<.15): the ratio is meaningless.")
             say("       ACTION per registration: deeper/longer arm (T-scaling first), "
@@ -128,11 +149,18 @@ def main():
     # ---- S-R2 ----
     say()
     say("S-R2 (H-33-ii) — does RI pay on a single-attractor landscape?")
-    if all(a in stats for a in ARMS):
-        A, B = stats["sudA"], stats["sudB"]
+    keys = [lv for lv in levels if ("sudA", lv) in stats and ("sudB", lv) in stats]
+    if ("sudA", "all") in stats and ("sudB", "all") in stats:
+        keys = keys + ["all"]
+    if not keys:
+        say("  (needs both arms)")
+    for lv in keys:
+        A, B = stats[("sudA", lv)], stats[("sudB", lv)]
         b, c, p = mcnemar(A["solve_bits"], B["solve_bits"])
         dA, dB = A["solve"] / A["n"], B["solve"] / B["n"]
-        say(f'  sudA solve {dA:.1%} vs sudB(+RI) {dB:.1%}  (flips A-only {b}, B-only {c}, p={p:.4f})')
+        tag = f"@{lv} givens" if lv != "all" else "POOLED"
+        say(f'  {tag}: sudA {dA:.1%} vs sudB(+RI) {dB:.1%} '
+            f'(flips A-only {b}, B-only {c}, p={p:.4f})')
         if dB <= dA:
             say("  KILL: RI does not pay here either -> the ARC null was OURS "
                 "(architecture/protocol), not landscape-class. H-33 loses its mechanism.")
@@ -140,17 +168,14 @@ def main():
             say("  CONFIRMED: RI's dividend appears when the landscape has one attractor "
                 "per instance — the EqR lever transfers exactly where H-33 says it should.")
         else:
-            say("  DIRECTIONAL only (n=64) — reported, not concluded.")
-    else:
-        say("  (needs both arms)")
+            say("  DIRECTIONAL only — reported, not concluded.")
 
     # ---- S-R3 ----
     say()
     say("S-R3 (H-33-iii) — basin-existence enrichment on solve-FAILED puzzles")
-    for a in ARMS:
-        if a not in stats:
-            continue
-        failed = [r for r in stats[a]["rows"] if not r["solved"]]
+    for (a, lv) in sorted([k for k in stats if k[1] != "all"],
+                          key=lambda k: (k[0], -k[1])):
+        failed = [r for r in stats[(a, lv)]["rows"] if not r["solved"]]
         with_b = [r for r in failed if r["gt_retention"]]
         without = [r for r in failed if not r["gt_retention"]]
         hw = sum(r["multi_init_hits"] for r in with_b)
@@ -159,8 +184,8 @@ def main():
         ko = sum(r["multi_init_k"] for r in without)
         rw = hw / kw if kw else 0.0
         ro = ho / ko if ko else 0.0
-        say(f'  {a}: failed {len(failed)} = {len(with_b)} with-basin / {len(without)} without; '
-            f'hit rate {rw:.4f} vs {ro:.4f}')
+        say(f'  {a} @ {lv}: failed {len(failed)} = {len(with_b)} with-basin / '
+            f'{len(without)} without; hit rate {rw:.4f} vs {ro:.4f}')
         if len(with_b) < 5 or len(without) < 5:
             say("       UNDERPOWERED (need >=5 per stratum) — reported, not concluded.")
         elif ro == 0:
