@@ -51,9 +51,17 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
     fi
     say "CREATED in $Z — bootstrapping"
 
+    # Bootstrap gets a SECOND attempt before teardown: the first failure
+    # tonight was a 600s scp timeout on flaky SSH, not a broken node, and
+    # discarding a landed pod for a transient hiccup is expensive when
+    # capacity is this scarce. `up` is idempotent, so a retry is safe.
     if ! $PY tools/dispatcher.py up --name "$POD" --zone "$Z" \
          --accelerator v6e-8 --with-data >> "$LOGF" 2>&1; then
-      teardown "$Z" "bootstrap failed"; continue
+      say "  bootstrap attempt 1 failed — retrying once"
+      if ! $PY tools/dispatcher.py up --name "$POD" --zone "$Z" \
+           --accelerator v6e-8 --with-data >> "$LOGF" 2>&1; then
+        teardown "$Z" "bootstrap failed twice"; continue
+      fi
     fi
     # canary reference ckpt (fresh pods lack it; mkdir-before-scp is LAW)
     gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm \
@@ -75,8 +83,28 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
     if gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm \
        --command="cd ~/qhrrn2 && kill -0 \$(cat runs/detached.pid 2>/dev/null) 2>/dev/null" \
        >> "$LOGF" 2>&1; then
-      say "CHAIN RUNNING in $Z — retry loop exits (chain banks to GCS every 5 min)"
-      exit 0
+      say "CHAIN RUNNING in $Z — supervising (banks to GCS every 5 min)"
+      # SUPERVISE rather than exit: the first version quit here, so when the
+      # node was preempted 15 min later nothing was hunting for it any more.
+      # Unattended, the loop must survive the whole night — watch the node,
+      # and on preemption fall back into the hunt with work already banked.
+      while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
+        sleep 300
+        ALIVE=$(gcloud compute tpus tpu-vm list --zone="$Z" --project=quantum-llm \
+                --format="value(name,state)" 2>/dev/null \
+                | grep -c "^${POD}[[:space:]]*READY$")
+        if [ "$ALIVE" -eq 0 ]; then
+          say "node lost (preempted?) — resuming hunt"
+          break
+        fi
+        if gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm \
+           --command="grep -q CHAIN-R0-COMPLETE ~/qhrrn2/runs/detached.log" \
+           >> "$LOGF" 2>&1; then
+          say "CHAIN COMPLETE — loop exits (completion watcher tears down)"
+          exit 0
+        fi
+      done
+      continue
     fi
     teardown "$Z" "chain did not start"
   done
