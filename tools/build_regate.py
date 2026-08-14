@@ -31,23 +31,32 @@ N_QUERY = 3
 # fresh instances (the Q2 attribution cell, registered 2026-08-11) — an
 # independent rng chain from the corpus sampler's (SEED+7 vs corpus seed 0),
 # so instances are disjoint from pretraining draws.
+# --set gateb (G4, rung-0 launch registration 2026-08-14): the DISJOINT
+# second 48 — the SAME seeded permutation's indices [48:96] over the same
+# 99-family gate pool, so rg-96 := frozen rg-48 ∪ rb-48 with the frozen set
+# untouched bit-exact (historical comparability preserved; resolution
+# doubled). perm_seed stays SEED for all gate-pool sets (disjointness by
+# construction); the instance chain gets its own documented seed.
 SETS = {
     "gate": dict(prefix="rg", out="re_gate48", sha="re_gate48.sha256",
-                 seed=SEED),
+                 seed=SEED, perm_seed=SEED, lo=0, hi=48),
     "train": dict(prefix="rt", out="re_train48", sha="re_train48.sha256",
-                  seed=SEED + 7),
+                  seed=SEED + 7, perm_seed=SEED + 7, lo=0, hi=48),
+    "gateb": dict(prefix="rb", out="re_gateb48", sha="re_gateb48.sha256",
+                  seed=SEED + 13, perm_seed=SEED, lo=48, hi=96),
 }
 
 
 def families_for(which: str):
     import dev30
     train, gate = rearc.family_split()
-    if which == "gate":
+    if which in ("gate", "gateb"):
         pool = [f for f in gate if f not in set(dev30.MANIFEST)]
     else:
         pool = sorted(set(train) - set(dev30.MANIFEST))  # = the 271 trained
-    rng = np.random.default_rng(SETS[which]["seed"])
-    idx = rng.permutation(len(pool))[:N_TASKS]
+    cfg = SETS[which]
+    rng = np.random.default_rng(cfg["perm_seed"])
+    idx = rng.permutation(len(pool))[cfg["lo"]:cfg["hi"]]
     return sorted(pool[i] for i in idx)
 
 

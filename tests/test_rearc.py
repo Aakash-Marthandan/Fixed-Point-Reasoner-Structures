@@ -70,6 +70,25 @@ def test_c20a_corpus_mixing_and_no_orbit_on_re_rows():
     assert any("@o1" in t for t in tids)  # base rows still orbit
 
 
+def test_g4_rb_second_gate_route_and_disjointness():
+    # G4 (2026-08-14): rg-96 = frozen rg-48 ∪ rb-48; rb families must be
+    # gate-pool, disjoint from rg's, and the loader must route rb_ ids.
+    import pathlib
+    rb_dir = pathlib.Path(rearc.REARC_ROOT).parent / "re_gateb48"
+    if not rb_dir.exists():
+        pytest.skip("rb set not built")
+    rb = sorted(p.stem for p in rb_dir.glob("*.json"))
+    assert len(rb) == 48
+    eps = G.load_task(rb[0])
+    assert len(eps) == 3 and len(eps[0].support) == 3
+    assert all(e.query_y is not None for e in eps)
+    rg_dir = pathlib.Path(rearc.REARC_ROOT).parent / "re_gate48"
+    rg_fams = {p.stem[3:] for p in rg_dir.glob("*.json")}
+    rb_fams = {t[3:] for t in rb}
+    train, gate = rearc.family_split()
+    assert rb_fams <= set(gate) and not (rb_fams & rg_fams)
+
+
 def test_c20c_rt_train_set_route_and_disjointness():
     import pathlib
     rt_dir = pathlib.Path(rearc.REARC_ROOT).parent / "re_train48"
