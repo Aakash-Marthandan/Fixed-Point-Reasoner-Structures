@@ -89,6 +89,11 @@ def parse_args():
     p.add_argument("--val-ids-file", default=None,
                    help="json with {'val40': [...]} — explicit val holdout (CC#2)")
     p.add_argument("--obj", action="store_true", help="C17 cluster layers on")
+    p.add_argument("--sudoku", type=int, default=0,
+                   help="S-port (H-33): train on N generated Sudoku puzzles "
+                        "instead of the ARC corpus (one task row)")
+    p.add_argument("--sudoku-givens", type=int, default=30,
+                   help="S-port difficulty dial: target givens per puzzle")
     p.add_argument("--d-task", type=int, default=32,
                    help="boundary program width (H-17 co-scaling)")
     p.add_argument("--orbit", type=int, default=1,
@@ -187,12 +192,22 @@ def main():
             sys.exit("--conceptarc: data/ConceptARC not vendored on this host")
         vh_path = Path(__file__).resolve().parent / "valhard.json"
         exclude_ca = frozenset(json.load(open(vh_path))["valhard"])
-    corpus, val = E.build_corpus(exclude, n_val=a.n_val, seed=a.seed, limit=a.limit,
-                                 val_ids=val_ids, orbit_n=a.orbit,
-                                 conceptarc=a.conceptarc, exclude_ca=exclude_ca,
-                                 rearc_families=rearc_families,
-                                 rearc_per_family=a.rearc_per_family,
-                                 rearc_seed=a.rearc_seed)
+    if a.sudoku:
+        # S-PORT (H-33): the single-attractor domain. ONE task row, generated
+        # instances, no ARC corpus involved — the contamination laws below
+        # are vacuous here and deliberately skipped.
+        corpus, val = E.build_sudoku_corpus(a.sudoku, n_val=a.n_val,
+                                            seed=a.seed, givens=a.sudoku_givens)
+        print(f"S-port corpus: {a.sudoku} generated puzzles @ "
+              f"{a.sudoku_givens} givens (+{a.n_val} held-out), one task row",
+              flush=True)
+    else:
+        corpus, val = E.build_corpus(exclude, n_val=a.n_val, seed=a.seed, limit=a.limit,
+                                     val_ids=val_ids, orbit_n=a.orbit,
+                                     conceptarc=a.conceptarc, exclude_ca=exclude_ca,
+                                     rearc_families=rearc_families,
+                                     rearc_per_family=a.rearc_per_family,
+                                     rearc_seed=a.rearc_seed)
     dev = E.corpus_to_device(corpus)
     n_tasks = len(corpus.task_ids)
     n_pairs = int(corpus.x.shape[0])

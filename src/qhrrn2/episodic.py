@@ -37,6 +37,44 @@ class Corpus:
     bound_w: np.ndarray  # (P,) int32 max ox (inclusive)
 
 
+def build_sudoku_corpus(n_train: int, *, n_val: int = 64, seed: int = 0,
+                        givens: int = 30):
+    """S-PORT corpus (H-33): ONE task row, many instances — Sudoku's rule is
+    universal, so this is the single-attractor contrast to ARC's per-task
+    rule inference. Train/val puzzles come from ONE sequential rng stream, so
+    they are distinct draws by construction (disjointness asserted below).
+
+    No orbit expansion: the generator is the diversity source (the C20a
+    precedent for re_ rows). Placement offsets ARE kept — Sudoku constraints
+    are position-independent, so translation stays a valid augmentation under
+    our convolutional equivariance, exactly as for ARC.
+    """
+    from . import sudoku as SU
+    rng = np.random.default_rng(seed)
+    pairs = [SU.sample(rng, givens) for _ in range(n_train + n_val)]
+    train_pairs, val_pairs = pairs[:n_train], pairs[n_train:]
+    seen = {p.tobytes() for p, _ in train_pairs}
+    assert not any(p.tobytes() in seen for p, _ in val_pairs), \
+        "sudoku val puzzle collided with train — rng stream reuse"
+
+    xs, ys, tidx, bh, bw = [], [], [], [], []
+    for x, y in train_pairs:
+        xs.append(G.place(x)); ys.append(G.place(y))
+        tidx.append(0)
+        bh.append(G.CANVAS - SU.N); bw.append(G.CANVAS - SU.N)
+    corpus = Corpus(
+        task_ids=("sudoku",),
+        x=np.stack(xs).astype(np.int32),
+        y=np.stack(ys).astype(np.int32),
+        tidx=np.asarray(tidx, dtype=np.int32),
+        starts=np.asarray([0, len(xs)], dtype=np.int32),
+        bound_h=np.asarray(bh, dtype=np.int32),
+        bound_w=np.asarray(bw, dtype=np.int32),
+    )
+    # val slice in build_corpus's format: (task_index, task_id, query pairs)
+    return corpus, [(0, "sudoku", val_pairs)]
+
+
 def _task_pairs(task_id: str, include_queries: bool):
     eps = G.load_task(task_id)
     pairs = list(eps[0].support)
