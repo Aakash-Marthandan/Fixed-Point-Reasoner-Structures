@@ -86,6 +86,9 @@ ARMS=${P13_ARMS:-"B Dri C53 Dcoup Dfloor C80"}
 if gsutil -q cp "$GCS/partial_results.tgz" /tmp/pr.tgz 2>/dev/null; then
   tar xzf /tmp/pr.tgz -C . 2>/dev/null && echo "RESUME-PARTIAL-RESULTS"
 fi
+if gsutil -q cp "$GCS/ttt_live.tgz" /tmp/tl.tgz 2>/dev/null; then
+  tar xzf /tmp/tl.tgz -C . 2>/dev/null && echo "RESUME-TTT-LIVE"
+fi
 arm_args () {
   case $1 in
     B)      echo "53333 --ri-p 0.15 --eq-coupled --flux-floors 350,75,50,15,30 --ni-sigma 0.01" ;;
@@ -134,7 +137,15 @@ if [ -f tools/.p13w3_phase3 ] && [ "${P13_PHASE3:-0}" = "1" ]; then
     [ "$MODE" = "ewc" ] && FLAG="--ewc 1.0"
     Q3+=("ttt_$MODE|python3 tools/probe_lora.py --ckpt runs/pretrain12_48c_40k/ckpt_latest.pkl --tasks $VH --out runs/ttt_${MODE}_p1248c $FLAG")
   done
+  # phase-3 is ONE wave — between-wave staging never fires, so a live
+  # 5-min stager covers it (mid-wave preemption cost: <=5 min of TTT rows;
+  # probes resume per-task from the restored results.jsonl)
+  ( while true; do sleep 300; tar czf /tmp/ttt_live.tgz runs/ttt_* \
+      2>/dev/null && gsutil -q cp /tmp/ttt_live.tgz "$GCS/ttt_live.tgz" \
+      2>/dev/null || true; done ) &
+  TSYNC=$!
   run_waves "${Q3[@]}"
+  kill "$TSYNC" 2>/dev/null || true
   echo "PHASE3-OK"
   tar czf /tmp/p13_ttt.tgz runs/ttt_*_p1248c runs/wave_ttt*.log 2>/dev/null || true
   gsutil -q cp /tmp/p13_ttt.tgz "$GCS/ttt.tgz" \
