@@ -19,9 +19,20 @@ LOG=runs/tpu_status_log.txt
 mkdir -p runs
 NEW=""
 for z in $ZONES; do
-  R=$(gcloud compute tpus tpu-vm list --zone="$z" --project=quantum-llm \
-      --format="value(name,state)" 2>/dev/null | tr '\n\t' ' :')
-  [ -n "$R" ] && NEW="$NEW$z=$R "
+  # perl alarm = portable timeout (no coreutils on this Mac); a wedged gcloud
+  # connection must never freeze the watchdog (2026-08-14: one hung poll
+  # blinded layer 1 for 45 min — the 07-29 bounded-call law applies here too).
+  RAW=$(perl -e 'alarm shift; exec @ARGV' 120 \
+      gcloud compute tpus tpu-vm list --zone="$z" --project=quantum-llm \
+      --format="value(name,state)" 2>/dev/null)
+  RC=$?
+  if [ "$RC" -ne 0 ]; then
+    # A failed probe is NOT an empty zone — surface blindness, never mask it.
+    NEW="$NEW$z=PROBE-FAIL "
+  else
+    R=$(printf '%s' "$RAW" | tr '\n\t' ' :')
+    [ -n "$R" ] && NEW="$NEW$z=$R "
+  fi
 done
 NEW=$(echo "$NEW" | sed 's/ *$//')
 OLD=$(cat "$SNAP" 2>/dev/null || echo "")
