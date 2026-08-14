@@ -43,7 +43,7 @@ import numpy as np
 import jax.numpy as jnp
 
 import probe_e1e3 as P
-from probe_ladder import LADDER_EPS, corrupt, rung_rng, retained
+from probe_ladder import LADDER_EPS, corrupt, rung_rng, retained, trace_flux
 from qhrrn2 import episodic as E
 from qhrrn2 import grid as G
 from qhrrn2 import sudoku as SU
@@ -123,9 +123,12 @@ def main():
                 continue
             t0 = time.time()
 
-            # (1) SOLVE — cold start, the EqR/FPRM comparison metric
-            tr = P.trace(model, cfg, puz, tau=1.0, task_vec=tvj,
-                         t_total=cfg.T)
+            # (1) SOLVE — cold start, the EqR/FPRM comparison metric.
+            # trace_flux (not P.trace) so the per-scale spectra ride along:
+            # S-R4's cross-domain H-34 test needs I_s on a NON-generative
+            # domain, and P.trace records only pred/hw/H_q.
+            tr = trace_flux(model, cfg, puz, tau=1.0, task_vec=tvj,
+                            t_total=cfg.T)
             pred = tr[-1]["pred"]
             solved = bool(pred.shape == sol.shape and np.array_equal(pred, sol))
             kept, ntot = givens_kept(pred, puz)
