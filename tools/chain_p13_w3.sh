@@ -51,7 +51,9 @@ run_waves () {
   local i=0
   while [ $i -lt ${#QUEUE[@]} ]; do
     pids=()
-    for c in 0 1 2 3 4 5 6 7; do
+    # NCHIPS env (default 8): v6e-4 hosts run 4-wide waves (2026-08-14 —
+    # the residue is all single-chip jobs; slice width only sets wave width)
+    for c in $(seq 0 $(( ${NCHIPS:-8} - 1 ))); do
       [ $((i)) -ge ${#QUEUE[@]} ] && break
       IFS='|' read -r TAG CMD <<< "${QUEUE[$i]}"
       echo ">>> wave job chip$c: $TAG"
