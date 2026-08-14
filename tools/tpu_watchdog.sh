@@ -49,3 +49,31 @@ if [ -n "$NEW" ]; then
 and teardown\" with title \"QHRRN TPU watchdog ALARM\"" 2>/dev/null
   fi
 fi
+
+# ---- HARD BILLING BACKSTOP (2026-08-14, PI stepping away for the night) ----
+# The DMS is a GUEST shutdown and does NOT stop TPU billing (07-29 lesson:
+# only node DELETION does), and layers 2/3 die with the Claude session. This
+# gives layer 1 — the only layer that survives everything — actual teeth:
+# past the deadline in runs/tpu_deadline.txt (UTC epoch seconds), every node
+# is DELETED. Safe by construction here: chain_r0 is resume-complete from
+# GCS with a 5-min live ckpt sync, so a deletion costs <=5 min of compute,
+# never the campaign. Remove/extend the file to change the deadline.
+DEADLINE_FILE=runs/tpu_deadline.txt
+if [ -n "$NEW" ] && [ -f "$DEADLINE_FILE" ]; then
+  DEADLINE=$(head -1 "$DEADLINE_FILE" | tr -dc '0-9')
+  NOW=$(date -u +%s)
+  if [ -n "$DEADLINE" ] && [ "$NOW" -gt "$DEADLINE" ]; then
+    for z in $ZONES; do
+      for n in $(gcloud compute tpus tpu-vm list --zone="$z" \
+                 --project=quantum-llm --format="value(name)" 2>/dev/null); do
+        echo "$(date -u +%FT%TZ) | DEADLINE-DELETE $z/$n" >> "$LOG"
+        gcloud compute tpus tpu-vm delete "$n" --zone="$z" \
+          --project=quantum-llm --quiet >/dev/null 2>&1 &
+      done
+    done
+    wait
+    /usr/bin/osascript -e "display notification \"deadline passed — all TPUs \
+deleted (work is banked in GCS)\" with title \"QHRRN watchdog: AUTO-TEARDOWN\"" \
+      2>/dev/null
+  fi
+fi
