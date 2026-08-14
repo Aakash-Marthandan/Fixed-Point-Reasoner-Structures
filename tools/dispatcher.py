@@ -153,11 +153,15 @@ def sync_code(zone: str, dry: bool, with_data: bool):
         # is defense in depth against a foreign-made archive.
         print(">>> Sync data (tar stream)")
         extra = "".join(f" {p}" for p in
-                        ("data/ConceptARC", "data/re_arc", "data/re_gate48")
+                        ("data/ConceptARC", "data/re_arc", "data/re_gate48",
+                         "data/re_train48", "data/re_gateb48")
                         if os.path.isdir(p))
         # re_arc + re_gate48 joined 2026-08-12: --rearc corpus builds and
         # ladrg batteries need them; the P10/P11 lanes got them by manual
         # payload scp — a standing trap until this line.
+        # re_train48 + re_gateb48 joined 2026-08-14 (rung-0): the rt battery
+        # was silently unshippable before this line — the plausible reason
+        # it fell out of W3 — and rb-48 (G4) is new this launch.
         # 2026-08-12 (lane-b/c incident, same evening as the re_arc addition):
         # the raw re_arc dir is 121MB of which the runtime needs only the
         # python modules — re_arc.zip/demo.ipynb/__pycache__ blew the 300s
