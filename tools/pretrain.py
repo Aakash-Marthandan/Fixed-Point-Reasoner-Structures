@@ -94,6 +94,10 @@ def parse_args():
                         "instead of the ARC corpus (one task row)")
     p.add_argument("--sudoku-givens", type=int, default=30,
                    help="S-port difficulty dial: target givens per puzzle")
+    p.add_argument("--sudoku-givens-hi", type=int, default=None,
+                   help="if set, givens ~ U[givens, givens_hi] per puzzle "
+                        "(mixed-difficulty training; see the cell-1 design "
+                        "review — a single hard setting can VOID H-33)")
     p.add_argument("--d-task", type=int, default=32,
                    help="boundary program width (H-17 co-scaling)")
     p.add_argument("--orbit", type=int, default=1,
@@ -196,11 +200,13 @@ def main():
         # S-PORT (H-33): the single-attractor domain. ONE task row, generated
         # instances, no ARC corpus involved — the contamination laws below
         # are vacuous here and deliberately skipped.
-        corpus, val = E.build_sudoku_corpus(a.sudoku, n_val=a.n_val,
-                                            seed=a.seed, givens=a.sudoku_givens)
-        print(f"S-port corpus: {a.sudoku} generated puzzles @ "
-              f"{a.sudoku_givens} givens (+{a.n_val} held-out), one task row",
-              flush=True)
+        corpus, val = E.build_sudoku_corpus(
+            a.sudoku, n_val=a.n_val, seed=a.seed, givens=a.sudoku_givens,
+            givens_hi=a.sudoku_givens_hi)
+        rng_txt = (f"{a.sudoku_givens}-{a.sudoku_givens_hi}"
+                   if a.sudoku_givens_hi else str(a.sudoku_givens))
+        print(f"S-port corpus: {a.sudoku} generated puzzles @ {rng_txt} "
+              f"givens (+{a.n_val} held-out), one task row", flush=True)
     else:
         corpus, val = E.build_corpus(exclude, n_val=a.n_val, seed=a.seed, limit=a.limit,
                                      val_ids=val_ids, orbit_n=a.orbit,

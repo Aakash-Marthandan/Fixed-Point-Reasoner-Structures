@@ -187,6 +187,23 @@ def sample_pairs(n: int, seed: int = 0, givens: int = 30):
     return [sample(rng, givens) for _ in range(n)]
 
 
+def sample_ladder(n: int, seed: int, givens_list):
+    """The DIFFICULTY LADDER instrument: n solution grids, each punched at
+    every difficulty, so 'how many givens' becomes a WITHIN-GRID contrast
+    (the same solution seen at 50/40/30 clues) instead of a between-sample
+    one. That pairing is what lets a solve-rate falloff be attributed to
+    required propagation depth rather than to grid luck.
+    -> {givens: [(puzzle, solution), ...]} with solutions shared across keys.
+    """
+    rng = np.random.default_rng(seed)
+    sols = [full_grid(rng) for _ in range(n)]
+    out = {}
+    for g in givens_list:
+        prng = np.random.default_rng(seed + 1_000 + g)   # per-level, seeded
+        out[g] = [(punch(s, prng, g), s) for s in sols]
+    return out
+
+
 # ── validity + the canvas adapter ─────────────────────────────────────────
 
 def is_valid_solution(g: np.ndarray) -> bool:

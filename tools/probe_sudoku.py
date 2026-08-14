@@ -85,6 +85,10 @@ def main():
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--n", type=int, default=64, help="held-out puzzles")
     ap.add_argument("--givens", type=int, default=30)
+    ap.add_argument("--givens-list", default=None,
+                    help="difficulty LADDER, e.g. '50,40,30' — the same "
+                         "solution grids punched at each level (paired "
+                         "within-grid contrast); overrides --givens")
     ap.add_argument("--eval-seed", type=int, default=99999,
                     help="MUST differ from the pretrain seed — these puzzles "
                          "are the held-out test set")
@@ -113,12 +117,21 @@ def main():
             except Exception:
                 pass
 
-    pairs = SU.sample_pairs(a.n, seed=a.eval_seed, givens=a.givens)
+    if a.givens_list:
+        levels = [int(g) for g in a.givens_list.split(",")]
+        ladder = SU.sample_ladder(a.n, a.eval_seed, levels)
+        # flatten to (tid, givens_level, puz, sol); tid carries the level so
+        # resume-by-task stays correct across levels
+        work = [(f"g{g}_{i:04d}", g, p_, s_)
+                for g in levels for i, (p_, s_) in enumerate(ladder[g])]
+    else:
+        work = [(f"sud{i:04d}", a.givens, p_, s_)
+                for i, (p_, s_) in enumerate(
+                    SU.sample_pairs(a.n, seed=a.eval_seed, givens=a.givens))]
     rng_init = np.random.default_rng(a.seed + 4242)
 
     with open(results, "a") as f:
-        for i, (puz, sol) in enumerate(pairs):
-            tid = f"sud{i:04d}"
+        for tid, level, puz, sol in work:
             if tid in done:
                 continue
             t0 = time.time()
@@ -162,6 +175,7 @@ def main():
 
             row = {
                 "task": tid,
+                "givens_level": level,
                 "solved": solved,
                 "gt_retention": bool(r0[-1]),
                 "retained_per_step": r0,

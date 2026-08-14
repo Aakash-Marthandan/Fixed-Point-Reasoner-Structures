@@ -38,7 +38,7 @@ class Corpus:
 
 
 def build_sudoku_corpus(n_train: int, *, n_val: int = 64, seed: int = 0,
-                        givens: int = 30):
+                        givens: int = 30, givens_hi: int | None = None):
     """S-PORT corpus (H-33): ONE task row, many instances — Sudoku's rule is
     universal, so this is the single-attractor contrast to ARC's per-task
     rule inference. Train/val puzzles come from ONE sequential rng stream, so
@@ -51,7 +51,15 @@ def build_sudoku_corpus(n_train: int, *, n_val: int = 64, seed: int = 0,
     """
     from . import sudoku as SU
     rng = np.random.default_rng(seed)
-    pairs = [SU.sample(rng, givens) for _ in range(n_train + n_val)]
+    # MIXED DIFFICULTY (2026-08-14 design review, before cell-1 ran): a single
+    # hard setting risks a substrate that solves NOTHING, which would VOID all
+    # three H-33 readouts rather than answer them. Training across a givens
+    # range and evaluating on a difficulty LADDER instead measures where the
+    # substrate's propagation depth runs out — an answer either way.
+    def draw():
+        g = givens if givens_hi is None else int(rng.integers(givens, givens_hi + 1))
+        return SU.sample(rng, g)
+    pairs = [draw() for _ in range(n_train + n_val)]
     train_pairs, val_pairs = pairs[:n_train], pairs[n_train:]
     seen = {p.tobytes() for p, _ in train_pairs}
     assert not any(p.tobytes() in seen for p, _ in val_pairs), \

@@ -14,9 +14,14 @@ set -uo pipefail
 export PATH="$PWD/.venv/bin:$PATH"
 export PYTHONPATH=src
 GCS=gs://qhrrn2-rescue/sport
+# MIXED-DIFFICULTY training + LADDER eval (design review before launch): a
+# single hard setting risks solve=0 everywhere, which VOIDS all three H-33
+# readouts instead of answering them. Training over 30-50 givens and probing
+# at 50/40/30 finds where propagation depth runs out — informative either way.
 COMMON="--equilibrium --d 16 --T 6 --steps 20000 --anchor-p 0.3
         --beta-flux 3e-5 --beta-flux-nl 1e-5
-        --sudoku 8000 --sudoku-givens 30 --n-val 64 --seed 0"
+        --sudoku 8000 --sudoku-givens 30 --sudoku-givens-hi 50
+        --n-val 64 --seed 0"
 
 run_arm () {
   NAME=$1; shift
@@ -36,7 +41,7 @@ run_arm () {
   echo "=== S-PORT $NAME probe $(date -u +%H:%M) ==="
   # eval-seed differs from the pretrain seed: held-out puzzles by construction
   python3 tools/probe_sudoku.py --ckpt "runs/sud_$NAME/ckpt_latest.pkl" \
-    --n 64 --givens 30 --k-init 16 --eval-seed 99999 \
+    --n 40 --givens-list 50,40,30 --k-init 16 --eval-seed 99999 \
     --out "runs/sudprobe_$NAME" && echo "PROBE-$NAME-OK"
   tar czf /tmp/sport_${NAME}.tgz "runs/sudprobe_$NAME" "runs/sud_$NAME/metrics.jsonl" \
     2>/dev/null || true
