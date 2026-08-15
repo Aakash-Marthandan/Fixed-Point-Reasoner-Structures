@@ -38,6 +38,18 @@ pretrain_arm () {
   SEED=${TAG#*s}
   echo "=== PRETRAIN $TAG $(date -u +%H:%M) ==="
   mkdir -p "runs/pretrain13f_$TAG"
+  # COMPLETED-ARM SHORT-CIRCUIT (2026-08-15): ${TAG}_ckpt.pkl is staged ONLY
+  # after an arm finishes, so its presence proves completion. The old resume
+  # pulled ${TAG}_ckpt_live.pkl (last 5-min sync) and re-ran the arm's tail —
+  # measured cost: every completed arm restarted at 36k/40k after a
+  # preemption, ~20 min per recovery for a 6-arm pod, recurring because
+  # .done markers die with the node. Prefer the complete ckpt and skip.
+  if gsutil -q cp "$GCS/${TAG}_ckpt.pkl" \
+      "runs/pretrain13f_$TAG/ckpt_latest.pkl" 2>/dev/null; then
+    touch "runs/pretrain13f_$TAG/.done"
+    echo "SKIP-$TAG (completed in an earlier life; final ckpt restored)"
+    return 0
+  fi
   if gsutil -q cp "$GCS/${TAG}_ckpt_live.pkl" \
       "runs/pretrain13f_$TAG/ckpt_latest.pkl" 2>/dev/null; then
     echo "RESUME-$TAG-FROM-GCS"
@@ -46,13 +58,28 @@ pretrain_arm () {
       "runs/pretrain13f_$TAG/ckpt_latest.pkl" \
       "$GCS/${TAG}_ckpt_live.pkl" 2>/dev/null || true; done ) &
   SYNC_PID=$!
+  # `if` form, not a bare call: under `set -e` a bare failing statement would
+  # abort the whole chain, and a command in an if-condition is exempt.
   # shellcheck disable=SC2086
-  python3 tools/pretrain.py --out "runs/pretrain13f_$TAG" $COMMON \
-    --seed "$SEED" $(arm_flags "$TAG") && echo "PRETRAIN-$TAG-OK"
+  if python3 tools/pretrain.py --out "runs/pretrain13f_$TAG" $COMMON \
+      --seed "$SEED" $(arm_flags "$TAG"); then
+    RC=0
+  else
+    RC=$?
+  fi
   kill "$SYNC_PID" 2>/dev/null || true
-  gsutil -q cp "runs/pretrain13f_$TAG/ckpt_latest.pkl" \
-    "$GCS/${TAG}_ckpt.pkl" && echo "CKPT-STAGE-$TAG-OK" \
-    || echo "CKPT-STAGE-$TAG-FAILED"
+  # Stage the COMPLETE ckpt ONLY on success — its presence is exactly what
+  # the short-circuit above reads as proof of completion, so staging it
+  # after a crash would make a later run SKIP an unfinished arm.
+  if [ "$RC" -eq 0 ]; then
+    echo "PRETRAIN-$TAG-OK"
+    gsutil -q cp "runs/pretrain13f_$TAG/ckpt_latest.pkl" \
+      "$GCS/${TAG}_ckpt.pkl" && echo "CKPT-STAGE-$TAG-OK" \
+      || echo "CKPT-STAGE-$TAG-FAILED"
+  else
+    echo "PRETRAIN-$TAG-FAILED rc=$RC (complete-ckpt NOT staged; live ckpt stands)"
+  fi
+  return "$RC"
 }
 
 # Stage every battery results.jsonl produced so far. Probes resume PER TASK
