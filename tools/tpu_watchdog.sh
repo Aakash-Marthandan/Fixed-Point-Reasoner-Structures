@@ -13,7 +13,7 @@
 # Install: tools/install_watchdog.sh (launchd, user-level, no sudo).
 PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
 cd "$(dirname "$0")/.." || exit 1
-ZONES="us-east1-d us-east1-c us-east5-b us-west4-a asia-east1-c"
+ZONES="us-east1-d us-east1-c us-east5-b us-central1-a us-central2-b us-west1-c us-west4-a asia-east1-c"
 SNAP=runs/tpu_status.txt
 LOG=runs/tpu_status_log.txt
 mkdir -p runs

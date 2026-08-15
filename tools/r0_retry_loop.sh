@@ -90,11 +90,14 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
       # and on preemption fall back into the hunt with work already banked.
       while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
         sleep 300
-        ALIVE=$(gcloud compute tpus tpu-vm list --zone="$Z" --project=quantum-llm \
-                --format="value(name,state)" 2>/dev/null \
-                | grep -c "^${POD}[[:space:]]*READY$")
-        if [ "$ALIVE" -eq 0 ]; then
-          say "node lost (preempted?) — resuming hunt"
+        # STATE, not presence: a PREEMPTED node still LISTS, so "is the name
+        # in the list" wedges forever (2026-08-15: one hunter polled a dead
+        # node for hours). Ask for the state field alone and match exactly.
+        ST=$(gcloud compute tpus tpu-vm describe "$POD" --zone="$Z" \
+             --project=quantum-llm --format="value(state)" 2>/dev/null | tr -d '[:space:]')
+        if [ "$ST" != "READY" ]; then
+          say "node state='$ST' (not READY) — clearing and resuming hunt"
+          [ -n "$ST" ] && teardown "$Z" "node $ST"
           break
         fi
         if gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm \
