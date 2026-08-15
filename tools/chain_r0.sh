@@ -22,6 +22,12 @@ PRICED="--beta-flux 3e-5 --beta-flux-nl 1e-5"
 FLOORS="--flux-floors 350,75,50,15,30"
 
 ARMS=${R0_ARMS:-"A1s0 A1s1 A1s2 A2s0 A2s1 A2s2 A3s0 A3s1 A3s2 A4s0 A4s1 A4s2"}
+# PER-POD staging object (2026-08-15): both pods were writing the SAME
+# partial_results.tgz, so each restore could overwrite this pod's newer
+# battery rows with the other pod's older snapshot of them (arm sets are
+# disjoint, so no corruption — but real recompute and confusing row counts:
+# both pods reported an identical 768 rows). Key the object to the arm set.
+PARTIAL="partial_${ARMS%% *}.tgz"
 
 arm_flags () {
   case ${1%s*} in
@@ -88,7 +94,7 @@ stage_partials () {
   tar czf /tmp/r0_partial.tgz runs/lad_p13f* runs/ladrg_p13f* \
     runs/ladrgb_p13f* runs/ladrt_p13f* runs/samp_p13f* runs/e1e3_p13f* \
     2>/dev/null || true
-  gsutil -q cp /tmp/r0_partial.tgz "$GCS/partial_results.tgz" 2>/dev/null || true
+  gsutil -q cp /tmp/r0_partial.tgz "$GCS/$PARTIAL" 2>/dev/null || true
 }
 
 run_waves () {
@@ -101,8 +107,12 @@ run_waves () {
   # costs <=5 min of rows regardless of when it lands.
   ( while true; do sleep 300; stage_partials; done ) &
   local STAGER=$!
-  # kill the stager on ANY exit path (set -e, ceiling kill, signal)
-  trap 'kill "$STAGER" 2>/dev/null || true' RETURN
+  # kill the stager AND its child sleep on ANY exit path (set -e, ceiling,
+  # signal). Plain `kill $STAGER` left an orphan `sleep 300` (harness-
+  # verified) that would hold the detached job open past CHAIN-R0-COMPLETE.
+  # pkill -P is portable (procps, present on the pod image); setsid is not
+  # guaranteed there.
+  trap 'pkill -P "$STAGER" 2>/dev/null; kill "$STAGER" 2>/dev/null || true' RETURN
   while [ $i -lt ${#QUEUE[@]} ]; do
     pids=()
     for c in $(seq 0 $(( ${NCHIPS:-8} - 1 ))); do
@@ -120,11 +130,17 @@ run_waves () {
     echo "wave done rc=$rc $(date -u +%H:%M)"
     stage_partials
   done
-  kill "$STAGER" 2>/dev/null || true
+  pkill -P "$STAGER" 2>/dev/null; kill "$STAGER" 2>/dev/null || true
 }
 
-# resume: restore staged partial batteries so probes skip completed tasks
-if gsutil -q cp "$GCS/partial_results.tgz" /tmp/r0p.tgz 2>/dev/null; then
+# resume: restore staged partial batteries so probes skip completed tasks.
+# Prefer this pod's own object; on the FIRST relaunch after the per-pod
+# rename none exists yet, so fall back to the legacy shared object (which
+# holds whatever this pod banked before the rename) rather than restoring
+# nothing. Restoring the other pod's rows too is harmless: arm sets are
+# disjoint, and probes only ever read their own arm's directories.
+if gsutil -q cp "$GCS/$PARTIAL" /tmp/r0p.tgz 2>/dev/null \
+   || gsutil -q cp "$GCS/partial_results.tgz" /tmp/r0p.tgz 2>/dev/null; then
   tar xzf /tmp/r0p.tgz -C . 2>/dev/null && echo "RESUME-PARTIAL-RESULTS"
   # SANITIZE: live (5-min) staging can tar a results.jsonl mid-write, so a
   # restored file may end in a truncated line. Probes tolerate it on resume
