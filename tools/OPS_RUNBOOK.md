@@ -17,9 +17,23 @@ d48/T6/40k, arms A1 floors / A2 global / A3 plain / A4 floors+NI, seeds 0-2,
 | qhrrn2-pod2 | `A3s0 A3s1 A3s2 A4s0 A4s1 A4s2` | same |
 
 Every result stages to `gs://qhrrn2-rescue/r0/` (ckpts live every 5 min +
-per-arm; batteries per wave as `partial_results.tgz`; final `r0_final.tgz`).
-**A preemption costs <=5 min of compute, never the campaign** — the chain
-resumes from GCS on relaunch (`RESUME-<arm>-FROM-GCS`, `RESUMED ... at step N`).
+per-arm on completion; batteries **every 5 min AND per wave** as
+`partial_results.tgz`; final `r0_final.tgz`).
+**A preemption costs <=5 min of compute in EITHER phase, never the campaign.**
+
+Resume semantics (2026-08-15, all three verified in-run):
+- `SKIP-<arm> (completed in an earlier life)` — `<arm>_ckpt.pkl` exists in
+  GCS, which is staged ONLY on rc=0, so it proves completion. Restored, no
+  recompute. (Before this, finished arms restarted at ~36k/40k.)
+- `RESUME-<arm>-FROM-GCS` + `RESUMED ... at step N` — partial arm, from the
+  5-min live ckpt.
+- `RESUME-PARTIAL-RESULTS` + `SANITIZED n file(s)` — battery rows restored;
+  probes skip completed tasks per-task. Sanitize drops any truncated final
+  row a live tar caught mid-write (probes would otherwise append after it
+  and the analyzers, which parse rows without try/except, would crash at
+  verdict time).
+- A pretrain that FAILS stages no complete ckpt, touches no `.done`, and does
+  not abort the chain — it is simply retried on the next relaunch.
 
 ## 2. The four supervision layers (who survives what)
 
