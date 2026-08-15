@@ -55,9 +55,27 @@ pretrain_arm () {
     || echo "CKPT-STAGE-$TAG-FAILED"
 }
 
+# Stage every battery results.jsonl produced so far. Probes resume PER TASK
+# from these files, so whatever is banked is never recomputed.
+stage_partials () {
+  tar czf /tmp/r0_partial.tgz runs/lad_p13f* runs/ladrg_p13f* \
+    runs/ladrgb_p13f* runs/ladrt_p13f* runs/samp_p13f* runs/e1e3_p13f* \
+    2>/dev/null || true
+  gsutil -q cp /tmp/r0_partial.tgz "$GCS/partial_results.tgz" 2>/dev/null || true
+}
+
 run_waves () {
   local -a QUEUE=("$@")
   local i=0
+  # LIVE 5-MIN STAGER (2026-08-15, PI): staging only BETWEEN waves meant a
+  # mid-wave preemption threw away the whole wave — up to ~40 min x 8 jobs,
+  # which is exactly what pod2's final wave lost. The pretrain phase already
+  # syncs every 300s; the battery phase now matches it, so a preemption
+  # costs <=5 min of rows regardless of when it lands.
+  ( while true; do sleep 300; stage_partials; done ) &
+  local STAGER=$!
+  # kill the stager on ANY exit path (set -e, ceiling kill, signal)
+  trap 'kill "$STAGER" 2>/dev/null || true' RETURN
   while [ $i -lt ${#QUEUE[@]} ]; do
     pids=()
     for c in $(seq 0 $(( ${NCHIPS:-8} - 1 ))); do
@@ -73,17 +91,39 @@ run_waves () {
     rc=0
     for p in "${pids[@]}"; do wait "$p" || rc=1; done
     echo "wave done rc=$rc $(date -u +%H:%M)"
-    tar czf /tmp/r0_partial.tgz runs/lad_p13f* runs/ladrg_p13f* \
-      runs/ladrgb_p13f* runs/ladrt_p13f* runs/samp_p13f* runs/e1e3_p13f* \
-      2>/dev/null || true
-    gsutil -q cp /tmp/r0_partial.tgz "$GCS/partial_results.tgz" \
-      2>/dev/null || true
+    stage_partials
   done
+  kill "$STAGER" 2>/dev/null || true
 }
 
 # resume: restore staged partial batteries so probes skip completed tasks
 if gsutil -q cp "$GCS/partial_results.tgz" /tmp/r0p.tgz 2>/dev/null; then
   tar xzf /tmp/r0p.tgz -C . 2>/dev/null && echo "RESUME-PARTIAL-RESULTS"
+  # SANITIZE: live (5-min) staging can tar a results.jsonl mid-write, so a
+  # restored file may end in a truncated line. Probes tolerate it on resume
+  # but would APPEND after it, leaving permanent corruption that the
+  # analyzers (which parse rows without try/except) would hit at verdict
+  # time. Drop non-parsing lines once, here, before anything appends.
+  python3 - <<'PYSAN'
+import json, pathlib
+
+def parses(line):
+    try:
+        json.loads(line)
+        return True
+    except Exception:
+        return False
+
+fixed = dropped = 0
+for p in pathlib.Path("runs").glob("*_p13f*/results.jsonl"):
+    lines = [l for l in p.read_text().splitlines() if l.strip()]
+    good = [l for l in lines if parses(l)]
+    if len(good) != len(lines):
+        p.write_text("".join(l + "\n" for l in good))
+        fixed += 1
+        dropped += len(lines) - len(good)
+print(f"SANITIZED {fixed} file(s), dropped {dropped} truncated row(s)")
+PYSAN
 fi
 
 # ---- PHASE 1: pretrains back-to-back, DP-8, zero idle ----
