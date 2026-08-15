@@ -28,8 +28,13 @@ while [ "$(date -u +%s)" -lt "$END" ]; do
   ALIVE=$(gcloud compute tpus tpu-vm list --zone="$ZONE" --project=quantum-llm \
           --format="value(name)" 2>/dev/null | grep -c "^${POD}$")
   if [ "$ALIVE" -eq 0 ]; then
-    say "node absent — watcher exits (retry loop owns recovery)"
-    exit 0
+    # TOLERATE absence (fixed 2026-08-15): the first version EXITED here,
+    # so both pod watchers quit during a hunter's re-create window and a
+    # finished chain would then have billed idle until the deadline. The
+    # hunter owns recovery; this watcher just keeps waiting for the node to
+    # come back and for its sentinel to appear.
+    say "node absent — waiting (hunter owns recovery)"
+    continue
   fi
   HIT=$(gcloud compute tpus tpu-vm ssh "$POD" --zone="$ZONE" \
         --project=quantum-llm --command="grep -c '$SENT' ~/qhrrn2/runs/detached.log 2>/dev/null" \
