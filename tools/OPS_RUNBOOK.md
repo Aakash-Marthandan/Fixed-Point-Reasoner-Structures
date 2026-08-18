@@ -1,104 +1,95 @@
-# TPU OPS RUNBOOK — rung-0 campaign (written 2026-08-15 for model/session handoff)
+# TPU OPS RUNBOOK — one-pod campaign (rewritten 2026-08-18 night)
 
 The science lives in `Documentation/Design_Ledger.md`. This file is ONLY the
-operational state machine, so that any session — after a restart, a model
-switch, or a cold start — can supervise the fleet mechanically without
-re-deriving anything from conversation memory. **The repo outranks memory.**
+operational state machine, so any session — after a restart, a model switch,
+a cold start — supervises mechanically from the repo. **The repo outranks
+conversation memory.** PI directive (2026-08-18): ONE stable spot v6e-8 pod
+finishes the rung; no multi-pod, no queued resources, no on-demand.
 
-## 1. What is running and what it produces
+## 1. The three files that matter
 
-Two v6e-8 spot pods in us-east1-d run `tools/chain_r0.sh` (12 pretrains,
-d48/T6/40k, arms A1 floors / A2 global / A3 plain / A4 floors+NI, seeds 0-2,
-+ 50 battery jobs). Split by `R0_ARMS`:
+| file | role |
+|---|---|
+| `tools/campaign.env` | THE source of truth: pod name, zones, accelerator, `R_TAG/R_D/R_STEPS`, `ARMS` (order load-bearing), chain script, wall ceiling, GCS bucket, sentinel |
+| `tools/pod.sh` | THE ops tool: `supervise` (one loop) · `status` · `relaunch` · `stop` · `down` · `log` |
+| `runs/tpu_deadline.txt` | THE knob: UTC epoch past which the launchd watchdog DELETES every node — and past which the supervisor stops creating (it re-reads this file every poll) |
 
-| pod | R0_ARMS | done when |
-|---|---|---|
-| qhrrn2-pod  | `A1s0 A1s1 A1s2 A2s0 A2s1 A2s2` | `CHAIN-R0-COMPLETE` in its detached.log |
-| qhrrn2-pod2 | `A3s0 A3s1 A3s2 A4s0 A4s1 A4s2` | same |
+Task lists (VH/RG/RB/RT CSVs) live in `tools/r0_tasks.sh` (repo copy — never a scratchpad).
 
-Every result stages to `gs://qhrrn2-rescue/r0/` (ckpts live every 5 min +
-per-arm on completion; batteries **every 5 min AND per wave** as
-`partial_results.tgz`; final `r0_final.tgz`).
-**A preemption costs <=5 min of compute in EITHER phase, never the campaign.**
-
-Resume semantics (2026-08-15, all three verified in-run):
-- `SKIP-<arm> (completed in an earlier life)` — `<arm>_ckpt.pkl` exists in
-  GCS, which is staged ONLY on rc=0, so it proves completion. Restored, no
-  recompute. (Before this, finished arms restarted at ~36k/40k.)
-- `RESUME-<arm>-FROM-GCS` + `RESUMED ... at step N` — partial arm, from the
-  5-min live ckpt.
-- `RESUME-PARTIAL-RESULTS` + `SANITIZED n file(s)` — battery rows restored;
-  probes skip completed tasks per-task. Sanitize drops any truncated final
-  row a live tar caught mid-write (probes would otherwise append after it
-  and the analyzers, which parse rows without try/except, would crash at
-  verdict time).
-- A pretrain that FAILS stages no complete ckpt, touches no `.done`, and does
-  not abort the chain — it is simply retried on the next relaunch.
-
-## 2. The four supervision layers (who survives what)
+## 2. Layers — who survives what
 
 | layer | survives | job |
 |---|---|---|
-| **launchd watchdog** `com.qhrrn2.tpuwatchdog` (15-min) | EVERYTHING (session death, restarts, sleep) | inventory log `runs/tpu_status_log.txt`; **HARD-DELETES all nodes past `runs/tpu_deadline.txt`** (UTC epoch). Zones: east1-d/c, east5-b, central1-a, central2-b, west1-c, west4-a, asia-east1-c |
-| **hunters** `tools/r0_retry_loop.sh <pod> "<arms>" <hours>` | this Mac's process table (NOT app restarts) | create -> up -> canary -> launch -> verify -> SUPERVISE; on node not-READY: teardown + resume hunt; exit only on CHAIN-R0-COMPLETE or hours elapsed. Log: `runs/r0_retry_<pod>.log` |
-| **completion watchers** `tools/completion_watch.sh <pod> <zone> CHAIN-R0-COMPLETE <hours>` | same as hunters | on sentinel: rescue + `dispatcher down`. Tolerates transient absence. Log: `runs/complwatch_<pod>.log` |
-| **session monitors / cron heartbeat** | this session only | convenience; re-arm after any restart |
+| **`pod.sh supervise`** (Mac process, log `runs/pod_<POD>.log`, pid `runs/pod_supervisor.pid`) | this Mac's process table — NOT app restarts: restart it, it ADOPTS whatever is running | the state table below; exits 0 on completion (after teardown), 3 if the chain dies 3× on one node (after teardown, "needs eyes"), 2 at the deadline (no creates) |
+| **launchd watchdog** `com.qhrrn2.tpuwatchdog` (`tools/tpu_watchdog.sh`, 15 min) | EVERYTHING | inventory log `runs/tpu_status_log.txt` + snapshot `runs/tpu_status.txt`; macOS notify on change; **hard-deletes all nodes past the deadline** |
+| session heartbeat (hourly cron) + Monitor on the supervisor log | this session only | PI-facing status; re-arm after any restart |
 
-Rule: **exactly one hunter and one watcher per pod.** Overlapping instances
-write one log and become unreadable (bitten 08-15). Check with
-`ps -eo pid,args | grep -E "r0_retry_loop|completion_watch" | grep -v grep`.
+The chain (`tools/chain_r0.sh`) is resume-complete from GCS: live ckpt every
+5 min, complete ckpt per arm (`<ARM>_ckpt.pkl` = proof of completion → SKIP),
+battery rows every 5 min + per wave (`partial_<firstarm>.tgz`, sanitized on
+restore), final `r0_final.tgz` then the sentinel `CHAIN-R0-COMPLETE`. **Any
+teardown costs ≤5 min of compute, never the campaign.**
 
-## 3. The 5-command health check (run this first, always)
+## 3. State table (one poll = one row; never acts on an UNKNOWN read)
 
-```bash
-gcloud compute tpus tpu-vm list --zone=us-east1-d --format="table(name,state,health)"
-ps -eo pid,args | grep -E "r0_retry_loop|completion_watch" | grep -v grep
-tail -2 runs/tpu_status_log.txt
-python3 -c "import time;d=int(open('runs/tpu_deadline.txt').read());print(f'deadline in {(d-time.time())/3600:.1f}h')"
-.venv/bin/python tools/spend_report.py --since 2026-08-14 | grep -E "qhrrn2|TOTAL"
-```
-Then per live pod (chain progress):
-```bash
-gcloud compute tpus tpu-vm ssh <POD> --zone=us-east1-d --project=quantum-llm --command="cd ~/qhrrn2 && (kill -0 \$(cat runs/detached.pid) 2>/dev/null && echo RUNNING || echo IDLE); echo arms=\$(ls runs/pretrain13f_*/.done 2>/dev/null|wc -l)/6; grep -E 'PHASE1-OK|wave done|CHAIN-R0' runs/detached.log | tail -2"
-```
+| supervisor sees | does |
+|---|---|
+| GCS `r0_final.tgz` present (checked first, node-independent) | down wherever the node is → exit 0 |
+| node ABSENT in every zone (all read positively) | create(spot) zone by zone → `up --with-data` (retry ×1) → canary ckpt + `canary` → `launch_detached` → verify; any failure after create → down, next zone; all dry → sleep 8 min |
+| CREATING / STOPPING / REPAIRING / DELETING | wait 2 min |
+| PREEMPTED / STOPPED / TERMINATED (positively observed) | down (rescue + delete); next poll hunts |
+| READY + sentinel in remote log | down → exit 0 |
+| READY + job RUNNING | log one progress line |
+| READY + job IDLE (crash / `timeout` ceiling / kill) | relaunch (resumes) — ≤3 per node life, then down + exit 3 loudly |
+| READY + SSH unreachable ×6 (30 min) | down (sick node); next poll hunts |
+| list/describe FAILED (network) | nothing; count; keep polling |
+| past `runs/tpu_deadline.txt` | exit 2 without creating (watchdog deletes what is up) |
 
-## 4. Decision table
+Verified offline end-to-end (stub gcloud/gsutil, real dispatcher +
+launch_detached underneath) on every row above before it ran live.
 
-| you see | it means | do |
-|---|---|---|
-| node PREEMPTED, hunter alive | normal churn | nothing — hunter clears it and re-hunts |
-| node PREEMPTED, **no hunter** | supervision gap | `dispatcher down --name <pod> --zone us-east1-d`, then relaunch ONE hunter (cmd in §5) |
-| node READY, chain IDLE, no CHAIN-R0-COMPLETE | chain died (ceiling / crash) | relaunch chain: `dispatcher run --name <pod> --zone us-east1-d --detach --wall-time 30600 --cmd "R0_ARMS='<arms>' bash tools/chain_r0.sh $VH $RG $RB $RT"` (VH/RG/RB/RT: build from `runs/lad_p1248c40k` task list + `data/re_gate48`, `data/re_gateb48`, `data/re_train48` stems). It resumes. |
-| CHAIN-R0-COMPLETE seen, node still up | watcher missed it | pull `gs://qhrrn2-rescue/r0/r0_final.tgz`, then `dispatcher down` |
-| stale hunter polling a dead node | pre-fix hunter | `pkill -f r0_retry_loop.sh`, relaunch per §5 |
-| deadline < remaining work | would kill good work | extend: write new epoch to `runs/tpu_deadline.txt` |
-| anything confusing / out of hand | PI standing order | **delete all VMs and wait**: `for p in qhrrn2-pod qhrrn2-pod2; do .venv/bin/python tools/dispatcher.py down --name $p --zone us-east1-d; done` — work is banked, nothing is lost |
-
-## 5. Relaunch commands (exact)
+## 4. Health check — 3 commands, always first
 
 ```bash
-# hunter (one per pod; 8h budget)
-nohup bash tools/r0_retry_loop.sh qhrrn2-pod  "A1s0 A1s1 A1s2 A2s0 A2s1 A2s2" 8 >/dev/null 2>&1 &
-nohup bash tools/r0_retry_loop.sh qhrrn2-pod2 "A3s0 A3s1 A3s2 A4s0 A4s1 A4s2" 8 >/dev/null 2>&1 &
-# watcher (one per pod)
-nohup bash tools/completion_watch.sh qhrrn2-pod  us-east1-d CHAIN-R0-COMPLETE 12 >/dev/null 2>&1 &
-nohup bash tools/completion_watch.sh qhrrn2-pod2 us-east1-d CHAIN-R0-COMPLETE 12 >/dev/null 2>&1 &
+bash tools/pod.sh status            # node (all zones), supervisor, deadline, GCS bank, remote job + per-arm + rows
+tail -3 runs/pod_qhrrn2-pod2.log    # what the loop last saw / did
+launchctl list | grep qhrrn2        # watchdog loaded? (reinstall: bash tools/install_watchdog.sh)
 ```
-The hunter carries the canary ckpt (`runs/pretrain6_d24/ckpt_latest.pkl`,
-mkdir-before-scp) and passes `dispatcher canary` before any launch. `up`
-is idempotent on an existing node.
 
-## 6. When both chains complete
+## 5. After an app restart / cold start
 
-1. Pull `gs://qhrrn2-rescue/r0/r0_final.tgz` (both pods stage the same
-   object name — pull each pod's before teardown, or read the per-arm
-   dirs from the tarballs). Extract into `runs/`.
-2. Verify zero TPUs + zero QRs across all door zones.
-3. `.venv/bin/python tools/analyze_r0.py` — R1-R6 as registered
-   (2026-08-14 rung-0 launch entry). Ledger the verdict. Do NOT tune.
+1. `git log --oneline -3` — has a completion/verdict entry landed?
+2. `bash tools/pod.sh status` — if `supervisor: NOT RUNNING` and the campaign
+   is not complete: `nohup bash tools/pod.sh supervise 14 >/dev/null 2>&1 &`
+   (it adopts a live chain; refuses to start twice).
+3. Re-arm the session heartbeat + Monitor on `runs/pod_qhrrn2-pod2.log`.
 
-## 7. Spend
+## 6. Manual verbs (rare — the loop does these itself)
 
-`tools/spend_report.py` derives billed READY-hours from the watchdog log
-(+-15 min). Rung-0 registered estimate $130; expected all-in with the
-overnight churn ~$140-160. Program-to-date at 08-15 morning ~$335.
+```bash
+bash tools/pod.sh relaunch          # READY node, chain idle → relaunch (resumes)
+bash tools/pod.sh stop              # controlled stop of the remote chain, verified (kill tree by pgid; pkill patterns cannot self-match)
+bash tools/pod.sh down              # rescue + delete the node = the PI standing order ("delete all and wait")
+echo $(( $(date -u +%s) + 12*3600 )) > runs/tpu_deadline.txt   # extend the deadline (supervisor + watchdog both follow it)
+```
+Never run two supervisors. Never edit `ARMS` order mid-campaign.
+
+## 7. Completion
+
+The loop tears the node down itself. Then: `gsutil cp gs://qhrrn2-rescue/rr1/r0_final.tgz .`
+→ extract into `runs/` → `.venv/bin/python tools/inspect_ckpt.py runs/pretrainr1_*`
+(every arm admitted at artifact level: d/T/steps/flags) → verify zero TPUs +
+zero queued-resources in all zones → analyzer per the ledger registration.
+Do NOT tune.
+
+## 8. Spend
+
+`.venv/bin/python tools/spend_report.py --since <date>` derives billed READY
+hours from the watchdog log (±15 min) at $6.82/pod-h spot v6e-8.
+
+## 9. Retired (2026-08-18; in git history before this commit)
+
+`r0_retry_loop.sh` (hunter), `completion_watch.sh` (watcher),
+`r1_merge_into_pod2.sh` (merge; its STOP command `pkill -f`-matched its own
+ssh shell and died before reporting — the last of the day's incidents). Their
+jobs are the rows of §3 in one loop.
