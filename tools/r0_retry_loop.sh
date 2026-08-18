@@ -83,11 +83,20 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
     fi
     say "canary PASS — launching chain"
 
-    $PY tools/dispatcher.py run --name "$POD" --zone "$Z" --detach \
+    # ROOT CAUSE of the 08-18 wedge: `dispatcher run --detach` detaches the
+    # REMOTE job but the LOCAL process stays and polls SSH until the job
+    # exits (20-miss backoff ~45+ min on preemption). The hunter therefore
+    # blocked here for the chain's whole lifetime and NEVER reached its
+    # supervise loop — the fixed, network-safe logic was unreachable, and it
+    # double-polled the pod. Now: bound the launch call (perl alarm — no
+    # coreutils timeout on this Mac) so it returns once the remote job is
+    # detached; the supervise loop below is the ONE poller (600s cadence).
+    perl -e 'alarm shift; exec @ARGV' 600 \
+      $PY tools/dispatcher.py run --name "$POD" --zone "$Z" --detach \
       --wall-time 30600 \
       --cmd "R_TAG='${R_TAG:-13f}' R_D='${R_D:-48}' R_STEPS='${R_STEPS:-40000}' R0_ARMS='$ARMS' bash tools/chain_r0.sh $VH $RG $RB $RT" \
-      >> "$LOGF" 2>&1
-    sleep 60
+      >> "$LOGF" 2>&1 || true
+    sleep 30
     # VERIFY it is really running; an unverified launch is an idle biller
     if gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm \
        --command="cd ~/qhrrn2 && kill -0 \$(cat runs/detached.pid 2>/dev/null) 2>/dev/null" \
