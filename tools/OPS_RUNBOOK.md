@@ -79,8 +79,9 @@ Never run two supervisors. Never edit `ARMS` order mid-campaign.
 The loop tears the node down itself. Then: `gsutil cp gs://qhrrn2-rescue/rr1/r0_final.tgz .`
 → extract into `runs/` → `.venv/bin/python tools/inspect_ckpt.py runs/pretrainr1_*`
 (every arm admitted at artifact level: d/T/steps/flags) → verify zero TPUs +
-zero queued-resources in all zones → analyzer per the ledger registration.
-Do NOT tune.
+zero queued-resources in all zones → `.venv/bin/python tools/analyze_r1.py`
+(R1-1..R1-6 as registered 2026-08-15; written pre-data, `--selftest` 14/14;
+admits only artifact-verified cells). Do NOT tune.
 
 ## 8. Spend
 
