@@ -37,10 +37,19 @@ say "retry loop start: pod=$POD arms='$ARMS' deadline=$(date -u -r $DEADLINE +%H
 while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
   for Z in $ZONES; do
     [ "$(date -u +%s)" -ge "$DEADLINE" ] && break
-    # skip zones where the node name already exists (stale/preempted)
-    EXIST=$(gcloud compute tpus tpu-vm list --zone="$Z" --project=quantum-llm \
-            --format="value(name)" 2>/dev/null | grep -c "^${POD}$")
-    [ "$EXIST" -gt 0 ] && teardown "$Z" "stale node before retry"
+    # Pre-create guard, NETWORK-SAFE (2026-08-15): if the list call itself
+    # fails we must NOT create blind — a node may already exist. Only proceed
+    # to create when the zone was POSITIVELY read; tear down a stale node
+    # only when POSITIVELY seen.
+    LISTOUT=$(gcloud compute tpus tpu-vm list --zone="$Z" --project=quantum-llm \
+              --format="value(name)" 2>&1); LRC=$?
+    if [ "$LRC" -ne 0 ]; then
+      say "  list failed in $Z (network?) — skipping zone this round, no blind create"
+      continue
+    fi
+    if printf '%s\n' "$LISTOUT" | grep -q "^${POD}$"; then
+      teardown "$Z" "stale node before retry"
+    fi
 
     say "try create $POD in $Z"
     if ! gcloud compute tpus tpu-vm create "$POD" --zone="$Z" \
@@ -93,11 +102,37 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
         # STATE, not presence: a PREEMPTED node still LISTS, so "is the name
         # in the list" wedges forever (2026-08-15: one hunter polled a dead
         # node for hours). Ask for the state field alone and match exactly.
-        ST=$(gcloud compute tpus tpu-vm describe "$POD" --zone="$Z" \
-             --project=quantum-llm --format="value(state)" 2>/dev/null | tr -d '[:space:]')
+        # NETWORK vs PREEMPTION (fixed 2026-08-15 after the stray-pod incident):
+        # an EMPTY state means the describe call FAILED (network/API), which is
+        # NOT evidence the node is gone. The old code treated empty as
+        # "not READY" -> re-hunt -> CREATED A NEW POD during a 1h outage on a
+        # campaign that was already complete. Now: unknown => retry with
+        # backoff; only a POSITIVELY OBSERVED non-READY state (PREEMPTED,
+        # STOPPING, ...) or a POSITIVE NOT_FOUND triggers recovery. After
+        # MAX_UNKNOWN consecutive failures we still do NOT create — we exit
+        # and leave the node to the watchdog deadline (creating blind is the
+        # one thing that must never happen).
+        DESC=$(gcloud compute tpus tpu-vm describe "$POD" --zone="$Z" \
+               --project=quantum-llm --format="value(state)" 2>&1)
+        DRC=$?
+        ST=$(printf '%s' "$DESC" | grep -oE '^(READY|CREATING|PREEMPTED|STOPPING|STOPPED|REPAIRING|DELETING|TERMINATED)$' | head -1)
+        if [ "$DRC" -ne 0 ] && printf '%s' "$DESC" | grep -q "NOT_FOUND"; then
+          say "node POSITIVELY not found — resuming hunt"
+          UNKNOWN=0; break
+        fi
+        if [ -z "$ST" ]; then
+          UNKNOWN=$(( ${UNKNOWN:-0} + 1 ))
+          say "  describe failed/unreadable (x$UNKNOWN) — network? NOT acting; retry"
+          if [ "$UNKNOWN" -ge "${MAX_UNKNOWN:-12}" ]; then   # 12 x 5 min = 1h blind
+            say "blind for ${UNKNOWN} polls — exiting WITHOUT creating (watchdog deadline owns teardown)"
+            exit 2
+          fi
+          continue
+        fi
+        UNKNOWN=0
         if [ "$ST" != "READY" ]; then
-          say "node state='$ST' (not READY) — clearing and resuming hunt"
-          [ -n "$ST" ] && teardown "$Z" "node $ST"
+          say "node state='$ST' (observed, not READY) — clearing and resuming hunt"
+          teardown "$Z" "node $ST"
           break
         fi
         if gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm \
