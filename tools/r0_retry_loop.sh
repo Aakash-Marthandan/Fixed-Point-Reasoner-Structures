@@ -23,6 +23,10 @@ POD=$1; ARMS=$2; MAXH=${3:-9}
 # ZONES overridable per hunter (2026-08-18): two-pod-two-region runs give each
 # hunter a DISJOINT zone list so they never race for the same capacity window.
 ZONES=${ZONES:-"us-east1-d us-east5-b us-central1-a us-west1-c us-central2-b"}   # US-only default (PI 2026-08-18)
+# SPOT_FLAG: "--spot" (default) or "" for ON-DEMAND (2026-08-18, PI call after
+# 8 preemptions in one day). On-demand permission is ZONE-SCOPED for v6e
+# (ledger: east1-d DENIED, central1-class permitted) — set ZONES to match.
+SPOT_FLAG=${SPOT_FLAG---spot}
 PY=.venv/bin/python
 LOGF=runs/r0_retry_${POD}.log
 DEADLINE=$(( $(date -u +%s) + MAXH * 3600 ))
@@ -95,7 +99,7 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
       say "try create $POD in $Z"
       if ! gcloud compute tpus tpu-vm create "$POD" --zone="$Z" \
            --project=quantum-llm --accelerator-type=v6e-8 \
-           --version=v6e-ubuntu-2404 --spot >> "$LOGF" 2>&1; then
+           --version=v6e-ubuntu-2404 ${SPOT_FLAG---spot} >> "$LOGF" 2>&1; then
         say "  no capacity in $Z"
         continue
       fi
