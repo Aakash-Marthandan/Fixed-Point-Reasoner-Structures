@@ -35,6 +35,25 @@ teardown () {   # $1 = zone, $2 = reason  — never leave a billing orphan
   $PY tools/dispatcher.py down --name "$POD" --zone "$1" >> "$LOGF" 2>&1
 }
 
+# still_ready ZONE — one cheap describe before every EXPENSIVE step (up /
+# canary / launch), so a preemption inside the ~15-min create->launch window
+# is caught by STATE in seconds instead of by SSH timeouts in tens of minutes
+# (2026-08-18: two preemptions landed in exactly that window). Network-safe:
+# a POSITIVE non-READY => 1 (caller tears down + rehunts); READY or UNKNOWN
+# => 0 (never act blind — the step itself will fail loudly if the node is
+# truly gone, and the supervise loop's unknown-counter handles outages).
+still_ready () {
+  local d st
+  d=$(gcloud compute tpus tpu-vm describe "$POD" --zone="$1" --project=quantum-llm \
+      --format="value(state)" 2>&1)
+  st=$(printf '%s' "$d" | grep -oE '^(READY|CREATING|PREEMPTED|STOPPING|STOPPED|REPAIRING|DELETING|TERMINATED)$' | head -1)
+  if [ -n "$st" ] && [ "$st" != "READY" ] && [ "$st" != "CREATING" ]; then
+    say "  precheck: node is $st — abandoning this attempt"
+    return 1
+  fi
+  return 0
+}
+
 say "retry loop start: pod=$POD arms='$ARMS' deadline=$(date -u -r $DEADLINE +%H:%MZ)"
 while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
   for Z in $ZONES; do
@@ -88,9 +107,11 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
     # discarding a landed pod for a transient hiccup is expensive when
     # capacity is this scarce. `up` is idempotent, so a retry is safe.
     if [ "${ADOPT_LIVE:-0}" -ne 1 ]; then
+    still_ready "$Z" || { teardown "$Z" "preempted before bootstrap"; continue; }
     if ! $PY tools/dispatcher.py up --name "$POD" --zone "$Z" \
          --accelerator v6e-8 --with-data >> "$LOGF" 2>&1; then
       say "  bootstrap attempt 1 failed — retrying once"
+      still_ready "$Z" || { teardown "$Z" "preempted during bootstrap"; continue; }
       if ! $PY tools/dispatcher.py up --name "$POD" --zone "$Z" \
            --accelerator v6e-8 --with-data >> "$LOGF" 2>&1; then
         teardown "$Z" "bootstrap failed twice"; continue
@@ -102,6 +123,7 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
     gcloud compute tpus tpu-vm scp runs/pretrain6_d24/ckpt_latest.pkl \
       "$POD:~/qhrrn2/runs/pretrain6_d24/" --zone="$Z" --project=quantum-llm \
       >> "$LOGF" 2>&1
+    still_ready "$Z" || { teardown "$Z" "preempted before canary"; continue; }
     if ! $PY tools/dispatcher.py canary --name "$POD" --zone "$Z" >> "$LOGF" 2>&1; then
       teardown "$Z" "canary FAILED"; continue
     fi
@@ -112,6 +134,7 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
     # the remote pid, and RETURNS — no local poller to wedge on, no wall-clock
     # alarm to race the sync. Exit 0 = launched+verified; 7 = already running
     # (also fine). Anything else = not launched -> teardown below.
+    still_ready "$Z" || { teardown "$Z" "preempted before launch"; continue; }
     if $PY tools/launch_detached.py --name "$POD" --zone "$Z" --wall-time 30600 \
          --cmd "R_TAG='${R_TAG:-13f}' R_D='${R_D:-48}' R_STEPS='${R_STEPS:-40000}' R0_ARMS='$ARMS' bash tools/chain_r0.sh $VH $RG $RB $RT" \
          >> "$LOGF" 2>&1; then LAUNCHED=1
