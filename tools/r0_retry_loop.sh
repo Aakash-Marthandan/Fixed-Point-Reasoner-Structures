@@ -20,7 +20,9 @@ cd "$(dirname "$0")/.." || exit 1
 export PATH="$PWD/.venv/bin:$PATH"
 
 POD=$1; ARMS=$2; MAXH=${3:-9}
-ZONES="us-east1-d us-east5-b us-central1-a us-west1-c us-central2-b asia-east1-c"
+# ZONES overridable per hunter (2026-08-18): two-pod-two-region runs give each
+# hunter a DISJOINT zone list so they never race for the same capacity window.
+ZONES=${ZONES:-"us-east1-d us-east5-b us-central1-a us-west1-c us-central2-b asia-east1-c"}
 PY=.venv/bin/python
 LOGF=runs/r0_retry_${POD}.log
 DEADLINE=$(( $(date -u +%s) + MAXH * 3600 ))
