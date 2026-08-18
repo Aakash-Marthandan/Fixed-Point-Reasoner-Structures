@@ -136,6 +136,14 @@ v_hunt () {   # try every zone once; 0 = chain launched somewhere
   done
   return 1
 }
+v_ensure_final () {   # ZONE — sentinel seen but the chain's own final upload may have failed: redo it (bounded) before any teardown
+  if gcs_complete; then say "  final object present in GCS"; return 0; fi
+  say "  final object ABSENT in GCS — re-running the chain's final rescue remotely"
+  gssh "$1" "cd ~/qhrrn2 && tar czf /tmp/r0_final.tgz runs/pretrain${R_TAG}_*/ckpt_latest.pkl runs/*_p${R_TAG}* runs/wave_*.log 2>/dev/null; gsutil -q cp /tmp/r0_final.tgz $GCS/$FINAL_OBJ && echo RESCUE-REDO-OK" | tee -a "$LOG"
+  if gcs_complete; then say "  final object now present"; return 0; fi
+  say "  WARNING: final object still absent — down's own rescue (runs/cloud/<pod>-<stamp>.tgz) is the last copy; per-arm ckpts + partial_${ARMS%% *}.tgz remain in GCS"
+  notify "final upload failed" "check runs/cloud rescue + GCS partials before analysis"; return 1
+}
 v_stop () {   # ZONE — kill the detached tree (setsid => pgid = pid), verify.
   # NOTE the [.] in pkill patterns: the pattern must not match THIS ssh command
   # line (the merge script's STOP killed its own shell that way, 08-18).
@@ -174,7 +182,8 @@ cmd_supervise () {
   # re-read every poll so extending the file extends both layers). Without it
   # the watchdog would delete the node at its deadline and this loop would
   # re-create it -> a create/delete cycle. HOURS is only the fallback.
-  end_time () { local d; d=$(tr -dc '0-9' < "${POD_DEADLINE_FILE:-runs/tpu_deadline.txt}" 2>/dev/null); [ -n "$d" ] && echo "$d" || echo $(( $(date -u +%s) + HOURS*3600 )); }
+  local END_FALLBACK=$(( $(date -u +%s) + HOURS*3600 ))   # fixed at start: no deadline file => HOURS cap, never "forever"
+  end_time () { local d; d=$(tr -dc '0-9' < "${POD_DEADLINE_FILE:-runs/tpu_deadline.txt}" 2>/dev/null); [ -n "$d" ] && echo "$d" || echo "$END_FALLBACK"; }
   END=$(end_time)
   say "SUPERVISE start: pod=$POD zones='$ZONES' arms='$ARMS' until=$(date -u -r "$END" +%FT%TZ) (watchdog deadline) poll=${POLL}s pid=$$"
   while END=$(end_time) && [ "$(date -u +%s)" -lt "$END" ]; do
@@ -197,7 +206,7 @@ cmd_supervise () {
       READY)
         js=$(job_state "$z")
         case ${js%%$'\n'*} in
-          COMPLETE)   say "COMPLETE (sentinel) in $z"; v_down "$z" "campaign complete"; notify "COMPLETE" "rung chain finished; node torn down"; rm -f "$PIDF"; exit 0;;
+          COMPLETE)   say "COMPLETE (sentinel) in $z"; v_ensure_final "$z"; v_down "$z" "campaign complete"; notify "COMPLETE" "rung chain finished; node torn down"; rm -f "$PIDF"; exit 0;;
           RUNNING*)   SSHFAIL=0; say "READY $z | ${js%%$'\n'*} | $(printf '%s' "$js" | grep PROGRESS | cut -c10-)";;
           IDLE*|NOREPO)
             SSHFAIL=0; say "READY $z | chain ${js%%$'\n'*} — relaunching (attempt $((RELAUNCHES+1))/3)"
