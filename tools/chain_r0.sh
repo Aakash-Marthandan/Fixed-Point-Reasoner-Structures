@@ -15,8 +15,13 @@ set -euo pipefail
 export PATH="$PWD/.venv/bin:$PATH"
 export PYTHONPATH=src
 VH=$1; RG=$2; RB=$3; RT=$4
-GCS=gs://qhrrn2-rescue/r0
-COMMON="--equilibrium --d 48 --T 6 --anchor-p 0.3 --steps 40000
+# RUNG PARAMETRIZATION (2026-08-15): the harness-verified rung-0 logic is
+# reused for every rung rather than forked. Defaults = rung 0 exactly.
+#   R_D / R_STEPS  width and budget (rung 1: 64 / 53333 = d48-proportional)
+#   R_TAG          run-dir + GCS prefix (rung 0: 13f, rung 1: r1)
+R_D=${R_D:-48}; R_STEPS=${R_STEPS:-40000}; R_TAG=${R_TAG:-13f}
+GCS=gs://qhrrn2-rescue/$([ "$R_TAG" = 13f ] && echo r0 || echo "r${R_TAG}")
+COMMON="--equilibrium --d $R_D --T 6 --anchor-p 0.3 --steps $R_STEPS
         --rearc --conceptarc --orbit 4 --dp"
 PRICED="--beta-flux 3e-5 --beta-flux-nl 1e-5"
 FLOORS="--flux-floors 350,75,50,15,30"
@@ -35,6 +40,7 @@ arm_flags () {
     A2) echo "$PRICED" ;;
     A3) echo "" ;;
     A4) echo "$PRICED $FLOORS --ni-sigma 0.01" ;;
+    A5) echo "$PRICED --ni-sigma 0.01" ;;          # global+NI: floors decomposition (rung 1)
     *)  echo "UNKNOWN-ARM $1" >&2; return 1 ;;
   esac
 }
@@ -43,7 +49,7 @@ pretrain_arm () {
   TAG=$1
   SEED=${TAG#*s}
   echo "=== PRETRAIN $TAG $(date -u +%H:%M) ==="
-  mkdir -p "runs/pretrain13f_$TAG"
+  mkdir -p "runs/pretrain${R_TAG}_$TAG"
   # COMPLETED-ARM SHORT-CIRCUIT (2026-08-15): ${TAG}_ckpt.pkl is staged ONLY
   # after an arm finishes, so its presence proves completion. The old resume
   # pulled ${TAG}_ckpt_live.pkl (last 5-min sync) and re-ran the arm's tail —
@@ -51,23 +57,23 @@ pretrain_arm () {
   # preemption, ~20 min per recovery for a 6-arm pod, recurring because
   # .done markers die with the node. Prefer the complete ckpt and skip.
   if gsutil -q cp "$GCS/${TAG}_ckpt.pkl" \
-      "runs/pretrain13f_$TAG/ckpt_latest.pkl" 2>/dev/null; then
-    touch "runs/pretrain13f_$TAG/.done"
+      "runs/pretrain${R_TAG}_$TAG/ckpt_latest.pkl" 2>/dev/null; then
+    touch "runs/pretrain${R_TAG}_$TAG/.done"
     echo "SKIP-$TAG (completed in an earlier life; final ckpt restored)"
     return 0
   fi
   if gsutil -q cp "$GCS/${TAG}_ckpt_live.pkl" \
-      "runs/pretrain13f_$TAG/ckpt_latest.pkl" 2>/dev/null; then
+      "runs/pretrain${R_TAG}_$TAG/ckpt_latest.pkl" 2>/dev/null; then
     echo "RESUME-$TAG-FROM-GCS"
   fi
   ( while true; do sleep 300; gsutil -q cp \
-      "runs/pretrain13f_$TAG/ckpt_latest.pkl" \
+      "runs/pretrain${R_TAG}_$TAG/ckpt_latest.pkl" \
       "$GCS/${TAG}_ckpt_live.pkl" 2>/dev/null || true; done ) &
   SYNC_PID=$!
   # `if` form, not a bare call: under `set -e` a bare failing statement would
   # abort the whole chain, and a command in an if-condition is exempt.
   # shellcheck disable=SC2086
-  if python3 tools/pretrain.py --out "runs/pretrain13f_$TAG" $COMMON \
+  if python3 tools/pretrain.py --out "runs/pretrain${R_TAG}_$TAG" $COMMON \
       --seed "$SEED" $(arm_flags "$TAG"); then
     RC=0
   else
@@ -79,7 +85,7 @@ pretrain_arm () {
   # after a crash would make a later run SKIP an unfinished arm.
   if [ "$RC" -eq 0 ]; then
     echo "PRETRAIN-$TAG-OK"
-    gsutil -q cp "runs/pretrain13f_$TAG/ckpt_latest.pkl" \
+    gsutil -q cp "runs/pretrain${R_TAG}_$TAG/ckpt_latest.pkl" \
       "$GCS/${TAG}_ckpt.pkl" && echo "CKPT-STAGE-$TAG-OK" \
       || echo "CKPT-STAGE-$TAG-FAILED"
   else
@@ -91,8 +97,8 @@ pretrain_arm () {
 # Stage every battery results.jsonl produced so far. Probes resume PER TASK
 # from these files, so whatever is banked is never recomputed.
 stage_partials () {
-  tar czf /tmp/r0_partial.tgz runs/lad_p13f* runs/ladrg_p13f* \
-    runs/ladrgb_p13f* runs/ladrt_p13f* runs/samp_p13f* runs/e1e3_p13f* \
+  tar czf /tmp/r0_partial.tgz runs/lad_p${R_TAG}* runs/ladrg_p${R_TAG}* \
+    runs/ladrgb_p${R_TAG}* runs/ladrt_p${R_TAG}* runs/samp_p${R_TAG}* runs/e1e3_p${R_TAG}* \
     2>/dev/null || true
   gsutil -q cp /tmp/r0_partial.tgz "$GCS/$PARTIAL" 2>/dev/null || true
 }
@@ -147,8 +153,9 @@ if gsutil -q cp "$GCS/$PARTIAL" /tmp/r0p.tgz 2>/dev/null \
   # but would APPEND after it, leaving permanent corruption that the
   # analyzers (which parse rows without try/except) would hit at verdict
   # time. Drop non-parsing lines once, here, before anything appends.
-  python3 - <<'PYSAN'
-import json, pathlib
+  R_TAG="$R_TAG" python3 - <<'PYSAN'
+import json, pathlib, os
+TAG = os.environ.get("R_TAG", "13f")
 
 def parses(line):
     try:
@@ -158,7 +165,7 @@ def parses(line):
         return False
 
 fixed = dropped = 0
-for p in pathlib.Path("runs").glob("*_p13f*/results.jsonl"):
+for p in pathlib.Path("runs").glob(f"*_p{TAG}*/results.jsonl"):
     lines = [l for l in p.read_text().splitlines() if l.strip()]
     good = [l for l in lines if parses(l)]
     if len(good) != len(lines):
@@ -171,28 +178,28 @@ fi
 
 # ---- PHASE 1: pretrains back-to-back, DP-8, zero idle ----
 for TAG in $ARMS; do
-  if [ -f "runs/pretrain13f_$TAG/.done" ]; then
+  if [ -f "runs/pretrain${R_TAG}_$TAG/.done" ]; then
     echo "SKIP-$TAG (done)"; continue
   fi
-  pretrain_arm "$TAG" && touch "runs/pretrain13f_$TAG/.done"
+  pretrain_arm "$TAG" && touch "runs/pretrain${R_TAG}_$TAG/.done"
 done
 echo "PHASE1-OK $(date -u +%H:%M)"
 
 # ---- PHASE 2: batteries, 8-way chip-pinned waves ----
 Q=()
 for TAG in $ARMS; do
-  CK="runs/pretrain13f_$TAG/ckpt_latest.pkl"
-  Q+=("lad_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $VH --out runs/lad_p13f$TAG")
-  Q+=("rg_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RG --out runs/ladrg_p13f$TAG")
-  Q+=("rb_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RB --out runs/ladrgb_p13f$TAG")
+  CK="runs/pretrain${R_TAG}_$TAG/ckpt_latest.pkl"
+  Q+=("lad_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $VH --out runs/lad_p${R_TAG}$TAG")
+  Q+=("rg_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RG --out runs/ladrg_p${R_TAG}$TAG")
+  Q+=("rb_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RB --out runs/ladrgb_p${R_TAG}$TAG")
   case $TAG in *s0)
-    Q+=("rt_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RT --out runs/ladrt_p13f$TAG") ;;
+    Q+=("rt_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RT --out runs/ladrt_p${R_TAG}$TAG") ;;
   esac
   case $TAG in A1s*|A2s0)
-    Q+=("mi_$TAG|python3 tools/probe_sample.py --ckpt $CK --tasks $VH --out runs/samp_p13f${TAG}_mi --k 16 --temps 0.0 --init random") ;;
+    Q+=("mi_$TAG|python3 tools/probe_sample.py --ckpt $CK --tasks $VH --out runs/samp_p${R_TAG}${TAG}_mi --k 16 --temps 0.0 --init random") ;;
   esac
   case $TAG in A1s*|A4s*)
-    Q+=("e13_$TAG|python3 tools/probe_e1e3.py --ckpt $CK --tasks $VH --out runs/e1e3_p13f$TAG") ;;
+    Q+=("e13_$TAG|python3 tools/probe_e1e3.py --ckpt $CK --tasks $VH --out runs/e1e3_p${R_TAG}$TAG") ;;
   esac
 done
 echo "PHASE2: ${#Q[@]} battery jobs"
@@ -200,8 +207,8 @@ run_waves "${Q[@]}"
 echo "PHASE2-OK $(date -u +%H:%M)"
 
 # ---- PHASE 3: final rescue ----
-tar czf /tmp/r0_final.tgz runs/pretrain13f_*/ckpt_latest.pkl \
-  runs/lad_p13f* runs/ladrg_p13f* runs/ladrgb_p13f* runs/ladrt_p13f* \
-  runs/samp_p13f* runs/e1e3_p13f* runs/wave_*.log 2>/dev/null || true
+tar czf /tmp/r0_final.tgz runs/pretrain${R_TAG}_*/ckpt_latest.pkl \
+  runs/lad_p${R_TAG}* runs/ladrg_p${R_TAG}* runs/ladrgb_p${R_TAG}* runs/ladrt_p${R_TAG}* \
+  runs/samp_p${R_TAG}* runs/e1e3_p${R_TAG}* runs/wave_*.log 2>/dev/null || true
 gsutil cp /tmp/r0_final.tgz "$GCS/r0_final.tgz" && echo "RESCUE-OK"
 echo "CHAIN-R0-COMPLETE $(date -u +%H:%M)"
