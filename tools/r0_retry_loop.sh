@@ -98,7 +98,7 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
       # Unattended, the loop must survive the whole night — watch the node,
       # and on preemption fall back into the hunt with work already banked.
       while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
-        sleep 300
+        sleep 600   # API-load trim (2026-08-18): 600s; the durability stack makes a 10-min reaction to preemption cost <=5 min of work
         # STATE, not presence: a PREEMPTED node still LISTS, so "is the name
         # in the list" wedges forever (2026-08-15: one hunter polled a dead
         # node for hours). Ask for the state field alone and match exactly.

@@ -23,7 +23,7 @@ say () { echo "$(date -u +%FT%TZ) | $*" >> "$LOGF"; }
 say "watching $POD/$ZONE for '$SENT'"
 
 while [ "$(date -u +%s)" -lt "$END" ]; do
-  sleep 300
+  sleep 600   # API-load trim (2026-08-18)
   # node gone (preempted/deleted) -> nothing to watch; let the retry loop own it
   ALIVE=$(gcloud compute tpus tpu-vm list --zone="$ZONE" --project=quantum-llm \
           --format="value(name)" 2>/dev/null | grep -c "^${POD}$")
