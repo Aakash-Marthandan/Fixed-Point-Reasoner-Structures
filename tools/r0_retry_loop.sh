@@ -91,6 +91,13 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
       else
         ADOPT_LIVE=0
       fi
+    elif [ "$EXST" = "CREATING" ]; then
+      # A node in flight — ours from a prior sweep, or a sibling hunter's.
+      # NEVER tear down a CREATING node (2026-08-18: this branch would have
+      # killed a landing on-demand node). Wait for it to resolve.
+      say "  $POD is CREATING in $Z — waiting for it to land (no create, no teardown)"
+      sleep 120
+      continue
     elif [ -n "$EXST" ]; then
       teardown "$Z" "stale node ($EXST) before retry"
       EXST=""
