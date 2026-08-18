@@ -44,28 +44,50 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
     # to create when the zone was POSITIVELY read; tear down a stale node
     # only when POSITIVELY seen.
     LISTOUT=$(gcloud compute tpus tpu-vm list --zone="$Z" --project=quantum-llm \
-              --format="value(name)" 2>&1); LRC=$?
+              --format="value(name,state)" 2>&1); LRC=$?
     if [ "$LRC" -ne 0 ]; then
       say "  list failed in $Z (network?) — skipping zone this round, no blind create"
       continue
     fi
-    if printf '%s\n' "$LISTOUT" | grep -q "^${POD}$"; then
-      teardown "$Z" "stale node before retry"
+    # EXISTING NODE (2026-08-18, after a hunter restart deleted a HEALTHY
+    # running pod): distinguish by STATE. READY => ADOPT it (skip create; up
+    # is idempotent, launch_detached's busy-guard returns 7 if the chain is
+    # already running). Non-READY (PREEMPTED etc.) => stale, clear it.
+    EXST=$(printf '%s\n' "$LISTOUT" | awk -v p="$POD" '$1==p{print $2}')
+    if [ "$EXST" = "READY" ]; then
+      say "ADOPTING existing READY $POD in $Z (no create)"
+      # If a chain is ALREADY RUNNING on it, skip up/canary/launch entirely:
+      # the canary would try to fit on a TPU the chain holds ("TPU already
+      # in use") -> FAIL -> teardown of a HEALTHY pod. Go straight to
+      # supervising it.
+      if gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm \
+         --command="cd ~/qhrrn2 && kill -0 \$(cat runs/detached.pid 2>/dev/null) 2>/dev/null" \
+         >/dev/null 2>&1; then
+        say "  chain already RUNNING on adopted node — supervising directly"
+        LAUNCHED=1; ADOPT_LIVE=1
+      else
+        ADOPT_LIVE=0
+      fi
+    elif [ -n "$EXST" ]; then
+      teardown "$Z" "stale node ($EXST) before retry"
+      EXST=""
     fi
-
-    say "try create $POD in $Z"
-    if ! gcloud compute tpus tpu-vm create "$POD" --zone="$Z" \
-         --project=quantum-llm --accelerator-type=v6e-8 \
-         --version=v6e-ubuntu-2404 --spot >> "$LOGF" 2>&1; then
-      say "  no capacity in $Z"
-      continue
+    if [ -z "$EXST" ]; then
+      say "try create $POD in $Z"
+      if ! gcloud compute tpus tpu-vm create "$POD" --zone="$Z" \
+           --project=quantum-llm --accelerator-type=v6e-8 \
+           --version=v6e-ubuntu-2404 --spot >> "$LOGF" 2>&1; then
+        say "  no capacity in $Z"
+        continue
+      fi
+      say "CREATED in $Z — bootstrapping"
     fi
-    say "CREATED in $Z — bootstrapping"
 
     # Bootstrap gets a SECOND attempt before teardown: the first failure
     # tonight was a 600s scp timeout on flaky SSH, not a broken node, and
     # discarding a landed pod for a transient hiccup is expensive when
     # capacity is this scarce. `up` is idempotent, so a retry is safe.
+    if [ "${ADOPT_LIVE:-0}" -ne 1 ]; then
     if ! $PY tools/dispatcher.py up --name "$POD" --zone "$Z" \
          --accelerator v6e-8 --with-data >> "$LOGF" 2>&1; then
       say "  bootstrap attempt 1 failed — retrying once"
@@ -85,20 +107,20 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
     fi
     say "canary PASS — launching chain"
 
-    # ROOT CAUSE of the 08-18 wedge: `dispatcher run --detach` detaches the
-    # REMOTE job but the LOCAL process stays and polls SSH until the job
-    # exits (20-miss backoff ~45+ min on preemption). The hunter therefore
-    # blocked here for the chain's whole lifetime and NEVER reached its
-    # supervise loop — the fixed, network-safe logic was unreachable, and it
-    # double-polled the pod. Now: bound the launch call (perl alarm — no
-    # coreutils timeout on this Mac) so it returns once the remote job is
-    # detached; the supervise loop below is the ONE poller (600s cadence).
-    perl -e 'alarm shift; exec @ARGV' 600 \
-      $PY tools/dispatcher.py run --name "$POD" --zone "$Z" --detach \
-      --wall-time 30600 \
-      --cmd "R_TAG='${R_TAG:-13f}' R_D='${R_D:-48}' R_STEPS='${R_STEPS:-40000}' R0_ARMS='$ARMS' bash tools/chain_r0.sh $VH $RG $RB $RT" \
-      >> "$LOGF" 2>&1 || true
-    sleep 30
+    # LAUNCH (2026-08-18, final form after two wedges): tools/launch_detached.py
+    # syncs, launches under setsid nohup with the double-launch guard, VERIFIES
+    # the remote pid, and RETURNS — no local poller to wedge on, no wall-clock
+    # alarm to race the sync. Exit 0 = launched+verified; 7 = already running
+    # (also fine). Anything else = not launched -> teardown below.
+    if $PY tools/launch_detached.py --name "$POD" --zone "$Z" --wall-time 30600 \
+         --cmd "R_TAG='${R_TAG:-13f}' R_D='${R_D:-48}' R_STEPS='${R_STEPS:-40000}' R0_ARMS='$ARMS' bash tools/chain_r0.sh $VH $RG $RB $RT" \
+         >> "$LOGF" 2>&1; then LAUNCHED=1
+    else
+      LRC=$?; [ "$LRC" -eq 7 ] && LAUNCHED=1 || LAUNCHED=0
+    fi
+    say "launch: $([ "$LAUNCHED" -eq 1 ] && echo confirmed || echo FAILED)"
+    fi   # ADOPT_LIVE gate
+    ADOPT_LIVE=0
     # VERIFY it is really running; an unverified launch is an idle biller
     if gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm \
        --command="cd ~/qhrrn2 && kill -0 \$(cat runs/detached.pid 2>/dev/null) 2>/dev/null" \
