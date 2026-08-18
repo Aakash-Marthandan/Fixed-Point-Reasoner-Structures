@@ -85,7 +85,7 @@ while [ "$(date -u +%s)" -lt "$DEADLINE" ]; do
 
     $PY tools/dispatcher.py run --name "$POD" --zone "$Z" --detach \
       --wall-time 30600 \
-      --cmd "R0_ARMS='$ARMS' bash tools/chain_r0.sh $VH $RG $RB $RT" \
+      --cmd "R_TAG='${R_TAG:-13f}' R_D='${R_D:-48}' R_STEPS='${R_STEPS:-40000}' R0_ARMS='$ARMS' bash tools/chain_r0.sh $VH $RG $RB $RT" \
       >> "$LOGF" 2>&1
     sleep 60
     # VERIFY it is really running; an unverified launch is an idle biller
