@@ -24,9 +24,16 @@ say "watching $POD/$ZONE for '$SENT'"
 
 while [ "$(date -u +%s)" -lt "$END" ]; do
   sleep 600   # API-load trim (2026-08-18)
-  # node gone (preempted/deleted) -> nothing to watch; let the retry loop own it
-  ALIVE=$(gcloud compute tpus tpu-vm list --zone="$ZONE" --project=quantum-llm \
-          --format="value(name)" 2>/dev/null | grep -c "^${POD}$")
+  # ZONE DISCOVERY (2026-08-18): hunters roam zones, so a pinned watcher would
+  # miss a pod that lands elsewhere. $ZONE is now a space-separated CANDIDATE
+  # list; find where the pod actually is each poll (READY only).
+  ALIVE=0
+  for z in $ZONE; do
+    if gcloud compute tpus tpu-vm list --zone="$z" --project=quantum-llm \
+         --format="value(name,state)" 2>/dev/null | grep -qE "^${POD}[[:space:]]+READY$"; then
+      ALIVE=1; CURZ=$z; break
+    fi
+  done
   if [ "$ALIVE" -eq 0 ]; then
     # TOLERATE absence (fixed 2026-08-15): the first version EXITED here,
     # so both pod watchers quit during a hunter's re-create window and a
@@ -36,14 +43,14 @@ while [ "$(date -u +%s)" -lt "$END" ]; do
     say "node absent — waiting (hunter owns recovery)"
     continue
   fi
-  HIT=$(gcloud compute tpus tpu-vm ssh "$POD" --zone="$ZONE" \
+  HIT=$(gcloud compute tpus tpu-vm ssh "$POD" --zone="$CURZ" \
         --project=quantum-llm --command="grep -c '$SENT' ~/qhrrn2/runs/detached.log 2>/dev/null" \
         2>/dev/null | tr -dc '0-9' | head -c 3)
   if [ -n "$HIT" ] && [ "$HIT" -gt 0 ] 2>/dev/null; then
     say "SENTINEL SEEN — rescuing then tearing down"
-    .venv/bin/python tools/dispatcher.py run --name "$POD" --zone "$ZONE" \
+    .venv/bin/python tools/dispatcher.py run --name "$POD" --zone "$CURZ" \
       --cmd "echo rescue-pass" >> "$LOGF" 2>&1      # pulls the rescue tarball
-    .venv/bin/python tools/dispatcher.py down --name "$POD" --zone "$ZONE" \
+    .venv/bin/python tools/dispatcher.py down --name "$POD" --zone "$CURZ" \
       >> "$LOGF" 2>&1
     say "TEARDOWN DONE"
     exit 0
