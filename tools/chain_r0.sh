@@ -41,6 +41,16 @@ arm_flags () {
     A3) echo "" ;;
     A4) echo "$PRICED $FLOORS --ni-sigma 0.01" ;;
     A5) echo "$PRICED --ni-sigma 0.01" ;;          # global+NI: floors decomposition (rung 1)
+    # RUNG-1b cells (registered 2026-08-19): H-38 beta-rescale at d64 (A5-class,
+    # the knee pair scaled by 1/3 and 1/10, beta_nl keeps its 1/3 ratio);
+    # A8 = A4-class at d48 with the rung-1 budget (eta: length vs width; budget
+    # at fixed width); A9 = A4-class d48/40k ALIAS whose ckpt is supplied from
+    # rung 0 (rt-only). Per-arm --d/--steps ride AFTER $COMMON: argparse takes
+    # the last occurrence (verified 2026-08-19).
+    A6) echo "--beta-flux 1e-5 --beta-flux-nl 3.3e-6 --ni-sigma 0.01" ;;
+    A7) echo "--beta-flux 3e-6 --beta-flux-nl 1e-6 --ni-sigma 0.01" ;;
+    A8) echo "$PRICED $FLOORS --ni-sigma 0.01 --d 48 --steps 53333" ;;
+    A9) echo "$PRICED $FLOORS --ni-sigma 0.01 --d 48 --steps 40000" ;;
     *)  echo "UNKNOWN-ARM $1" >&2; return 1 ;;
   esac
 }
@@ -191,12 +201,20 @@ echo "PHASE1-OK $(date -u +%H:%M)"
 
 # ---- PHASE 2: batteries, 8-way chip-pinned waves ----
 Q=()
+# Battery selection knobs (2026-08-19, rung 1b): R0_RT_ALL=1 queues rt for EVERY
+# arm (default: s0 arms only, the rung-0/1 convention); R0_RT_ONLY="<arms>" lists
+# arms that get ONLY rt (ckpt supplied from an earlier campaign; no lad/rg/rb/
+# e1e3/mi). Defaults reproduce rung 0/1 exactly.
 for TAG in $ARMS; do
   CK="runs/pretrain${R_TAG}_$TAG/ckpt_latest.pkl"
+  case " ${R0_RT_ONLY:-} " in *" $TAG "*)
+    Q+=("rt_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RT --out runs/ladrt_p${R_TAG}$TAG")
+    continue ;;
+  esac
   Q+=("lad_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $VH --out runs/lad_p${R_TAG}$TAG")
   Q+=("rg_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RG --out runs/ladrg_p${R_TAG}$TAG")
   Q+=("rb_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RB --out runs/ladrgb_p${R_TAG}$TAG")
-  case $TAG in *s0)
+  case "${R0_RT_ALL:-0}:$TAG" in 1:*|*:*s0)
     Q+=("rt_$TAG|python3 tools/probe_ladder.py --ckpt $CK --tasks $RT --out runs/ladrt_p${R_TAG}$TAG") ;;
   esac
   case $TAG in A1s*|A2s0)

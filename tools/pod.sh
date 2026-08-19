@@ -42,7 +42,7 @@ PROJECT=quantum-llm
 LOG=${POD_LOG:-runs/pod_${POD}.log}          # overridable ONLY for the offline harness
 PIDF=${POD_PIDF:-runs/pod_supervisor.pid}
 POLL=${POLL:-300}
-CHAIN_CMD="R_TAG='$R_TAG' R_D='$R_D' R_STEPS='$R_STEPS' R0_ARMS='$ARMS' bash ${CHAIN_SCRIPT:-tools/chain_r0.sh} $VH $RG $RB $RT"
+CHAIN_CMD="${CHAIN_EXTRA_ENV:+$CHAIN_EXTRA_ENV }R_TAG='$R_TAG' R_D='$R_D' R_STEPS='$R_STEPS' R0_ARMS='$ARMS' bash ${CHAIN_SCRIPT:-tools/chain_r0.sh} $VH $RG $RB $RT"
 
 say () { echo "$(date -u +%FT%TZ) | $*" | tee -a "$LOG"; }
 notify () { [ -n "${POD_QUIET:-}" ] && return 0; /usr/bin/osascript -e "display notification \"$2\" with title \"QHRRN pod: $1\"" 2>/dev/null || true; }

@@ -76,12 +76,14 @@ Never run two supervisors. Never edit `ARMS` order mid-campaign.
 
 ## 7. Completion
 
-The loop tears the node down itself. Then: `gsutil cp gs://qhrrn2-rescue/rr1/r0_final.tgz .`
-→ extract into `runs/` → `.venv/bin/python tools/inspect_ckpt.py runs/pretrainr1_*`
+The loop tears the node down itself. Then (bucket/tag from `tools/campaign.env`):
+`gcloud storage cp $GCS/r0_final.tgz .` (never `gsutil -m`) → extract into `runs/` →
+`.venv/bin/python tools/inspect_ckpt.py runs/pretrain${R_TAG}_*`
 (every arm admitted at artifact level: d/T/steps/flags) → verify zero TPUs +
-zero queued-resources in all zones → `.venv/bin/python tools/analyze_r1.py`
-(R1-1..R1-6 as registered 2026-08-15; written pre-data, `--selftest` 14/14;
-admits only artifact-verified cells). Do NOT tune.
+zero queued-resources in all zones → the campaign's pre-registered analyzer
+(`tools/analyze_<tag>.py`, written before the data, with `--selftest`; admits only
+artifact-verified cells) — in the ANALYSIS phase, never the ops phase. Do NOT tune.
+The per-campaign handoff (`tools/HANDOFF.md`) carries the exact commands.
 
 ## 8. Spend
 
