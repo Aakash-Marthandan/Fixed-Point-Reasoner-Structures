@@ -118,7 +118,11 @@ run_waves () {
   # verified) that would hold the detached job open past CHAIN-R0-COMPLETE.
   # pkill -P is portable (procps, present on the pod image); setsid is not
   # guaranteed there.
-  trap 'pkill -P "$STAGER" 2>/dev/null; kill "$STAGER" 2>/dev/null || true' RETURN
+  # `|| true` on pkill -P too (2026-08-19): pkill returns 1 when the stager has
+  # no child at that instant (after the first kill, or between its sleep and
+  # tar) — under set -e that aborted the chain right after the LAST wave,
+  # before PHASE2-OK/rescue/sentinel (rung 1 hit it 2/2; rung 0 got lucky).
+  trap 'pkill -P "$STAGER" 2>/dev/null || true; kill "$STAGER" 2>/dev/null || true' RETURN
   while [ $i -lt ${#QUEUE[@]} ]; do
     pids=()
     for c in $(seq 0 $(( ${NCHIPS:-8} - 1 ))); do
@@ -136,7 +140,7 @@ run_waves () {
     echo "wave done rc=$rc $(date -u +%H:%M)"
     stage_partials
   done
-  pkill -P "$STAGER" 2>/dev/null; kill "$STAGER" 2>/dev/null || true
+  pkill -P "$STAGER" 2>/dev/null || true; kill "$STAGER" 2>/dev/null || true
 }
 
 # resume: restore staged partial batteries so probes skip completed tasks.
