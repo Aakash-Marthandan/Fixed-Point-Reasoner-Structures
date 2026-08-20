@@ -51,6 +51,15 @@ arm_flags () {
     A7) echo "--beta-flux 3e-6 --beta-flux-nl 1e-6 --ni-sigma 0.01" ;;
     A8) echo "$PRICED $FLOORS --ni-sigma 0.01 --d 48 --steps 53333" ;;
     A9) echo "$PRICED $FLOORS --ni-sigma 0.01 --d 48 --steps 40000" ;;
+    # RUNG-1c cells (registered 2026-08-20): the WIDTH x BUDGET completion.
+    #   A10 = A4-class d64@40,000 (the missing A4 2x2 corner)
+    #   A11 = A5-class d48@40,000 (new-substrate anchor; d96 baseline row)
+    #   A12 = A5-class d64@40,000 (d96 baseline row; A5 width axis at fixed budget)
+    #   A13 = A5-class d48@53,333 at beta 6e-5/2e-5 (the re-pricing rescue, H-41)
+    A10) echo "$PRICED $FLOORS --ni-sigma 0.01 --steps 40000" ;;
+    A11) echo "$PRICED --ni-sigma 0.01 --d 48 --steps 40000" ;;
+    A12) echo "$PRICED --ni-sigma 0.01 --steps 40000" ;;
+    A13) echo "--beta-flux 6e-5 --beta-flux-nl 2e-5 --ni-sigma 0.01 --d 48" ;;
     *)  echo "UNKNOWN-ARM $1" >&2; return 1 ;;
   esac
 }
@@ -220,9 +229,17 @@ for TAG in $ARMS; do
   case $TAG in A1s*|A2s0)
     Q+=("mi_$TAG|python3 tools/probe_sample.py --ckpt $CK --tasks $VH --out runs/samp_p${R_TAG}${TAG}_mi --k 16 --temps 0.0 --init random") ;;
   esac
-  case $TAG in A1s*|A4s*)
-    Q+=("e13_$TAG|python3 tools/probe_e1e3.py --ckpt $CK --tasks $VH --out runs/e1e3_p${R_TAG}$TAG") ;;
-  esac
+  # e1e3 selection (2026-08-20): R0_E13 lists arms that get e1e3 explicitly;
+  # unset = the legacy pattern (A1s*/A4s*, rungs 0-1 exactly).
+  if [ -n "${R0_E13:-}" ]; then
+    case " ${R0_E13} " in *" $TAG "*)
+      Q+=("e13_$TAG|python3 tools/probe_e1e3.py --ckpt $CK --tasks $VH --out runs/e1e3_p${R_TAG}$TAG") ;;
+    esac
+  else
+    case $TAG in A1s*|A4s*)
+      Q+=("e13_$TAG|python3 tools/probe_e1e3.py --ckpt $CK --tasks $VH --out runs/e1e3_p${R_TAG}$TAG") ;;
+    esac
+  fi
 done
 echo "PHASE2: ${#Q[@]} battery jobs"
 run_waves "${Q[@]}"

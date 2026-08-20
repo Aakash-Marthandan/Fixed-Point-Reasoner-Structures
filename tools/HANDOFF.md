@@ -4,58 +4,26 @@
 memory. The ops model runs the campaign to completion and STOPS; the analysis
 phase is reserved for the PI's next model switch.
 
-## COMPLETE 2026-08-20 07:11Z (12:41 IST) — rung-1b CHAIN-R0-COMPLETE; ops closed
+## CURRENT CAMPAIGN — RUNG 1c (launched 2026-08-20; the WIDTH×BUDGET completion, the LAST rung-1 side quest before d96)
 
-Fleet ZERO (all zones); all 33 battery files 48/48 + 12 ckpts in `gs://qhrrn2-rescue/rr1b/` and local `runs/`; one ops-close ledger line committed. NEXT = ANALYSIS phase (Fable switch): `tools/analyze_r1b.py` untouched → verdict → rung-2 registration. This CURRENT-CAMPAIGN block is now historical; the next campaign rewrites it.
+**What it is (ledger: 2026-08-20 RUNG-1c LAUNCH REGISTRATION):** completes the A4-class
+2×2 (H-40: budget vs width), builds the A5-class 40k anchors (the d96 baseline row), and
+tests the β-rescue (H-41). Tag `r1c`, GCS `gs://qhrrn2-rescue/rr1c/`, one spot v6e-8 pod.
 
-## RESUMED 2026-08-20 05:22Z (10:52 IST) — day 2; was PAUSED at night close 2026-08-19 19:10Z
+**Arms in order (decisive corners FIRST, banked early against churn):**
+A10s0 A8s1 A10s1 A8s2 (the 2×2: d64@40k ×2, d48@53k ×2, all A4-class) →
+A11s0 A12s0 A11s1 A12s1 (A5-class 40k anchors d48/d64) → A13s0 A13s1 (d48@53k β=6e-5).
+10 pretrains (@40k ≈ 29 min, @53k ≈ 38 min at ~23 it/s ⇒ ~5.4 h) → `PHASE1-OK` →
+`PHASE2: 44 battery jobs` (lad/rg/rb/rt ×10 + e1e3 on A8s1 A8s2 A10s0 A10s1) in 6 waves
+(~2.5 h) → `RESCUE-OK` → `CHAIN-R0-COMPLETE` → the loop tears down. ≈ 8 h ≈ $55 absent churn.
 
-Fleet ZERO verified (nodes + QRs, all 8 door zones); supervisor stopped; cron + Monitor
-stopped; launchd watchdog left running (billing backstop; no node = nothing for it to do).
-Rung-1b is PAUSED mid-PHASE2, NOT complete.
-
-**State (all banked in `gs://qhrrn2-rescue/rr1b/`):** all 7 pretrains done + 5 supplied
-ckpts (12 `*_ckpt.pkl`); battery `partial_A6s0.tgz` = 16/33 files complete (48 rows:
-lad/rg/rb/rt for A5s1, A6s0, A6s1, A7s0) + 8 partial. Remaining ≈ 17 battery files
-(< 1h on a stable pod). NO pretrain is at risk.
-
-**Why paused:** heavy us-east1-d spot churn this afternoon/evening (5+ preemptions,
-several mid-bring-up) then a US-wide v6e-8 capacity gap (all 4 zones dry from ~18:16Z).
-Battery progress stuck at 16/33 for ~3h because windows were 5–20 min. Not a config
-problem — spot weather. One manual bank+delete+recreate was done at the PI's request
-(~17:30Z); the recreate also churned.
-
-**RESUME (done 05:22Z day 2; supervisor pid in runs/pod_supervisor.pid, hunting; deadline 21:21Z; Monitor+cron armed). The commands, for reference / any re-restart:**
-```bash
-cd /Users/aakash/Projects/HRRN
-bash tools/pod.sh status                                        # expect node ABSENT, supervisor NOT RUNNING
-echo $(( $(date -u +%s) + 16*3600 )) > runs/tpu_deadline.txt    # the 01:18Z deadline is stale — extend FIRST
-nohup bash tools/pod.sh supervise 16 >/dev/null 2>&1 &          # hunts → up → canary → launch; chain SKIPs all 12 arms, restores the partial, re-runs only the ~17 unfinished battery files
-tail -f runs/pod_qhrrn2-pod2.log
-```
-Then re-arm the hourly heartbeat cron + Monitor (§2, prompts verbatim). If the morning
-spot market is healthier this should complete in one short window. Everything else in
-this handoff (decision table, completion §6, never-list) is unchanged. Ops phase only —
-NO analysis (tools/analyze_r1b.py is reserved for the PI's next Fable switch).
-
-## CURRENT CAMPAIGN — RUNG 1b (launched 2026-08-19 09:18Z / 14:48 IST)
-
-**What it is (ledger: 2026-08-19 RUNG-1b LAUNCH REGISTRATION):** the cells the
-rung-1 verdict owes before rung 2 / d96 — H-38 β-rescale at d64 (A6 β=1e-5, A7
-β=3e-6, A5-class, seeds 0/1), H-39 A5 seeds (A5s1, A5s2), A8 = A4-class d48@53,333
-(η/budget), and rt-48 on every arm including rt-ONLY for ckpts supplied in GCS
-(A4s1 A4s2 A3s1 from rung 1; A9s1 A9s2 = rung-0 d48 A4 aliases). Tag `r1b`,
-GCS `gs://qhrrn2-rescue/rr1b/`, one spot v6e-8 pod `qhrrn2-pod2`.
-
-**Expected shape:** 7 pretrains (≈38 min each at ~23 it/s: A6s0 A7s0 A5s1 A6s1
-A7s1 A5s2 A8s0) → `PHASE1-OK` → `PHASE2: 33 battery jobs` → 5 × `wave done rc=0`
-(≈25 min each; the 5th wave has one job) → `RESCUE-OK` → `CHAIN-R0-COMPLETE` →
-the loop tears down. ≈6.3 pod-h ≈ $43 absent preemption. Deadline 01:18Z Aug 20
-(16 h margin). The five rt-only arms print `SKIP-<arm> (completed in an earlier
-life; final ckpt restored)` — that is correct, their ckpts were staged on purpose.
-
-**Right now:** supervisor pid in `runs/pod_supervisor.pid`, hunting from 09:18Z
-(first CREATE in us-east1-d). Monitor + hourly cron (:17) armed in this session.
+**Known-good signatures:** every arm trains fresh (no SKIPs expected this campaign unless
+resuming after a preemption — then SKIP/RESUME lines are the durability stack working).
+Everything else in this handoff (§1-§6: first commands, re-arm prompts, log signatures,
+decision table, never-list, completion procedure) applies unchanged with tag r1c — in §6
+substitute `rr1c` for the bucket and `pretrainr1c_*`/`*_pr1c*` for the dirs (expect 10
+ckpts + 44 battery files: 40 @48 rows + 4 e1e3). Analysis = `tools/analyze_r1c.py`,
+reserved for the PI's Fable switch.
 
 ## 1. First three commands (any time, and after any app restart)
 
