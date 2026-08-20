@@ -4,6 +4,40 @@
 memory. The ops model runs the campaign to completion and STOPS; the analysis
 phase is reserved for the PI's next model switch.
 
+## COMPLETE 2026-08-20 07:11Z (12:41 IST) — rung-1b CHAIN-R0-COMPLETE; ops closed
+
+Fleet ZERO (all zones); all 33 battery files 48/48 + 12 ckpts in `gs://qhrrn2-rescue/rr1b/` and local `runs/`; one ops-close ledger line committed. NEXT = ANALYSIS phase (Fable switch): `tools/analyze_r1b.py` untouched → verdict → rung-2 registration. This CURRENT-CAMPAIGN block is now historical; the next campaign rewrites it.
+
+## RESUMED 2026-08-20 05:22Z (10:52 IST) — day 2; was PAUSED at night close 2026-08-19 19:10Z
+
+Fleet ZERO verified (nodes + QRs, all 8 door zones); supervisor stopped; cron + Monitor
+stopped; launchd watchdog left running (billing backstop; no node = nothing for it to do).
+Rung-1b is PAUSED mid-PHASE2, NOT complete.
+
+**State (all banked in `gs://qhrrn2-rescue/rr1b/`):** all 7 pretrains done + 5 supplied
+ckpts (12 `*_ckpt.pkl`); battery `partial_A6s0.tgz` = 16/33 files complete (48 rows:
+lad/rg/rb/rt for A5s1, A6s0, A6s1, A7s0) + 8 partial. Remaining ≈ 17 battery files
+(< 1h on a stable pod). NO pretrain is at risk.
+
+**Why paused:** heavy us-east1-d spot churn this afternoon/evening (5+ preemptions,
+several mid-bring-up) then a US-wide v6e-8 capacity gap (all 4 zones dry from ~18:16Z).
+Battery progress stuck at 16/33 for ~3h because windows were 5–20 min. Not a config
+problem — spot weather. One manual bank+delete+recreate was done at the PI's request
+(~17:30Z); the recreate also churned.
+
+**RESUME (done 05:22Z day 2; supervisor pid in runs/pod_supervisor.pid, hunting; deadline 21:21Z; Monitor+cron armed). The commands, for reference / any re-restart:**
+```bash
+cd /Users/aakash/Projects/HRRN
+bash tools/pod.sh status                                        # expect node ABSENT, supervisor NOT RUNNING
+echo $(( $(date -u +%s) + 16*3600 )) > runs/tpu_deadline.txt    # the 01:18Z deadline is stale — extend FIRST
+nohup bash tools/pod.sh supervise 16 >/dev/null 2>&1 &          # hunts → up → canary → launch; chain SKIPs all 12 arms, restores the partial, re-runs only the ~17 unfinished battery files
+tail -f runs/pod_qhrrn2-pod2.log
+```
+Then re-arm the hourly heartbeat cron + Monitor (§2, prompts verbatim). If the morning
+spot market is healthier this should complete in one short window. Everything else in
+this handoff (decision table, completion §6, never-list) is unchanged. Ops phase only —
+NO analysis (tools/analyze_r1b.py is reserved for the PI's next Fable switch).
+
 ## CURRENT CAMPAIGN — RUNG 1b (launched 2026-08-19 09:18Z / 14:48 IST)
 
 **What it is (ledger: 2026-08-19 RUNG-1b LAUNCH REGISTRATION):** the cells the
