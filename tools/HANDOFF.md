@@ -4,6 +4,38 @@
 memory. The ops model runs the campaign to completion and STOPS; the analysis
 phase is reserved for the PI's next model switch.
 
+## PAUSED — bad TPU weather 2026-08-20 17:40Z (23:10 IST) — PI: "continue later"
+
+Fleet ZERO verified (nodes + QRs, all 8 door zones); supervisor stopped; cron + all three
+monitors stopped; launchd watchdog left running (billing backstop; no node = nothing to do).
+Rung-1c PAUSED at 8/10 pretrains, NOT complete.
+
+**State (banked in `gs://qhrrn2-rescue/rr1c/`):** 8 complete ckpts — all 4 H-40 corners
+(A10s0/A10s1 d64@40k, A8s1/A8s2 d48@53k) AND all 4 A5-class d96 anchors (A11s0/A12s0/
+A11s1/A12s1). **The two decisive datasets (width×budget 2×2 + d96 baseline) are safe.**
+Remaining: A13s0/A13s1 (the β-rescue pair, H-41) + the 44-job battery phase.
+
+**Why paused:** severe us-east1-d evening spot churn (~5 preemptions in ~2 h, several
+mid-bring-up) + intermittent dry spells — the classic evening pattern (yesterday it cleared
+by morning). Not a config problem. Deadline was extended to 09:01Z before pausing.
+
+**RESUME (morning or when spot weather improves; ARMS order still load-bearing):**
+```bash
+cd /Users/aakash/Projects/HRRN
+bash tools/pod.sh status                                        # expect node ABSENT, supervisor NOT RUNNING
+echo $(( $(date -u +%s) + 16*3600 )) > runs/tpu_deadline.txt    # refresh the deadline
+nohup bash tools/pod.sh supervise 16 >/dev/null 2>&1 &          # SKIPs 8 arms, resumes A13s0 from live ckpt, then A13s1 + batteries
+tail -f runs/pod_qhrrn2-pod2.log
+```
+Then re-arm the hourly heartbeat cron + all three monitors (§2 verbatim — edge, watchdog-
+inventory, and `tools/unstick_watch.sh`). Only ~2 pretrains + batteries remain (<3 h on a
+stable pod). Everything else in this handoff is unchanged; ops-only, NO analysis
+(tools/analyze_r1c.py reserved for the PI's Fable switch).
+
+## COMPLETE 2026-08-21 08:29Z (13:59 IST) — rung-1c CHAIN-R0-COMPLETE; ops closed
+
+Fleet ZERO; all 44 battery files 48/48 + 10 ckpts in `gs://qhrrn2-rescue/rr1c/` and local `runs/`; one ops-close ledger line committed. Finished in the first stable window after a ~9h overnight spot drought (covered by hourly resume timers; durability held everything). NEXT = ANALYSIS (fresh session): `tools/analyze_r1c.py` untouched → H-40/H-41 verdict + d96 anchors → d96 registration. This block is historical.
+
 ## CURRENT CAMPAIGN — RUNG 1c (launched 2026-08-20; the WIDTH×BUDGET completion, the LAST rung-1 side quest before d96)
 
 **What it is (ledger: 2026-08-20 RUNG-1c LAUNCH REGISTRATION):** completes the A4-class
@@ -16,6 +48,18 @@ A11s0 A12s0 A11s1 A12s1 (A5-class 40k anchors d48/d64) → A13s0 A13s1 (d48@53k 
 10 pretrains (@40k ≈ 29 min, @53k ≈ 38 min at ~23 it/s ⇒ ~5.4 h) → `PHASE1-OK` →
 `PHASE2: 44 battery jobs` (lad/rg/rb/rt ×10 + e1e3 on A8s1 A8s2 A10s0 A10s1) in 6 waves
 (~2.5 h) → `RESCUE-OK` → `CHAIN-R0-COMPLETE` → the loop tears down. ≈ 8 h ≈ $55 absent churn.
+
+**Right now (07:55Z):** node CREATED in us-east1-d 07:47Z, bring-up in progress;
+supervisor pid in `runs/pod_supervisor.pid`; deadline 01:43Z 21-Aug. THREE session
+watches armed (survive model switches, NOT app restarts — re-arm per §2 below):
+edge monitor, watchdog-inventory monitor, and the NEW self-healing stall watch
+(`tools/unstick_watch.sh` under a Monitor: when a bring-up step hangs past its
+normal duration on a POSITIVELY dead node, it kills the hung child so the loop
+fails fast and re-hunts — the 08-19/08-20 silent-stall incidents cannot recur;
+it emits an event only when it acts). ETA absent churn: PHASE1-OK ≈ 13:25Z,
+COMPLETE + auto-teardown ≈ 15:45Z (21:15 IST); with yesterday's evening churn
+pattern budget up to ~23:00 IST. Heartbeat cron at :23 carries a manual
+unstick instruction as the backstop of the backstop.
 
 **Known-good signatures:** every arm trains fresh (no SKIPs expected this campaign unless
 resuming after a preemption — then SKIP/RESUME lines are the durability stack working).
@@ -50,6 +94,21 @@ without creating.
 cd /Users/aakash/Projects/HRRN && tail -n0 -F runs/pod_qhrrn2-pod2.log | grep --line-buffered -E '^2026' | awk -F'\|' '/CREATED in|canary FAILED|DOWN |COMPLETE|CHAIN-R0|NEEDS|died|sick|SSHFAIL|unreachable|all zones dry|EXIT|relaunch|not READY/{print;fflush();next} NF>=4{if($4!=last){print;fflush();last=$4}}'
 ```
 It emits one line per state/phase change (steady 5-min polls are deduplicated).
+
+**Watchdog-inventory monitor** — `Monitor` (persistent), command verbatim:
+```
+tail -n0 -F runs/tpu_status_log.txt | grep --line-buffered -vE 'PROBE-FAIL' | awk '{cur=$0; sub(/^[^|]*\| /,"",cur); if (cur!=last) {print; fflush(); last=cur}}'
+```
+Independent channel: fires on real fleet changes even while the supervisor is blocked mid-call.
+
+**Self-healing stall watch** — `Monitor` (persistent), command verbatim:
+```
+cd /Users/aakash/Projects/HRRN && bash tools/unstick_watch.sh
+```
+Auto-unsticks a bring-up hung on a positively dead node (kills the hung CHILD only,
+never the supervisor; never acts on READY/CREATING/unknown). An `UNSTUCK:` event =
+it worked and the loop is re-hunting — no action needed. `SUPERVISOR DEAD` event =
+restart per §1.
 
 ## 3. Normal log signatures (runs/pod_qhrrn2-pod2.log)
 
