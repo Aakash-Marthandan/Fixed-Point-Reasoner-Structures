@@ -32,3 +32,4 @@ Documentation/private/
 # Professor review-log PDFs (measurement note + update logs); local only
 Documentation/Review logs/
 data/re_arc
+data/sudoku_extreme/

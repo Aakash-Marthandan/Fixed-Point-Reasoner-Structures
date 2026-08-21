@@ -47,6 +47,7 @@ from probe_ladder import LADDER_EPS, corrupt, rung_rng, retained, trace_flux
 from qhrrn2 import episodic as E
 from qhrrn2 import grid as G
 from qhrrn2 import sudoku as SU
+from qhrrn2 import sudoku_extreme as SX
 from qhrrn2.config import Config
 
 
@@ -96,6 +97,15 @@ def main():
     ap.add_argument("--stab-steps", type=int, default=8)
     ap.add_argument("--k-init", type=int, default=16, help="multi-init draws")
     ap.add_argument("--seed", type=int, default=0)
+    # SPRINT S2 (2026-08-21): benchmark puzzles + inference depth
+    ap.add_argument("--t-total", type=int, default=None,
+                    help="inference depth for the SOLVE step (default cfg.T)")
+    ap.add_argument("--pairs-file", default=None,
+                    help="prepared Sudoku-Extreme npz (overrides the generator)")
+    ap.add_argument("--split", default="test", choices=["test", "val", "train"])
+    ap.add_argument("--stratified", type=int, default=None,
+                    help="rating-stratified subsample size from --pairs-file")
+    ap.add_argument("--strat-seed", type=int, default=20260821)
     a = ap.parse_args()
 
     saved = E.load_ckpt(a.ckpt)
@@ -117,7 +127,15 @@ def main():
             except Exception:
                 pass
 
-    if a.givens_list:
+    if a.pairs_file:
+        d = SX.load_prepared(a.pairs_file)
+        Q, A, R = d[f"{a.split}_q"], d[f"{a.split}_a"], d[f"{a.split}_rating"]
+        sel = (SX.stratified_subsample(R, a.stratified, a.strat_seed)
+               if a.stratified else np.arange(min(a.n, len(Q))))
+        # tid carries the row index; 'level' carries the tdoku rating
+        work = [(f"x{int(i):06d}", int(R[i]), Q[i].astype(np.int8), A[i].astype(np.int8))
+                for i in sel]
+    elif a.givens_list:
         levels = [int(g) for g in a.givens_list.split(",")]
         ladder = SU.sample_ladder(a.n, a.eval_seed, levels)
         # flatten to (tid, givens_level, puz, sol); tid carries the level so
@@ -141,7 +159,7 @@ def main():
             # S-R4's cross-domain H-34 test needs I_s on a NON-generative
             # domain, and P.trace records only pred/hw/H_q.
             tr = trace_flux(model, cfg, puz, tau=1.0, task_vec=tvj,
-                            t_total=cfg.T)
+                            t_total=(a.t_total or cfg.T))
             pred = tr[-1]["pred"]
             solved = bool(pred.shape == sol.shape and np.array_equal(pred, sol))
             kept, ntot = givens_kept(pred, puz)

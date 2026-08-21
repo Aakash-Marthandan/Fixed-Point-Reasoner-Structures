@@ -35,6 +35,7 @@ import optax
 
 import dev30
 from qhrrn2 import episodic as E
+from qhrrn2 import sudoku_extreme as SX
 from qhrrn2 import train as T
 from qhrrn2.config import Config
 from qhrrn2.model import count_params, init_params
@@ -98,6 +99,19 @@ def parse_args():
                    help="if set, givens ~ U[givens, givens_hi] per puzzle "
                         "(mixed-difficulty training; see the cell-1 design "
                         "review — a single hard setting can VOID H-33)")
+    p.add_argument("--sudoku-extreme", default=None,
+                   help="SPRINT S2: prepared Sudoku-Extreme npz "
+                        "(tools/prep_sudoku_extreme.py) — train on its seeded "
+                        "1k subsample x --sudoku-aug group-augmented copies "
+                        "(one task row); val = its disjoint monitor rows")
+    p.add_argument("--sudoku-aug", type=int, default=100,
+                   help="group-augmented copies per base puzzle (HRM: 1000)")
+    p.add_argument("--sudoku-digit-aug", action="store_true",
+                   help="ablation: explicit digit permutation too (exact S9 "
+                        "covers it by construction; prediction = no change)")
+    p.add_argument("--init-from", default=None,
+                   help="warm-start params+table from this ckpt at step 0 with "
+                        "a fresh optimizer (the GEN arm's 1k finetune)")
     p.add_argument("--d-task", type=int, default=32,
                    help="boundary program width (H-17 co-scaling)")
     p.add_argument("--orbit", type=int, default=1,
@@ -196,7 +210,18 @@ def main():
             sys.exit("--conceptarc: data/ConceptARC not vendored on this host")
         vh_path = Path(__file__).resolve().parent / "valhard.json"
         exclude_ca = frozenset(json.load(open(vh_path))["valhard"])
-    if a.sudoku:
+    if a.sudoku_extreme:
+        # SPRINT S2 (2026-08-21): the BENCHMARK corpus — seeded 1k Sudoku-
+        # Extreme puzzles x group-augmented copies, one task row; val = the
+        # file's disjoint monitor rows (never the test set).
+        corpus, val = SX.build_corpus_extreme(
+            a.sudoku_extreme, n_aug=a.sudoku_aug, seed=a.seed,
+            digit_aug=a.sudoku_digit_aug)
+        print(f"SPRINT-S2 corpus: Sudoku-Extreme {a.sudoku_extreme} x "
+              f"(1+{a.sudoku_aug}) group copies (digit_aug={a.sudoku_digit_aug}) "
+              f"= {corpus.x.shape[0]} pairs, one task row; val = monitor rows",
+              flush=True)
+    elif a.sudoku:
         # S-PORT (H-33): the single-attractor domain. ONE task row, generated
         # instances, no ARC corpus involved — the contamination laws below
         # are vacuous here and deliberately skipped.
@@ -240,6 +265,16 @@ def main():
         state, opt_state = saved["state"], saved["opt_state"]
         start_step, rng = int(saved["step"]), jnp.asarray(saved["rng"])
         print(f"RESUMED from {latest} at step {start_step}", flush=True)
+    elif a.init_from:
+        saved = E.load_ckpt(a.init_from)
+        src = saved["state"]
+        assert jax.tree.structure(src["model"]) == jax.tree.structure(state["model"]), \
+            "--init-from: model tree mismatch (config differs)"
+        state = dict(state, model=src["model"])
+        if np.asarray(src["table"]).shape == np.asarray(state["table"]).shape:
+            state["table"] = src["table"]
+        opt_state = opt.init(state)
+        print(f"INIT-FROM {a.init_from} (step 0, fresh optimizer)", flush=True)
 
     config_rec = {
         "argv": vars(a), "config": dataclasses.asdict(cfg), "git": git_rev(),

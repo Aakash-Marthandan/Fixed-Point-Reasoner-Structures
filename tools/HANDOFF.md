@@ -4,6 +4,26 @@
 memory. The ops model runs the campaign to completion and STOPS; the analysis
 phase is reserved for the PI's next model switch.
 
+## CURRENT CAMPAIGN — SPRINT S2 (Sudoku-Extreme wave 1; launched 2026-08-21; ledger 'SPRINT S2 LAUNCH REGISTRATION')
+
+**What it is:** the series HRM→TRM→EqR→FPRM as an ablation ladder on our substrate on the
+real Sudoku-Extreme benchmark (1k seeded train / FULL 423k test, exact accuracy). Tag `sport2`,
+GCS `gs://qhrrn2-rescue/sport2/`, ONE spot v6e-8 pod, `tools/campaign.env` = `campaign_sport2.env`.
+Arms S0 S1 S2 S3 S4 S5 S6 S7 (d16, 20k steps; S3/S7 T12, S4 T24), all 8 in ONE chip-pinned wave.
+Chain `tools/chain_sport2.sh`: PHASE1 pretrain wave (~0.5–2 h; S4 is the long pole) → `PHASE1-OK` →
+PHASE2 evals per arm on its own chip (stratified-512 @ t 6/64/256 k=16 + FULL test @ t 6/64;
+~1–1.5 h) → `PHASE2-OK` → PHASE3 probes (~0.5 h) → `PHASE3-OK` → `RESCUE-OK` → `CHAIN-SPORT2-COMPLETE`
+→ the loop tears down. ≈ 3–4 h ≈ $25–45 absent churn.
+
+**Signatures:** `=== PRETRAIN S3 hh:mm === chip 3 flags: ...`, `PRETRAIN-S0-OK`, `SKIP-S0 (GCS complete)`,
+`RESUME-S4 from live ckpt`, `RESTORE-S2 evals from GCS`, `EVAL-S1-OK`, `PROBE-S5-OK`.
+`PRETRAIN-Sx-FAILED rc=` / `PROBE-Sx-FAILED` = one arm failed; the chain CONTINUES (others unaffected).
+After the loop's `down rc=0`: §6 with `sport2` substituted — pull `gs://qhrrn2-rescue/sport2/sport2_final.tgz`
+(expect `pretrainsport2_*` ×8 with metrics.jsonl, `sxeval_psport2*` ×8 (summary_all.json per depth),
+`sudprobe_psport2*` ×8 at 512 rows), print-only inspection, ONE ops ledger line, ONE commit,
+NO analysis (`tools/analyze_sport2.py` is reserved for the analysis pass). Then wave 2 / d96 / convert
+per the launch entry. Everything in §1–§5 applies unchanged with tag sport2.
+
 ## PAUSED — bad TPU weather 2026-08-20 17:40Z (23:10 IST) — PI: "continue later"
 
 Fleet ZERO verified (nodes + QRs, all 8 door zones); supervisor stopped; cron + all three
@@ -36,7 +56,7 @@ stable pod). Everything else in this handoff is unchanged; ops-only, NO analysis
 
 Fleet ZERO; all 44 battery files 48/48 + 10 ckpts in `gs://qhrrn2-rescue/rr1c/` and local `runs/`; one ops-close ledger line committed. Finished in the first stable window after a ~9h overnight spot drought (covered by hourly resume timers; durability held everything). NEXT = ANALYSIS (fresh session): `tools/analyze_r1c.py` untouched → H-40/H-41 verdict + d96 anchors → d96 registration. This block is historical.
 
-## CURRENT CAMPAIGN — RUNG 1c (launched 2026-08-20; the WIDTH×BUDGET completion, the LAST rung-1 side quest before d96)
+## HISTORICAL — RUNG 1c (launched 2026-08-20; COMPLETE; the WIDTH×BUDGET completion, the LAST rung-1 side quest before d96)
 
 **What it is (ledger: 2026-08-20 RUNG-1c LAUNCH REGISTRATION):** completes the A4-class
 2×2 (H-40: budget vs width), builds the A5-class 40k anchors (the d96 baseline row), and
