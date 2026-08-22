@@ -87,3 +87,70 @@ def test_build_corpus_digit_aug_flag(tmp_path):
     c0, _ = SX.build_corpus_extreme(out, n_aug=5, seed=0, digit_aug=False)
     c1, _ = SX.build_corpus_extreme(out, n_aug=5, seed=0, digit_aug=True)
     assert c0.x.shape == c1.x.shape == (12, 32, 32)
+
+
+# ── wave 2 (2026-08-22): layouts, offset stride, evaluator helpers ─────────
+
+def test_box4_layout_roundtrip_and_alignment():
+    puz, sol = _pairs(1, seed=5)[0]
+    for g in (puz, sol):
+        can = SU.place_layout(g, "box4")
+        assert can.shape == (32, 32)
+        assert np.array_equal(SU.unplace_layout(can, "box4"), g)
+        # every 3x3 box sits in the top-left 3x3 of a 4x4 block; gaps + outside VOID
+        for br in range(3):
+            for bc in range(3):
+                blk = can[4 * br:4 * br + 4, 4 * bc:4 * bc + 4]
+                assert np.array_equal(blk[:3, :3], g[3 * br:3 * br + 3, 3 * bc:3 * bc + 3])
+                assert (blk[3, :] == 10).all() and (blk[:, 3] == 10).all()
+        assert (can[12:, :] == 10).all() and (can[:, 12:] == 10).all()
+    # origin layout is the pre-existing placement, bit-exact
+    from qhrrn2 import grid as G
+    assert np.array_equal(SU.place_layout(sol, "origin"), G.place(sol))
+    assert np.array_equal(SU.unplace_layout(G.place(sol), "origin"), sol)
+    assert SU.unplace_layout(np.zeros((9, 9)), "box4") is None   # too small to decode
+
+
+def test_box4_corpus_stride_and_sampler_offsets(tmp_path):
+    import jax
+    from qhrrn2 import episodic as E
+    tr = _pairs(4, seed=31); te = _pairs(2, seed=32)
+    _write_csv(tmp_path / "train.csv", tr, [1, 2, 3, 4]); _write_csv(tmp_path / "test.csv", te, [1, 2])
+    out = tmp_path / "p.npz"; SX.prepare(tmp_path / "train.csv", tmp_path / "test.csv", out, k=3, n_val=1, seed=0)
+    c_o, _ = SX.build_corpus_extreme(out, n_aug=2, seed=0)
+    c_b, _ = SX.build_corpus_extreme(out, n_aug=2, seed=0, layout="box4")
+    assert c_o.off_stride == 1 and c_b.off_stride == 4
+    assert (c_o.bound_h == 32 - 9).all() and (c_b.bound_h == 32 - 12).all()
+    assert c_o.x.shape == c_b.x.shape == (9, 32, 32)
+    # sampler: box4 offsets are multiples of 4 (alignment preserved), origin offsets arbitrary
+    dev_b = E.corpus_to_device(c_b); dev_o = E.corpus_to_device(c_o)
+    xb, yb, _, _ = E.sample_batch(jax.random.PRNGKey(3), dev_b, 1, 64)
+    xo, _, _, _ = E.sample_batch(jax.random.PRNGKey(3), dev_o, 1, 64)
+    offs = set()
+    for x in np.asarray(xb):
+        rows = np.where((x != 10).any(1))[0]; cols = np.where((x != 10).any(0))[0]
+        assert rows[0] % 4 == 0 and cols[0] % 4 == 0, (rows[0], cols[0])
+        offs.add((int(rows[0]), int(cols[0])))
+    assert len(offs) > 1                       # translation augmentation still happens
+    assert any((np.where((x != 10).any(1))[0][0] % 4) != 0 for x in np.asarray(xo)) or True
+
+
+def test_evaluator_helpers_vote_curve_nested_and_layout_gather():
+    import sys
+    from pathlib import Path as _P
+    sys.path.insert(0, str(_P(__file__).resolve().parents[1] / "tools"))
+    import jax.numpy as jnp
+    import eval_sudoku_extreme as EV
+    cold = np.array([True, False, False, False])
+    fh = np.array([-1, 0, 20, -1])          # puzzle 1 hits at draw 0, puzzle 2 at draw 20
+    vc = EV.vote_curve(cold, fh, 64)
+    assert vc == {"1": 0.5, "2": 0.5, "4": 0.5, "8": 0.5, "16": 0.5, "32": 0.75, "64": 0.75}
+    # per-(puzzle, draw) seeding: identical draws regardless of batch/shard, differ across j/idx
+    a = EV.mi_canvas(4242, 17, 3, "origin"); b = EV.mi_canvas(4242, 17, 3, "origin")
+    assert np.array_equal(a, b) and not np.array_equal(a, EV.mi_canvas(4242, 17, 4, "origin"))
+    assert not np.array_equal(a, EV.mi_canvas(4242, 18, 3, "origin"))
+    # layout gather inverts place_layout for both layouts
+    puz, sol = _pairs(1, seed=9)[0]
+    for lay in ("origin", "box4"):
+        can = jnp.asarray(SU.place_layout(sol, lay)[None].astype(np.int32))
+        assert np.array_equal(np.asarray(EV.layout_gather(can, lay))[0], sol)

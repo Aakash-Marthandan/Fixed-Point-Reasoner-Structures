@@ -26,11 +26,38 @@ ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "runs" / "tpu_status_log.txt"
 POLL = timedelta(minutes=15)
 
-RATES = {"pod": 6.5, "default": 0.55}     # $/h by node-name class
+RATES = {"pod": 6.5, "default": 0.55}     # $/h by node-name class (v6e-8 pod)
+ACCEL_MULT = {"v6e-8": 1.0, "v6e-16": 2.0, "v6e-32": 4.0}   # 2026-08-22: accelerator ladder
+POD_LOG = ROOT / "runs" / "pod_qhrrn2-pod2.log"
 
 
 def rate_for(name: str) -> float:
     return RATES["pod"] if "pod" in name else RATES["default"]
+
+
+def _creates():
+    """[(ts, accel)] from the supervisor log's 'CREATED in <zone> (<accel>, ...)' lines
+    (2026-08-22 format); older 'CREATED in <zone>' lines imply the v6e-8 default."""
+    out = []
+    if not POD_LOG.exists():
+        return out
+    for line in POD_LOG.read_text(errors="ignore").splitlines():
+        m = re.match(r"(\S+) \|\s+CREATED in \S+(?: \((v6e-\d+)|)", line.strip())
+        if m:
+            try:
+                ts = datetime.fromisoformat(m.group(1).replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            out.append((ts, m.group(2) or "v6e-8"))
+    return out
+
+
+def accel_for(name: str, start: datetime, creates) -> str:
+    """Accelerator of a pod span = the latest CREATED line at or before its start."""
+    if "pod" not in name:
+        return "-"
+    prior = [a for ts, a in creates if ts <= start + POLL]
+    return prior[-1] if prior else "v6e-8"
 
 
 def parse(since: datetime | None):
@@ -84,16 +111,21 @@ def main():
 
     print("=" * 78)
     print("TPU SPEND — spans MEASURED from the watchdog inventory log (+-15 min);")
-    print("            dollars INFERRED at list spot rates (v6e-8 $6.5/h, v5e-1 $0.55/h)")
+    print("            dollars INFERRED at list spot rates (v6e-8 $6.5/h, v6e-16 x2, v5e-1 $0.55/h)")
     print("=" * 78)
     total = 0.0
+    creates = _creates()
     for node in sorted(spans):
         hrs = sum((b - a).total_seconds() for a, b in spans[node]) / 3600
-        cost = hrs * rate_for(node)
+        cost = 0.0
+        for s, e in spans[node]:
+            acc = accel_for(node, s, creates)
+            cost += (e - s).total_seconds() / 3600 * rate_for(node) * ACCEL_MULT.get(acc, 1.0)
         total += cost
         print(f"  {node:16s} {len(spans[node]):>2d} span(s)  {hrs:>5.2f} h  ${cost:>6.2f}")
         for s, e in spans[node]:
-            print(f"      {s:%m-%d %H:%M} -> {e:%m-%d %H:%M}Z")
+            acc = accel_for(node, s, creates)
+            print(f"      {s:%m-%d %H:%M} -> {e:%m-%d %H:%M}Z" + (f"  [{acc} x{ACCEL_MULT.get(acc, 1.0):.0f}]" if acc != "-" else ""))
     print(f"  {'TOTAL':16s} {'':>2s}          {'':>5s}    ${total:>6.2f}")
     if last_poll:
         print(f"\n  last watchdog poll: {last_poll:%Y-%m-%d %H:%M}Z")

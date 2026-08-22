@@ -4,10 +4,53 @@
 memory. The ops model (Opus) runs the campaign to completion and STOPS; the analysis
 phase (Fable) is reserved for the PI's next model switch. **ALL ETAs and clock times
 reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08-21).
-HARD BOUNDARY during ops: no `tools/analyze_sport2.py`, no reading/quoting accuracy
+HARD BOUNDARY during ops: no `tools/analyze_sport2w2.py` (nor analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
-## CURRENT CAMPAIGN — SPRINT S2 (Sudoku-Extreme wave 1; launched 2026-08-21; ledger 'SPRINT S2 LAUNCH REGISTRATION')
+## CURRENT CAMPAIGN — SPRINT S2 WAVE 2 (Sudoku-Extreme; launched 2026-08-22; ledger 'SPRINT S2 WAVE 2 LAUNCH REGISTRATION')
+
+**What it is:** the wave-1 verdict's levers on the PLAIN (β=0) base + the PRICE × SCALE surface
+(PI 2026-08-22: price effects may be scale-dependent — width/budget/dose axes, not one cell), on ONE spot
+pod: **v6e-16 (2 workers × 8 chips) hunted first, v6e-8 as the fallback** — `ACCEL_LIST="v6e-16 v6e-8"` in
+`tools/campaign.env` (= `campaign_sport2w2.env`); the 16 is DEMOTED for the supervisor's life after
+`BIG_MAX_STRIKES=2` bring-up failures/preemptions (PI: "fall back if 16 gets preempted too much"). Tag
+`sport2w2`, GCS `gs://qhrrn2-rescue/sport2w2/`, chain `tools/chain_sport2w2.sh` (launched ONCE PER
+WORKER with `CHAIN_WORKER=w CHAIN_WORKERS=n`; worker 0 runs `ARMS_W0`, worker 1 `ARMS_W1`; on a v6e-8 one
+worker runs both lists, 2 jobs per chip). Jobs (16): W13 W2 W3 W1 W9 W5 W4 W8 | scan:S5:64:256
+scan:S4:64:256 scan:S7:64:256 scan:S5:6:256 W6 W7 W1s1 W4s1 (arm meanings in the chain header). Each
+training arm = pretrain → evals (strat t6/64/256 k16, full t6/t64, val t64, retention t8) → probe (not W7:
+box4 layout) → GCS; then PHASE4 per worker (best-of-my-arms 20k-subsample k=128 t=64, 8 shards); then the
+COMPLETION GUARD (the last worker to find every arm's artifacts in GCS builds `sport2w2_final.tgz` + emits
+`CHAIN-SPORT2W2-COMPLETE`; a worker that finishes its share earlier emits `CHAIN-SPORT2W2-WORKER-DONE` and
+exits 0 — pod.sh treats that as WDONE, not a crash). ETA absent churn ≈ 7–9 h on a v6e-16 (long poles:
+W13 100k steps, the d32 arms' evals), ≈ 2× on a v6e-8; ≈ $13.6/h (16) or $6.8/h (8).
+
+**Signatures (per worker log):** `=== SPORT2W2 START … worker=w/n my_jobs=[…]`, `chip c queue: …`,
+`=== PRETRAIN W1 hh:mm === chip c flags: …`, `=== SCAN S5 t=64 k=256 …`, `PRETRAIN-Wx-OK`, `SKIP-Wx (GCS
+complete)`, `RESUME-Wx from live ckpt`, `EVAL-Wx-OK`, `PROBE-Wx-OK`, `PROBE-SKIP-W7`, `SCAN-S5-t64-k256-OK`,
+`QUEUES-DONE`, `PHASE4: best arm …`, `PHASE4-OK`, `RESCUE-OK`, `CHAIN-SPORT2W2-WORKER-DONE` /
+`CHAIN-SPORT2W2-COMPLETE`. `PRETRAIN-Wx-FAILED rc=` = one arm failed, the others continue (the campaign
+then never COMPLETEs: after 3 relaunches the supervisor exits 3 "needs eyes" — report which arm, do NOT
+patch). Supervisor lines: `CREATE … (v6e-16 spot)`, `CREATED in <zone> (v6e-16, 2 worker(s))`,
+`launch w0/w1: detached + verified`, `READY <zone> | RUNNING 2/2 worker(s) | [w0 …] [w1 …]`,
+`(+1 done)`, `STRIKE n/2 against v6e-16`, `DEMOTE v6e-16`.
+
+**Per-worker progress (heartbeat):** replace the wave-1 ssh loop with, for each worker w in 0..n-1
+(n from `runs/pod_workers.txt`): `gcloud compute tpus tpu-vm ssh qhrrn2-pod2 --zone=<zone> --worker=$w
+--project=quantum-llm --command "cd ~/qhrrn2 && for a in W13 W2 W3 W1 W9 W5 W4 W8 W6 W7 W1s1 W4s1 W5gen;
+do [ -f runs/wave_pre_$a.log ] || continue; printf '%s: ' $a; grep -E 'step |DONE' runs/wave_pre_$a.log |
+tail -1 | cut -c1-80; echo; done; grep -E 'SCAN-.*-OK|EVAL-.*-OK|PROBE-.*-OK|PHASE4|QUEUES-DONE|WORKER-DONE|
+COMPLETE' runs/detached.log | tail -8"` (bounded; perl alarm 150). Per-arm steps: W13 100k, W1/W9/W1s1
+50k, W2/W3 30k, others 20k (W5 = W5gen 20k then W5 20k).
+
+**Analysis boundary unchanged:** `tools/analyze_sport2w2.py` (self-test 21/21) is reserved for the analysis
+pass; no accuracy values quoted during ops. §6 completion (sport2w2 version): pull
+`gs://qhrrn2-rescue/sport2w2/sport2w2_final.tgz`; expect `pretrainsport2w2_*` ×13 (12 arms + W5gen, ckpt
+at the registered steps), `sxeval_psport2w2*` ×12 (strat_t6/t64/t256 + full_t6/t64 + val_t64 + ret_t8 =
+7 summary files each), `sudprobe_psport2w2*` ×11 (no W7), `sxbreadth_*` ×4, `sxbreadth20k_*` ×1–2;
+print-only `inspect_ckpt.py` on a few arms; ONE ops ledger line; ONE commit; STOP.
+
+## PREVIOUS CAMPAIGN (historical) — CURRENT CAMPAIGN — SPRINT S2 (Sudoku-Extreme wave 1; launched 2026-08-21; ledger 'SPRINT S2 LAUNCH REGISTRATION')
 
 ## ⏸ PAUSED — overnight spot drought 2026-08-22 00:56 IST (19:26Z 08-21) — PI: "pause till morning, resume 7am IST, 1h gaps"
 

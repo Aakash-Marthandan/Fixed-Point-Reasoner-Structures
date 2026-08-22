@@ -38,13 +38,19 @@ def main() -> int:
                     help="remote ceiling (s): the job is wrapped in `timeout` "
                          "on the VM so a runaway never outlives the DMS")
     ap.add_argument("--no-sync", action="store_true")
+    ap.add_argument("--worker", type=int, default=0,
+                    help="multi-host (2026-08-22): launch the job on this worker")
+    ap.add_argument("--workers", type=int, default=1,
+                    help="total workers: code sync + DMS go to ALL of them")
     a = ap.parse_args()
 
     D.TPU_NAME = a.name           # dispatcher helpers read the module global
+    D.WORKERS = max(int(a.workers), 1)
     D.guard_identity(False)
     D.arm_dms(a.zone, False)
     if not a.no_sync:
         D.sync_code(a.zone, False, False)
+    wk = a.worker if D.WORKERS > 1 else None
 
     # remote job: same shape as dispatcher's, plus a REMOTE wall ceiling so a
     # hung chain cannot outlive the DMS window without any local poller.
@@ -58,7 +64,7 @@ def main() -> int:
               "rm -f runs/detached.exit runs/detached.pid && "
               f"(setsid nohup sh -c {inner} < /dev/null > runs/detached.log 2>&1 & "
               "echo $! > runs/detached.pid) && echo detached-launch-ok")
-    r = subprocess.run(D.gssh(launch, a.zone), shell=True, capture_output=True,
+    r = subprocess.run(D.gssh(launch, a.zone, wk), shell=True, capture_output=True,
                        text=True, timeout=180)
     if "detached-BUSY" in r.stdout:
         print("launch: remote job already running (double-launch guard) — treating as launched")
@@ -70,12 +76,12 @@ def main() -> int:
     # VERIFY: the pid is alive (one more bounded ssh)
     v = subprocess.run(D.gssh(f"cd {D.REMOTE_PROJECT} && test -f runs/detached.pid && "
                               "kill -0 $(cat runs/detached.pid) 2>/dev/null && echo ALIVE",
-                              a.zone),
+                              a.zone, wk),
                        shell=True, capture_output=True, text=True, timeout=120)
     if "ALIVE" not in v.stdout:
         print("launch: pid not alive after launch — verify FAILED")
         return 4
-    print("launch: detached + verified alive")
+    print(f"launch: detached + verified alive{'' if wk is None else f' (worker {wk})'}")
     return 0
 
 

@@ -61,3 +61,9 @@ class Config:
     #                            STRING, not tuple: ckpt config values must
     #                            survive as python scalars (2026-08-01 law,
     #                            tests/test_episodic.py) — parsed at trace time
+    # SPRINT S2 wave 2 (ledger 2026-08-22): Sudoku canvas layout — "origin"
+    # (every prior arm) or "box4" (the registered box-aligned control arm:
+    # each 3x3 box in a 4x4 block). Carried in the ckpt so the batched
+    # evaluator places/unplaces consistently with training; the model graph
+    # does not read it (no effect on ARC or on any old checkpoint).
+    sudoku_layout: str = "origin"

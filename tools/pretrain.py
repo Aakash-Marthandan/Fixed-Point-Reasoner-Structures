@@ -109,6 +109,9 @@ def parse_args():
     p.add_argument("--sudoku-digit-aug", action="store_true",
                    help="ablation: explicit digit permutation too (exact S9 "
                         "covers it by construction; prediction = no change)")
+    p.add_argument("--sudoku-layout", default="origin", choices=["origin", "box4"],
+                   help="wave-2 (2026-08-22): Sudoku canvas layout; box4 = the "
+                        "registered box-aligned control (carried in the ckpt cfg)")
     p.add_argument("--init-from", default=None,
                    help="warm-start params+table from this ckpt at step 0 with "
                         "a fresh optimizer (the GEN arm's 1k finetune)")
@@ -185,7 +188,8 @@ def main():
                  beta_flux=a.beta_flux, beta_flux_nl=a.beta_flux_nl,
                  eta_floor=a.eta_floor, z_gate_init=a.z_gate_init,
                  eq_coupled=a.eq_coupled, ni_sigma=a.ni_sigma,
-                 flux_floors=a.flux_floors or "")
+                 flux_floors=a.flux_floors or "",
+                 sudoku_layout=a.sudoku_layout)
 
     exclude = frozenset(dev30.MANIFEST)
     rearc_families = None
@@ -216,11 +220,18 @@ def main():
         # file's disjoint monitor rows (never the test set).
         corpus, val = SX.build_corpus_extreme(
             a.sudoku_extreme, n_aug=a.sudoku_aug, seed=a.seed,
-            digit_aug=a.sudoku_digit_aug)
+            digit_aug=a.sudoku_digit_aug, layout=a.sudoku_layout)
         print(f"SPRINT-S2 corpus: Sudoku-Extreme {a.sudoku_extreme} x "
-              f"(1+{a.sudoku_aug}) group copies (digit_aug={a.sudoku_digit_aug}) "
-              f"= {corpus.x.shape[0]} pairs, one task row; val = monitor rows",
-              flush=True)
+              f"(1+{a.sudoku_aug}) group copies (digit_aug={a.sudoku_digit_aug}, "
+              f"layout={a.sudoku_layout}) = {corpus.x.shape[0]} pairs, one task row; "
+              f"val = monitor rows", flush=True)
+        if a.sudoku_layout != "origin":
+            # the trainer's val monitor (val20_eval -> T.predict) places grids
+            # at the origin; under another layout it would read a wrong-layout
+            # zero. The batched evaluator (layout-aware) measures val@t for
+            # these arms (wave-2 M0 reads the evaluator, not this monitor).
+            val = []
+            print("val monitor DISABLED for non-origin layout (evaluator measures val)", flush=True)
     elif a.sudoku:
         # S-PORT (H-33): the single-attractor domain. ONE task row, generated
         # instances, no ARC corpus involved — the contamination laws below

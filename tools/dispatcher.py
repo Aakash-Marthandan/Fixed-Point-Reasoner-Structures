@@ -50,6 +50,13 @@ def _identity():
 
 
 ACCOUNT, PROJECT = _identity()
+# MULTI-HOST (2026-08-22, wave 2 on a spot v6e-16 = 2 workers x 8 chips): every
+# remote verb takes the worker set explicitly — `up` bootstraps/syncs ALL
+# workers, `canary` certifies EACH worker (chip-pinned, so a worker never tries
+# to form the cross-host slice), `down` rescues each worker. WORKERS=1 keeps
+# every command line byte-identical to the proven single-host path (no
+# --worker flag emitted).
+WORKERS = 1
 DEFAULT_ZONE = "us-east1-c"
 DEFAULT_ACCEL = "v5litepod-1"
 TPU_NAME = "qhrrn2-tpu"
@@ -89,9 +96,37 @@ def sh(cmd: str, *, dry: bool, check: bool = True, timeout: int | None = 600):
     return subprocess.run(cmd, check=check, timeout=timeout, shell=True)
 
 
-def gssh(command: str, zone: str) -> str:
-    return (f"gcloud compute tpus tpu-vm ssh {TPU_NAME} --zone={zone} "
+def _wflag(worker) -> str:
+    """--worker flag; omitted for the single-host default so proven command
+    lines stay byte-identical. worker: None (default 0), int, or "all"."""
+    if worker is None or str(worker) == "0":
+        return ""
+    return f" --worker={worker}"
+
+
+def gssh(command: str, zone: str, worker=None) -> str:
+    return (f"gcloud compute tpus tpu-vm ssh {TPU_NAME} --zone={zone}{_wflag(worker)} "
             f"--project={PROJECT} --command={shlex.quote(command)}")
+
+
+def gscp(src: str, dst: str, zone: str, worker=None, recurse: bool = False) -> str:
+    return (f"gcloud compute tpus tpu-vm scp{' --recurse' if recurse else ''} {src} {dst} "
+            f"--zone={zone}{_wflag(worker)} --project={PROJECT}")
+
+
+def vm_workers(zone: str) -> int:
+    """Number of workers (hosts) of the TPU VM, from its network endpoints;
+    1 if unreadable (callers that need certainty pass --workers explicitly)."""
+    r = subprocess.run(
+        f"gcloud compute tpus tpu-vm describe {TPU_NAME} --zone={zone} "
+        f"--project={PROJECT} --format='value(networkEndpoints[].ipAddress)'",
+        shell=True, capture_output=True, text=True)
+    n = len([x for x in r.stdout.replace(";", " ").split() if x]) if r.returncode == 0 else 0
+    return max(n, 1)
+
+
+def _all():
+    return "all" if WORKERS > 1 else None
 
 
 def guard_identity(dry: bool):
@@ -122,7 +157,7 @@ def vm_state(zone: str) -> str | None:
 def arm_dms(zone: str, dry: bool, minutes: int = DMS_MINUTES):
     print(f">>> Dead man's switch: re-arm +{minutes} min")
     sh(gssh(f"sudo shutdown -c 2>/dev/null || true; sudo shutdown -h +{minutes}",
-            zone), dry=dry, check=False)
+            zone, _all()), dry=dry, check=False)
 
 
 def _stream(process):
@@ -135,12 +170,10 @@ def _stream(process):
 
 
 def sync_code(zone: str, dry: bool, with_data: bool):
-    print(">>> Sync code")
-    sh(gssh(f"mkdir -p {REMOTE_PROJECT}", zone), dry=dry)
+    print(">>> Sync code" + (f" (all {WORKERS} workers)" if WORKERS > 1 else ""))
+    sh(gssh(f"mkdir -p {REMOTE_PROJECT}", zone, _all()), dry=dry)
     for item in UPLOADS:
-        sh(f"gcloud compute tpus tpu-vm scp --recurse {item} "
-           f"{TPU_NAME}:{REMOTE_PROJECT}/ --zone={zone} --project={PROJECT}",
-           dry=dry)
+        sh(gscp(item, f"{TPU_NAME}:{REMOTE_PROJECT}/", zone, _all(), recurse=True), dry=dry)
     if with_data:
         # 2026-08-01: recursive scp of ~800 small JSONs blew the 600 s sh()
         # ceiling (per-file overhead) AND landed at ~/qhrrn2/data — the loader
@@ -169,12 +202,14 @@ def sync_code(zone: str, dry: bool, with_data: bool):
         # the failure to exit 0 (the run-execution standard's masking sin,
         # committed locally). Excludes trim the stream ~15x; ceiling doubled
         # for tunnel-weather margin.
-        sh(f"COPYFILE_DISABLE=1 tar czf - --exclude='*.zip' "
-           f"--exclude='*.ipynb' --exclude=__pycache__ --exclude=.git "
-           f"data/ARC-AGI/data{extra} | "
-           + gssh(f"rm -rf {REMOTE_PROJECT}/data && "
-                  f"tar xzf - -C {REMOTE_PROJECT} --exclude \"._*\"",
-                  zone), dry=dry, timeout=600)
+        # multi-host: one stream PER WORKER (stdin cannot fan out to --worker=all)
+        for w in (range(WORKERS) if WORKERS > 1 else [None]):
+            sh(f"COPYFILE_DISABLE=1 tar czf - --exclude='*.zip' "
+               f"--exclude='*.ipynb' --exclude=__pycache__ --exclude=.git "
+               f"data/ARC-AGI/data{extra} | "
+               + gssh(f"rm -rf {REMOTE_PROJECT}/data && "
+                      f"tar xzf - -C {REMOTE_PROJECT} --exclude \"._*\"",
+                      zone, w), dry=dry, timeout=600)
 
 
 def rescue(zone: str, dry: bool):
@@ -182,12 +217,14 @@ def rescue(zone: str, dry: bool):
     stamp = time.strftime("%Y%m%d-%H%M%S")
     os.makedirs("runs/cloud", exist_ok=True)
     try:
-        sh(gssh(f"cd {REMOTE_PROJECT} && tar czf /tmp/qhrrn2_runs.tgz runs "
-                "2>/dev/null || true", zone), dry=dry, check=False, timeout=120)
-        # fleet mode: rescue files carry the VM name so lanes never collide
-        sh(f"gcloud compute tpus tpu-vm scp {TPU_NAME}:/tmp/qhrrn2_runs.tgz "
-           f"runs/cloud/{TPU_NAME}-{stamp}.tgz --zone={zone} --project={PROJECT}",
-           dry=dry, check=False, timeout=120)
+        for w in (range(WORKERS) if WORKERS > 1 else [None]):
+            tag = f"-w{w}" if w is not None else ""
+            sh(gssh(f"cd {REMOTE_PROJECT} && tar czf /tmp/qhrrn2_runs.tgz runs "
+                    "2>/dev/null || true", zone, w), dry=dry, check=False, timeout=120)
+            # fleet mode: rescue files carry the VM name (+worker) so lanes never collide
+            sh(gscp(f"{TPU_NAME}:/tmp/qhrrn2_runs.tgz",
+                    f"runs/cloud/{TPU_NAME}{tag}-{stamp}.tgz", zone, w),
+               dry=dry, check=False, timeout=120)
     except Exception as e:  # rescue must never block anything
         print(f"  WARNING: rescue failed: {e}")
 
@@ -231,7 +268,8 @@ def cmd_up(args) -> int:
             # LATEST instead (-U with an empty spec), which drives v6 lite.
             "&& uv pip install --python .venv/bin/python -q --no-deps -U "
             f"libtpu{prof['libtpu']} "
-            "&& touch .venv/.boot_ok)", args.zone), dry=args.dry_run)
+            "&& touch .venv/.boot_ok)", args.zone, _all()), dry=args.dry_run,
+       timeout=1200)
     print(f">>> up: READY. DMS fires in {DMS_MINUTES} min unless re-armed; "
           f"`down` when finished.")
     return 0
@@ -396,7 +434,8 @@ def cmd_status(args) -> int:
         # Detached-job forensics (2026-08-07 incident: manual kills left local
         # pollers aimed at a REUSED pid file; job state must be inspectable
         # before any launch/kill decision).
-        try:
+        for w in (range(WORKERS) if WORKERS > 1 else [None]):
+          try:
             sh(gssh(f"cd {REMOTE_PROJECT} 2>/dev/null && "
                     "if test -f runs/detached.pid && "
                     "kill -0 $(cat runs/detached.pid) 2>/dev/null; then "
@@ -406,8 +445,8 @@ def cmd_status(args) -> int:
                     "|| echo none)\"; fi; "
                     "for f in runs/*/results.jsonl; do test -f \"$f\" && "
                     "echo \"  $f: $(wc -l < \"$f\") rows\"; done",
-                    args.zone), dry=False, timeout=120)
-        except Exception as e:
+                    args.zone, w), dry=False, timeout=120)
+          except Exception as e:
             print(f"  job probe failed: {e}")
     return 0
 
@@ -427,25 +466,35 @@ def cmd_canary(args) -> int:
         return 3
     arm_dms(args.zone, args.dry_run)
     marker = "CANARY-PASS"
-    cmd = (f"rm -rf runs/_canary && python tools/eval_pop.py "
+    # multi-host: pin the canary to one chip per worker — an unpinned JAX process
+    # on a 2-host slice would try to form the 16-chip system and hang; the
+    # chip-pinned single-chip process is exactly the chain's own execution mode,
+    # so this certifies what the campaign will run.
+    pin = ("TPU_CHIPS_PER_PROCESS_BOUNDS=1,1,1 TPU_PROCESS_BOUNDS=1,1,1 "
+           "TPU_VISIBLE_CHIPS=0 " if WORKERS > 1 else "")
+    cmd = (f"rm -rf runs/_canary && {pin}python tools/eval_pop.py "
            f"--ckpt {args.canary_ckpt} --tasks {args.canary_task} "
            f"--steps 60 --val-every 30 --out runs/_canary "
-           f"&& echo {marker}")
-    full = gssh(f"cd {REMOTE_PROJECT} && "
-                f"export PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src; {cmd}",
-                args.zone)
-    print(f">>> canary ({args.canary_task}, 60 steps): {TPU_NAME}")
-    if args.dry_run:
-        print(f"  $ {full}")
-        return 0
-    r = subprocess.run(full, shell=True, capture_output=True, text=True,
-                       timeout=1800)
-    passed = marker in r.stdout
-    tail = "\n".join((r.stdout + r.stderr).strip().splitlines()[-3:])
-    print(tail)
-    print(f">>> canary: {'PASS' if passed else 'FAIL'} "
-          f"(sentinel {'found' if passed else 'MISSING'}, ssh exit {r.returncode})")
-    return 0 if passed else 5
+           f"&& echo {marker}-$(hostname)")
+    print(f">>> canary ({args.canary_task}, 60 steps): {TPU_NAME}"
+          + (f" x {WORKERS} workers (pinned)" if WORKERS > 1 else ""))
+    passed_all = True
+    for w in (range(WORKERS) if WORKERS > 1 else [None]):
+        full = gssh(f"cd {REMOTE_PROJECT} && "
+                    f"export PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src; {cmd}",
+                    args.zone, w)
+        if args.dry_run:
+            print(f"  $ {full}")
+            continue
+        r = subprocess.run(full, shell=True, capture_output=True, text=True,
+                           timeout=1800)
+        passed = marker in r.stdout
+        tail = "\n".join((r.stdout + r.stderr).strip().splitlines()[-3:])
+        print(tail)
+        print(f">>> canary{'' if w is None else f' worker {w}'}: {'PASS' if passed else 'FAIL'} "
+              f"(sentinel {'found' if passed else 'MISSING'}, ssh exit {r.returncode})")
+        passed_all = passed_all and passed
+    return 0 if (passed_all or args.dry_run) else 5
 
 
 def cmd_cycle(args) -> int:
@@ -472,6 +521,9 @@ def main():
     common.add_argument("--name", default=TPU_NAME,
                         help="VM name (fleet mode 2026-08-02: run several "
                              "lanes concurrently, e.g. qhrrn2-a/-b/-c)")
+    common.add_argument("--workers", type=int, default=1,
+                        help="TPU VM hosts (v6e-16 = 2): up/canary/down/status "
+                             "act on every worker; 1 = the single-host path")
     up_like = argparse.ArgumentParser(add_help=False)
     up_like.add_argument("--accelerator", default=DEFAULT_ACCEL)
     up_like.add_argument("--on-demand", action="store_true", help="disable --spot")
@@ -499,6 +551,8 @@ def main():
 
     args = ap.parse_args()
     TPU_NAME = args.name  # every helper reads the module global
+    global WORKERS
+    WORKERS = max(int(args.workers), 1)
     sys.exit({"up": cmd_up, "run": cmd_run, "down": cmd_down,
               "status": cmd_status, "cycle": cmd_cycle,
               "canary": cmd_canary}[args.verb](args))

@@ -115,6 +115,12 @@ def main():
     state = saved["state"]
     model = state["model"]
     tvj = jnp.asarray(state["table"][0])      # the single "sudoku" task row
+    if getattr(cfg, "sudoku_layout", "origin") not in ("", "origin"):
+        # wave 2 (2026-08-22): the ARC-shared instruments (trace/retained) place
+        # grids at the canvas origin; non-origin layouts are measured by the
+        # batched evaluator (cold/retention/multi-init) — refuse, never mis-place.
+        sys.exit(f"probe_sudoku: layout {cfg.sudoku_layout!r} is not origin — use "
+                 "tools/eval_sudoku_extreme.py (--init solution for retention)")
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)

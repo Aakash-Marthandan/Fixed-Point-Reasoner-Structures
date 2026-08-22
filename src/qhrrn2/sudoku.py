@@ -204,6 +204,64 @@ def sample_ladder(n: int, seed: int, givens_list):
     return out
 
 
+# ── canvas LAYOUTS (SPRINT S2 wave 2, ledger 2026-08-22) ───────────────────
+# "origin": the 9x9 grid at the canvas origin (every cell-1 / wave-1 arm).
+# "box4":   the REGISTERED box-aligned control — each 3x3 box sits in the
+#           top-left 3x3 of a 4x4 canvas block (a 12x12 window, the 4th row/col
+#           of every block VOID), so box boundaries coincide with scale-2 (4x4)
+#           pooling blocks: the 3-adic/dyadic mismatch named at the S-port
+#           launch becomes a testable arm. Placement offsets for box4 must be
+#           multiples of 4 (Corpus.off_stride) or the alignment is lost.
+LAYOUTS = ("origin", "box4")
+BOX4 = 4
+BOX4_EXTENT = BOX * BOX4        # 12
+
+
+def layout_extent(layout: str = "origin") -> int:
+    if layout == "origin":
+        return N
+    if layout == "box4":
+        return BOX4_EXTENT
+    raise ValueError(f"unknown layout {layout!r}")
+
+
+def box4_index() -> np.ndarray:
+    """Window row (= col) index of grid row r: 4*(r//3) + r%3."""
+    rr = np.arange(N)
+    return (rr // BOX) * BOX4 + rr % BOX
+
+
+def place_layout(g: np.ndarray, layout: str = "origin", oy: int = 0, ox: int = 0) -> np.ndarray:
+    """9x9 digits/blanks -> 32x32 canvas in the given layout (VOID elsewhere)."""
+    g = np.asarray(g, dtype=np.int8)
+    assert g.shape == (N, N), g.shape
+    if layout == "origin":
+        return G.place_at(g, oy, ox)
+    if layout == "box4":
+        win = np.full((BOX4_EXTENT, BOX4_EXTENT), G.VOID, dtype=np.int8)
+        idx = box4_index()
+        win[np.ix_(idx, idx)] = g
+        canvas = np.full((G.CANVAS, G.CANVAS), G.VOID, dtype=np.int8)
+        if oy < 0 or ox < 0 or oy + BOX4_EXTENT > G.CANVAS or ox + BOX4_EXTENT > G.CANVAS:
+            raise ValueError("box4 window exceeds canvas")
+        canvas[oy:oy + BOX4_EXTENT, ox:ox + BOX4_EXTENT] = win
+        return canvas
+    raise ValueError(f"unknown layout {layout!r}")
+
+
+def unplace_layout(arr: np.ndarray, layout: str = "origin"):
+    """Canvas (32x32) or the cropped window (placed at the origin) -> 9x9 digits,
+    or None when the array is too small to decode. Gap cells are never read."""
+    a = np.asarray(arr)
+    e = layout_extent(layout)
+    if a.ndim != 2 or a.shape[0] < e or a.shape[1] < e:
+        return None
+    if layout == "origin":
+        return a[:N, :N]
+    idx = box4_index()
+    return a[np.ix_(idx, idx)]
+
+
 # ── validity + the canvas adapter ─────────────────────────────────────────
 
 def is_valid_solution(g: np.ndarray) -> bool:

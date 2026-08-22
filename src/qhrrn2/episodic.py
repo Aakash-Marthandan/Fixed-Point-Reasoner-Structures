@@ -35,6 +35,9 @@ class Corpus:
     starts: np.ndarray   # (n_tasks + 1,) int32 prefix offsets into the pair axis
     bound_h: np.ndarray  # (P,) int32 max oy (inclusive)
     bound_w: np.ndarray  # (P,) int32 max ox (inclusive)
+    off_stride: int = 1  # placement offsets are multiples of this (wave-2 box4
+    #                      layout needs 4 so boxes stay on 4x4 pooling blocks);
+    #                      1 = every offset, the exact pre-existing sampler.
 
 
 def build_sudoku_corpus(n_train: int, *, n_val: int = 64, seed: int = 0,
@@ -242,8 +245,11 @@ def sample_batch(rng, corpus_dev: dict, n_tasks: int, batch: int):
     y_b = corpus_dev["y"][p_b]
     u_oy = jax.random.uniform(k_oy, (batch,))
     u_ox = jax.random.uniform(k_ox, (batch,))
-    oy = jnp.floor(u_oy * (corpus_dev["bound_h"][p_b] + 1)).astype(jnp.int32)
-    ox = jnp.floor(u_ox * (corpus_dev["bound_w"][p_b] + 1)).astype(jnp.int32)
+    # off_stride (wave-2 box4 layout): offsets are multiples of the stride;
+    # stride 1 is the exact pre-existing arithmetic (integer floor-divide by 1).
+    stride = int(corpus_dev.get("off_stride", 1))
+    oy = jnp.floor(u_oy * (corpus_dev["bound_h"][p_b] // stride + 1)).astype(jnp.int32) * stride
+    ox = jnp.floor(u_ox * (corpus_dev["bound_w"][p_b] // stride + 1)).astype(jnp.int32) * stride
 
     def roll(x, y, dy, dx):
         return (jnp.roll(x, (dy, dx), axis=(0, 1)),
@@ -295,6 +301,7 @@ def corpus_to_device(corpus: Corpus) -> dict:
         "starts": jnp.asarray(corpus.starts),
         "bound_h": jnp.asarray(corpus.bound_h),
         "bound_w": jnp.asarray(corpus.bound_w),
+        "off_stride": int(getattr(corpus, "off_stride", 1)),
     }
 
 

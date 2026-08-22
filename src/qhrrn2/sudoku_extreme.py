@@ -171,30 +171,36 @@ def stratified_subsample(ratings: np.ndarray, n: int, seed: int, bins: int = 8):
 # ── corpus builder (ONE task row, like build_sudoku_corpus) ───────────────
 
 def build_corpus_extreme(npz_path, *, n_aug: int = 100, seed: int = 0,
-                         digit_aug: bool = False, limit_base: int | None = None):
+                         digit_aug: bool = False, limit_base: int | None = None,
+                         layout: str = "origin"):
     """Corpus = the k base puzzles x (1 + n_aug) group-augmented copies under
     the single 'sudoku' task row; val = the disjoint monitor rows. Mirrors
-    episodic.build_sudoku_corpus's Corpus contract exactly."""
+    episodic.build_sudoku_corpus's Corpus contract exactly. `layout` (wave 2):
+    "origin" = the wave-1 placement; "box4" = the box-aligned control (12x12
+    window, offsets restricted to multiples of 4 via Corpus.off_stride)."""
     from .episodic import Corpus
     d = load_prepared(npz_path)
     q, a = d["train_q"], d["train_a"]
     if limit_base is not None:
         q, a = q[:limit_base], a[:limit_base]
     rng = np.random.default_rng(seed + 7_777)
+    ext = SU.layout_extent(layout)
+    stride = SU.BOX4 if layout == "box4" else 1
     xs, ys = [], []
     for p_, s_ in zip(q, a):
-        xs.append(G.place(p_)); ys.append(G.place(s_))
+        xs.append(SU.place_layout(p_, layout)); ys.append(SU.place_layout(s_, layout))
         for _ in range(n_aug):
             pa, sa = augment(p_, s_, rng, digit=digit_aug)
-            xs.append(G.place(pa)); ys.append(G.place(sa))
+            xs.append(SU.place_layout(pa, layout)); ys.append(SU.place_layout(sa, layout))
     P = len(xs)
     corpus = Corpus(
         task_ids=("sudoku",),
         x=np.stack(xs).astype(np.int32), y=np.stack(ys).astype(np.int32),
         tidx=np.zeros(P, dtype=np.int32),
         starts=np.asarray([0, P], dtype=np.int32),
-        bound_h=np.full(P, G.CANVAS - N, dtype=np.int32),
-        bound_w=np.full(P, G.CANVAS - N, dtype=np.int32))
+        bound_h=np.full(P, G.CANVAS - ext, dtype=np.int32),
+        bound_w=np.full(P, G.CANVAS - ext, dtype=np.int32),
+        off_stride=stride)
     val_pairs = [(np.asarray(p_, np.int8), np.asarray(s_, np.int8))
                  for p_, s_ in zip(d["val_q"], d["val_a"])]
     return corpus, [(0, "sudoku", val_pairs)]
