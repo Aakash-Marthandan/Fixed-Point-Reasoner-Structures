@@ -39,7 +39,11 @@ SX_NPZ=${SX_NPZ:-sudoku_extreme_seed0.npz}; GEN_NPZ=${GEN_NPZ:-sudoku_gen_g22_se
 SX_AUG=${SX_AUG:-100}; SX_T_STRAT=${SX_T_STRAT:-"6 64 256"}; SX_T_FULL=${SX_T_FULL:-"6 64"}
 SX_K_INIT=${SX_K_INIT:-16}; SX_STRAT=${SX_STRAT:-512}
 SX_SUB=${SX_SUB:-20000}; SX_SUB_K=${SX_SUB_K:-128}; SX_RET_T=${SX_RET_T:-8}
-NCHIP=${NCHIP:-8}
+# chips on THIS host: v6e-8 = 1 host x 8 chips; v6e-16 = 4 hosts x 4 chips (learned live 2026-08-22:
+# the first launch pinned chips 0-7 on 4-chip hosts and half the jobs died at startup). Detect from
+# /dev/vfio (one numeric entry per chip); fall back to 8.
+if [ -z "${NCHIP:-}" ]; then NCHIP=$(ls /dev/vfio 2>/dev/null | grep -cE '^[0-9]+$'); fi
+[ "${NCHIP:-0}" -ge 1 ] 2>/dev/null || NCHIP=8
 SENT=CHAIN-SPORT2W2
 NPZ=data/sudoku_extreme/$SX_NPZ; GNPZ=data/sudoku_extreme/$GEN_NPZ
 mkdir -p runs data/sudoku_extreme
@@ -58,7 +62,7 @@ done
 [ -n "$ALL_JOBS" ] || ALL_JOBS=${R0_ARMS:-}
 [ "$NW" -ge 2 ] || MY_JOBS=$ALL_JOBS
 ALL_ARMS=""; for j in $ALL_JOBS; do case $j in scan:*) ;; *) ALL_ARMS="$ALL_ARMS $j";; esac; done
-echo "=== SPORT2W2 START $(date -u +%FT%TZ) worker=$W/$NW my_jobs=[$MY_JOBS] all_arms=[$ALL_ARMS] ==="
+echo "=== SPORT2W2 START $(date -u +%FT%TZ) worker=$W/$NW chips=$NCHIP my_jobs=[$MY_JOBS] all_arms=[$ALL_ARMS] ==="
 [ -f "$NPZ" ] || gsutil -q cp "$GCS_W1/$SX_NPZ" "$NPZ" || { echo "NPZ-MISSING $SX_NPZ"; exit 2; }
 [ -f "$GNPZ" ] || gsutil -q cp "$GCS/$GEN_NPZ" "$GNPZ" || echo "GEN-NPZ-MISSING $GEN_NPZ (GEN arm will fail)"
 
@@ -173,7 +177,7 @@ for job in $MY_JOBS; do
   c=$((i % NCHIP)); eval "Q_$c=\"\${Q_$c:-} $job\""; i=$((i+1))
 done
 pids=()
-for c in 0 1 2 3 4 5 6 7; do
+for c in $(seq 0 $((NCHIP-1))); do
   q=$(eval "echo \${Q_$c:-}")
   [ -n "$q" ] || continue
   echo "chip $c queue: $q"
@@ -198,7 +202,7 @@ if [ -n "$best" ]; then
   else
     echo "PHASE4: best arm $best (full t64 exact $bestacc) -> $SX_SUB-puzzle subsample k=$SX_SUB_K t=64, $NCHIP shards $(date -u +%H:%M)"
     mkdir -p "$O"; pids=()
-    for c in 0 1 2 3 4 5 6 7; do
+    for c in $(seq 0 $((NCHIP-1))); do
       [ -f "$O/summary_s$c.json" ] && continue
       ( pin "$c" python3 tools/eval_sudoku_extreme.py --ckpt "runs/pretrain${R_TAG}_$best/ckpt_latest.pkl" --npz "$NPZ" \
           --split test --subsample "$SX_SUB" --t-total 64 --k-init "$SX_SUB_K" --shard "$c/$NCHIP" --out "$O" > "runs/wave_b20k_${best}_s$c.log" 2>&1 \

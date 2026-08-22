@@ -9,15 +9,47 @@ values from result files, no verdicts, no tuning, no chain/env edits, no second 
 
 ## CURRENT CAMPAIGN — SPRINT S2 WAVE 2 (Sudoku-Extreme; launched 2026-08-22; ledger 'SPRINT S2 WAVE 2 LAUNCH REGISTRATION')
 
+## ⏸ PAUSED — 2026-08-22 19:45 IST (14:15Z) — PI: "pod is gone, let's pause the work for now"
+
+Fleet ZERO verified (all 8 door zones, nodes + QRs). Supervisor KILLED (it had NOT re-created a node), meter +
+caffeinate stopped, heartbeat cron deleted, all 3 monitors stopped. launchd watchdog left running (billing
+backstop; deadline file 2026-08-23 13:58Z — refresh before any resume). The first v6e-16 (us-east1-d, 4
+workers × 4 chips) was PREEMPTED at 13:57Z after ~45 min (STRIKE 1/2 recorded in runs/pod_strikes.txt —
+delete that file to give the 16 a fresh 2-strike budget on resume).
+**Banked in `gs://qhrrn2-rescue/sport2w2/`:** breadth scans S5@t6 and S5@t64 (k=256) COMPLETE; LIVE ckpts
+(≤5 min old at preemption) for W13 W1 W1s1 W2 W3 W5gen W6 W7 W9 (resume from them); W4 W8 W4s1 (d32) and
+the S4/S7 scans restart fresh. No arm complete yet; nothing to analyze.
+**Uncommitted ops fixes in the working tree (commit at the next checkpoint):** chain chip auto-detect (v6e-16 =
+4 hosts × 4 chips), 4-way ARMS_W0..W3 lists in both env files, pod.sh accel_workers v6e-16→4 + `stop`
+archives worker logs, meter wave-2-aware. **Deferred hardening (not applied):** chain self-teardown on COMPLETE
+(SELF_TEARDOWN/SELF_POD/SELF_ZONE via the pod.sh launch line + dispatcher `down` tolerant of an already-deleted
+node) and MAX_RELAUNCH 3→6 for 4-worker wall-ceiling resumes — apply + harness before a long unattended run.
+
+**RESUME (any session):**
+```bash
+cd /Users/aakash/Projects/HRRN
+echo $(( $(date -u +%s) + 24*3600 )) > runs/tpu_deadline.txt      # 1. deadline FIRST (supervisor + watchdog follow it)
+rm -f runs/pod_strikes.txt                                        # 2. optional: fresh strike budget for the v6e-16
+bash tools/pod.sh status                                          # 3. expect node ABSENT, supervisor NOT RUNNING
+nohup bash tools/pod.sh supervise 14 >/dev/null 2>&1 &            # 4. hunts v6e-16 then v6e-8; chain SKIPs done scans, RESUMEs partial arms
+nohup caffeinate -i -s -w $(cat runs/pod_supervisor.pid) >/dev/null 2>&1 &   # 5. keep the Mac awake while it runs
+nohup .venv/bin/python tools/sport2_meter.py --interval 300 >runs/sport2_meter.log 2>&1 &   # 6. meter (optional)
+```
+Then re-arm §2 (heartbeat cron :23 with the wave-2 per-worker progress loop described in the CURRENT CAMPAIGN
+block; edge monitor with the `CHAIN-SPORT2W2|WORKER-DONE|STRIKE|DEMOTE|launch w` patterns; watchdog-inventory
+monitor; `tools/unstick_watch.sh`). On `CHAIN-SPORT2W2-COMPLETE` → §6 (sport2w2 version) → STOP.
+
+
 **What it is:** the wave-1 verdict's levers on the PLAIN (β=0) base + the PRICE × SCALE surface
 (PI 2026-08-22: price effects may be scale-dependent — width/budget/dose axes, not one cell), on ONE spot
-pod: **v6e-16 (2 workers × 8 chips) hunted first, v6e-8 as the fallback** — `ACCEL_LIST="v6e-16 v6e-8"` in
+pod: **v6e-16 (4 workers × 4 chips — measured live 2026-08-22) hunted first, v6e-8 (1 × 8) as the fallback** — `ACCEL_LIST="v6e-16 v6e-8"` in
 `tools/campaign.env` (= `campaign_sport2w2.env`); the 16 is DEMOTED for the supervisor's life after
 `BIG_MAX_STRIKES=2` bring-up failures/preemptions (PI: "fall back if 16 gets preempted too much"). Tag
 `sport2w2`, GCS `gs://qhrrn2-rescue/sport2w2/`, chain `tools/chain_sport2w2.sh` (launched ONCE PER
-WORKER with `CHAIN_WORKER=w CHAIN_WORKERS=n`; worker 0 runs `ARMS_W0`, worker 1 `ARMS_W1`; on a v6e-8 one
-worker runs both lists, 2 jobs per chip). Jobs (16): W13 W2 W3 W1 W9 W5 W4 W8 | scan:S5:64:256
-scan:S4:64:256 scan:S7:64:256 scan:S5:6:256 W6 W7 W1s1 W4s1 (arm meanings in the chain header). Each
+WORKER with `CHAIN_WORKER=w CHAIN_WORKERS=n`; worker w runs `ARMS_W$w`, the chip count per host is
+self-detected from /dev/vfio; on a v6e-8 one worker runs all four lists, 2 jobs per chip). Jobs (16, one
+per chip): W0 = W13 W2 W3 W1 | W1 = scan:S5:64:256 scan:S4:64:256 scan:S7:64:256 scan:S5:6:256 | W2 = W9 W5
+W4 W8 | W3 = W6 W7 W1s1 W4s1 (arm meanings in the chain header). Each
 training arm = pretrain → evals (strat t6/64/256 k16, full t6/t64, val t64, retention t8) → probe (not W7:
 box4 layout) → GCS; then PHASE4 per worker (best-of-my-arms 20k-subsample k=128 t=64, 8 shards); then the
 COMPLETION GUARD (the last worker to find every arm's artifacts in GCS builds `sport2w2_final.tgz` + emits
@@ -31,8 +63,8 @@ complete)`, `RESUME-Wx from live ckpt`, `EVAL-Wx-OK`, `PROBE-Wx-OK`, `PROBE-SKIP
 `QUEUES-DONE`, `PHASE4: best arm …`, `PHASE4-OK`, `RESCUE-OK`, `CHAIN-SPORT2W2-WORKER-DONE` /
 `CHAIN-SPORT2W2-COMPLETE`. `PRETRAIN-Wx-FAILED rc=` = one arm failed, the others continue (the campaign
 then never COMPLETEs: after 3 relaunches the supervisor exits 3 "needs eyes" — report which arm, do NOT
-patch). Supervisor lines: `CREATE … (v6e-16 spot)`, `CREATED in <zone> (v6e-16, 2 worker(s))`,
-`launch w0/w1: detached + verified`, `READY <zone> | RUNNING 2/2 worker(s) | [w0 …] [w1 …]`,
+patch). Supervisor lines: `CREATE … (v6e-16 spot)`, `CREATED in <zone> (v6e-16, 4 worker(s))`,
+`launch w0/w1: detached + verified`, `READY <zone> | RUNNING 4/4 worker(s) | [w0 …] … [w3 …]`,
 `(+1 done)`, `STRIKE n/2 against v6e-16`, `DEMOTE v6e-16`.
 
 **Per-worker progress (heartbeat):** replace the wave-1 ssh loop with, for each worker w in 0..n-1

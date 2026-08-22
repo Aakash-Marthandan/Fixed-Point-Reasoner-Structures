@@ -69,7 +69,7 @@ gssh () {   # gssh ZONE CMD [WORKER]  (bounded 150 s, gcloud chatter stripped; w
   bounded 150 gcloud compute tpus tpu-vm ssh "$POD" --zone="$1" $wf --project=$PROJECT \
     --command="$2" 2>/dev/null | grep -vE "^(SSH:|Using ssh|Warning:|Updating|Existing)"
 }
-accel_workers () { case $1 in v6e-16) echo 2;; v6e-32) echo 4;; *) echo 1;; esac; }   # 8 chips per v6e host
+accel_workers () { case $1 in v6e-16) echo 4;; v6e-32) echo 8;; *) echo 1;; esac; }   # v6e-8 = 1 host x 8 chips; v6e-16 = 4 hosts x 4 chips (measured 2026-08-22); the LIVE count comes from describe
 live_accel () { cat "$AFILE" 2>/dev/null | tr -dc 'a-z0-9-' ; }
 live_workers () {  # ZONE -> worker count of the live node: describe (positive read) > file > 1
   local n
@@ -217,7 +217,8 @@ if [ -n \"\$P\" ] && kill -0 \$P 2>/dev/null; then kill -TERM -- -\$P 2>/dev/nul
 pkill -TERM -f 'tools/chain_[a-z0-9_]*[.]sh|tools/pretrain[.]py|tools/probe_[a-z]|tools/eval_[a-z_]*[.]py' 2>/dev/null; sleep 4; \
 pkill -KILL -f 'tools/chain_[a-z0-9_]*[.]sh|tools/pretrain[.]py|tools/probe_[a-z]|tools/eval_[a-z_]*[.]py' 2>/dev/null; sleep 2; \
 if [ -n \"\$P\" ] && kill -0 \$P 2>/dev/null; then echo 'STOP: sh STILL ALIVE'; else echo 'STOP: detached sh gone'; fi; \
-echo \"STOP: workers left=\$(pgrep -fc 'tools/pretrain[.]py|tools/probe_[a-z]|tools/chain_[a-z0-9_]*[.]sh|tools/eval_[a-z_]*[.]py')\"" "$w" | tee -a "$LOG"
+echo \"STOP: workers left=\$(pgrep -fc 'tools/pretrain[.]py|tools/probe_[a-z]|tools/chain_[a-z0-9_]*[.]sh|tools/eval_[a-z_]*[.]py')\"; \
+mv -f runs/detached.log runs/detached.log.stopped.\$(date -u +%H%M%S) 2>/dev/null; echo 'STOP: detached.log archived (stale COMPLETE/WORKER-DONE markers cleared)'" "$w" | tee -a "$LOG"
   done
 }
 
