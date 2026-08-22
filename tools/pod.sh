@@ -145,15 +145,17 @@ v_ensure_final () {   # ZONE — sentinel seen but the chain's own final upload 
   notify "final upload failed" "check runs/cloud rescue + GCS partials before analysis"; return 1
 }
 v_stop () {   # ZONE — kill the detached tree (setsid => pgid = pid), verify.
+  # 2026-08-21: patterns generalized from chain_r0 to ANY tools/chain_*.sh + eval_*.py —
+  # the r0-only pattern let chain_sport2.sh survive a stop and emit a vacuous sentinel.
   # NOTE the [.] in pkill patterns: the pattern must not match THIS ssh command
   # line (the merge script's STOP killed its own shell that way, 08-18).
   say "STOP chain in $1"
   gssh "$1" "cd ~/qhrrn2 && P=\$(cat runs/detached.pid 2>/dev/null); \
 if [ -n \"\$P\" ] && kill -0 \$P 2>/dev/null; then kill -TERM -- -\$P 2>/dev/null || kill -TERM \$P; sleep 6; fi; \
-pkill -TERM -f 'tools/chain_r0[.]sh|tools/pretrain[.]py|tools/probe_[a-z]' 2>/dev/null; sleep 4; \
-pkill -KILL -f 'tools/chain_r0[.]sh|tools/pretrain[.]py|tools/probe_[a-z]' 2>/dev/null; sleep 2; \
+pkill -TERM -f 'tools/chain_[a-z0-9_]*[.]sh|tools/pretrain[.]py|tools/probe_[a-z]|tools/eval_[a-z_]*[.]py' 2>/dev/null; sleep 4; \
+pkill -KILL -f 'tools/chain_[a-z0-9_]*[.]sh|tools/pretrain[.]py|tools/probe_[a-z]|tools/eval_[a-z_]*[.]py' 2>/dev/null; sleep 2; \
 if [ -n \"\$P\" ] && kill -0 \$P 2>/dev/null; then echo 'STOP: sh STILL ALIVE'; else echo 'STOP: detached sh gone'; fi; \
-echo \"STOP: workers left=\$(pgrep -fc 'tools/pretrain[.]py|tools/probe_[a-z]|tools/chain_r0[.]sh')\"" | tee -a "$LOG"
+echo \"STOP: workers left=\$(pgrep -fc 'tools/pretrain[.]py|tools/probe_[a-z]|tools/chain_[a-z0-9_]*[.]sh|tools/eval_[a-z_]*[.]py')\"" | tee -a "$LOG"
 }
 
 # ---------- subcommands ----------

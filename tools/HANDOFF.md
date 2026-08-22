@@ -1,10 +1,63 @@
 # HANDOFF — TPU ops phase (persistent; the "CURRENT CAMPAIGN" block is rewritten per campaign)
 
 **Read this first, then `tools/OPS_RUNBOOK.md`.** The repo outranks conversation
-memory. The ops model runs the campaign to completion and STOPS; the analysis
-phase is reserved for the PI's next model switch.
+memory. The ops model (Opus) runs the campaign to completion and STOPS; the analysis
+phase (Fable) is reserved for the PI's next model switch. **ALL ETAs and clock times
+reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08-21).
+HARD BOUNDARY during ops: no `tools/analyze_sport2.py`, no reading/quoting accuracy
+values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
 ## CURRENT CAMPAIGN — SPRINT S2 (Sudoku-Extreme wave 1; launched 2026-08-21; ledger 'SPRINT S2 LAUNCH REGISTRATION')
+
+## ⏸ PAUSED — overnight spot drought 2026-08-22 00:56 IST (19:26Z 08-21) — PI: "pause till morning, resume 7am IST, 1h gaps"
+
+Fleet ZERO verified (all 8 door zones, nodes + QRs). Supervisor KILLED, meter loop stopped, PHASE1 watcher
++ all 3 monitors stopped, heartbeat cron deleted. launchd watchdog left running (billing backstop; no node = nothing to do).
+**State: 7/8 arms DONE + banked in `gs://qhrrn2-rescue/sport2/` (S0/S1/S2/S3/S5/S6/S7 all `_ckpt.pkl`).
+Only S4 (T24) remains — resumes from `S4_ckpt_live.pkl` (18:13Z, ~step 14,200 = ~71%).** PHASE2/PHASE3 not started.
+**Why paused:** us-east1-d evening churn escalated to preempting nodes DURING bring-up (18:25Z + 19:01Z both canary-FAILED)
+plus intermittent all-zones-dry — no node could survive its ~8-min bring-up. Classic overnight trough (clears by morning; cf 08-20).
+
+**RESUME** (fires via session cron `0 7-11 * * *` IST = 7,8,9,10,11 AM IST — the 7am start + hourly fallback; each fire self-checks and self-deletes when done). A fresh session does it manually:
+```bash
+cd /Users/aakash/Projects/HRRN
+echo $(( $(date -u +%s) + 14*3600 )) > runs/tpu_deadline.txt          # 1. extend deadline FIRST
+bash tools/pod.sh status                                              # 2. expect node ABSENT, supervisor NOT RUNNING (unless already resumed)
+# if CHAIN-SPORT2-COMPLETE already in gs://qhrrn2-rescue/sport2/ (final object) -> skip to §6 close instead
+nohup bash tools/pod.sh supervise 14 >/dev/null 2>&1 &                # 3. resume: SKIPs the 7 done arms, resumes S4 from live ckpt, then PHASE2/PHASE3
+nohup .venv/bin/python tools/sport2_meter.py --interval 300 >runs/sport2_meter.log 2>&1 &   # 4. meter back
+```
+Then re-arm §2 (heartbeat cron + edge/inventory/unstick monitors) and, optionally, a fresh PHASE1 watcher bounded to the NEW log tail. If morning is STILL churny (nodes preempt at bring-up), the supervisor keeps hunting on its own; the hourly cron just re-verifies it's alive. On `CHAIN-SPORT2-COMPLETE` → §6 close (SPORT2 version) → STOP. Delete the resume cron once PHASE1-OK is reached or the campaign completes.
+
+
+**INCIDENT + RECOVERY 11:30–11:50Z / 17:00–17:20 IST (Opus):** `pod.sh stop` killed the workers but
+the chain script itself survived (v_stop's pkill pattern was r0-specific), raced through its empty
+phases and uploaded a VACUOUS `sport2_final.tgz` + sentinel at 11:31:08Z → the supervisor read COMPLETE,
+tore the node down and exited. No data lost: the six running arms' ckpts were pushed to GCS-live at
+11:31:13–20Z (S0/S1/S2/S5/S6 ≈ step 11.8k, S4 ≈ 1.8k). FIXES (harness-verified): (i) `pod.sh` v_stop patterns
+generalized to any `tools/chain_*.sh` + `eval_*.py`; (ii) `chain_sport2.sh` completion GUARD — sentinel +
+final object only when every arm has pretrain .done + full-test summaries + probe rows, else
+`CHAIN-SPORT2-INCOMPLETE missing:…` exit 1 (supervisor relaunches → resume). The bogus object was moved
+to `gs://qhrrn2-rescue/sport2/_bogus_final_1131Z.tgz`. Supervisor RESTARTED 11:50Z: hunts a fresh node →
+resumes S0/S1/S2/S4/S5/S6 from GCS-live, S3/S7 fresh with `--remat`. New ETA in the next heartbeat
+(add ≈ 25 min hunt/bring-up + the S3/S7 restart ≈ 1.5 h to the original plan → COMPLETE ≈ 21:30–22:00 IST).
+If the supervisor ever logs COMPLETE while arms are incomplete: check `gsutil ls gs://qhrrn2-rescue/sport2/`
+for a stray `sport2_final.tgz`, quarantine it (`gsutil mv`), and restart `supervise`.
+
+**OPS INTERVENTION 11:30Z / 17:00 IST (Opus, PI: "fix things and make a decision"):** S3 and S7 (the
+T12 arms WITHOUT `--remat`) OOM'd HBM at their first step (`HLO temporaries 33.02G > 31.24G`; the P11-EXT
+lesson — S4/T24 already carried --remat and trains fine at 2.26 it/s). Fix = `--remat` added to S3/S7 in
+`tools/chain_sport2.sh` (flags re-verified), chain stopped, patched chain shipped, relaunched: the six
+running arms RESUME from their ckpts (≤5 min lost), S3/S7 retrain with remat. Campaign still 8/8 arms;
+ETAs shift by the S3/S7 restart (T12+remat ≈ 1.3× T12 ≈ 1.5 h) — new ETA in the next heartbeat.
+
+**LIVE (as of 10:35Z / 16:05 IST 2026-08-21):** node READY in us-east1-d (created 10:14Z, first
+attempt), chain launched 10:27Z (remote pid 12042), supervisor pid 43606 (`runs/pod_supervisor.pid`),
+deadline +14 h (`runs/tpu_deadline.txt`), all 8 arms training in parallel. ETA absent churn:
+T6 arms ≈ 16:35 IST (11:05Z), T12 arms ≈ 17:00 IST, S4 T24 ≈ 18:00 IST (12:30Z) = PHASE1-OK,
+PHASE2-OK ≈ 19:30 IST, COMPLETE + auto-teardown ≈ **20:00 IST (14:30Z)**. Heartbeat cron at :23
+and the three monitors are armed in the launching session (they survive model switches, NOT app
+restarts — re-arm per §2).
 
 **What it is:** the series HRM→TRM→EqR→FPRM as an ablation ladder on our substrate on the
 real Sudoku-Extreme benchmark (1k seeded train / FULL 423k test, exact accuracy). Tag `sport2`,
@@ -105,13 +158,13 @@ without creating.
 
 ## 2. Re-arm the session layers (they die with the session)
 
-**Hourly heartbeat** — `CronCreate`, cron `17 * * * *`, prompt verbatim:
+**Hourly heartbeat** — `CronCreate`, cron `23 * * * *`, prompt verbatim:
 
-> HOURLY TPU HEARTBEAT (standing PI directive, generic — never run-specific). Do ALL of: (1) `cd /Users/aakash/Projects/HRRN && bash tools/pod.sh status` (node state across zones, supervisor alive?, deadline margin, GCS bank rr1b, remote job + per-arm DONE/partial + battery row counts). (2) From the remote detached.log progress (last `step N` line; ~23 it/s at d64 and d48) compute per-ARM completion fraction and ETA — this campaign (rung 1b) has 7 pretrains (A6s0 A7s0 A5s1 A6s1 A7s1 A5s2 A8s0, each 53,333 steps ≈ 38 min) then 33 battery jobs in 5 waves of 8 (~25 min/wave; the last wave has 1 job); rt-only arms A4s1 A4s2 A3s1 A9s1 A9s2 SKIP pretrain. (3) `tail -3 runs/tpu_status_log.txt` and `.venv/bin/python tools/spend_report.py --since 2026-08-19 | tail -3` for spend. (4) Report to the PI in 2-4 sentences + a table with EACH active process, completion fraction, and concrete ETA — EVEN IF UNEVENTFUL. (5) If the supervisor (runs/pod_supervisor.pid) is NOT alive while a node exists or the campaign is incomplete: restart it with `nohup bash tools/pod.sh supervise 16 >/dev/null 2>&1 &` and say so. (6) If the pod.sh log shows COMPLETE + `down rc=0`: verify ZERO TPUs + ZERO queued-resources in all zones, then do EXACTLY §6 of tools/HANDOFF.md (pull gs://qhrrn2-rescue/rr1b/r0_final.tgz with `gcloud storage cp`, list, extract, print-only inspection, one ops ledger line, ONE commit — NO analysis, NO verdicts: the analysis phase (tools/analyze_r1b.py) is reserved for the PI's next model switch) and delete this cron job (CronDelete). (7) If the hard-delete deadline is within 2h of expected completion, extend runs/tpu_deadline.txt and report it. Read tools/HANDOFF.md if anything is unclear.
+> HOURLY TPU HEARTBEAT (standing PI directive, generic — never run-specific). Report ALL times/ETAs in IST (UTC+5:30) with UTC in parentheses. Do ALL of: (1) `bash tools/pod.sh status` (node state across zones, supervisor alive?, deadline margin, GCS bank sport2, remote job + per-arm DONE/partial). (2) Per-arm progress: `gcloud compute tpus tpu-vm ssh qhrrn2-pod2 --zone=us-east1-d --project=quantum-llm --command "cd ~/qhrrn2 && for a in S0 S1 S2 S3 S4 S5 S6 S7; do printf '%s: ' \$a; grep -E 'step |PRETRAIN-|EVAL-|PROBE-' runs/wave_pre_\$a.log runs/detached.log 2>/dev/null | grep \$a | tail -1 | cut -c1-100; echo; done"` (bounded; use perl alarm 150) — compute per-ARM completion fraction and ETA from the measured it/s. This campaign (SPRINT S2, Sudoku-Extreme wave 1) has 8 chip-pinned pretrains IN PARALLEL (S0 S1 S2 S5 S6 at T6, S3/S7 at T12, S4 at T24 = the long pole), then PHASE2 evals per arm on its own chip, then PHASE3 probes, then RESCUE-OK + CHAIN-SPORT2-COMPLETE. (3) `tail -3 runs/tpu_status_log.txt` and `.venv/bin/python tools/spend_report.py --since 2026-08-21 | tail -3` for spend. (4) Report to the PI in 2–4 sentences + a table with EACH active process, completion fraction, and concrete ETA in IST — EVEN IF UNEVENTFUL. (5) If the supervisor (runs/pod_supervisor.pid) is NOT alive while a node exists or the campaign is incomplete: restart it with `nohup bash tools/pod.sh supervise 14 >/dev/null 2>&1 &` and say so. (6) If the pod.sh log shows COMPLETE + `down rc=0`: verify ZERO TPUs + ZERO queued-resources in all zones, then do EXACTLY §6 of tools/HANDOFF.md (sport2 version) and delete this cron job (CronDelete). NO analysis, NO accuracy values quoted, NO verdicts — tools/analyze_sport2.py is reserved for the analysis pass. (7) If the hard-delete deadline (runs/tpu_deadline.txt) is within 2h of expected completion, extend it and report. (8) If a bring-up step (UP/CANARY/LAUNCH) has sat unchanged for >25 min and a fresh describe shows the node PREEMPTED/STOPPED/absent and the stall watch has not acted, kill the supervisor's hung CHILD (never the supervisor) per tools/unstick_watch.sh and report. Read tools/HANDOFF.md if anything is unclear.
 
 **Event monitor** — `Monitor` (persistent), command verbatim:
 ```
-cd /Users/aakash/Projects/HRRN && tail -n0 -F runs/pod_qhrrn2-pod2.log | grep --line-buffered -E '^2026' | awk -F'\|' '/CREATED in|canary FAILED|DOWN |COMPLETE|CHAIN-R0|NEEDS|died|sick|SSHFAIL|unreachable|all zones dry|EXIT|relaunch|not READY/{print;fflush();next} NF>=4{if($4!=last){print;fflush();last=$4}}'
+cd /Users/aakash/Projects/HRRN && tail -n0 -F runs/pod_qhrrn2-pod2.log | grep --line-buffered -E '^2026' | awk -F'\|' '/CREATED in|canary FAILED|DOWN |COMPLETE|CHAIN-SPORT2|PHASE|NEEDS|died|sick|SSHFAIL|unreachable|all zones dry|EXIT|relaunch|not READY|FAILED/{print;fflush();next} NF>=4{if($4!=last){print;fflush();last=$4}}'
 ```
 It emits one line per state/phase change (steady 5-min polls are deduplicated).
 
@@ -131,6 +184,8 @@ it worked and the loop is re-hunting — no action needed. `SUPERVISOR DEAD` eve
 restart per §1.
 
 ## 3. Normal log signatures (runs/pod_qhrrn2-pod2.log)
+
+**SPORT2 (current):** `=== SPORT2 START … arms=… ===` → `PHASE1: pretrain` → eight `=== PRETRAIN Sx hh:mm === chip c flags: …` lines at once (parallel) → per-arm `PRETRAIN-Sx-OK` (or `PRETRAIN-Sx-FAILED rc=… (see runs/wave_pre_Sx.log)` — the chain CONTINUES) → `wave done` → `PHASE1-OK` → `PHASE2: eval` → per-arm `EVAL-Sx-OK` → `PHASE2-OK` → `PHASE3: probes` → `PROBE-Sx-OK` → `PHASE3-OK` → `RESCUE-OK` → `CHAIN-SPORT2-COMPLETE`. After a preemption: `SKIP-Sx (GCS complete)` / `RESUME-Sx from live ckpt` / `RESTORE-Sx evals from GCS` = the durability stack working. pod.sh's PROGRESS field shows only the LAST matching line (with 8 parallel arms it is not a progress bar — use the per-arm ssh in §2 for fractions). The rung-era signatures below still describe the supervisor itself.
 
 - Hunting: `node ABSENT everywhere — hunting` → `CREATE … in <zone>` → either `no capacity in <zone>` ×4 + `all zones dry — sleeping 8 min` (normal spot weather; repeats) or `CREATED in <zone>` → `UP (bootstrap+data)` (~7 min) → `CANARY` (~2 min) → `LAUNCH chain` → `launch: detached + verified` → `READY <zone> | RUNNING <pid> | …`.
 - Phase 1: `READY … | RUNNING <pid> | === PRETRAIN A7s0 hh:mm === | step N … it/s`; `RESUMED from … at step N` after a preemption (≤5 min lost); `SKIP-<arm>` for completed or supplied ckpts.
@@ -153,36 +208,48 @@ restart per §1.
 
 ## 5. Never (during this phase)
 
-Two supervisors · editing `tools/campaign.env` (ARMS order is load-bearing) · touching
+Two supervisors · editing `tools/campaign.env` / `tools/campaign_sport2.env` · touching
 the running chain (`pod.sh stop/relaunch` only if the PI asks) · on-demand, queued
-resources, a second pod · running `tools/analyze_r1b.py` for a verdict · patching
-`pretrain.py`, `chain_r0.sh` or probes · deleting `runs/tpu_deadline.txt` · `gsutil -m`
-pulls · more than ONE commit (the ops close).
+resources, a second pod · running `tools/analyze_sport2.py` (or any analyzer) for a verdict ·
+reading or quoting accuracy/exact numbers from `summary_*.json` / `results.jsonl` (the verdict
+pass does that) · patching `pretrain.py`, `chain_sport2.sh`, `eval_sudoku_extreme.py` or probes ·
+deleting `runs/tpu_deadline.txt` · `gsutil -m` pulls · more than ONE commit (the ops close) ·
+reporting ETAs in any timezone but IST.
 
-## 6. Completion procedure — and where you STOP
+## 6. Completion procedure — and where you STOP (SPORT2 version)
 
 After the loop's `down rc=0` and exit 0:
 ```bash
+cd /Users/aakash/Projects/HRRN
 for z in us-east1-d us-east1-c us-east5-b us-central1-a us-central2-b us-west1-c us-west4-a asia-east1-c; do
   echo "$z: $(gcloud compute tpus tpu-vm list --zone=$z --project=quantum-llm --format='value(name,state)' 2>&1 | tr '\n' ' ')"
   gcloud compute tpus queued-resources list --zone=$z --project=quantum-llm --format='value(name,state)' 2>/dev/null
 done                                                    # every line must be empty
-mkdir -p runs/_rr1b_final && gcloud storage cp gs://qhrrn2-rescue/rr1b/r0_final.tgz runs/_rr1b_final/
-tar tzf runs/_rr1b_final/r0_final.tgz | sed 's#^runs/##; s#/.*##' | sort | uniq -c   # expect pretrainr1b_* x12 (7 new + 5 supplied), lad/ladrg/ladrgb_pr1b* x7, ladrt_pr1b* x12, wave logs
-tar xzf runs/_rr1b_final/r0_final.tgz -C .              # extracts into runs/ (note: pretrainr1b_A4s1 etc. are COPIES of supplied ckpts)
-.venv/bin/python tools/inspect_ckpt.py runs/pretrainr1b_A6s0 runs/pretrainr1b_A7s0 runs/pretrainr1b_A5s1 runs/pretrainr1b_A6s1 runs/pretrainr1b_A7s1 runs/pretrainr1b_A5s2 runs/pretrainr1b_A8s0   # print only
-for f in runs/*_pr1b*/results.jsonl; do echo "$f $(wc -l < $f)"; done   # row counts, print only (expect 48 each)
-.venv/bin/python tools/spend_report.py --since 2026-08-19 | tail -4
+mkdir -p runs/_sport2_final && gcloud storage cp gs://qhrrn2-rescue/sport2/sport2_final.tgz runs/_sport2_final/
+tar tzf runs/_sport2_final/sport2_final.tgz | sed 's#^runs/##; s#/.*##' | sort | uniq -c   # expect pretrainsport2_S0..S7 (x8), sxeval_psport2S0..S7 (x8), sudprobe_psport2S0..S7 (x8), wave logs
+tar xzf runs/_sport2_final/sport2_final.tgz -C .              # extracts into runs/
+for a in S0 S1 S2 S3 S4 S5 S6 S7; do echo "$a: ckpt $([ -f runs/pretrainsport2_$a/ckpt_latest.pkl ] && echo ok || echo MISSING)  metrics $(wc -l < runs/pretrainsport2_$a/metrics.jsonl 2>/dev/null) rows  eval-files $(ls runs/sxeval_psport2$a/*/summary_all.json 2>/dev/null | wc -l)  probe-rows $(wc -l < runs/sudprobe_psport2$a/results.jsonl 2>/dev/null)"; done   # PRESENCE + COUNTS ONLY — do not cat summary files
+.venv/bin/python tools/inspect_ckpt.py runs/pretrainsport2_S0 runs/pretrainsport2_S3 runs/pretrainsport2_S4   # print-only (d16, step 20000, T per arm)
+.venv/bin/python tools/spend_report.py --since 2026-08-21 | tail -4
 ```
+Expected per arm: 1 ckpt at step 20,000; eval-files 5 (strat_t6/t64/t256 + full_t6/t64); probe 512 rows.
 Then ONE ledger line under §5 (newest first, right after the `## 5.` header): date,
-"RUNG-1b CHAIN COMPLETE — ops close", completion time, preemptions/relaunches
-(count `DOWN`/`CREATED`/`relaunching` lines since the `RUNG-1b CAMPAIGN START`
-marker in the log), spend, "zero TPUs verified", "data local in runs/ + GCS rr1b;
-analysis reserved for the next session". Commit (`git add Documentation/Design_Ledger.md`
-only; `runs/` stays untracked) and push. Delete the cron. **STOP.** Tell the PI
-the campaign is closed operationally and the analysis phase can start.
+"SPRINT S2 CHAIN COMPLETE — ops close", completion time (IST + UTC), preemptions/relaunches
+(count `DOWN`/`CREATED`/`relaunching` lines since `SPORT2 START` in the log), spend, "zero TPUs
+verified", "data local in runs/ + GCS sport2; analysis reserved for the analysis pass
+(tools/analyze_sport2.py)". Commit (`git add Documentation/Design_Ledger.md` only; `runs/` stays
+untracked) and push. Delete the cron. **STOP.** Tell the PI the campaign is closed operationally and
+the analysis pass can start. If arms are MISSING (a `PRETRAIN-Sx-FAILED` in the log): report which,
+with the last 20 lines of `runs/wave_pre_Sx.log` — do NOT relaunch or patch; the PI decides.
 
 ## 7. Facts you will be asked about
+
+- SPORT2: registration = ledger 'SPRINT S2 LAUNCH REGISTRATION' (2026-08-21; rules pre-data in
+  tools/analyze_sport2.py, self-test 12/12); protocol = sapientinc/sudoku-extreme, seeded 1k train ×100
+  group-aug, FULL 423k test exact accuracy; arms S0 base / S1 +RI / S2 +NI / S3 T12 / S4 T24 / S5 plain /
+  S6 +digit-aug / S7 RI+NI+T12; harness-verified offline (4 runs) + CPU smoke end-to-end; the chain
+  pulls the benchmark npz from GCS itself. Rung-1c (tag r1c) is COMPLETE and ledgered (7b79641); its
+  block below is historical.
 
 - Registration: 2026-08-19 RUNG-1b LAUNCH REGISTRATION (rules R1b-1..R1b-4, locked pre-data); analyzer `tools/analyze_r1b.py` self-test 15/15.
 - Chain changes (arms A6–A9, `R0_RT_ALL`/`R0_RT_ONLY`) were harness-verified offline: exact per-arm flags, SKIPs, 33-job queue, 5 waves, sentinel rc=0.

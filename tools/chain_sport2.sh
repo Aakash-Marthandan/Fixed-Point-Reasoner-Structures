@@ -8,7 +8,8 @@
 #   S0 base   equilibrium core, anchors p.3, knee-priced, T6   (the control)
 #   S1 +RI .15        EqR's randomized-init training rows (H-37 lever)
 #   S2 +NI .01        EqR's per-step training noise
-#   S3 T12            training depth
+#   S3 T12            training depth (remat)  [2026-08-21: T12 without remat OOMs HBM at
+#                     33.0G>31.2G — P11-EXT lesson; S4 already carried --remat]
 #   S4 T24            training depth (remat)
 #   S5 plain          beta=0 (Law 4 on CSP; the throat of a solving substrate)
 #   S6 +digit-aug     explicit digit permutation (S9 covers it: prediction = no change)
@@ -48,11 +49,11 @@ arm_flags () {
     S0) echo "--T 6  --beta-flux 3e-5 --beta-flux-nl 1e-5";;
     S1) echo "--T 6  --beta-flux 3e-5 --beta-flux-nl 1e-5 --ri-p 0.15";;
     S2) echo "--T 6  --beta-flux 3e-5 --beta-flux-nl 1e-5 --ni-sigma 0.01";;
-    S3) echo "--T 12 --beta-flux 3e-5 --beta-flux-nl 1e-5";;
+    S3) echo "--T 12 --beta-flux 3e-5 --beta-flux-nl 1e-5 --remat";;
     S4) echo "--T 24 --beta-flux 3e-5 --beta-flux-nl 1e-5 --remat";;
     S5) echo "--T 6  --beta-flux 0 --beta-flux-nl 0";;
     S6) echo "--T 6  --beta-flux 3e-5 --beta-flux-nl 1e-5 --sudoku-digit-aug";;
-    S7) echo "--T 12 --beta-flux 3e-5 --beta-flux-nl 1e-5 --ri-p 0.15 --ni-sigma 0.01";;
+    S7) echo "--T 12 --beta-flux 3e-5 --beta-flux-nl 1e-5 --ri-p 0.15 --ni-sigma 0.01 --remat";;
     S*s1) echo "$(arm_flags "${1%s1}") --seed 1";;   # seed-1 replicate of any arm
     S*s2) echo "$(arm_flags "${1%s2}") --seed 2";;
     *) echo "UNKNOWN-ARM $1" >&2; return 1;;
@@ -130,6 +131,21 @@ while [ $# -gt 0 ]; do
 done
 echo "PHASE3-OK $(date -u +%H:%M)"
 
+# ---------- completion GUARD (2026-08-21 incident: a `pod.sh stop` killed the workers but this
+# script raced through empty phases and emitted the sentinel + final object -> the supervisor
+# read COMPLETE and tore the pod down mid-campaign). The sentinel is earned only when EVERY arm
+# has its pretrain .done AND its full-test summaries AND its probe rows; otherwise exit 1 (the
+# supervisor relaunches -> resume) and NO final object is written. ----------
+missing=""
+for arm in $ARMS; do
+  D=runs/pretrain${R_TAG}_$arm; O=runs/sxeval_p${R_TAG}$arm; Pq=runs/sudprobe_p${R_TAG}$arm
+  [ -f "$D/.done" ] || missing="$missing $arm:pretrain"
+  for t in $SX_T_FULL; do [ -f "$O/full_t$t/summary_all.json" ] || missing="$missing $arm:full_t$t"; done
+  [ -s "$Pq/results.jsonl" ] || missing="$missing $arm:probe"
+done
+if [ -n "$missing" ]; then
+  echo "CHAIN-SPORT2-INCOMPLETE missing:$missing $(date -u +%FT%TZ)"; exit 1
+fi
 # ---------- final object + sentinel ----------
 tar czf /tmp/$FINAL_OBJ runs/pretrain${R_TAG}_*/ckpt_latest.pkl runs/pretrain${R_TAG}_*/metrics.jsonl runs/*_p${R_TAG}* runs/wave_*.log 2>/dev/null
 gsutil -q cp /tmp/$FINAL_OBJ "$GCS/$FINAL_OBJ" && echo "RESCUE-OK"
