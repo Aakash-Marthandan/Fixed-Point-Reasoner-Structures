@@ -248,7 +248,7 @@ cmd_supervise () {
     echo "supervisor already running (pid $(cat "$PIDF")) — one instance only"; exit 1; fi
   echo $$ > "$PIDF"
   local END RELAUNCHES=0 UNKNOWN=0 SSHFAIL=0 nw z st js
-  local MAXRL=${MAX_RELAUNCH:-6}   # relaunch rounds per node life (2026-08-22: 4 workers x the 8.5h wall-ceiling resume can take 2-3 rounds; the cap guards crash loops, not resumes)
+  local MAXRL=${MAX_RELAUNCH:-10}   # relaunch rounds per node life (2026-08-22: 4 workers x the 8.5h wall-ceiling resume can take 2-3 rounds; the cap guards crash loops, not resumes)
   # ONE KNOB: the loop's end time IS the watchdog deadline (runs/tpu_deadline.txt,
   # re-read every poll so extending the file extends both layers). Without it
   # the watchdog would delete the node at its deadline and this loop would
@@ -310,6 +310,12 @@ cmd_supervise () {
             if [ "$wnorepo" -eq 1 ]; then v_bring_up "$z" || v_down "$z" "bring-up failed"
             else for wk in $target; do v_launch "$z" "$wk" || v_down "$z" "launch failed"; done; fi
             RELAUNCHES=$((RELAUNCHES+1))
+          else
+            # HEALTHY poll (workers running, nothing to relaunch) — the relaunch streak is
+            # broken, so reset the crash-loop counter (2026-08-24 fix: staggered per-worker
+            # wall-ceiling resumes across a long multi-worker run are NOT a crash loop; the
+            # monotonic counter would falsely trip exit 3 near completion).
+            [ "$wrun" -gt 0 ] && RELAUNCHES=0
           fi
         fi;;
       CREATING|STOPPING|REPAIRING|DELETING) say "node $st in $z — waiting"; sleep 120; continue;;
