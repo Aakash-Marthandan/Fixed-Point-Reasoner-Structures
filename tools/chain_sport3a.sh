@@ -166,9 +166,14 @@ bscan_one () {   # bscan:ARM:SEL:K   (SEL = 20000 | strat)  on a banked WAVE-1 c
   if [ $ok -eq 0 ]; then tar czf "/tmp/$obj" "$O" && gsutil -q cp "/tmp/$obj" "$GCS/$obj" && echo "BSCAN-$spec-OK $(date -u +%H:%M)"; else echo "BSCAN-$spec-FAILED"; fi
 }
 
-# ---------- PHASE0: breadth confirmation (sharded, all chips) ----------
-if [ "$NW" -lt 2 ] || [ "$W" -eq 0 ]; then for b in $BSCANS; do bscan_one "$b"; done; fi
-echo "PHASE0-DONE $(date -u +%H:%M)"
+# ---------- PHASE0: breadth confirmation (sharded over this worker's chips) ----------
+# multi-host: bscan i runs on worker (i mod NW) so no single worker carries all three.
+bi=0
+for b in $BSCANS; do
+  if [ "$NW" -lt 2 ] || [ $((bi % NW)) -eq "$W" ]; then bscan_one "$b"; fi
+  bi=$((bi+1))
+done
+echo "PHASE0-DONE worker=$W $(date -u +%H:%M)"
 
 # ---------- PHASE1-3: per-chip arm pipelines (round-robin) ----------
 i=0
