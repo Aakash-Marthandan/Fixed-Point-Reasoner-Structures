@@ -211,6 +211,7 @@ v_stop () {   # ZONE — kill the detached tree (setsid => pgid = pid), verify.
   # line (the merge script's STOP killed its own shell that way, 08-18).
   local nw w; nw=$(live_workers "$1")
   for w in $(seq 0 $((nw-1))); do
+  [ -z "${2:-}" ] || [ "$2" = "$w" ] || continue     # optional: stop ONE worker (2026-08-23)
   say "STOP chain in $1 (worker $w)"
   gssh "$1" "cd ~/qhrrn2 && P=\$(cat runs/detached.pid 2>/dev/null); \
 if [ -n \"\$P\" ] && kill -0 \$P 2>/dev/null; then kill -TERM -- -\$P 2>/dev/null || kill -TERM \$P; sleep 6; fi; \
@@ -326,6 +327,6 @@ case ${1:-} in
   relaunch|stop|down)
     nw=$(node_where); case $nw in ABSENT|UNKNOWN) echo "node $nw — nothing to $1"; exit 2;; esac
     z=${nw%% *}
-    case $1 in relaunch) v_launch "$z";; stop) v_stop "$z";; down) v_down "$z" "manual";; esac;;
+    case $1 in relaunch) v_launch "$z" "${2:-all}";; stop) v_stop "$z" "${2:-}";; down) v_down "$z" "manual";; esac;;
   *) sed -n '2,20p' "$0"; exit 64;;
 esac

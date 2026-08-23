@@ -48,11 +48,14 @@ RUNS = Path(os.environ.get("QHRRN_RUNS", ROOT / "runs"))
 OUT = RUNS / "analysis" / "sport3a_verdict.txt"
 T1, T2, T3 = "sport2", "sport2w2", "sport3a"
 REF = {"S5": T1, "W2": T2, "W8": T2, "W9": T2}
-ARMS = ["A2", "A3", "A4", "A5", "A6", "A7", "A7s1", "A8"]
-FIX = ["A2", "A3", "A4"]
+ARMS = ["A2", "A3", "A4", "A5", "A6", "A7", "A7s1", "A8", "A2s1", "A3s1", "A4s1", "A5s1", "A6s1", "A9", "A9s1", "A10"]
+FIX = ["A2", "A3", "A4", "A9"]
+SEED_PAIRS = [("A7", "A7s1"), ("A2", "A2s1"), ("A3", "A3s1"), ("A4", "A4s1"), ("A5", "A5s1"), ("A6", "A6s1"), ("A9", "A9s1")]
 DESC = {"S5": "plain T6 d16 20k (w1)", "W2": "plain T12 d16 30k (w2)", "W8": "priced d32 T6 20k (w2)", "W9": "priced d16 T6 50k (w2)",
         "A2": "plain T12 RI.5 NI.01 50k", "A3": "plain T12 FPA k4 50k", "A4": "plain T12 eq_coupled 50k", "A5": "priced T12 50k",
-        "A6": "priced d32 T6 50k", "A7": "plain T12 50k (W2 cont.)", "A7s1": "A7 seed 1", "A8": "plain T6 aug500 wd1e-3 50k"}
+        "A6": "priced d32 T6 50k", "A7": "plain T12 50k (W2 cont.)", "A7s1": "A7 seed 1", "A8": "plain T6 aug500 wd1e-3 50k",
+        "A2s1": "A2 seed 1", "A3s1": "A3 seed 1", "A4s1": "A4 seed 1", "A5s1": "A5 seed 1", "A6s1": "A6 seed 1",
+        "A9": "plain T12 RI.5 NI.01 + FPA k4 50k", "A9s1": "A9 seed 1", "A10": "priced T12 RI.5 NI.01 50k"}
 LINES = []
 def say(s=""): LINES.append(str(s)); print(s)
 def jload(p):
@@ -109,9 +112,12 @@ def analyze():
         vb = valbest(a); vbs = f"{fpp(cold(a, vb=True))} [{vb[0]}]" if (vb and cold(a, vb=True) is not None) else ("  (final=best) " if vb else "   -   ")
         say(f"  {a:5s} {DESC[a]:30s} t6 {fpp(cold(a,6))} t64 {fpp(cold(a))} | vb {vbs} | v16 {fpp(vote16(a))} | ret {f(ret(a))} retfm {f(retfm(a))} | val {fpp(val64(a))} | eta {f(eta(a),3)} | {cls(a)}")
     # seed noise
-    dS = delta(cold("A7"), cold("A7s1")); NOISE = max(abs(dS) if dS is not None else 0.0, 1.0)
-    V["SEED"] = f"|A7-A7s1|={f(dS)}pp NOISE={NOISE:.2f}pp"
-    say(f"\nSEED NOISE: |A7-A7s1| {f(dS)} pp -> NOISE {NOISE:.2f} pp (contrasts below {2*NOISE:.2f} pp labeled WITHIN-SEED-NOISE)")
+    spreads = {f"{a}-{b}": delta(cold(a), cold(b)) for a, b in SEED_PAIRS}
+    dS = spreads["A7-A7s1"]
+    vals = [abs(v) for v in spreads.values() if v is not None]
+    NOISE = max(max(vals) if vals else 0.0, 1.0)
+    V["SEED"] = " ".join(f"|{k}|={f(v)}" for k, v in spreads.items() if v is not None) + f" NOISE={NOISE:.2f}pp"
+    say(f"\nSEED NOISE (cold@t64 final, per pair): " + ", ".join(f"{k} {f(v)}pp" for k, v in spreads.items()) + f" -> NOISE {NOISE:.2f} pp (contrasts below {2*NOISE:.2f} pp labeled WITHIN-SEED-NOISE)")
     lab = lambda d: "" if d is None or abs(d) >= 2 * NOISE else " [WITHIN-SEED-NOISE]"
     # breadth confirmation
     b128 = jload(RUNS / "sxbreadth20000_S5_k128" / "summary_all.json"); b256 = jload(RUNS / "sxbreadth20000_S5_k256" / "summary_all.json"); b1k = jload(RUNS / "sxbreadth_S5_t64_k1024" / "summary_all.json")
@@ -146,7 +152,7 @@ def analyze():
     V["PRICED-DEPTH"] = "NO-DATA" if d5 is None else ("PRICED-DEPTH-PAYS" if d5 >= 3 else "PRICED-DEPTH-FLAT")
     say(f"\nPRICE CEILING: A6 priced d32 @50k {fpp(c6)} vs W8 @20k {fpp(cold('W8'))} ({f(d6)}pp{lab(d6)}) -> {V['PRICE-RISES']} [{cls('A6')}] | A5 priced T12 @50k {fpp(c5)} vs W9 {fpp(cold('W9'))} ({f(d5)}pp{lab(d5)}) -> {V['PRICED-DEPTH']} [{cls('A5')}]")
     fixbest = max([a for a in FIX if cold(a) is not None], key=lambda a: cold(a), default=None)
-    prbest = max([a for a in ("A5", "A6") if cold(a) is not None], key=lambda a: cold(a), default=None)
+    prbest = max([a for a in ("A5", "A6", "A10", "A5s1", "A6s1") if cold(a) is not None], key=lambda a: cold(a), default=None)
     if fixbest and prbest:
         dm = delta(cold(fixbest), cold(prbest)); V["REGULARISER"] = f"{fixbest if dm >= 0 else prbest} (margin {f(abs(dm))}pp{lab(dm)})"
         say(f"  REGULARISER-OF-CHOICE: best fix {fixbest} {fpp(cold(fixbest))} vs best priced {prbest} {fpp(cold(prbest))} -> {V['REGULARISER']}")
@@ -182,7 +188,7 @@ def analyze():
         say(f"\nTRAJECTORY LAW: Spearman(joint lambda_max, final-map retention) over {len(rows)} monitor rows = {rho:.2f} (H-45 predicts strongly negative; lam>1 <-> retfm->0)")
     else: V["TRAJ"] = "NO-DATA"
     # recipe decision
-    cands = [a for a in ARMS if a != "A7s1" and cold(a) is not None and not (retfm(a) is not None and retfm(a) < .5)]
+    cands = [a for a in ARMS if not a.endswith("s1") and cold(a) is not None and not (retfm(a) is not None and retfm(a) < .5)]
     if cands:
         def key(a):
             vb = cold(a, vb=True); return (vb if vb is not None else cold(a), vote16(a) or 0)

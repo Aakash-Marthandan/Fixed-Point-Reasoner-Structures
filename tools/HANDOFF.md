@@ -15,9 +15,9 @@ first / v6e-8 fallback (same ladder, strikes, demotion as wave 2). Tag `sport3a`
 chain `tools/chain_sport3a.sh` (same launch contract as wave 2: per worker, `CHAIN_WORKER/CHAIN_WORKERS`, chips
 self-detected). **Jobs:** PHASE0 (worker 0, sharded over its chips) = BREADTH CONFIRMATION on the banked wave-1 S5
 map: `bscan:S5:20000:128`, `bscan:S5:20000:256`, `bscan:S5:strat:1024` (≈ 2.75 h on 8 chips, ≈ 5.5 h on 4);
-then 8 training arms, one per chip (v6e-8) or 2 per worker (v6e-16: `ARMS_W0..W3` = "A2 A3" "A4 A5" "A6 A7" "A7s1 A8"):
+then 16 training arms (v6e-16: one per chip, `ARMS_W0..W3` = "A2 A3 A2s1 A3s1" "A4 A5 A4s1 A5s1" "A6 A7 A9 A9s1" "A7s1 A8 A10 A6s1"; the +8 addendum of 18:45 IST; on a v6e-8 fallback two per chip):
 A2 plain T12 RI.5 NI.01 · A3 plain T12 FPA k4 · A4 plain T12 eq_coupled · A5 priced T12 · A6 priced d32 T6 ·
-A7 plain T12 (W2 → 50k) · A7s1 seed 1 · A8 plain T6 aug500 wd1e-3 — all 50k steps, MONITOR every 5k (val@t64,
+A7 plain T12 (W2 → 50k) · A7s1 seed 1 · A8 plain T6 aug500 wd1e-3 · A9 plain T12 RI/NI+FPA · A10 priced T12 RI/NI · seeds A2s1 A3s1 A4s1 A5s1 A6s1 A9s1 — all 50k steps, MONITOR every 5k (val@t64,
 retention sched/final-map, η, λ_max), ckpts banked every 5k (`ckpt_0*.pkl`, live-synced with metrics). Per arm:
 pretrain → `VALBEST-Ax <step>` → cheap evals (strat t6/64/256 k16, val t64, ret_t8, retfm_t8) → probe (skipped
 for A4: eq_coupled). Then PHASE-F = full-test evals SHARDED per arm (t6 + t64 final; t64 val-best), PHASE4 =
@@ -32,16 +32,16 @@ ETA ≈ 14 h on a v6e-8 (T12 @50k ≈ 9 h is the pole), ≈ 16 h on a v6e-16 (wo
 (the wave-2 W4 crash was a transient libtpu SLICE_FAILURE; the relaunch resumes). Supervisor lines as in wave 2.
 
 **Heartbeat progress (per worker w):** `gcloud compute tpus tpu-vm ssh qhrrn2-pod2 --zone=<zone> --worker=$w
---project=quantum-llm --command "cd ~/qhrrn2 && for a in A2 A3 A4 A5 A6 A7 A7s1 A8; do [ -f runs/wave_pre_$a.log ]
+--project=quantum-llm --command "cd ~/qhrrn2 && for a in A2 A3 A4 A5 A6 A7 A7s1 A8 A2s1 A3s1 A4s1 A5s1 A6s1 A9 A9s1 A10; do [ -f runs/wave_pre_$a.log ]
 || continue; printf '%s: ' $a; grep -E 'step |DONE' runs/wave_pre_$a.log | tail -1 | cut -c1-70; echo; grep MONITOR
 runs/wave_pre_$a.log | tail -1 | cut -c1-120; done; grep -E 'BSCAN-.*-OK|PHASE0-DONE|PRETRAIN-.*-OK|EVALCHEAP|FULL|PHASE4|
 QUEUES-DONE|WORKER-DONE|COMPLETE|FAILED' runs/detached.log | tail -12"` (bounded). All arms 50k steps; T12 wall ≈ 1.5–1.7
 it/s, T6 d16 ≈ 4 it/s, d32 ≈ 2.2 it/s; MONITOR lines are the trajectory (val@t64 / ret_final / lam_max) — report them
 but do NOT interpret (no verdicts; `tools/analyze_sport3a.py` is reserved).
 
-**§6 completion (sport3a version):** pull `gs://qhrrn2-rescue/sport3a/sport3a_final.tgz`; expect 8 `pretrainsport3a_*`
-dirs each with `ckpt_latest.pkl` + `ckpt_0*.pkl` (10) + `metrics.jsonl` + `val_best.txt`; 8 `sxeval_psport3a*` dirs
-(strat_t6/t64/t256, val_t64, ret_t8, retfm_t8, full_t6, full_t64, + full_t64_valbest where it differs); 7 probes (no A4);
+**§6 completion (sport3a version):** pull `gs://qhrrn2-rescue/sport3a/sport3a_final.tgz`; expect 16 `pretrainsport3a_*`
+dirs each with `ckpt_latest.pkl` + `ckpt_0*.pkl` (10) + `metrics.jsonl` + `val_best.txt`; 16 `sxeval_psport3a*` dirs
+(strat_t6/t64/t256, val_t64, ret_t8, retfm_t8, full_t6, full_t64, + full_t64_valbest where it differs); 14 probes (no A4/A4s1);
 `sxbreadth20000_S5_k128`, `sxbreadth20000_S5_k256`, `sxbreadth_S5_t64_k1024`, one `sxbreadth20k_psport3a*`; counts only;
 ONE ops ledger line; ONE commit; STOP.
 

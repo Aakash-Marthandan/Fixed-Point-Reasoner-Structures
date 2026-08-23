@@ -70,6 +70,8 @@ arm_flags () {   # the registered per-arm flags (everything else = the wave-2 ba
     A6)  echo "--d 32 --T 6 --steps 50000 --beta-flux 3e-5 --beta-flux-nl 1e-5 --remat";;
     A7)  echo "--d 16 --T 12 --steps 50000 --beta-flux 0 --beta-flux-nl 0 --remat";;
     A8)  echo "--d 16 --T 6 --steps 50000 --beta-flux 0 --beta-flux-nl 0 --sudoku-aug 500 --wd 1e-3";;
+    A9)  echo "--d 16 --T 12 --steps 50000 --beta-flux 0 --beta-flux-nl 0 --ri-p 0.5 --ni-sigma 0.01 --fpa-k 4 --fpa-eps 0.2 --fpa-w 1.0 --remat";;   # combined: RI/NI + FPA (v6e-16 addendum 2026-08-23)
+    A10) echo "--d 16 --T 12 --steps 50000 --beta-flux 3e-5 --beta-flux-nl 1e-5 --ri-p 0.5 --ni-sigma 0.01 --remat";;                          # priced T12 + RI/NI (addendum)
     A*s1) echo "$(arm_flags "${1%s1}") --seed 1";;
     A*s2) echo "$(arm_flags "${1%s2}") --seed 2";;
     *) echo "UNKNOWN-ARM $1" >&2; return 1;;
