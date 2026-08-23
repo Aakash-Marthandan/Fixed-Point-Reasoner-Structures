@@ -174,6 +174,9 @@ def main():
     ap.add_argument("--fpopt-gamma", type=float, default=1.0,
                     help="<1: eta decays by gamma per step beyond cfg.T (FPOpt)")
     ap.add_argument("--tau", type=float, default=1.0)
+    ap.add_argument("--eta-override", type=float, default=None,
+                    help="DIAGNOSTIC ONLY (2026-08-23 wave-2 analysis): replace the ckpt's learned "
+                         "equilibrium step eta at inference. Never a benchmark number — labeled in the summary.")
     ap.add_argument("--batch", type=int, default=512)
     ap.add_argument("--out", help="output dir")
     ap.add_argument("--merge", default=None, help="merge shard files in DIR and exit")
@@ -194,6 +197,10 @@ def main():
     tvj = jnp.asarray(saved["state"]["table"][0])
     eta = float(cfg.eta_floor + (1.0 - cfg.eta_floor) * jax.nn.sigmoid(params["eq"]["eta"]))
     eta_z = float(jax.nn.sigmoid(params["eq"]["eta_z"]))
+    eta_learned = eta
+    if a.eta_override is not None:
+        eta = float(a.eta_override)
+        print(f"DIAGNOSTIC eta override: learned {eta_learned:.3f} -> {eta:.3f}", flush=True)
     t_total = a.t_total or cfg.T
 
     d = SX.load_prepared(a.npz)
@@ -264,6 +271,7 @@ def main():
         layout=layout, fpopt_gamma=a.fpopt_gamma, tau=a.tau, shard=tag,
         stratified=a.stratified, subsample=a.subsample, subsample_seed=a.subsample_seed,
         mi_seed=a.mi_seed, eta=eta, eta_z=eta_z, T=cfg.T, d=cfg.d,
+        eta_learned=eta_learned, eta_override=a.eta_override,
         wall_s=round(time.time() - t0, 1)))
     (out / f"summary_{tag}.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps({k: summ[k] for k in ("n", "t_total", "k_init", "init", "exact_acc", "exact_acc_vote", "wall_s")}))
