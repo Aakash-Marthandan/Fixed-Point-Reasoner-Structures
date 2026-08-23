@@ -35,6 +35,7 @@ import optax
 
 import dev30
 from qhrrn2 import episodic as E
+from qhrrn2 import grid as G
 from qhrrn2 import sudoku_extreme as SX
 from qhrrn2 import train as T
 from qhrrn2.config import Config
@@ -109,6 +110,15 @@ def parse_args():
     p.add_argument("--sudoku-digit-aug", action="store_true",
                    help="ablation: explicit digit permutation too (exact S9 "
                         "covers it by construction; prediction = no change)")
+    # wave 3a (ledger 2026-08-23, H-45): fixed-point anchor rows + trajectory monitor
+    p.add_argument("--fpa-k", type=int, default=0,
+                   help="fixed-point anchor: final-map steps supervised from a corrupted solution (0=off)")
+    p.add_argument("--fpa-eps", type=float, default=0.2, help="max corruption fraction for FPA starts")
+    p.add_argument("--fpa-w", type=float, default=1.0, help="FPA loss weight")
+    p.add_argument("--monitor-every", type=int, default=0,
+                   help="every N steps: val@t64 cold, schedule + FINAL-MAP retention (t8, solution "
+                        "init), eta, and lambda_max of the final map at the solution (power iteration) "
+                        "on the monitor puzzles -> metrics.jsonl {'monitor':...}; 0 = off")
     p.add_argument("--sudoku-layout", default="origin", choices=["origin", "box4"],
                    help="wave-2 (2026-08-22): Sudoku canvas layout; box4 = the "
                         "registered box-aligned control (carried in the ckpt cfg)")
@@ -172,6 +182,61 @@ def val20_eval(state, cfg, val, tau):
             "obj_consistency_n": c_tot}
 
 
+def sudoku_monitor(state, cfg, val_pairs, *, t_cold=64, t_ret=8, n_lam=16, lam_iters=12):
+    """Wave 3a TRAJECTORY MONITOR (H-45): on the held-out monitor puzzles —
+    val@t_cold cold exact; retention from the solution under the trained
+    schedule and under the FINAL map only (t_norm=1); eta/eta_z (or a1/a2);
+    lambda_max of the final-map update Jacobian at the solution (power
+    iteration, no z-carry, first n_lam puzzles) — the RG-eigenvalue readout:
+    contractive iff |lambda|max < 1. Uses the batched evaluator's own step
+    functions so the monitor and the registered evaluation agree."""
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import eval_sudoku_extreme as EV
+    from qhrrn2 import model as M
+    params = state["model"]; tvj = jnp.asarray(state["table"][0])
+    layout = getattr(cfg, "sudoku_layout", "origin") or "origin"
+    eta = float(cfg.eta_floor + (1.0 - cfg.eta_floor) * jax.nn.sigmoid(params["eq"]["eta"]))
+    eta_z = float(jax.nn.sigmoid(params["eq"]["eta_z"]))
+    ab = EV.coupled_ab(params, cfg)
+    puz9 = np.stack([np.asarray(p_, np.int32) for p_, _ in val_pairs]); sol9 = np.stack([np.asarray(s_, np.int32) for _, s_ in val_pairs])
+    x_can = EV.place_batch(puz9, layout); B = x_can.shape[0]
+    void = jax.nn.one_hot(jnp.full((G.CANVAS, G.CANVAS), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
+    y0v = jnp.broadcast_to(void, (B,) + void.shape)
+    ex, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0v, t_total=t_cold, tau=1.0, gamma=1.0,
+                            sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
+    val_cold = float(ex[-1].mean())
+    y0s = jax.nn.one_hot(EV.place_batch(sol9, layout), M.VOCAB).transpose(0, 3, 1, 2)
+    exr, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0s, t_total=t_ret, tau=1.0, gamma=1.0,
+                             sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
+    exf, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0s, t_total=t_ret, tau=1.0, gamma=1.0,
+                             sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab,
+                             t_norm_fixed=1.0)
+    # lambda_max: power iteration on F(y) = y + eta*(softmax(f(x,y)) - y)  [or a1*y + a2*p]
+    def F(yy, xx):
+        out = M.forward_fields(params, cfg, M.build_fields_soft(xx, yy), t_norm=1.0, tau=1.0,
+                               rng=None, task_vec=tvj, z_in=None)
+        pp = jax.nn.softmax(out.logits, axis=-1).transpose(2, 0, 1)
+        return (ab[0] * yy + ab[1] * pp) if ab is not None else (yy + eta * (pp - yy))
+    def lam_one(xx, ys, key):
+        v = jax.random.normal(key, ys.shape); v = v / (jnp.linalg.norm(v) + 1e-9)
+        def body(_, v):
+            _, jv = jax.jvp(lambda yy: F(yy, xx), (ys,), (v,))
+            return jv / (jnp.linalg.norm(jv) + 1e-12)
+        v = jax.lax.fori_loop(0, lam_iters, body, v)
+        _, jv = jax.jvp(lambda yy: F(yy, xx), (ys,), (v,))
+        return jnp.linalg.norm(jv)
+    n = min(n_lam, B)
+    keys = jax.random.split(jax.random.PRNGKey(0), n)
+    lam = np.asarray(jax.vmap(lam_one)(x_can[:n], y0s[:n], keys))
+    rec = dict(val_t64=val_cold, ret_sched_t8=float(exr[-1].mean()), ret_final_t8=float(exf[-1].mean()),
+               eta=eta, eta_z=eta_z, lam_max_mean=float(lam.mean()), lam_max_max=float(lam.max()),
+               lam_frac_expansive=float((lam > 1.0).mean()), n_val=int(B), n_lam=int(n))
+    if ab is not None:
+        rec["a1"], rec["a2"] = float(ab[0]), float(ab[1])
+    return rec
+
+
 def main():
     a = parse_args()
     if a.smoke:
@@ -189,7 +254,8 @@ def main():
                  eta_floor=a.eta_floor, z_gate_init=a.z_gate_init,
                  eq_coupled=a.eq_coupled, ni_sigma=a.ni_sigma,
                  flux_floors=a.flux_floors or "",
-                 sudoku_layout=a.sudoku_layout)
+                 sudoku_layout=a.sudoku_layout,
+                 fpa_k=a.fpa_k, fpa_eps=a.fpa_eps, fpa_w=a.fpa_w)
 
     exclude = frozenset(dev30.MANIFEST)
     rearc_families = None
@@ -386,6 +452,7 @@ def main():
             rec = {
                 "step": i + 1,
                 "loss": float(loss),
+                **({"fpa_ce": float(aux["fpa_ce_last"])} if "fpa_ce_last" in aux else {}),
                 "ce_in": float(aux["ce_in_last"]),
                 "I_total": float(aux["flux_last"]) * cfg.scales,
                 "A_total": float(aux["flux_attn_last"]) * cfg.scales,
@@ -409,6 +476,18 @@ def main():
             print(f"  VAL step {i+1}: exact {v['val_exact']}/{v['val_total']} "
                   f"pix {v['val_pix_mean']:.3f} objcons {v['obj_consistency']:.3f}"
                   f"(n={v['obj_consistency_n']})", flush=True)
+            t_block = time.time()
+
+        if a.monitor_every and cfg.equilibrium and val and ((i + 1) % a.monitor_every == 0 or i + 1 == a.steps):
+            if a.dp:
+                state = jax.tree.map(lambda x: x[0], state_r)
+            t_m = time.time()
+            mon = sudoku_monitor(state, cfg, val[0][2])
+            mon["step"] = i + 1; mon["wall_s"] = round(time.time() - t_m, 1)
+            metrics_f.write(json.dumps({"monitor": mon}) + "\n"); metrics_f.flush()
+            print(f"  MONITOR step {i+1}: val@t64 {mon['val_t64']:.3f} ret_sched {mon['ret_sched_t8']:.2f} "
+                  f"ret_final {mon['ret_final_t8']:.2f} eta {mon['eta']:.3f} lam_max mean {mon['lam_max_mean']:.3f} "
+                  f"max {mon['lam_max_max']:.3f} expansive {mon['lam_frac_expansive']:.2f} ({mon['wall_s']}s)", flush=True)
             t_block = time.time()
 
         if (i + 1) % a.ckpt_every == 0 or i + 1 == a.steps:

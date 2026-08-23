@@ -4,8 +4,46 @@
 memory. The ops model (Opus) runs the campaign to completion and STOPS; the analysis
 phase (Fable) is reserved for the PI's next model switch. **ALL ETAs and clock times
 reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08-21).
-HARD BOUNDARY during ops: no `tools/analyze_sport2w2.py` (nor analyze_sport2.py), no reading/quoting accuracy
+HARD BOUNDARY during ops: no `tools/analyze_sport3a.py` (nor analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
+
+## CURRENT CAMPAIGN — SPRINT S2 WAVE 3a "fix, confirm, instrument" (launched 2026-08-23 evening IST; ledger 'SPRINT S2 WAVE 3a LAUNCH REGISTRATION')
+
+**What it is:** Phase A of the wave-3 plan (the wave-2 verdict: H-45 contractivity collapse of plain maps with
+budget/capacity; H-44 price = contractive regulariser; S5 breadth 70.7 % @k128 strat-512). ONE spot pod, v6e-16
+first / v6e-8 fallback (same ladder, strikes, demotion as wave 2). Tag `sport3a`, GCS `gs://qhrrn2-rescue/sport3a/`,
+chain `tools/chain_sport3a.sh` (same launch contract as wave 2: per worker, `CHAIN_WORKER/CHAIN_WORKERS`, chips
+self-detected). **Jobs:** PHASE0 (worker 0, sharded over its chips) = BREADTH CONFIRMATION on the banked wave-1 S5
+map: `bscan:S5:20000:128`, `bscan:S5:20000:256`, `bscan:S5:strat:1024` (≈ 2.75 h on 8 chips, ≈ 5.5 h on 4);
+then 8 training arms, one per chip (v6e-8) or 2 per worker (v6e-16: `ARMS_W0..W3` = "A2 A3" "A4 A5" "A6 A7" "A7s1 A8"):
+A2 plain T12 RI.5 NI.01 · A3 plain T12 FPA k4 · A4 plain T12 eq_coupled · A5 priced T12 · A6 priced d32 T6 ·
+A7 plain T12 (W2 → 50k) · A7s1 seed 1 · A8 plain T6 aug500 wd1e-3 — all 50k steps, MONITOR every 5k (val@t64,
+retention sched/final-map, η, λ_max), ckpts banked every 5k (`ckpt_0*.pkl`, live-synced with metrics). Per arm:
+pretrain → `VALBEST-Ax <step>` → cheap evals (strat t6/64/256 k16, val t64, ret_t8, retfm_t8) → probe (skipped
+for A4: eq_coupled). Then PHASE-F = full-test evals SHARDED per arm (t6 + t64 final; t64 val-best), PHASE4 =
+best-arm 20k k=128, completion guard → `sport3a_final.tgz` + `CHAIN-SPORT3A-COMPLETE` (+ self-teardown).
+ETA ≈ 14 h on a v6e-8 (T12 @50k ≈ 9 h is the pole), ≈ 16 h on a v6e-16 (worker 0 carries PHASE0).
+
+**Signatures:** `=== SPORT3A START … chips=N`, `=== BSCAN bscan:S5:20000:128 …`, `BSCAN-…-OK`, `PHASE0-DONE`,
+`chip c queue: Ax`, `=== PRETRAIN Ax …`, `MONITOR step N: val@t64 … lam_max …` (in `runs/wave_pre_Ax.log`),
+`VALBEST-Ax`, `PRETRAIN-Ax-OK`, `EVALCHEAP-Ax-OK`, `PROBE-Ax-OK` / `PROBE-SKIP-A4`, `QUEUES-DONE`, `FULL-Ax-t64-OK`,
+`FULLVB-Ax-t64-OK step=…`, `EVAL-Ax-OK`, `PHASE4: best arm …`, `PHASE4-OK`, `RESCUE-OK`, `CHAIN-SPORT3A-WORKER-DONE` /
+`CHAIN-SPORT3A-COMPLETE`, `SELF-TEARDOWN…`. `PRETRAIN-Ax-FAILED rc=` = report the last 20 log lines, do NOT patch
+(the wave-2 W4 crash was a transient libtpu SLICE_FAILURE; the relaunch resumes). Supervisor lines as in wave 2.
+
+**Heartbeat progress (per worker w):** `gcloud compute tpus tpu-vm ssh qhrrn2-pod2 --zone=<zone> --worker=$w
+--project=quantum-llm --command "cd ~/qhrrn2 && for a in A2 A3 A4 A5 A6 A7 A7s1 A8; do [ -f runs/wave_pre_$a.log ]
+|| continue; printf '%s: ' $a; grep -E 'step |DONE' runs/wave_pre_$a.log | tail -1 | cut -c1-70; echo; grep MONITOR
+runs/wave_pre_$a.log | tail -1 | cut -c1-120; done; grep -E 'BSCAN-.*-OK|PHASE0-DONE|PRETRAIN-.*-OK|EVALCHEAP|FULL|PHASE4|
+QUEUES-DONE|WORKER-DONE|COMPLETE|FAILED' runs/detached.log | tail -12"` (bounded). All arms 50k steps; T12 wall ≈ 1.5–1.7
+it/s, T6 d16 ≈ 4 it/s, d32 ≈ 2.2 it/s; MONITOR lines are the trajectory (val@t64 / ret_final / lam_max) — report them
+but do NOT interpret (no verdicts; `tools/analyze_sport3a.py` is reserved).
+
+**§6 completion (sport3a version):** pull `gs://qhrrn2-rescue/sport3a/sport3a_final.tgz`; expect 8 `pretrainsport3a_*`
+dirs each with `ckpt_latest.pkl` + `ckpt_0*.pkl` (10) + `metrics.jsonl` + `val_best.txt`; 8 `sxeval_psport3a*` dirs
+(strat_t6/t64/t256, val_t64, ret_t8, retfm_t8, full_t6, full_t64, + full_t64_valbest where it differs); 7 probes (no A4);
+`sxbreadth20000_S5_k128`, `sxbreadth20000_S5_k256`, `sxbreadth_S5_t64_k1024`, one `sxbreadth20k_psport3a*`; counts only;
+ONE ops ledger line; ONE commit; STOP.
 
 ## ✅ COMPLETE — SPRINT S2 WAVE 2 (2026-08-23 09:52Z / 15:22 IST) — ops closed, fleet ZERO, analysis pending
 
@@ -18,7 +56,7 @@ meter/caffeinate/monitors/heartbeat-cron down). **The analysis pass has NOT run*
 in the ledger close): 4 preemptions + v6e-16 demotion; W4 transient libtpu SLICE_FAILURE crash → resumed; W4/W9
 evals sharded over idle chips + merged (validity verified). The blocks below are the (now historical) launch spec.
 
-## CURRENT CAMPAIGN — SPRINT S2 WAVE 2 (Sudoku-Extreme; launched 2026-08-22; ledger 'SPRINT S2 WAVE 2 LAUNCH REGISTRATION')
+## PREVIOUS CAMPAIGN (historical) — SPRINT S2 WAVE 2 (Sudoku-Extreme; launched 2026-08-22; COMPLETE 2026-08-23; ledger 'SPRINT S2 WAVE 2 LAUNCH REGISTRATION')
 
 ## ▶ LIVE — OPS HANDOFF (Opus) as of 2026-08-23 00:15 IST (18:45Z) — node v6e-8 READY us-east1-d since 17:41Z, chain launched 17:49Z, 1 worker × 8 chips, no preemption since
 

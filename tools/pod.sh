@@ -116,7 +116,7 @@ if grep -q '$SENTINEL' runs/detached.log 2>/dev/null; then echo COMPLETE; \
 elif P=\$(cat runs/detached.pid 2>/dev/null) && [ -n \"\$P\" ] && kill -0 \$P 2>/dev/null; then echo \"RUNNING \$P\"; \
 elif grep -q '$WDONE_MARK' runs/detached.log 2>/dev/null; then echo WDONE; \
 else echo \"IDLE \$(cat runs/detached.exit 2>/dev/null || echo killed)\"; fi; \
-echo \"PROGRESS \$(grep -E '^=== PRETRAIN|^=== SCAN|PHASE1-OK|PHASE2:|PHASE4|wave done|PHASE2-OK|^SKIP-|RESUME|QUEUES-DONE|-OK' runs/detached.log 2>/dev/null | tail -1 | cut -c1-60) | \$(grep 'it/s' runs/detached.log 2>/dev/null | tail -1 | cut -c1-44)\"" "${2:-0}")
+echo \"PROGRESS \$(grep -E '^=== PRETRAIN|^=== SCAN|^=== BSCAN|PHASE0-DONE|PHASE1-OK|PHASE2:|PHASE4|wave done|PHASE2-OK|^SKIP-|RESUME|QUEUES-DONE|-OK' runs/detached.log 2>/dev/null | tail -1 | cut -c1-60) | \$(grep 'it/s' runs/detached.log 2>/dev/null | tail -1 | cut -c1-44)\"" "${2:-0}")
   if ! printf '%s' "$out" | grep -qE '^(COMPLETE|WDONE|RUNNING|IDLE|NOREPO)'; then echo SSHFAIL; return; fi
   printf '%s\n' "$out"
 }

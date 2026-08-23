@@ -36,7 +36,7 @@ def arm_steps(chain_path, arms, default_steps):
     steps = {}
     try: txt = Path(chain_path).read_text()
     except Exception: txt = ""
-    for m in re.finditer(r'^\s*(W\w+|S\d+)\)\s+echo "([^"]*)"', txt, re.M):
+    for m in re.finditer(r'^\s*([A-Z]\w*)\)\s+echo "([^"]*)"', txt, re.M):
         sm = re.search(r'--steps (\d+)', m.group(2))
         if sm: steps[m.group(1)] = int(sm.group(1))
     out = {}
@@ -128,7 +128,7 @@ def main():
     ap.add_argument("--interval", type=int, default=300); ap.add_argument("--once", action="store_true")
     a = ap.parse_args()
     e = env(); pod, gcs, tag = e["POD"], e["GCS"], e.get("R_TAG", "sport2")
-    raw = [x for x in e["ARMS"].split() if not x.startswith("scan:")]
+    raw = [x for x in e["ARMS"].split() if not (x.startswith("scan:") or x.startswith("bscan:"))]
     arms = []
     for arm_ in raw:                   # W5 = two stages (W5gen then W5) — both rows (never rebind `a` = argparse namespace)
         if re.sub(r's[12]$', '', arm_) == "W5": arms.append(arm_ + "gen")

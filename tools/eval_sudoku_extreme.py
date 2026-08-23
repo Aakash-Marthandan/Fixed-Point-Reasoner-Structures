@@ -99,10 +99,19 @@ def _step(cfg, tau, t_norm, first):
     return make_step(cfg, tau, t_norm, first)
 
 
+def coupled_ab(params, cfg):
+    """FPRM coupled residual (cfg.eq_coupled): y <- a1*y + a2*p; None for the damped form."""
+    if not getattr(cfg, "eq_coupled", False):
+        return None
+    return (float(jax.nn.sigmoid(params["eq"]["alpha1"])), float(jax.nn.sigmoid(params["eq"]["alpha2"])))
+
+
 def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
-              eta, eta_z, layout="origin"):
+              eta, eta_z, layout="origin", t_norm_fixed=None, ab=None):
     """Returns per-puzzle numpy: exact_t (T,B), valid_ok_t (T,B) [valid & givens-
-    consistent], final pred9 (B,9,9)."""
+    consistent], final pred9 (B,9,9). t_norm_fixed (wave 3a): apply one map at
+    every step (1.0 = the FINAL map — the final-map retention instrument);
+    ab = (a1, a2) for eq_coupled checkpoints (mirrors model.iterate_eq)."""
     B = x_can.shape[0]
     y = y0
     z_c = None
@@ -111,14 +120,14 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
     sol9 = jnp.asarray(sol9, jnp.int32); puz9 = jnp.asarray(puz9, jnp.int32)
     mask = puz9 != 0
     for t in range(t_total):
-        t_norm = min(t, cfg.T - 1) / max(cfg.T - 1, 1)
+        t_norm = (min(t, cfg.T - 1) / max(cfg.T - 1, 1)) if t_norm_fixed is None else float(t_norm_fixed)
         first = z_c is None
         logits, zf = _step(cfg, float(tau), float(t_norm), first)(
             params, x_can, y, tvj, jnp.zeros(1) if first else z_c)
         z_c = zf if first else z_c + eta_z * (zf - z_c)
         p = jax.nn.softmax(logits, axis=-1).transpose(0, 3, 1, 2)
         eta_t = eta if (gamma >= 1.0 or t < cfg.T) else eta * (gamma ** (t - cfg.T + 1))
-        y = y + eta_t * (p - y)
+        y = (ab[0] * y + ab[1] * p) if ab is not None else (y + eta_t * (p - y))
         pred9 = layout_gather(jnp.argmax(logits, axis=-1), layout).astype(jnp.int32)
         pred9 = jnp.where(pred9 == G.VOID, 0, pred9)
         exact = jnp.all((pred9 == sol9).reshape(B, -1), axis=1)
@@ -171,6 +180,10 @@ def main():
     ap.add_argument("--init", default="void", choices=["void", "solution"],
                     help="start state: void (cold start, the benchmark) or solution "
                          "(the batched RETENTION instrument: exact_acc = retention)")
+    ap.add_argument("--final-map-only", action="store_true",
+                    help="wave 3a: apply the FINAL map (t_norm=1) at every step — with "
+                         "--init solution this is the final-map retention instrument "
+                         "(the probe's e3b semantics, batched, any layout)")
     ap.add_argument("--fpopt-gamma", type=float, default=1.0,
                     help="<1: eta decays by gamma per step beyond cfg.T (FPOpt)")
     ap.add_argument("--tau", type=float, default=1.0)
@@ -201,6 +214,8 @@ def main():
     if a.eta_override is not None:
         eta = float(a.eta_override)
         print(f"DIAGNOSTIC eta override: learned {eta_learned:.3f} -> {eta:.3f}", flush=True)
+    ab = coupled_ab(params, cfg)
+    tnf = 1.0 if a.final_map_only else None
     t_total = a.t_total or cfg.T
 
     d = SX.load_prepared(a.npz)
@@ -236,7 +251,7 @@ def main():
             y0 = jnp.broadcast_to(void, (B,) + void.shape)
         ex, ok, pred9 = run_batch(params, cfg, tvj, x_can, y0, t_total=t_total, tau=a.tau,
                                   gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                  layout=layout)
+                                  layout=layout, t_norm_fixed=tnf, ab=ab)
         cold = ex[-1]
         fe, fv = first_true(ex), first_true(ok)
         viol = np.asarray(violations_dev(jnp.asarray(pred9)))
@@ -249,7 +264,7 @@ def main():
             y0r = jax.nn.one_hot(jnp.asarray(y0r, jnp.int32), M.VOCAB).transpose(0, 3, 1, 2)
             exr, okr, _ = run_batch(params, cfg, tvj, x_can, y0r, t_total=t_total, tau=a.tau,
                                     gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                    layout=layout)
+                                    layout=layout, t_norm_fixed=tnf, ab=ab)
             hit = okr[-1]
             mi_first = np.where((mi_first < 0) & hit, j, mi_first)
             mi_v += hit.astype(int); mi_t += exr[-1].astype(int)
@@ -272,6 +287,7 @@ def main():
         stratified=a.stratified, subsample=a.subsample, subsample_seed=a.subsample_seed,
         mi_seed=a.mi_seed, eta=eta, eta_z=eta_z, T=cfg.T, d=cfg.d,
         eta_learned=eta_learned, eta_override=a.eta_override,
+        final_map_only=bool(a.final_map_only), eq_coupled_ab=ab,
         wall_s=round(time.time() - t0, 1)))
     (out / f"summary_{tag}.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps({k: summ[k] for k in ("n", "t_total", "k_init", "init", "exact_acc", "exact_acc_vote", "wall_s")}))

@@ -7,8 +7,8 @@ import jax
 import jax.numpy as jnp
 
 from qhrrn2.config import Config
-from qhrrn2.grid import VOID
-from qhrrn2.model import iterate, size_candidates, size_mixture_probs
+from qhrrn2.grid import VOID, NUM_COLORS, CANVAS
+from qhrrn2.model import iterate, iterate_eq, size_candidates, size_mixture_probs, VOCAB
 
 
 def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
@@ -56,16 +56,40 @@ def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
 
     yprev_init: optional initial feedback canvas ([H-23] basin rows)."""
     mask = y_canvas != VOID
+    k_fpa = None
+    if cfg.equilibrium and cfg.fpa_k > 0 and rng is not None:
+        # wave 3a FPA: one extra split ONLY on this branch (fpa_k=0 leaves the
+        # registered rng stream bit-exact — tests/test_fpa.py)
+        rng, k_fpa = jax.random.split(rng)
     outs = iterate(params, cfg, x_canvas, tau=tau, rng=rng, task_vec=task_vec,
                    labels_x=labels_x, yprev_init=yprev_init)
     losses, ces = zip(*(_step_loss(o, x_canvas, y_canvas, mask, cfg) for o in outs))
-    return jnp.mean(jnp.stack(losses)), {
+    total = jnp.mean(jnp.stack(losses))
+    aux = {
         "ce_in_last": ces[-1],
         "flux_last": outs[-1].flux,
         "flux_attn_last": outs[-1].flux_attn,
         "flux_obj_last": outs[-1].flux_obj,
         "rule_entropy_last": -jnp.sum(outs[-1].rule_q * jnp.log(outs[-1].rule_q + 1e-9), axis=-1),
     }
+    if k_fpa is not None:
+        # FIXED-POINT ANCHOR rows (H-45): corrupt eps~U[0,fpa_eps] of the true-extent
+        # cells of the SOLUTION uniformly in 0..9, then apply the FINAL map (t_norm=1)
+        # fpa_k times from there and supervise every step toward the solution —
+        # local contraction of the final map at its fixed point, trained.
+        k_e, k_m, k_c, k_roll = jax.random.split(k_fpa, 4)
+        eps = jax.random.uniform(k_e, (), minval=0.0, maxval=cfg.fpa_eps)
+        flip = jax.random.bernoulli(k_m, eps, (CANVAS, CANVAS)) & mask
+        rand = jax.random.randint(k_c, (CANVAS, CANVAS), 0, NUM_COLORS).astype(jnp.int32)
+        y_corr = jnp.where(flip, rand, y_canvas.astype(jnp.int32))
+        y0 = jax.nn.one_hot(y_corr, VOCAB).transpose(2, 0, 1)
+        outs_fp, _, _ = iterate_eq(params, cfg, x_canvas, tau=tau, rng=k_roll,
+                                   task_vec=task_vec, t_total=cfg.fpa_k, y0_probs=y0,
+                                   t_norm_fixed=1.0)
+        l_fp, c_fp = zip(*(_step_loss(o, x_canvas, y_canvas, mask, cfg) for o in outs_fp))
+        total = total + cfg.fpa_w * jnp.mean(jnp.stack(l_fp))
+        aux["fpa_ce_last"] = c_fp[-1]
+    return total, aux
 
 
 def batch_loss(params, cfg: Config, x_batch, y_batch, *, tau: float, rng=None,

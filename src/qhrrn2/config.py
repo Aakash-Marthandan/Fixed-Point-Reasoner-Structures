@@ -67,3 +67,12 @@ class Config:
     # evaluator places/unplaces consistently with training; the model graph
     # does not read it (no effect on ARC or on any old checkpoint).
     sudoku_layout: str = "origin"
+    # SPRINT S2 wave 3a (ledger 2026-08-23, H-45 contractivity collapse): FIXED-POINT
+    # ANCHOR rows — per training pair, additionally roll the FINAL map (t_norm=1)
+    # for fpa_k steps from a lightly corrupted solution (eps ~ U[0, fpa_eps] of the
+    # true-extent cells resampled) and deep-supervise those steps, weight fpa_w.
+    # Trains local contraction of the final map at the solution (the probe's
+    # ladder instrument as a loss). fpa_k=0 = off, bit-exact pre-existing graph.
+    fpa_k: int = 0
+    fpa_eps: float = 0.2
+    fpa_w: float = 1.0

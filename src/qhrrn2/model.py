@@ -374,13 +374,16 @@ def build_fields_soft(x_canvas, y_probs):
 
 
 def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
-               task_vec=None, t_total=None, y0_probs=None):
+               task_vec=None, t_total=None, y0_probs=None, t_norm_fixed=None):
     """E10 equilibrium loop ([H-2'], ledger 2026-08-09): continuous carried
     answer register with a damped update y <- y + eta*(softmax(logits) - y);
     eta = sigmoid(params['eq']['eta']) (FPRM-style learnable step). Steps
     beyond cfg.T repeat the final map (t_norm frozen at 1). Returns
     (outs, residuals, y_final); residuals are mean |Delta y| per step —
-    the inference halt (res < cfg.res_tau) is applied by callers/probes."""
+    the inference halt (res < cfg.res_tau) is applied by callers/probes.
+    t_norm_fixed (wave 3a): apply ONE map (e.g. 1.0 = the final map) at every
+    step — the fixed-point-anchor rows and the final-map instruments; None =
+    the trained ramp, bit-identical."""
     T = t_total if t_total is not None else cfg.T
     void_can = jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
     y = (jax.nn.one_hot(void_can, VOCAB).transpose(2, 0, 1)
@@ -394,7 +397,7 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
     outs, residuals = [], []
     z_c = None
     for t in range(T):
-        t_norm = min(t, cfg.T - 1) / max(cfg.T - 1, 1)
+        t_norm = (min(t, cfg.T - 1) / max(cfg.T - 1, 1)) if t_norm_fixed is None else float(t_norm_fixed)
         step_rng = None
         if rng is not None:
             rng, step_rng = jax.random.split(rng)
