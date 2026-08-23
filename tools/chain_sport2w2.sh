@@ -106,7 +106,7 @@ pretrain_one () {   # ARM CHIP OUTDIR NPZ AUG [extra flags]  -> 0 ok
   # shellcheck disable=SC2086
   pin "$c" python3 tools/pretrain.py --out "$D" --equilibrium --anchor-p 0.3 --sudoku-extreme "$npz" \
       --sudoku-aug "$aug" --n-val 64 --seed 0 $(arm_flags "$arm") "$@" > "runs/wave_pre_$arm.log" 2>&1
-  local rc=$?; kill $SY 2>/dev/null || true
+  local rc=$?; pkill -P $SY 2>/dev/null; kill $SY 2>/dev/null || true   # stop the live-sync loop AND its sleeping child (no orphans holding fds)
   if [ $rc -eq 0 ]; then
     touch "$D/.done"; gsutil -q cp "$D/ckpt_latest.pkl" "$GCS/${arm}_ckpt.pkl"
     gsutil -q cp "$D/metrics.jsonl" "$GCS/${arm}_metrics.jsonl"; echo "PRETRAIN-$arm-OK $(date -u +%H:%M)"
@@ -245,3 +245,12 @@ for obj in $(gsutil ls "$GCS/breadth20k_*.tgz" 2>/dev/null); do b=$(basename "$o
 tar czf /tmp/$FINAL_OBJ runs/pretrain${R_TAG}_*/ckpt_latest.pkl runs/pretrain${R_TAG}_*/metrics.jsonl runs/*_p${R_TAG}* runs/sxbreadth_* runs/wave_*.log 2>/dev/null
 gsutil -q cp /tmp/$FINAL_OBJ "$GCS/$FINAL_OBJ" && echo "RESCUE-OK"
 echo "$SENT-COMPLETE worker=$W $(date -u +%FT%TZ)"
+# ---------- cloud-side SELF-TEARDOWN backstop (2026-08-22, PI offline: "finish and tear down on its own") ----------
+# The supervisor on the Mac is the primary teardown; if it is dead/asleep this node would bill until the
+# watchdog deadline. With everything banked (final object uploaded synchronously above), the finalizing
+# worker deletes its own node. Gated on SELF_TEARDOWN=1 + SELF_POD/SELF_ZONE (set by pod.sh's launch line).
+if [ "${SELF_TEARDOWN:-0}" = 1 ] && [ -n "${SELF_POD:-}" ] && [ -n "${SELF_ZONE:-}" ]; then
+  echo "SELF-TEARDOWN: deleting $SELF_POD in $SELF_ZONE (all artifacts banked) $(date -u +%FT%TZ)"
+  sleep 20   # let the log line land in any in-flight supervisor poll
+  gcloud compute tpus tpu-vm delete "$SELF_POD" --zone "$SELF_ZONE" --quiet >/dev/null 2>&1 && echo "SELF-TEARDOWN-ISSUED" || echo "SELF-TEARDOWN-FAILED (supervisor/watchdog will tear down)"
+fi

@@ -144,9 +144,9 @@ v_launch () { # ZONE [WORKER|all] -> 0 launched/already running (every requested
     [ "$which" = all ] || [ "$which" = "$w" ] || continue
     if [ "$nw" -gt 1 ]; then
       $PY tools/launch_detached.py --name "$POD" --zone "$1" --wall-time "$WALL" --worker "$w" --workers "$nw" \
-          $([ "$first" -eq 1 ] || echo --no-sync) --cmd "CHAIN_WORKER=$w CHAIN_WORKERS=$nw $CHAIN_CMD" >> "$LOG" 2>&1; rc=$?
+          $([ "$first" -eq 1 ] || echo --no-sync) --cmd "SELF_TEARDOWN=${SELF_TEARDOWN:-1} SELF_POD=$POD SELF_ZONE=$1 CHAIN_WORKER=$w CHAIN_WORKERS=$nw $CHAIN_CMD" >> "$LOG" 2>&1; rc=$?
     else
-      $PY tools/launch_detached.py --name "$POD" --zone "$1" --wall-time "$WALL" --cmd "$CHAIN_CMD" >> "$LOG" 2>&1; rc=$?
+      $PY tools/launch_detached.py --name "$POD" --zone "$1" --wall-time "$WALL" --cmd "SELF_TEARDOWN=${SELF_TEARDOWN:-1} SELF_POD=$POD SELF_ZONE=$1 $CHAIN_CMD" >> "$LOG" 2>&1; rc=$?
     fi
     first=0
     case $rc in 0) say "  launch w$w: detached + verified";;
@@ -247,6 +247,7 @@ cmd_supervise () {
     echo "supervisor already running (pid $(cat "$PIDF")) — one instance only"; exit 1; fi
   echo $$ > "$PIDF"
   local END RELAUNCHES=0 UNKNOWN=0 SSHFAIL=0 nw z st js
+  local MAXRL=${MAX_RELAUNCH:-6}   # relaunch rounds per node life (2026-08-22: 4 workers x the 8.5h wall-ceiling resume can take 2-3 rounds; the cap guards crash loops, not resumes)
   # ONE KNOB: the loop's end time IS the watchdog deadline (runs/tpu_deadline.txt,
   # re-read every poll so extending the file extends both layers). Without it
   # the watchdog would delete the node at its deadline and this loop would
@@ -300,10 +301,10 @@ cmd_supervise () {
           if [ -n "$widle" ] || { [ "$wrun" -eq 0 ] && [ "$wdone" -gt 0 ]; }; then
             local target=${widle:-0}
             [ -n "$widle" ] || say "READY $z | all $wdone worker(s) WORKER-DONE but no final/sentinel — relaunching worker 0 to finalize"
-            [ -z "$widle" ] || say "READY $z | worker(s)$widle IDLE — relaunching (attempt $((RELAUNCHES+1))/3)"
-            if [ "$RELAUNCHES" -ge 3 ]; then
-              say "chain died 3x on this node — tearing down and EXITING (needs eyes)"; v_down "$z" "repeated chain death"
-              notify "NEEDS EYES" "chain died 3x; node deleted; supervisor exited"; rm -f "$PIDF"; exit 3
+            [ -z "$widle" ] || say "READY $z | worker(s)$widle IDLE — relaunching (attempt $((RELAUNCHES+1))/$MAXRL)"
+            if [ "$RELAUNCHES" -ge "$MAXRL" ]; then
+              say "chain died ${MAXRL}x on this node — tearing down and EXITING (needs eyes)"; v_down "$z" "repeated chain death"
+              notify "NEEDS EYES" "chain died ${MAXRL}x; node deleted; supervisor exited"; rm -f "$PIDF"; exit 3
             fi
             if [ "$wnorepo" -eq 1 ]; then v_bring_up "$z" || v_down "$z" "bring-up failed"
             else for wk in $target; do v_launch "$z" "$wk" || v_down "$z" "launch failed"; done; fi

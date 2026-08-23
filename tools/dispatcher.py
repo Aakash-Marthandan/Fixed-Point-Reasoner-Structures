@@ -412,6 +412,9 @@ def cmd_down(args) -> int:
            f"--zone={args.zone} --project={PROJECT}", dry=args.dry_run, timeout=300)
         print("  teardown OK")
     except Exception as e:
+        if vm_state(args.zone) is None:
+            print(f"  teardown: '{TPU_NAME}' is already gone (self-teardown or deleted elsewhere) — OK")
+            return 0
         print(f"  CRITICAL: teardown failed ({e}). DELETE '{TPU_NAME}' "
               f"MANUALLY in the GCP console NOW — it is billing.")
         return 4

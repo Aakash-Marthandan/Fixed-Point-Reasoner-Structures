@@ -128,11 +128,11 @@ def main():
     ap.add_argument("--interval", type=int, default=300); ap.add_argument("--once", action="store_true")
     a = ap.parse_args()
     e = env(); pod, gcs, tag = e["POD"], e["GCS"], e.get("R_TAG", "sport2")
-    raw = [a for a in e["ARMS"].split() if not a.startswith("scan:")]
+    raw = [x for x in e["ARMS"].split() if not x.startswith("scan:")]
     arms = []
-    for a in raw:                      # W5 = two stages (W5gen then W5) — both rows
-        if re.sub(r's[12]$', '', a) == "W5": arms.append(a + "gen")
-        arms.append(a)
+    for arm_ in raw:                   # W5 = two stages (W5gen then W5) — both rows (never rebind `a` = argparse namespace)
+        if re.sub(r's[12]$', '', arm_) == "W5": arms.append(arm_ + "gen")
+        arms.append(arm_)
     STEPS = arm_steps(ROOT / e.get("CHAIN_SCRIPT", "tools/chain_sport2.sh"), arms, int(e.get("R_STEPS", "20000")))
     steps = max(STEPS.values())        # legacy scalar (bars use per-arm STEPS)
     state = {}   # arm -> dict(t, step, rate)
