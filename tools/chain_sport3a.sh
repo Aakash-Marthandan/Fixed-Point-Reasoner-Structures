@@ -149,7 +149,13 @@ sharded_eval () {  # OUT CKPT [extra evaluator flags...] -> merged summary_all.j
   mkdir -p "$O"; local pids=() c
   for c in $(seq 0 $((NCHIP-1))); do
     [ -f "$O/summary_s$c.json" ] && continue
-    ( pin "$c" python3 tools/eval_sudoku_extreme.py --ckpt "$CK" --npz "$NPZ" --shard "$c/$NCHIP" --out "$O" "$@" > "$O/shard_s$c.log" 2>&1 || echo "SHARD-FAILED $O s$c" ) & pids+=($!)
+    # a chip may be transiently held by an idle-chip filler job (2026-08-23 PI utilization policy):
+    # on "Device or resource busy" retry every 2 min for up to 2 h instead of failing the shard
+    ( for try in $(seq 1 60); do
+        pin "$c" python3 tools/eval_sudoku_extreme.py --ckpt "$CK" --npz "$NPZ" --shard "$c/$NCHIP" --out "$O" "$@" > "$O/shard_s$c.log" 2>&1 && break
+        if grep -qE "resource busy|Couldn't open iommu group" "$O/shard_s$c.log"; then [ "$try" -eq 1 ] && echo "SHARD-WAIT $O s$c (chip busy; retrying)"; sleep "${SHARD_RETRY_SLEEP:-120}"; continue; fi
+        echo "SHARD-FAILED $O s$c"; break
+      done ) & pids+=($!)
   done
   for p in ${pids[@]+"${pids[@]}"}; do wait "$p" || true; done
   JAX_PLATFORMS=cpu python3 tools/eval_sudoku_extreme.py --merge "$O" > "$O/merge.log" 2>&1
