@@ -24,6 +24,8 @@ for A4: eq_coupled). Then PHASE-F = full-test evals SHARDED per arm (t6 + t64 fi
 best-arm 20k k=128, completion guard → `sport3a_final.tgz` + `CHAIN-SPORT3A-COMPLETE` (+ self-teardown).
 ETA ≈ 14 h on a v6e-8 (T12 @50k ≈ 9 h is the pole), ≈ 16 h on a v6e-16 (worker 0 carries PHASE0).
 
+**Chip-utilization policy (PI 2026-08-23):** report busy/idle chips per worker each heartbeat; ≤8 busy for >30 min (no sharded phase imminent) → migrate to v6e-8 (stop → `ACCEL_LIST=v6e-8` in campaign.env → restart supervisor → resume); one long arm alone → v6e-1. Wave 3a: `tools/idle_filler.sh` runs detached on workers 0/2/3 (`runs/filler.pid`, `runs/filler.log`) filling free chips with eval-only breadth k=256 scans of W3/W2/W8/W9 (claims `breadth_*.claim` in GCS; results `breadth_<arm>_t64_k256.tgz`); the chain's sharded phases retry on a busy chip (`SHARD-WAIT … retrying` = normal). Don't start a second filler; if a filler job looks stuck >3 h, kill just that python process.
+
 **Signatures:** `=== SPORT3A START … chips=N`, `=== BSCAN bscan:S5:20000:128 …`, `BSCAN-…-OK`, `PHASE0-DONE`,
 `chip c queue: Ax`, `=== PRETRAIN Ax …`, `MONITOR step N: val@t64 … lam_max …` (in `runs/wave_pre_Ax.log`),
 `VALBEST-Ax`, `PRETRAIN-Ax-OK`, `EVALCHEAP-Ax-OK`, `PROBE-Ax-OK` / `PROBE-SKIP-A4`, `QUEUES-DONE`, `FULL-Ax-t64-OK`,
