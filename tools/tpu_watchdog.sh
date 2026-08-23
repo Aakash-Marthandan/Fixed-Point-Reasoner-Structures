@@ -45,8 +45,19 @@ fi
 if [ -n "$NEW" ]; then
   SAME=$(tail -n 40 "$LOG" | grep -cF "| $NEW")
   if [ "$SAME" -ge 32 ]; then   # 32 polls x 15 min = 8h same inventory
-    /usr/bin/osascript -e "display notification \"$NEW up >=8h — check DMS \
+    # 2026-08-23 (PI: the >=8h alarm kept firing through a supervised 16h campaign): the
+    # reminder is for an UNSUPERVISED long-lived node. Stay quiet when the one-pod
+    # supervisor is alive AND the deadline file is more than 1h away (the supervisor
+    # tears down on completion; the deadline delete below is untouched) — log instead.
+    SUP_ALIVE=0; SP=$(cat runs/pod_supervisor.pid 2>/dev/null); [ -n "$SP" ] && kill -0 "$SP" 2>/dev/null && SUP_ALIVE=1
+    DL=$(head -1 runs/tpu_deadline.txt 2>/dev/null | tr -dc '0-9'); FAR=0
+    [ -n "$DL" ] && [ $(( DL - $(date -u +%s) )) -gt 3600 ] && FAR=1
+    if [ "$SUP_ALIVE" -eq 1 ] && [ "$FAR" -eq 1 ]; then
+      echo "$(date -u +%FT%TZ) | >=8h READY but supervised (pid $SP) with deadline >1h away — alarm suppressed" >> "$LOG"
+    else
+      /usr/bin/osascript -e "display notification \"$NEW up >=8h — check DMS \
 and teardown\" with title \"QHRRN TPU watchdog ALARM\"" 2>/dev/null
+    fi
   fi
 fi
 
