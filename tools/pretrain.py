@@ -212,25 +212,59 @@ def sudoku_monitor(state, cfg, val_pairs, *, t_cold=64, t_ret=8, n_lam=16, lam_i
     exf, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0s, t_total=t_ret, tau=1.0, gamma=1.0,
                              sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab,
                              t_norm_fixed=1.0)
-    # lambda_max: power iteration on F(y) = y + eta*(softmax(f(x,y)) - y)  [or a1*y + a2*p]
-    def F(yy, xx):
+    # Final-map fixed-point readouts on the first n_lam puzzles (2026-08-23, refined after the
+    # banked-ckpt check: the y-only/z-less spectrum does NOT separate collapsed from healthy maps;
+    # the collapse reads as the FINAL map's fixed point DRIFTING off the solution). Three numbers:
+    #   fp_drift  = mean |F(sol, z*) - sol| per cell after settling z* (4 final-map steps from the
+    #               solution): "is the solution still a fixed point of the final map?" (0 = yes)
+    #   lam_joint = |lambda|max of the JOINT (y, z) final-map Jacobian at (sol, z*) by power iteration
+    #   lam_yonly = the y-only, z=None spectrum (kept for continuity; informational)
+    eta_z_v = eta_z
+    def Fy(yy, xx, zz):
         out = M.forward_fields(params, cfg, M.build_fields_soft(xx, yy), t_norm=1.0, tau=1.0,
-                               rng=None, task_vec=tvj, z_in=None)
+                               rng=None, task_vec=tvj, z_in=zz)
         pp = jax.nn.softmax(out.logits, axis=-1).transpose(2, 0, 1)
-        return (ab[0] * yy + ab[1] * pp) if ab is not None else (yy + eta * (pp - yy))
-    def lam_one(xx, ys, key):
-        v = jax.random.normal(key, ys.shape); v = v / (jnp.linalg.norm(v) + 1e-9)
+        y2 = (ab[0] * yy + ab[1] * pp) if ab is not None else (yy + eta * (pp - yy))
+        return y2, out.z_fine
+    def F_joint(yz, xx):
+        yy, zz = yz
+        y2, zf = Fy(yy, xx, zz)
+        return (y2, zz + eta_z_v * (zf - zz))
+    def settle(xx, ys):          # z* by 4 final-map steps from the solution (first step has no z)
+        y2, zf = Fy(ys, xx, None); z = zf
+        def body(_, carry):
+            yy, zz = carry; return F_joint((yy, zz), xx)
+        yy, zz = jax.lax.fori_loop(0, 3, body, (y2, z))
+        return zz
+    def readouts(xx, ys, key):
+        zs = settle(xx, ys)
+        y1, _ = F_joint((ys, zs), xx)
+        drift = jnp.mean(jnp.abs(y1 - ys))
+        vy = jax.random.normal(key, ys.shape); vz = jax.random.normal(jax.random.fold_in(key, 1), zs.shape)
+        nrm = jnp.sqrt(jnp.sum(vy**2) + jnp.sum(vz**2)) + 1e-9; vy, vz = vy / nrm, vz / nrm
         def body(_, v):
-            _, jv = jax.jvp(lambda yy: F(yy, xx), (ys,), (v,))
-            return jv / (jnp.linalg.norm(jv) + 1e-12)
-        v = jax.lax.fori_loop(0, lam_iters, body, v)
-        _, jv = jax.jvp(lambda yy: F(yy, xx), (ys,), (v,))
-        return jnp.linalg.norm(jv)
+            _, jv = jax.jvp(lambda yz: F_joint(yz, xx), ((ys, zs),), (v,))
+            n = jnp.sqrt(jnp.sum(jv[0]**2) + jnp.sum(jv[1]**2)) + 1e-12
+            return (jv[0] / n, jv[1] / n)
+        v = jax.lax.fori_loop(0, lam_iters, body, (vy, vz))
+        _, jv = jax.jvp(lambda yz: F_joint(yz, xx), ((ys, zs),), (v,))
+        lam_j = jnp.sqrt(jnp.sum(jv[0]**2) + jnp.sum(jv[1]**2))
+        # y-only, z=None (the original readout)
+        def Fy0(yy): return Fy(yy, xx, None)[0]
+        u = jax.random.normal(jax.random.fold_in(key, 2), ys.shape); u = u / (jnp.linalg.norm(u) + 1e-9)
+        def body0(_, u):
+            _, ju = jax.jvp(Fy0, (ys,), (u,)); return ju / (jnp.linalg.norm(ju) + 1e-12)
+        u = jax.lax.fori_loop(0, lam_iters, body0, u)
+        _, ju = jax.jvp(Fy0, (ys,), (u,))
+        return drift, lam_j, jnp.linalg.norm(ju)
     n = min(n_lam, B)
     keys = jax.random.split(jax.random.PRNGKey(0), n)
-    lam = np.asarray(jax.vmap(lam_one)(x_can[:n], y0s[:n], keys))
+    drift, lam_j, lam = (np.asarray(t) for t in jax.vmap(readouts)(x_can[:n], y0s[:n], keys))
     rec = dict(val_t64=val_cold, ret_sched_t8=float(exr[-1].mean()), ret_final_t8=float(exf[-1].mean()),
-               eta=eta, eta_z=eta_z, lam_max_mean=float(lam.mean()), lam_max_max=float(lam.max()),
+               eta=eta, eta_z=eta_z,
+               fp_drift_mean=float(drift.mean()), fp_drift_max=float(drift.max()),
+               lam_joint_mean=float(lam_j.mean()), lam_joint_max=float(lam_j.max()), lam_joint_frac_expansive=float((lam_j > 1.0).mean()),
+               lam_max_mean=float(lam.mean()), lam_max_max=float(lam.max()),
                lam_frac_expansive=float((lam > 1.0).mean()), n_val=int(B), n_lam=int(n))
     if ab is not None:
         rec["a1"], rec["a2"] = float(ab[0]), float(ab[1])
@@ -486,8 +520,8 @@ def main():
             mon["step"] = i + 1; mon["wall_s"] = round(time.time() - t_m, 1)
             metrics_f.write(json.dumps({"monitor": mon}) + "\n"); metrics_f.flush()
             print(f"  MONITOR step {i+1}: val@t64 {mon['val_t64']:.3f} ret_sched {mon['ret_sched_t8']:.2f} "
-                  f"ret_final {mon['ret_final_t8']:.2f} eta {mon['eta']:.3f} lam_max mean {mon['lam_max_mean']:.3f} "
-                  f"max {mon['lam_max_max']:.3f} expansive {mon['lam_frac_expansive']:.2f} ({mon['wall_s']}s)", flush=True)
+                  f"ret_final {mon['ret_final_t8']:.2f} eta {mon['eta']:.3f} fp_drift {mon['fp_drift_mean']:.4f} "
+                  f"lam_joint {mon['lam_joint_mean']:.3f}/{mon['lam_joint_max']:.3f} lam_y {mon['lam_max_mean']:.3f} ({mon['wall_s']}s)", flush=True)
             t_block = time.time()
 
         if (i + 1) % a.ckpt_every == 0 or i + 1 == a.steps:

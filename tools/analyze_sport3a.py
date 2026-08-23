@@ -127,7 +127,7 @@ def analyze():
     c7, r7 = cold("A7"), retfm("A7"); w2 = cold("W2")
     if c7 is None or r7 is None or w2 is None: V["COLLAPSE"] = "NO-DATA"
     else: V["COLLAPSE"] = "COLLAPSED" if (r7 < .5 or 100*(c7 - w2) < -5) else "NO-COLLAPSE"
-    mons7 = monitors("A7"); traj7 = " ".join(f"{m['step']//1000}k:{100*m['val_t64']:.0f}/{m['ret_final_t8']:.2f}/{m['lam_max_mean']:.2f}" for m in mons7)
+    mons7 = monitors("A7"); traj7 = " ".join(f"{m['step']//1000}k:{100*m['val_t64']:.0f}/{m['ret_final_t8']:.2f}/{m.get('lam_joint_mean', m['lam_max_mean']):.2f}" for m in mons7)
     say(f"\nCOLLAPSE CONTROL (A7 = W2's recipe to 50k): cold {fpp(c7)} (W2 {fpp(w2)}) retfm {f(r7)} -> {V['COLLAPSE']} | trajectory (step: val%/retfm/lam): {traj7 or '-'}")
     # fix arms
     say("\nFIX ARMS (vs W2 19.37 % and A7's outcome):")
@@ -138,7 +138,7 @@ def analyze():
         elif r >= .9 and d >= -2: V[a] = "FIX-IMPROVES" if d >= 3 else "FIX-HOLDS"
         else: V[a] = "FIX-PARTIAL"
         note = " (uninformative: A7 did not collapse)" if (V["COLLAPSE"] == "NO-COLLAPSE" and V[a] == "FIX-HOLDS") else ""
-        mons = monitors(a); first_exp = next((m["step"] for m in mons if m.get("lam_frac_expansive", 0) > 0), None)
+        mons = monitors(a); first_exp = next((m["step"] for m in mons if m.get("lam_joint_frac_expansive", m.get("lam_frac_expansive", 0)) > 0.5), None)
         say(f"  {a} {DESC[a]:28s} cold {fpp(c)} ({f(d)}pp vs W2{lab(d)}) retfm {f(r)} v16 {fpp(vote16(a))} -> {V[a]}{note} | first expansive-lam step: {first_exp}")
     # price ceiling
     c5, c6 = cold("A5"), cold("A6"); d6 = delta(c6, cold("W8")); d5 = delta(c5, cold("W9"))
@@ -174,10 +174,12 @@ def analyze():
     # trajectory law
     rows = [m for a in ARMS for m in monitors(a)]
     if len(rows) >= 6:
-        lam = np.array([m["lam_max_mean"] for m in rows]); rf = np.array([m["ret_final_t8"] for m in rows])
+        # joint (y,z) lambda_max is the validated contractivity readout (2026-08-23 banked-ckpt check:
+        # healthy .73-.85, collapsed 2.3 with 75-88% expansive); y-only lambda kept as fallback
+        lam = np.array([m.get("lam_joint_mean", m["lam_max_mean"]) for m in rows]); rf = np.array([m["ret_final_t8"] for m in rows])
         rl = np.argsort(np.argsort(lam)); rr = np.argsort(np.argsort(rf)); rho = float(np.corrcoef(rl, rr)[0, 1])
-        V["TRAJ"] = f"spearman(lam_max,retfm)={rho:.2f} n={len(rows)}"
-        say(f"\nTRAJECTORY LAW: Spearman(lam_max, final-map retention) over {len(rows)} monitor rows = {rho:.2f} (H-45 predicts strongly negative; lam>1 <-> retfm->0)")
+        V["TRAJ"] = f"spearman(lam_joint,retfm)={rho:.2f} n={len(rows)}"
+        say(f"\nTRAJECTORY LAW: Spearman(joint lambda_max, final-map retention) over {len(rows)} monitor rows = {rho:.2f} (H-45 predicts strongly negative; lam>1 <-> retfm->0)")
     else: V["TRAJ"] = "NO-DATA"
     # recipe decision
     cands = [a for a in ARMS if a != "A7s1" and cold(a) is not None and not (retfm(a) is not None and retfm(a) < .5)]
