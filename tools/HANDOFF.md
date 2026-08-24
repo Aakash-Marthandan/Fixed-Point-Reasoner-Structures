@@ -7,6 +7,45 @@ reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08
 HARD BOUNDARY during ops: no `tools/analyze_sportB.py` (nor analyze_sport3a.py / analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
+## ▶ LIVE — OPS HANDOFF (Opus) as of 2026-08-24 17:10Z (22:40 IST) — v6e-8 READY us-east1-d, 1 worker × 8 chips, chain launched 16:38Z, all six arms on the one worker
+
+**Your job:** run PHASE B RUNG 1 to `CHAIN-SPORTB-COMPLETE` → §6 (sportB version, below) → ONE ops
+ledger line + ONE commit → STOP. Analysis = Fable on the PI's next switch (`analyze_sportB.py`
+untouched, self-test 16/16). Boundary per the preamble; report in IST.
+
+**State:** two v6e-16 preemptions today (13:50Z, 15:40Z — US-Monday churn the PI predicted) →
+**v6e-16 DEMOTED (strikes 2/2)**; one v6e-8 canary-failed at 16:07Z (node preempted mid-bring-up,
+positively identified — NOT env-rot); current v6e-8 landed 16:24Z, canary PASSED, chain launched
+16:38Z. **BANKED in GCS sportB:** B4 COMPLETE (ckpt + val_best + evalcheap.tgz); live ckpts B1 ≈27k
+/ B2 ≈25k / B3 ≈24k of 50k (+ banked 5k-grid ckpts); B4s1 ≈3.4k of 20k; B5 not started; no PHASE2
+objects yet (screens/fulls/probes4/PHASE4 all pending). Chain order on the 8: B1(resume)→B2→B3→
+B4(SKIP)→B4s1(resume)→B5, then cheap evals per arm, then the PHASE2 claim queue 8-way sharded.
+**MEASURED:** T12 d64 = 3.63 it/s at DP-4; T6 = 7.12 it/s at DP-4; **DP-8 rates unmeasured — your
+first heartbeat should report them** and re-price the ETAs. Rough ETA: pretrains done ≈ 22:00–24:00Z,
+PHASE2 ≈ 7–12 h single-worker → COMPLETE ≈ 06:00–12:00Z Aug 25 absent the swap (below).
+**WALL CEILING:** chain launched 16:38Z → recycle ≈ 01:08Z = NORMAL (`worker(s) 0 IDLE —
+relaunching`, resume, re-arm DMS). Deadline `runs/tpu_deadline.txt` = 2026-08-25 13:50Z (19:20 IST).
+Spend: sportB ≈ $48 through 17:05Z (watchdog spans, list rates), ≈ $6.5/h while the 8 runs.
+
+**PI-APPROVED SWAP at 06:03 IST Aug 25 (00:33Z):** a one-shot session cron (id 8df5e184) fires with
+the decision rule + commands (also in the SWAP PLAN block below): IF remaining wall > ~2.5 h and not
+in PHASE4/finalize → kill supervisor, `rm runs/pod_strikes.txt`, `pod.sh stop` + `down`, restart
+`supervise` (+caffeinate) → hunts a fresh v6e-16 (US-night stability window), everything resumes.
+ELSE stay on the 8. Session crons SURVIVE model switches (not app restarts — re-arm §2 + this swap
+by hand after any restart).
+
+**Decision-table additions (this campaign):** `PRETRAIN-Bx-REMAT-RETRY` = HBM auto-retry, normal,
+report · `PRETRAIN-Bx-DIVERGED` = report, do NOT patch (PI decides the registered lr-5e-4 relaunch) ·
+`SHARD-WAIT` = transient chip busy, normal · canary FAILED right after a landing = check
+`gcloud ... describe` — if the node reads PREEMPTED it was churn (no env concern); TWO canary fails
+on nodes that are READY = env-rot, STOP and pull the canary log before more bring-ups · claim-queue
+tasks print nothing while another worker holds the claim (single worker on the 8: irrelevant until a
+16 lands) · on the 8 there is no WORKER-DONE — the single worker emits COMPLETE directly.
+**Live layers:** supervisor pid in `runs/pod_supervisor.pid` + caffeinate pinned; heartbeat cron :23
+(id 71d019a6); edge + watchdog-inventory + unstick monitors (session-scoped). Working tree is clean
+(fixes committed: b1d21fe launch, 93a79d4 multi-host confinement); ops-close commit = ledger line
+only.
+
 ## CURRENT CAMPAIGN — PHASE B RUNG 1 "the parity ladder, d64" (launched 2026-08-24 evening IST; ledger 'PHASE B RUNG 1 LAUNCH REGISTRATION')
 
 **What it is:** d64 FULL-WIDTH (`--width-scale 4`, n_bulk 959,482) versions of the measured d16/d32
@@ -25,6 +64,15 @@ Bx` → 20k k=128 (`PHASE4-OK`; `PHASE4-MID` too iff the winner's screens differ
 Completion: `CHAIN-SPORTB-WORKER-DONE` (waits) / `CHAIN-SPORTB-COMPLETE` + `SELF-TEARDOWN`.
 ETA ≈ 9–12 h on a v6e-16 (INFERRED — canary + first arm measure it; wall pace expected ≥ 2 it/s
 T12 d64 DP-4; the 8.5 h wall ceiling mid-pretrain recycles + resumes = NORMAL).
+
+**PI-APPROVED SWAP PLAN (2026-08-24 ~16:00Z):** two v6e-16 preemptions (13:50Z, 15:40Z, US-Monday
+churn) → demoted; campaign continues on a v6e-8 (landed 15:50Z). At **06:03 IST Aug 25 (00:33Z,
+US night = the historically stable window)** a one-shot session cron re-hunts the 16: IF remaining
+wall on the 8 > ~2.5h and not in PHASE4/finalize → kill supervisor, `rm runs/pod_strikes.txt`,
+`pod.sh stop` + `down` (all work banks), restart `supervise` (+caffeinate) — hunts 16-then-8, chain
+SKIPs/RESUMEs; ladder re-demotes automatically if the 16 churns again. ELSE stay on the 8. If the
+app restarted and the cron died, execute this by hand at that time. Deadline extended to
+2026-08-25 13:50Z (19:20 IST).
 
 **OPS FIX 2026-08-24 12:30Z (launch incident, resolved):** the first launch's unconfined `--dp`
 pretrains on the 4-host v6e-16 tried to form the global 16-chip system (B4 SIGABRT `RET_CHECK
