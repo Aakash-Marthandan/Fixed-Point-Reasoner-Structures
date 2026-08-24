@@ -84,10 +84,18 @@ sync_loop () {  # ARM DIR — every 5 min bank ckpt_latest + metrics + banked ck
     for f in "$D"/ckpt_0*.pkl; do [ -f "$f" ] && gsutil -q cp -n "$f" "$GCS/${arm}_$(basename "$f")" 2>/dev/null; done
   done
 }
-run_pretrain () {  # ARM DIR EXTRA -> rc  (DP over the whole worker host; no pin)
+run_pretrain () {  # ARM DIR EXTRA -> rc  (DP over the whole worker host)
   local arm=$1 D=$2 extra=$3
+  # On a MULTI-HOST slice each worker's pretrain must be confined to ITS OWN host
+  # (a 2x2 single-process system), else the 4 unconfined processes try to form the
+  # global 16-chip system and pmap's local replica groups clash with global device
+  # ids (RET_CHECK device_id, seen at launch 2026-08-24 12:19Z). Same mechanism as
+  # pin(), widened to the host's 4 chips. Single-host (v6e-8, NW=1): no confinement
+  # (global == local; the P11-EXT proven path).
+  local conf=""
+  [ "$NW" -ge 2 ] && conf="TPU_PROCESS_BOUNDS=1,1,1 TPU_CHIPS_PER_PROCESS_BOUNDS=2,2,1 TPU_VISIBLE_CHIPS=0,1,2,3"
   # shellcheck disable=SC2086
-  JAX_DEFAULT_MATMUL_PRECISION=highest python3 tools/pretrain.py --out "$D" --equilibrium --anchor-p 0.3 \
+  env $conf JAX_DEFAULT_MATMUL_PRECISION=highest python3 tools/pretrain.py --out "$D" --equilibrium --anchor-p 0.3 \
       --sudoku-extreme "$NPZ" --sudoku-aug "$SX_AUG" --n-val 64 --seed 0 --dp \
       --monitor-every "$MON_EVERY" $(arm_flags "$arm") $extra > "runs/wave_pre_$arm.log" 2>&1
 }

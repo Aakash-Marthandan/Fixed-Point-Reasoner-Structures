@@ -26,6 +26,15 @@ Completion: `CHAIN-SPORTB-WORKER-DONE` (waits) / `CHAIN-SPORTB-COMPLETE` + `SELF
 ETA ≈ 9–12 h on a v6e-16 (INFERRED — canary + first arm measure it; wall pace expected ≥ 2 it/s
 T12 d64 DP-4; the 8.5 h wall ceiling mid-pretrain recycles + resumes = NORMAL).
 
+**OPS FIX 2026-08-24 12:30Z (launch incident, resolved):** the first launch's unconfined `--dp`
+pretrains on the 4-host v6e-16 tried to form the global 16-chip system (B4 SIGABRT `RET_CHECK
+device_id`, B1–B3 hung at 0 steps) → `chain_sportB.sh` now confines each worker's pretrain to its
+own host (`TPU_PROCESS_BOUNDS=1,1,1 TPU_CHIPS_PER_PROCESS_BOUNDS=2,2,1 TPU_VISIBLE_CHIPS=0,1,2,3`
+when CHAIN_WORKERS ≥ 2; v6e-8/NW=1 unconfined = the proven single-host path). Stopped, patched,
+re-shipped, relaunched 12:27–12:48Z; ~35 min / ≈$8 lost. MEASURED PACE post-fix: T12 d64 DP-4 =
+3.63 it/s, T6 = 7.12 it/s. Relaunches re-sync code from the Mac's working tree (worker 0 first,
+then 1–3, ~5 min apart).
+
 **Signature notes:** `PRETRAIN-Bx-REMAT-RETRY` = HBM OOM auto-retry with --remat (numerics-equivalent,
 tested) — normal, report it. `PRETRAIN-Bx-DIVERGED last_loss=…` = report to the PI, do NOT patch
 (the registered contingency — ONE relaunch at lr 5e-4 — is the PI's call). `SHARD-WAIT` = chip
