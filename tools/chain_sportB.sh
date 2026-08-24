@@ -65,7 +65,7 @@ pin () { local c=$1; shift; TPU_CHIPS_PER_PROCESS_BOUNDS=1,1,1 TPU_PROCESS_BOUND
 is_primary () { case " $PRIMARY " in *" $1 "*) return 0;; *) return 1;; esac; }
 arm_flags () {   # WIDTH-ONLY scaling of the registered reference recipes (seed via s1/s2 suffix)
   case $1 in
-    B1) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 0 --beta-flux-nl 0 --ri-p 0.5 --ni-sigma 0.01";;
+    B1) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 0 --beta-flux-nl 0 --ri-p 0.5 --ni-sigma 0.01 --lr 5e-4";;  # LR-RETRY (registered contingency, PI-authorized 2026-08-24 ~18:30Z): B1 NaN-diverged at step 24300 (RI/NI phase-boundary fragility at width; resume rng re-split the trigger candidate); ONE relaunch from clean ckpt_020000 at half lr — LABELED, the analysis pass reads B1 with this label
     B2) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 0 --beta-flux-nl 0 --fpa-k 4 --fpa-eps 0.2 --fpa-w 1.0";;
     B3) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 3e-5 --beta-flux-nl 1e-5";;
     B4) echo "--d $RD --width-scale $WS --T 6 --steps 20000 --beta-flux 0 --beta-flux-nl 0";;

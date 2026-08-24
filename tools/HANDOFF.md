@@ -65,6 +65,18 @@ Completion: `CHAIN-SPORTB-WORKER-DONE` (waits) / `CHAIN-SPORTB-COMPLETE` + `SELF
 ETA ≈ 9–12 h on a v6e-16 (INFERRED — canary + first arm measure it; wall pace expected ≥ 2 it/s
 T12 d64 DP-4; the 8.5 h wall ceiling mid-pretrain recycles + resumes = NORMAL).
 
+**B1 NaN-DIVERGENCE + LR-RETRY (2026-08-24 18:11–18:30Z, PI-authorized "deal with this"):** B1
+(RI/NI — the phase-boundary-fragile recipe) ran clean to ce .50 at step 24250 then NaN'd at 24300,
+~300 steps after a preemption-resume rng re-split. Registered contingency executed: chain stopped,
+GCS `B1_ckpt_live.pkl` overwritten with the verified-clean `B1_ckpt_020000.pkl`, `B1_metrics_live`
+truncated to step ≤ 20000 (450 rows kept / 114 NaN-era dropped), worker-local stale files removed
+(no NaN ckpt was ever banked to the 5k grid — GCS and local grids verified clean), and B1's flags
+carry `--lr 5e-4` (ONE labeled LR-RETRY; the in-code comment + this note are the label — the
+analysis pass reads B1 accordingly). Chain re-shipped (harness 20/20), supervisor restarted 18:23Z.
+If B1 NaNs AGAIN under half-lr: STOP the arm (report; do not iterate lr) — B2 (FPA) is the
+registered seed-stable alternate and the ladder proceeds without B1; the analyzer handles a missing
+arm as NO-DATA.
+
 **PI-APPROVED SWAP PLAN (2026-08-24 ~16:00Z):** two v6e-16 preemptions (13:50Z, 15:40Z, US-Monday
 churn) → demoted; campaign continues on a v6e-8 (landed 15:50Z). At **06:03 IST Aug 25 (00:33Z,
 US night = the historically stable window)** a one-shot session cron re-hunts the 16: IF remaining
