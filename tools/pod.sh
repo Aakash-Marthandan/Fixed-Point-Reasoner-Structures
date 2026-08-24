@@ -215,10 +215,10 @@ v_stop () {   # ZONE — kill the detached tree (setsid => pgid = pid), verify.
   say "STOP chain in $1 (worker $w)"
   gssh "$1" "cd ~/qhrrn2 && P=\$(cat runs/detached.pid 2>/dev/null); \
 if [ -n \"\$P\" ] && kill -0 \$P 2>/dev/null; then kill -TERM -- -\$P 2>/dev/null || kill -TERM \$P; sleep 6; fi; \
-pkill -TERM -f 'tools/chain_[a-z0-9_]*[.]sh|tools/pretrain[.]py|tools/probe_[a-z]|tools/eval_[a-z_]*[.]py' 2>/dev/null; sleep 4; \
-pkill -KILL -f 'tools/chain_[a-z0-9_]*[.]sh|tools/pretrain[.]py|tools/probe_[a-z]|tools/eval_[a-z_]*[.]py' 2>/dev/null; sleep 2; \
+pkill -TERM -f 'tools/chain_[a-zA-Z0-9_]*[.]sh|tools/pretrain[.]py|tools/probe_[a-z]|tools/eval_[a-z_]*[.]py' 2>/dev/null; sleep 4; \
+pkill -KILL -f 'tools/chain_[a-zA-Z0-9_]*[.]sh|tools/pretrain[.]py|tools/probe_[a-z]|tools/eval_[a-z_]*[.]py' 2>/dev/null; sleep 2; \
 if [ -n \"\$P\" ] && kill -0 \$P 2>/dev/null; then echo 'STOP: sh STILL ALIVE'; else echo 'STOP: detached sh gone'; fi; \
-echo \"STOP: workers left=\$(pgrep -fc 'tools/pretrain[.]py|tools/probe_[a-z]|tools/chain_[a-z0-9_]*[.]sh|tools/eval_[a-z_]*[.]py')\"; \
+echo \"STOP: workers left=\$(pgrep -fc 'tools/pretrain[.]py|tools/probe_[a-z]|tools/chain_[a-zA-Z0-9_]*[.]sh|tools/eval_[a-z_]*[.]py')\"; \
 mv -f runs/detached.log runs/detached.log.stopped.\$(date -u +%H%M%S) 2>/dev/null; echo 'STOP: detached.log archived (stale COMPLETE/WORKER-DONE markers cleared)'" "$w" | tee -a "$LOG"
   done
 }
