@@ -1,13 +1,54 @@
 # HANDOFF — TPU ops phase (persistent; the "CURRENT CAMPAIGN" block is rewritten per campaign)
 
 **Read this first, then `tools/OPS_RUNBOOK.md`.** The repo outranks conversation
-memory. The ops model (Opus) runs the campaign to completion and STOPS; the analysis
-phase (Fable) is reserved for the PI's next model switch. **ALL ETAs and clock times
+memory. The ops model runs the campaign to completion and STOPS; the analysis
+phase (Fable) is reserved for the PI's next switch. **ALL ETAs and clock times
 reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08-21).
-HARD BOUNDARY during ops: no `tools/analyze_sport3a.py` (nor analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
+HARD BOUNDARY during ops: no `tools/analyze_sportB.py` (nor analyze_sport3a.py / analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
-## ✅ COMPLETE — SPRINT S2 WAVE 3a (2026-08-24 08:48Z / 14:18 IST) — ops closed, fleet ZERO, node self-torn-down, zero preemptions, all 16 arms + scans banked (sport3a_final.tgz 356 MB, extracted into runs/); analysis pending (analyze_sport3a.py untouched). Mid-run supervisor counter fix 89f154b validated live. The blocks below are the historical launch/ops record.
+## CURRENT CAMPAIGN — PHASE B RUNG 1 "the parity ladder, d64" (launched 2026-08-24 evening IST; ledger 'PHASE B RUNG 1 LAUNCH REGISTRATION')
+
+**What it is:** d64 FULL-WIDTH (`--width-scale 4`, n_bulk 959,482) versions of the measured d16/d32
+reference recipes — WIDTH is the only variable. ONE spot pod, v6e-16 first / v6e-8 fallback (same
+ladder/strikes as waves 2/3a). Tag `sportB`, GCS `gs://qhrrn2-rescue/sportB/`, chain
+`tools/chain_sportB.sh` (per worker, `CHAIN_WORKER/CHAIN_WORKERS`, chips self-detected; each arm
+pretrains DP over its worker's WHOLE host — no chip pinning during pretrain).
+**Arms:** W0 = B1 (plain T12 RI.5 NI.01 @50k) · W1 = B2 (plain T12 FPA k4 @50k) · W2 = B3 (priced
+T12 @50k) · W3 = B4 + B4s1 + B5 sequential (plain T6 @20k ×2 seeds; priced T6 @20k). Monitor every
+5k, banked ckpts every 5k, live-sync 5 min. After each arm: `VALBEST-Bx`, cheap evals
+(`EVALCHEAP-Bx-OK`). **PHASE2 = a GLOBAL claim queue** (GCS `claim_*` markers; any worker runs any
+ready task): breadth SCREENS per arm (strat-512 k=256 on the val-best AND mid banked ckpts —
+`SCREEN-Bx-vb-OK step=NNNNN` / `SCREEN-Bx-mid-OK`), full-test evals (B1–B4 t6+t64+valbest;
+B4s1/B5 t64 only — `FULL-Bx-t64-OK`), `PROBES4-OK` (B1–B4 parallel), then `PHASE4: screen winner
+Bx` → 20k k=128 (`PHASE4-OK`; `PHASE4-MID` too iff the winner's screens differ ≥ 5 pp).
+Completion: `CHAIN-SPORTB-WORKER-DONE` (waits) / `CHAIN-SPORTB-COMPLETE` + `SELF-TEARDOWN`.
+ETA ≈ 9–12 h on a v6e-16 (INFERRED — canary + first arm measure it; wall pace expected ≥ 2 it/s
+T12 d64 DP-4; the 8.5 h wall ceiling mid-pretrain recycles + resumes = NORMAL).
+
+**Signature notes:** `PRETRAIN-Bx-REMAT-RETRY` = HBM OOM auto-retry with --remat (numerics-equivalent,
+tested) — normal, report it. `PRETRAIN-Bx-DIVERGED last_loss=…` = report to the PI, do NOT patch
+(the registered contingency — ONE relaunch at lr 5e-4 — is the PI's call). `SHARD-WAIT` = chip
+transiently busy, retrying, normal. Claim lines are silent (GCS markers); a task another worker
+claimed shows nothing locally. `PHASE2-DONE` per worker precedes the guard.
+
+**Heartbeat progress (per worker w):** `gcloud compute tpus tpu-vm ssh qhrrn2-pod2 --zone=<zone>
+--worker=$w --project=quantum-llm --command "cd ~/qhrrn2 && for a in B1 B2 B3 B4 B4s1 B5; do [ -f
+runs/wave_pre_$a.log ] || continue; printf '%s: ' $a; grep -E 'step |DONE' runs/wave_pre_$a.log |
+tail -1 | cut -c1-70; echo; grep MONITOR runs/wave_pre_$a.log | tail -1 | cut -c1-120; done; grep -E
+'PRETRAIN-.*-OK|VALBEST|EVALCHEAP|SCREEN-.*-OK|FULL-.*-OK|PROBES4|PHASE4|PHASE2-DONE|QUEUES-DONE|WORKER-DONE|COMPLETE|FAILED|DIVERGED|REMAT'
+runs/detached.log | tail -12"` (bounded, perl alarm 150). Steps: B1/B2/B3 50k, B4/B4s1/B5 20k.
+MONITOR lines (val@t64/ret_final/lam) are the trajectory — report, do NOT interpret.
+
+**§6 completion (sportB version):** pull `gs://qhrrn2-rescue/sportB/sportB_final.tgz`; expect 6
+`pretrainsportB_*` dirs (ckpt_latest + banked ckpt_0*.pkl [10 for 50k arms, 4 for 20k arms] +
+metrics.jsonl + val_best.txt), 6 `sxeval_psportB*` dirs (strat_t6/t64/t256 + val_t64 + ret_t8 +
+retfm_t8 everywhere; full_t64 everywhere; full_t6 + full_t64_valbest on B1–B4 where vb differs), 12
+`sxscreen_psportB*_{vb,mid}` dirs (some may be skip-empty if vb=final had no distinct mid), 4
+`sudprobe_psportB*` (B1–B4), 1–2 `sxbreadth20k_psportB*`; counts only; ONE ops ledger line; ONE
+commit; STOP. Analysis = `tools/analyze_sportB.py` untouched (self-test 16/16), reserved.
+
+## ✅ COMPLETE — SPRINT S2 WAVE 3a (2026-08-24 08:48Z / 14:18 IST) — ops closed, fleet ZERO, node self-torn-down, zero preemptions, all 16 arms + scans banked (sport3a_final.tgz 356 MB, extracted into runs/); VERDICT LEDGERED same day (analyze_sport3a.py 18/18; report Report_2026-08-24_SprintS2_Wave3a_Verdict.md). Mid-run supervisor counter fix 89f154b validated live. The blocks below are the historical launch/ops record.
 
 ## ▶ LIVE — OPS HANDOFF (Opus) as of 2026-08-23 23:20 IST (17:50Z) — v6e-16 READY us-east1-d (since 16:57 IST), 4 workers × 4 chips, 16/16 chips busy, no preemption since launch
 

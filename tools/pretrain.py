@@ -127,6 +127,13 @@ def parse_args():
                         "a fresh optimizer (the GEN arm's 1k finetune)")
     p.add_argument("--d-task", type=int, default=32,
                    help="boundary program width (H-17 co-scaling)")
+    p.add_argument("--width-scale", type=float, default=1.0,
+                   help="PHASE B ladder (ledger 2026-08-24): multiply the side widths "
+                        "(d_b, d_a, d_ir, d_code, d_task) by this factor from their d16-reference "
+                        "defaults (6,6,32,32,32) so params scale ~d^2 (full-width scaling; the "
+                        "canvas-head hidden 64 stays fixed — documented exception). The concrete "
+                        "widths are stored in the ckpt Config; downstream tools need no changes. "
+                        "1.0 = bit-exact pre-existing behavior. Incompatible with an explicit --d-task.")
     p.add_argument("--orbit", type=int, default=1,
                    help="orbit expansion factor: virtual tasks per base task")
     p.add_argument("--rearc", action="store_true",
@@ -282,7 +289,16 @@ def main():
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat,
+    if a.width_scale != 1.0:
+        if a.d_task != 32:
+            raise SystemExit("--width-scale is incompatible with an explicit --d-task")
+        ws = a.width_scale
+        a.d_task = int(round(32 * ws))
+        side = dict(d_b=int(round(6 * ws)), d_a=int(round(6 * ws)),
+                    d_ir=int(round(32 * ws)), d_code=int(round(32 * ws)))
+    else:
+        side = {}
+    cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat, **side,
                  d_task=a.d_task, equilibrium=a.equilibrium,
                  beta_flux=a.beta_flux, beta_flux_nl=a.beta_flux_nl,
                  eta_floor=a.eta_floor, z_gate_init=a.z_gate_init,

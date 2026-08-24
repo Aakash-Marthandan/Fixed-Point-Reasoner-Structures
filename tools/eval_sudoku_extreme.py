@@ -49,7 +49,10 @@ from qhrrn2 import sudoku_extreme as SX
 from qhrrn2.config import Config
 
 N = SX.N
-K_CURVE = (1, 2, 4, 8, 16, 32, 64, 128, 256)
+K_CURVE = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024)
+# 512/1024 added 2026-08-24 (Phase B registration): the wave-3a k=1024 scan's
+# summary silently capped at 256; vote_curve already breaks at k > k_init, so
+# this only adds entries when the run actually drew that many inits.
 
 
 # ── device-side checks on the 9x9 window ─────────────────────────────────
