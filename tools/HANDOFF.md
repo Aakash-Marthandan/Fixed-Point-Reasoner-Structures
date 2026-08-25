@@ -65,6 +65,18 @@ Completion: `CHAIN-SPORTB-WORKER-DONE` (waits) / `CHAIN-SPORTB-COMPLETE` + `SELF
 ETA ≈ 9–12 h on a v6e-16 (INFERRED — canary + first arm measure it; wall pace expected ≥ 2 it/s
 T12 d64 DP-4; the 8.5 h wall ceiling mid-pretrain recycles + resumes = NORMAL).
 
+**⏸ PAUSED 2026-08-25 18:41Z (PI: "resume by 7 am IST") — fleet ZERO verified (nodes + QRs, all 4
+hunt zones); supervisor + caffeinate stopped; heartbeat cron deleted; monitors left running;
+launchd watchdog stands (deadline 2026-08-26 03:20Z — the RESUME MUST EXTEND IT FIRST).**
+Remaining = ONLY three eval tasks (~2.5–3.5 h on a v6e-8, ~2 h on a 16): `full_B2_t64`,
+`full_B4_t64`, PHASE4 (winner **B2 vb**, 20k k=128). Everything else is banked: 6 arms, all cheap
+evals, 12 screens, probes4, 9 fulls. Pause reason: 5 node deaths 15:10–17:36Z + drought (US
+afternoon). A one-shot session cron (afa666ed) fires 06:47 IST Aug 26 with the resume procedure;
+if the app restarted and it died, resume BY HAND: extend deadline (+14 h) → `pod.sh status`
+(expect ABSENT) → `supervise 14` + caffeinate → re-arm the heartbeat cron per §2 → on COMPLETE do
+§6 (sportB). Strikes note: `runs/pod_strikes.txt` state decides the ladder; absent = fresh 16-first
+hunt (fine in the US-night window).
+
 **B1 NaN-DIVERGENCE + LR-RETRY (2026-08-24 18:11–18:30Z, PI-authorized "deal with this"):** B1
 (RI/NI — the phase-boundary-fragile recipe) ran clean to ce .50 at step 24250 then NaN'd at 24300,
 ~300 steps after a preemption-resume rng re-split. Registered contingency executed: chain stopped,
