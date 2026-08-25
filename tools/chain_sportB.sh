@@ -255,6 +255,14 @@ run_task () {
         obj2=$(task_obj "$t2"); d2=runs/sxscreen_p${R_TAG}${a}_${ck}
         [ -d "$d2" ] || { gsutil -q cp "$GCS/$obj2" /tmp/_s.tgz 2>/dev/null && tar xzf /tmp/_s.tgz 2>/dev/null || true; }
       done
+      # multi-host fix (2026-08-25 13:00Z): the retfm guard reads each arm's cheap-eval
+      # summary, which lives on the worker that TRAINED the arm — pull evalcheap tgzs
+      # for arms whose retfm summary is not local, else every guard lookup fails and
+      # PHASE4 skips hollow (the empty-marker incident).
+      for a2 in $ALL_ARMS; do
+        [ -f "runs/sxeval_p${R_TAG}$a2/retfm_t8/summary_all.json" ] || \
+          { gsutil -q cp "$GCS/${a2}_evalcheap.tgz" /tmp/_ec.tgz 2>/dev/null && tar xzf /tmp/_ec.tgz 2>/dev/null || true; }
+      done
       read -r WINNER WINCK ALSO <<< "$(python3 - <<'PY'
 import json, os
 from pathlib import Path
