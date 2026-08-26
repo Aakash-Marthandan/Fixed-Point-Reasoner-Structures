@@ -65,6 +65,47 @@ Completion: `CHAIN-SPORTB-WORKER-DONE` (waits) / `CHAIN-SPORTB-COMPLETE` + `SELF
 ETA ≈ 9–12 h on a v6e-16 (INFERRED — canary + first arm measure it; wall pace expected ≥ 2 it/s
 T12 d64 DP-4; the 8.5 h wall ceiling mid-pretrain recycles + resumes = NORMAL).
 
+## ▶ LIVE — OPS HANDOFF (Opus) as of 2026-08-26 11:50Z (17:20 IST) — hardened chain redeployed (9f0454f); supervisor hunting v6e-16-ONLY at 150s cadence; second 16 of the hour created 11:46Z, bring-up in flight
+
+**Your job:** run the rung-1 TAIL to `CHAIN-SPORTB-COMPLETE` → §6 (sportB version + the count-verified
+audit below) → ONE ops ledger line + ONE commit → STOP. The analysis is Fable's in a NEW session
+(`analyze_sportB.py` untouched, self-test 16/16). Boundary per the preamble; ALL times in IST.
+
+**Remaining work (everything else is banked + count-verified):** `full_B2_t64` and `full_B4_t64`
+(claim queue, 4-way sharded, ~80 min each, banked partials every 5 min) and **PHASE4-COOP** (winner
+**B2 vb**; cooperative 16-way — every worker runs shards W*4..W*4+3 of 16, uploads each to
+`$GCS/p4/`, first-to-see-all-16 merges; ~1.5–2 h; `--bank-every 300` partials throughout). COMPLETE
+≈ 2–2.5 h after a launch sticks. Wall-ceiling recycles + preemptions now cost ≤10 min anywhere in
+the tail (the 08-26 hardening: bit-identical eval resume, partial GCS sync, claim TTL).
+
+**Hunt posture (PI-directed):** ladder PINNED `v6e-16` only (campaign.env) for this tail; DRY_SLEEP=150
+(fast retries in prime windows — restart command below keeps it). If 16s stay dry/churny for > ~3 h,
+REPORT and ask the PI before un-pinning to the 8 (their explicit call). Supervisor restart:
+`DRY_SLEEP=150 nohup bash tools/pod.sh supervise 14 >/dev/null 2>&1 &` + caffeinate pinned to its pid.
+Deadline `runs/tpu_deadline.txt` = 2026-08-27 01:16Z (06:46 IST) — extend +8 h if completion nears it.
+
+**NORMAL new signatures (do not treat as incidents):** `PHASE4-COOP: winner B2 …`, `P4-SHARD-sK-OK`,
+`CLAIM-STALE … taking over` (dead-node claim TTL working), `banked partial …`, `RESUMED shard … from
+partial`, `SHARD-WAIT` (chip transiently busy), `all zones dry — sleeping 150s`. Canary FAILED right
+after a landing: check `describe` — PREEMPTED/NOT_FOUND = churn (the standing pattern); TWO canary
+fails on nodes still READY = env-rot, STOP and pull the canary log. `PRETRAIN-*` lines should all be
+`SKIP-… (GCS complete)` — any actual retraining of B1–B5 is WRONG (report immediately; all six arms
+are complete in GCS).
+
+**§6 completion (sportB, count-verified — the PI's explicit requirement):** after `down rc=0`: verify
+ZERO nodes + ZERO QRs in all 8 door zones; pull `gs://qhrrn2-rescue/sportB/sportB_final.tgz`; verify
+by COUNTS ONLY (no values): 6 `pretrainsportB_*` (ckpt_latest + banked ckpt_0* + metrics + val_best),
+6 `sxeval_psportB*` (8 kinds each; full n=422,786 / strat+screens+ret n=512 / val n=64), 11 screens +
+the by-design-empty trio (`full_B2_vb`, `full_B3_vb`, `screen_B4_mid` — the ONLY legitimate empties),
+4 probes at 512 rows, `sxbreadth20k_psportBB2` (n=20,000, k=128; + `_mid` iff PHASE4-MID fired).
+ONE ops ledger line (incidents: see the REDEPLOY block + B1 LR-RETRY + the three multi-host fixes +
+claim-stall; spend from `spend_report.py --since 2026-08-24`); ONE commit; STOP. Tell the PI the ops
+are closed and the analysis pass can start in a fresh session.
+
+**Layers live:** heartbeat cron :23 (id 5d9a2a82, carries §6 + the audit), edge/inventory/unstick
+monitors, supervisor + caffeinate. All survive model switches, NOT app restarts — §2 has re-arm
+prompts; add DRY_SLEEP=150 to any supervisor restart.
+
 **REDEPLOY 2026-08-26 ~12:30Z (PI-directed: stop the 16, build the two durability features, redeploy):**
 the running 4-way PHASE4 (~33% at ~22 draws/s/chip measured — an 8h monolith) was discarded in favor
 of the hardened rebuild. SHIPPED + verified (bank-resume named test bit-identical; chain harness
