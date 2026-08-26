@@ -269,7 +269,7 @@ cmd_supervise () {
         UNKNOWN=$((UNKNOWN+1)); say "read UNKNOWN (x$UNKNOWN) — network? not acting"; sleep "$POLL"; continue;;
       ABSENT)
         UNKNOWN=0; say "node ABSENT everywhere — hunting"
-        if v_hunt; then RELAUNCHES=0; SSHFAIL=0; sleep "$POLL"; else say "  all zones dry — sleeping 8 min"; sleep 480; fi
+        if v_hunt; then RELAUNCHES=0; SSHFAIL=0; sleep "$POLL"; else say "  all zones dry — sleeping ${DRY_SLEEP:-480}s"; sleep "${DRY_SLEEP:-480}"; fi
         continue;;
     esac
     z=${nw%% *}; st=${nw#* }; UNKNOWN=0

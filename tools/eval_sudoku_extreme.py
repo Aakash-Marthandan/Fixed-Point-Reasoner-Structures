@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import functools
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -194,6 +195,12 @@ def main():
                     help="DIAGNOSTIC ONLY (2026-08-23 wave-2 analysis): replace the ckpt's learned "
                          "equilibrium step eta at inference. Never a benchmark number — labeled in the summary.")
     ap.add_argument("--batch", type=int, default=512)
+    ap.add_argument("--bank-every", type=float, default=0,
+                    help="PHASE B ops hardening (2026-08-26, registered d06fe39): every N seconds "
+                         "write partial_{tag}.npz (atomic, batch-boundary) with a provenance "
+                         "fingerprint; on start, a matching partial resumes the shard exactly "
+                         "(per-(puzzle,draw) seeding makes resumed == uninterrupted, bit-identical "
+                         "— named test). 0 = off, existing behavior byte-for-byte.")
     ap.add_argument("--out", help="output dir")
     ap.add_argument("--merge", default=None, help="merge shard files in DIR and exit")
     a = ap.parse_args()
@@ -242,7 +249,26 @@ def main():
                violations=[], cells=[], givens_kept=[], mi_verified=[], mi_true=[],
                mi_first_hit=[])
     t0 = time.time()
-    for s in range(0, len(sel), a.batch):
+    # --bank-every: resume from a provenance-matched partial (batch-boundary counts only)
+    fingerprint = json.dumps(dict(ckpt=a.ckpt, npz=a.npz, split=a.split, shard=tag, n=len(sel),
+                                  t=t_total, k=a.k_init, init=a.init, layout=layout, batch=a.batch,
+                                  mi_seed=a.mi_seed, fmo=bool(a.final_map_only)), sort_keys=True)
+    partial_p = out / f"partial_{tag}.npz"
+    start = 0
+    if a.bank_every and partial_p.exists():
+        try:
+            pz = np.load(partial_p, allow_pickle=True)
+            if str(pz["_fingerprint"]) == fingerprint and int(pz["_done"]) % a.batch == 0:
+                for k in rec:
+                    rec[k] = pz[k].tolist()
+                start = int(pz["_done"])
+                print(f"RESUMED shard {tag} from partial at {start}/{len(sel)}", flush=True)
+            else:
+                print(f"partial {tag} fingerprint/boundary mismatch — starting fresh", flush=True)
+        except Exception as e:
+            print(f"partial {tag} unreadable ({e}) — starting fresh", flush=True)
+    last_bank = time.time()
+    for s in range(start, len(sel), a.batch):
         ids = sel[s:s + a.batch]
         puz9 = Q[ids].astype(np.int32); sol9 = A[ids].astype(np.int32)
         x_can = place_batch(puz9, layout)
@@ -281,9 +307,20 @@ def main():
         if done % (a.batch * 8) == 0 or done == len(sel):
             acc = float(np.mean(rec["cold_exact"]))
             print(f"  {done}/{len(sel)} cold-exact {acc:.4f}  {time.time()-t0:.0f}s", flush=True)
+        if a.bank_every and done < len(sel) and time.time() - last_bank >= a.bank_every:
+            tmp = out / f"partial_{tag}.tmp.npz"   # savez appends .npz if absent — keep the suffix explicit
+            np.savez_compressed(tmp, _fingerprint=fingerprint, _done=done,
+                                **{k: np.asarray(v) for k, v in rec.items()})
+            os.replace(tmp, partial_p)
+            last_bank = time.time()
+            print(f"  banked partial {tag} @ {done}/{len(sel)}", flush=True)
+        if os.environ.get("SX_TEST_ABORT_AFTER") and done >= int(os.environ["SX_TEST_ABORT_AFTER"]):
+            print(f"  TEST ABORT at {done} (SX_TEST_ABORT_AFTER)", flush=True)
+            sys.exit(3)   # named-test hook only: simulates a preemption mid-shard
 
     arr = {k: np.asarray(v) for k, v in rec.items()}
     np.savez_compressed(out / f"records_{tag}.npz", **arr)
+    partial_p.unlink(missing_ok=True)
     summ = summarize(arr, Q, sel, qs, dict(
         ckpt=a.ckpt, npz=a.npz, split=a.split, t_total=t_total, k_init=a.k_init, init=a.init,
         layout=layout, fpopt_gamma=a.fpopt_gamma, tau=a.tau, shard=tag,

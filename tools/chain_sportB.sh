@@ -154,19 +154,35 @@ eval_cheap () {   # ARM — strat t6/64/256 k16, val t64, ret_t8, retfm_t8; para
 }
 
 # ---------- sharded helper (all chips of this worker) ----------
+partial_sync () {  # OUT — every 5 min push partial_*.npz to GCS partials/<base>_* (ops hardening 2026-08-26)
+  local O=$1 base; base=$(basename "$O")
+  while true; do sleep "${PARTIAL_SYNC_SLEEP:-300}"
+    for f in "$O"/partial_*.npz; do [ -f "$f" ] && gsutil -q cp "$f" "$GCS/partials/${base}_$(basename "$f")" 2>/dev/null; done
+  done
+}
+partial_restore () {  # OUT — pull banked partials for this dir if local absent
+  local O=$1 base f b; base=$(basename "$O")
+  for f in $(gsutil ls "$GCS/partials/${base}_partial_*.npz" 2>/dev/null); do
+    b=$(basename "$f"); b=${b#${base}_}
+    [ -f "$O/$b" ] || gsutil -q cp "$f" "$O/$b" 2>/dev/null
+  done
+}
 sharded_eval () {  # OUT CKPT [extra flags...] -> merged summary_all.json in OUT
   local O=$1 CK=$2; shift 2
   [ -f "$O/summary_all.json" ] && return 0
-  mkdir -p "$O"; local pids=() c
+  mkdir -p "$O"; partial_restore "$O"
+  partial_sync "$O" & local PS=$!
+  local pids=() c
   for c in $(seq 0 $((NCHIP-1))); do
     [ -f "$O/summary_s$c.json" ] && continue
     ( for try in $(seq 1 60); do
-        pin "$c" python3 tools/eval_sudoku_extreme.py --ckpt "$CK" --npz "$NPZ" --shard "$c/$NCHIP" --out "$O" "$@" > "$O/shard_s$c.log" 2>&1 && break
+        pin "$c" python3 tools/eval_sudoku_extreme.py --ckpt "$CK" --npz "$NPZ" --shard "$c/$NCHIP" --out "$O" --bank-every 300 "$@" > "$O/shard_s$c.log" 2>&1 && break
         if grep -qE "resource busy|Couldn't open iommu group" "$O/shard_s$c.log"; then [ "$try" -eq 1 ] && echo "SHARD-WAIT $O s$c (chip busy; retrying)"; sleep "${SHARD_RETRY_SLEEP:-120}"; continue; fi
         echo "SHARD-FAILED $O s$c"; break
       done ) & pids+=($!)
   done
   for p in ${pids[@]+"${pids[@]}"}; do wait "$p" || true; done
+  pkill -P $PS 2>/dev/null; kill $PS 2>/dev/null || true
   JAX_PLATFORMS=cpu python3 tools/eval_sudoku_extreme.py --merge "$O" > "$O/merge.log" 2>&1
   [ -f "$O/summary_all.json" ]
 }
@@ -309,15 +325,20 @@ for a in $ALL_ARMS; do
   if is_primary "$a"; then FULL_TASKS="$FULL_TASKS full:$a:t64 full:$a:t6 full:$a:vb"
   else FULL_TASKS="$FULL_TASKS full:$a:t64"; fi
 done
-TASKS="$FULL_TASKS $SCREEN_TASKS probes4 phase4"
+TASKS="$FULL_TASKS $SCREEN_TASKS probes4"
+CLAIM_TTL=${CLAIM_TTL:-9000}   # ops hardening 2026-08-26: a dead node's claim expires (stale-claim incident 08-26 08:10Z)
 for pass in $(seq 1 200); do
   pending=0
   for t in $TASKS; do
     obj=$(task_obj "$t"); claim="claim_${obj%.tgz}"
     gsutil -q stat "$GCS/$obj" 2>/dev/null && continue
     task_ready "$t" || { pending=1; continue; }
-    if gsutil -q stat "$GCS/$claim" 2>/dev/null; then pending=1; continue; fi
-    echo "worker $W" | gsutil -q cp - "$GCS/$claim" 2>/dev/null || true
+    if gsutil -q stat "$GCS/$claim" 2>/dev/null; then
+      cts=$(gsutil -q cp "$GCS/$claim" - 2>/dev/null | head -1)
+      if [ -n "$cts" ] && [ $(( $(date -u +%s) - cts )) -lt "$CLAIM_TTL" ] 2>/dev/null; then pending=1; continue; fi
+      echo "CLAIM-STALE $t (age > ${CLAIM_TTL}s) — taking over"
+    fi
+    date -u +%s | gsutil -q cp - "$GCS/$claim" 2>/dev/null || true
     run_task "$t" || pending=1
     gsutil -q rm "$GCS/$claim" 2>/dev/null || true
   done
@@ -325,6 +346,91 @@ for pass in $(seq 1 200); do
   sleep "${PHASE2_SLEEP:-120}"
 done
 echo "PHASE2-DONE worker=$W $(date -u +%H:%M)"
+
+# ---------- PHASE4 (cooperative, ALL workers x ALL chips = NSH-way; ops hardening 2026-08-26) ----------
+NSH=$((NCHIP * NW))
+p4_winner () {  # -> "ARM step" of the screen winner (retfm>=.5 guard; evalcheap pulled per the b589334 fix)
+  for t2 in $SCREEN_TASKS; do IFS=: read -r _ a2 ck2 <<< "$t2"
+    obj2=$(task_obj "$t2"); d2=runs/sxscreen_p${R_TAG}${a2}_${ck2}
+    [ -d "$d2" ] || { gsutil -q cp "$GCS/$obj2" /tmp/_s.tgz 2>/dev/null && [ -s /tmp/_s.tgz ] && tar xzf /tmp/_s.tgz 2>/dev/null || true; }
+  done
+  for a2 in $ALL_ARMS; do
+    [ -f "runs/sxeval_p${R_TAG}$a2/retfm_t8/summary_all.json" ] || \
+      { gsutil -q cp "$GCS/${a2}_evalcheap.tgz" /tmp/_ec.tgz 2>/dev/null && tar xzf /tmp/_ec.tgz 2>/dev/null || true; }
+  done
+  python3 - <<'PY'
+import json, os
+from pathlib import Path
+tag = os.environ.get("R_TAG", "sportB")
+best, bestv = "", -1.0
+for d in Path("runs").glob(f"sxscreen_p{tag}*_vb"):
+    arm = d.name.replace(f"sxscreen_p{tag}", "")[:-3]
+    try:
+        sj = json.loads((d / "summary_all.json").read_text())
+        rj = json.loads(Path(f"runs/sxeval_p{tag}{arm}/retfm_t8/summary_all.json").read_text())
+    except Exception: continue
+    if rj.get("exact_acc", 0) < 0.5: continue
+    v = sj.get("vote_at_k", {}).get("256", sj.get("exact_acc_vote", 0)) or 0
+    if v > bestv: best, bestv = arm, v
+print(best or "-")
+PY
+}
+if ! gsutil -q stat "$GCS/breadth20k.tgz" 2>/dev/null; then
+  # wait (bounded) for all screens, then everyone contributes its shard slice
+  for w8 in $(seq 1 "${P4_WAIT_PASSES:-90}"); do task_ready_all_screens=1
+    for t2 in $SCREEN_TASKS; do gsutil -q stat "$GCS/$(task_obj "$t2")" 2>/dev/null || task_ready_all_screens=0; done
+    [ "$task_ready_all_screens" -eq 1 ] && break; sleep "${P4_POLL_SLEEP:-60}"; done
+  WINNER=$(p4_winner | tail -1)
+  if [ "$WINNER" != "-" ] && [ -n "$WINNER" ]; then
+    need_arm_local "$WINNER"
+    D=runs/pretrain${R_TAG}_$WINNER; step=$(vb_step "$WINNER"); CK="$D/ckpt_$step.pkl"; [ -f "$CK" ] || CK="$D/ckpt_latest.pkl"
+    O=runs/sxbreadth20k_p${R_TAG}${WINNER}; mkdir -p "$O"; partial_restore "$O"
+    echo "PHASE4-COOP: winner $WINNER (vb) — worker $W shards $((W*NCHIP))..$((W*NCHIP+NCHIP-1)) of $NSH $(date -u +%H:%M)"
+    partial_sync "$O" & PS4=$!
+    pids=()
+    for c in $(seq 0 $((NCHIP-1))); do K=$((W*NCHIP + c))
+      gsutil -q stat "$GCS/p4/summary_s$K.json" 2>/dev/null && continue
+      ( for try in $(seq 1 60); do
+          pin "$c" python3 tools/eval_sudoku_extreme.py --ckpt "$CK" --npz "$NPZ" --shard "$K/$NSH" --out "$O" --bank-every 300 \
+              --split test --subsample "$SX_SUB" --t-total 64 --k-init "$SX_SUB_K" > "$O/shard_s$K.log" 2>&1 \
+            && { gsutil -q cp "$O/summary_s$K.json" "$GCS/p4/summary_s$K.json"; gsutil -q cp "$O/records_s$K.npz" "$GCS/p4/records_s$K.npz"; echo "P4-SHARD-s$K-OK $(date -u +%H:%M)"; break; }
+          if grep -qE "resource busy|Couldn't open iommu group" "$O/shard_s$K.log"; then sleep "${SHARD_RETRY_SLEEP:-120}"; continue; fi
+          echo "P4-SHARD-s$K-FAILED"; break
+        done ) & pids+=($!)
+    done
+    for p in ${pids[@]+"${pids[@]}"}; do wait "$p" || true; done
+    pkill -P $PS4 2>/dev/null; kill $PS4 2>/dev/null || true
+    # poll for ALL NSH shards, then first-to-see merges (stat-guarded; merge is idempotent anyway)
+    for w8 in $(seq 1 "${P4_WAIT_PASSES2:-120}"); do
+      n=$(gsutil ls "$GCS/p4/summary_s*.json" 2>/dev/null | wc -l | tr -d ' ')
+      [ "$n" -ge "$NSH" ] && break; sleep "${P4_POLL_SLEEP:-60}"
+    done
+    if [ "$n" -ge "$NSH" ] && ! gsutil -q stat "$GCS/breadth20k.tgz" 2>/dev/null; then
+      for f in $(gsutil ls "$GCS/p4/summary_s*.json" "$GCS/p4/records_s*.npz" 2>/dev/null); do
+        b=$(basename "$f"); [ -f "$O/$b" ] || gsutil -q cp "$f" "$O/$b"
+      done
+      JAX_PLATFORMS=cpu python3 tools/eval_sudoku_extreme.py --merge "$O" > "$O/merge.log" 2>&1
+      if [ -f "$O/summary_all.json" ]; then
+        # PHASE4-MID conditional (H-46 full-test-grade): the merger alone runs it, banked+sharded over its own chips
+        vbv=$(python3 -c "import json;s=json.load(open('$O/summary_all.json'));print(s.get('vote_at_k',{}).get('128',0) or 0)")
+        mv2=$(python3 -c "import json;from pathlib import Path
+try:
+    m=json.loads(Path('runs/sxscreen_p${R_TAG}${WINNER}_mid/summary_all.json').read_text())
+    v=json.loads(Path('runs/sxscreen_p${R_TAG}${WINNER}_vb/summary_all.json').read_text())
+    print(abs((v.get('vote_at_k',{}).get('256',0) or 0)-(m.get('vote_at_k',{}).get('256',0) or 0)))
+except Exception: print(0)")
+        if python3 -c "import sys; sys.exit(0 if float('$mv2') >= 0.05 else 1)"; then
+          ms=$(mid_step "$WINNER")
+          if [ -n "$ms" ] && [ -f "$D/ckpt_$ms.pkl" ]; then
+            echo "PHASE4-MID: screens differ ${mv2} — scanning mid ckpt $ms"
+            sharded_eval "runs/sxbreadth20k_p${R_TAG}${WINNER}_mid" "$D/ckpt_$ms.pkl" --split test --subsample "$SX_SUB" --t-total 64 --k-init "$SX_SUB_K" || echo "PHASE4-MID-FAILED"
+          fi
+        fi
+        tar czf /tmp/breadth20k.tgz runs/sxbreadth20k_p${R_TAG}* 2>/dev/null && gsutil -q cp /tmp/breadth20k.tgz "$GCS/breadth20k.tgz" && echo "PHASE4-OK $WINNER (coop ${NSH}-way) $(date -u +%H:%M)"
+      else echo "PHASE4-MERGE-FAILED"; fi
+    fi
+  else echo "PHASE4-SKIP (no screened arm passed the guard)"; fi
+fi
 
 # ---------- COMPLETION GUARD (global) ----------
 missing=""

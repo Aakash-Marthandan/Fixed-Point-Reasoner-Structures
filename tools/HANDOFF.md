@@ -65,6 +65,20 @@ Completion: `CHAIN-SPORTB-WORKER-DONE` (waits) / `CHAIN-SPORTB-COMPLETE` + `SELF
 ETA ≈ 9–12 h on a v6e-16 (INFERRED — canary + first arm measure it; wall pace expected ≥ 2 it/s
 T12 d64 DP-4; the 8.5 h wall ceiling mid-pretrain recycles + resumes = NORMAL).
 
+**REDEPLOY 2026-08-26 ~12:30Z (PI-directed: stop the 16, build the two durability features, redeploy):**
+the running 4-way PHASE4 (~33% at ~22 draws/s/chip measured — an 8h monolith) was discarded in favor
+of the hardened rebuild. SHIPPED + verified (bank-resume named test bit-identical; chain harness
+23/23 incl. coop-shards + stale-claim scenarios): (1) evaluator `--bank-every` — partial_{tag}.npz
+with provenance fingerprint every N s, batch-boundary resume, RESUMED == uninterrupted bit-identical;
+(2) `sharded_eval` partial_sync/restore — partials to `$GCS/partials/` every 5 min, pulled on start;
+(3) **PHASE4-COOP** — all workers × all chips (NSH = NCHIP×NW = 16-way on a 16), per-shard upload to
+`$GCS/p4/`, first-to-see-all merges (stat-guarded), PHASE4-MID by the merger; (4) CLAIM TTL
+(default 9000 s) — a dead node's claim expires (`CLAIM-STALE … taking over`), fixing the 08-26
+08:10Z stale-claim stall. New signatures: `PHASE4-COOP: winner …`, `P4-SHARD-sK-OK`, `CLAIM-STALE`,
+`banked partial`, `RESUMED shard … from partial`. Ladder pinned v6e-16-only (PI); DRY_SLEEP=150
+during prime windows. Remaining work unchanged: full_B2_t64, full_B4_t64, PHASE4 (winner B2 vb) —
+now ≈ 2h total on a 16 at 16-way with ≤10-min preemption durability.
+
 **⏸ PAUSED 2026-08-25 18:41Z (PI: "resume by 7 am IST") — fleet ZERO verified (nodes + QRs, all 4
 hunt zones); supervisor + caffeinate stopped; heartbeat cron deleted; monitors left running;
 launchd watchdog stands (deadline 2026-08-26 03:20Z — the RESUME MUST EXTEND IT FIRST).**
