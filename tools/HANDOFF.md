@@ -7,7 +7,27 @@ reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08
 HARD BOUNDARY during ops: no `tools/analyze_sportB.py` (nor analyze_sport3a.py / analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
-## ▶ LIVE — RUNG-1 TAIL PAUSE (new session pickup) as of 2026-08-26 15:35Z (21:05 IST) — FLEET ZERO verified (all 8 door zones, nodes + QRs); PI paused for a fresh session
+## ▶ LIVE — RUNG-1 TAIL RUNNING as of 2026-08-26 16:10Z (21:40 IST) — v6e-8 us-east1-d, tail_runbook LAUNCHED 16:03Z (source-verified: PID-ALIVE, TAIL-START chips=8, REFS ok, ALL 8 shard logs exist)
+
+**RESUMED (Fable, PI-directed, this session):** deadline 2026-08-27 05:42Z; `campaign_tail.env` → `campaign.env`
+(ACCEL_LIST "v6e-8 v6e-4", strikes 0/3 fresh); supervisor pid `runs/pod_supervisor.pid` (DRY_SLEEP=150)
++ caffeinate, launched 15:42Z; node CREATED 15:48Z first try us-east1-d; chain launched 16:03Z.
+**Pre-launch verification done at $0:** fleet-zero re-verified (8 zones nodes+QRs); GCS state == audit
+(14 p4 shards, no s6/s14 partials, no NSH pin, breadth absent, ref/mid ckpts + npz present); ref npz
+field + val_best format pre-checked; evaluator `--merge` reads ONLY records_s*/summary_s* (stale
+partials inert); chain completion guard hydrates ALL arms' grids + tasks from GCS before the final tar
+(no hollow final on a fresh node). **tail_runbook OFFLINE-HARNESS VERIFIED this session (5 scenarios:
+fresh-8, idempotent, gate-refusal w/ positive GATE-DIFF evidence, fresh-4 pins NSH=4, pinned-6 reuse
+on 4 chips; harness in session scratchpad rbtest/).** T0=16:03Z: s6+s14 chips 0-1 (~2h, done ≈18:05Z),
+mid 6-way chips 2-7 (~5.4h, done ≈21:26Z), merges+chain-cascade ~40 min → COMPLETE ≈22:05-22:20Z
+(03:35-03:50 IST), spend ≈$44 from 15:48Z landing. Layers (session-scoped, re-arm §2 after restart):
+edge+inventory+GCS-staleness monitors, hourly heartbeat :23, T+55m invariant check (8/8 fresh units by
+16:58Z or alarm). PI directives this session: SOURCE-verified status only (memory verify-source-not-proxy);
+thorough+critical, no new error surface; 2 idle chips T+2h→T+5.4h accepted as wall-optimal.
+On COMPLETE: §6 sportB counts + `audit_sportB_integrity.py --phase final` 0-FAIL gate → ONE ledger line
+→ ONE commit → STOP (analysis = fresh session).
+
+## ▼ SUPERSEDED — RUNG-1 TAIL PAUSE (as of 2026-08-26 15:35Z) — FLEET ZERO verified (all 8 door zones, nodes + QRs); PI paused for a fresh session
 
 **STATE.** The campaign is ~95% banked and integrity-PROVEN; only the PHASE4 tail remains.
 Banked + audited (334 PASS / 0 FAIL, `tools/audit_sportB_integrity.py --phase tail`, report
