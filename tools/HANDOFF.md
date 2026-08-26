@@ -7,7 +7,77 @@ reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08
 HARD BOUNDARY during ops: no `tools/analyze_sportB.py` (nor analyze_sport3a.py / analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
-## ▶ LIVE — OPS HANDOFF (Opus) as of 2026-08-24 17:10Z (22:40 IST) — v6e-8 READY us-east1-d, 1 worker × 8 chips, chain launched 16:38Z, all six arms on the one worker
+## ▶ LIVE — RUNG-1 TAIL PAUSE (new session pickup) as of 2026-08-26 15:35Z (21:05 IST) — FLEET ZERO verified (all 8 door zones, nodes + QRs); PI paused for a fresh session
+
+**STATE.** The campaign is ~95% banked and integrity-PROVEN; only the PHASE4 tail remains.
+Banked + audited (334 PASS / 0 FAIL, `tools/audit_sportB_integrity.py --phase tail`, report
+`runs/audit_sportB_20260826T15b.txt`): all 6 arms trained; all cheap evals; 11 screens; all
+full-tests; probes4; **14/16 PHASE4 /16 shards in `$GCS/p4/`** (partition-exact, provenance-
+identical — the fingerprint reference is `p4/summary_s0.json`). Metrics splices characterized
+(B1×6, B2/B3/B4×1, B4s1/B5 none) — lineage, not corruption; **the analysis pass must last-wins
+dedup metrics by step.**
+
+**REMAINING WORK** (≈5.5–6.5h on one spot v6e-8; ~10h on a v6e-4):
+1. `/16` shards **s6 + s14** (chips 0,1; ~2h; the chain invocation verbatim; fingerprint-gated
+   vs `p4/summary_s0.json` before upload). They have NO partials — they never started on the
+   dead node (silent stall, see incidents).
+2. **PHASE4-MID** (predicate = chain line 422, computed from banked screens: **YES**): full 20k
+   scan of B2 `ckpt_025000`, freshly sharded (6-way on a v6e-8), per-shard banked to `$GCS/p4mid/`.
+   `p4mid/NSH.txt` does NOT exist yet — the first run pins the partition; resumes MUST reuse it.
+3. Evaluator `--merge` for both dirs (count-gate n=20000 each) → `tar czf breadth20k.tgz
+   runs/sxbreadth20k_psportB*` → upload.
+4. THEN run unmodified `tools/chain_sportB.sh` (pure SKIP-cascade once breadth20k.tgz is banked)
+   → completion guard → `sportB_final.tgz` → `CHAIN-SPORTB-COMPLETE` → self-teardown.
+   **NEVER run chain_sportB.sh on a non-16 node while breadth20k.tgz is ABSENT — its NSH
+   partition hollow-merges (b589334 class).**
+
+**HOW TO RESUME (the 08-26 lesson: use the PROVEN machinery, not hand-rolled ops):**
+`cp tools/campaign_tail.env tools/campaign.env` → `DRY_SLEEP=150 nohup bash tools/pod.sh
+supervise 14 &` (+ caffeinate). The tail env sets `CHAIN_SCRIPT=tools/tail_runbook_sportB.sh`
+(idempotent, GCS-guarded, 60s partial sync, per-shard banking, fingerprint gate, NSH pinning,
+runs steps 1–4 above) so the supervisor's hunt/bring-up/dispatcher-detach/watchdog/teardown all
+run the proven path. Verify at first launch: (a) v_launch exports SELF_POD/SELF_ZONE (chain
+self-teardown contract; else append to CHAIN_EXTRA_ENV), (b) the runbook log EXISTS AND GROWS on
+the node (`~/qhrrn2/runs/wave_*.log`-equivalent; verify by ARTIFACT, never by pgrep — see
+incident e). First milestones: `TAIL-START chips=8`, `REFS ck=...`, then GCS partials within
+~55 min. §6 close spec below is unchanged, PLUS `audit_sportB_integrity.py --phase final` must
+be 0-FAIL before the close commit (PI mandate 08-26).
+
+**08-26 INCIDENTS (all root-caused; fixes registered for rung 2):**
+- (a) **s6/s14 silent stall**: PHASE4-COOP launch loop has NO wait echo (unlike sharded_eval's
+  SHARD-WAIT); both stragglers (chip 2 on w1/w3) sat silently ~2h; the 14:21Z preemption erased
+  their logs. Fulls were NOT the contention (done 09:29/09:33Z — earlier inference corrected).
+  Fix: echo every wait/retry state; in-flight invariant (banked-partial count == launched count
+  by T+55min or alarm).
+- (b) 14:21Z v6e-16 preemption: 14/16 shards banked+immutable survived (hardening WORKED);
+  merge was ~15 min away.
+- (c) **MID-TRIGGER = YES** (registered H-46 branch) discovered post-preemption; adds the 20k
+  mid scan (it was always coming; the old chain would have run it 4-way ≈8h — the 6-way tail
+  plan is faster).
+- (d) **`timeout`(1) does not exist on macOS**: the first hand-rolled hunt loop's every create
+  died command-not-found masked as "no capacity" for 40 min. Manual create then landed a v6e-8
+  in us-east1-d INSTANTLY. Use `bounded` (pod.sh:65 perl alarm) — fixed in
+  `tools/tail_hunt_sportB.sh` (kept for reference; superseded by the supervisor plan above).
+- (e) **Runbook never executed on the node** (evidence `runs/tail_node_evidence_20260826.txt`:
+  `~/qhrrn2/runs/` empty, no log ever created). The "LAUNCHED" verification was an illusion:
+  pgrep matched the ssh wrapper's OWN cmdline containing the literal script name (the v_stop
+  self-match footgun in a new form — a [.]-bracket in the pattern does not help when the
+  WRAPPER's cmdline contains the literal text). Root cause of the instant death is UNRESOLVED
+  (node deleted on PI instruction); do not debug the hand-rolled launcher — resume via the
+  dispatcher path above, and verify by artifact.
+- Prior incidents (v_stop capital-B, DP confinement, hollow-skip near-miss, stale claims,
+  probes4 false-alarm, ~20 node losses) are in the ledger/commits d1be32b, b589334, cde1715,
+  93a79d4, d06fe39.
+
+**SESSION CONFIG STATE (as left):** fleet ZERO (15:33Z, all 8 zones, nodes+QRs); NO crons (both
+hourly heartbeats deleted — arm a fresh one from this block's spec on resume); no monitors; no
+local supervisor/hunt processes; `tools/campaign.env` still contains the ORIGINAL 16-pinned env
+(do not supervise against it for the tail). Spend today: ~2h v6e-16 + ~20 min v6e-8 + the
+overnight/morning window — measure with `spend_report.py --since 2026-08-24` at close.
+
+---
+
+## ▼ SUPERSEDED — OPS HANDOFF (Opus) as of 2026-08-24 17:10Z (22:40 IST) — v6e-8 READY us-east1-d, 1 worker × 8 chips, chain launched 16:38Z, all six arms on the one worker
 
 **Your job:** run PHASE B RUNG 1 to `CHAIN-SPORTB-COMPLETE` → §6 (sportB version, below) → ONE ops
 ledger line + ONE commit → STOP. Analysis = Fable on the PI's next switch (`analyze_sportB.py`
