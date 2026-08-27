@@ -7,6 +7,8 @@ reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08
 HARD BOUNDARY during ops: no `tools/analyze_sportB.py` (nor analyze_sport3a.py / analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
+## ✅ ANALYZED — PHASE B RUNG 1 VERDICT LEDGERED (2026-08-27 afternoon IST; ledger §5 entry + §3 H-44/H-45/H-46 annotations + NEW H-47; report Report_2026-08-27_PhaseB_Rung1_Verdict.md; artifacts sportB_r1_verdict.txt + sportB_r1_physics_20260827.txt). WINNER B2 (FPA) 25.27 % cold record / 66.16 % vote@128 (BREADTH-FLAT, B-M1); B4-pair UNSTABLE (H-45 at width); H-47 registered (breadth–budget competition). NEXT = RUNG-2 (d96) REGISTRATION after the PI decides: insurance arm (recommend T6@20k+FPA), B1 drop, H-47 β-piggyback. The block below is the ops-close record.
+
 ## ✅ COMPLETE — PHASE B RUNG 1 (2026-08-27 07:45:49Z / 13:15 IST) — sportB_final.tgz banked (534 MB), sentinel + self-teardown + supervisor exit 0, FLEET ZERO verified (8 zones, nodes + QRs); §6 counts ALL PASS + audit --phase final 339/0/0; ops CLOSED in the ledger (2026-08-27 §5 entry = the record: tail recovery, 5-node churn, flex-start experiment, measured ops facts, spend). ANALYSIS = Fable, FRESH session, ON PI APPROVAL ONLY (`analyze_sportB.py` untouched, 16/16). The blocks below are the historical tail record.
 
 ## ▼ SUPERSEDED — RUNG-1 TAIL RUNNING as of 2026-08-26 16:10Z (21:40 IST) — v6e-8 us-east1-d, tail_runbook LAUNCHED 16:03Z (source-verified: PID-ALIVE, TAIL-START chips=8, REFS ok, ALL 8 shard logs exist)
