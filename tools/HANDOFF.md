@@ -7,7 +7,48 @@ reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08
 HARD BOUNDARY during ops: no `tools/analyze_sportB.py` (nor analyze_sport3a.py / analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
-## ▶ LIVE — PHASE B RUNG 2 REGISTERED + BUILT (2026-08-27 evening IST) — LAUNCH AT THE NIGHT WINDOW (~05:15-05:30 IST Aug 28 via one-shot session cron; manual fallback below)
+## ▶ LIVE — PHASE B RUNG 2 IN FLIGHT, SUPERVISOR SELF-DRIVING (session handoff written 2026-08-27 ~12:30Z / 18:00 IST — the PI continues OPS in a NEW session; session-scoped crons/monitors from the old session are DEAD — re-arm below)
+
+**CAMPAIGN STATE:** launched 11:21Z on a v6e-8 (artifact-verified: SPORTBR2 START chips=8 d=96 ws=6;
+code-from-GCS-archive fast path worked, landing→launch 5.5 min). Churn so far: one v6e-16 preempted
+mid-bring-up (11:08Z, strike 1/2 vs the 16, $≈0) and the v6e-8 PREEMPTED at 12:24Z after ~67 min
+(C1 trained ~1h, live-synced every 5 min → resume loses ≤5 min; nothing else started). SUPERVISOR
+(pid `runs/pod_supervisor.pid`, DRY_SLEEP=150) is autonomously re-hunting v6e-16-first / v6e-8 and
+relaunching — the chain SKIPs/RESUMEs everything from GCS. Deadline `runs/tpu_deadline.txt` =
+2026-08-28 02:48Z (08:18 IST) — EXTEND (+14h) whenever within ~10h of it. launchd watchdog stands.
+**NEW-SESSION PICKUP (in order):** (1) session-start discipline (memory + ledger §5 top + this block);
+(2) `bash tools/pod.sh status` + tail the pod log — the supervisor may be mid-hunt or riding a new
+node; verify any RUNNING claim at the SOURCE (node detached.log SPORTBR2 START + wave_pre_*.log
+growing + GCS mtimes/record counts — never pgrep/echoes); (3) re-arm session layers: edge monitor
+(tail -F pod log: CREATED/canary FAILED/launch w/STRIKE/DEMOTE/COMPLETE/NEEDS EYES/relaunching/DOWN),
+GCS staleness+milestone watchdog on gs://qhrrn2-rescue/sportBr2 (25-min staleness, count-not-mtime
+lesson), hourly heartbeat :23 (source-verified; per-arm step/ETA IST; chip census; spend vs $150-250
+with the 1.5× tripwire; C1 5k-grid + _live ckpts in GCS are the resume truth); (4) caffeinate must be
+pinned to the supervisor pid (outlives-everything law).
+**PI-APPROVED NIGHT SWAP (~05:43 IST Aug 28, MANUAL in the new session — the old cron is dead):**
+source-check progress first; IF in PHASE4/finalize OR <~2.5h remain OR COMPLETE → do NOT swap, ride.
+ELSE: kill supervisor + caffeinate → `rm -f runs/pod_strikes.txt` (fresh 16 budget) → `bash
+tools/pod.sh stop` → `bash tools/pod.sh down` → extend deadline (+14h) → `DRY_SLEEP=150 nohup bash
+tools/pod.sh supervise 14 &` + caffeinate. 16 lands → 4 workers pull ARMS_W0..W3 in parallel; the
+PHASE4 partition PIN (harness S6) protects any in-flight scan across the shape change.
+**OPS BOUNDARY:** `analyze_sportBr2.py` UNTOUCHED; no accuracy values; MONITOR lines reported, never
+interpreted. Signatures: rung-1 set + `P4 partition pinned: N-way` / `CLAIM-STALE p4 sK — taking
+over` (self-healing, normal) / `P4DEPTH-OK` / `D3DEMO-*` (optional, failures never block) /
+`COMPILE-CACHE restored|pushed` / `code archive banked|code from GCS archive`.
+`PRETRAIN-*-DIVERGED` = report, do NOT patch (registered contingency = ONE labeled half-lr relaunch,
+the B1-d64 precedent).
+**DURING-RIDE BUILDS OWED ($0, cannot touch the run):** (a) auditor `--tag sportBr2` generalization
+(needed at §6); (b) venv-tarball half of O1; (c) noted tweak (weigh at a relaunch boundary only,
+harness-verified first): cache_push also after the FIRST arm — a mid-PHASE1 preemption currently
+loses the compile cache (bit us at 12:24Z).
+**§6 CLOSE (on CHAIN-SPORTBR2-COMPLETE):** verify final at GCS + fleet-zero (8 zones n+q); pull
+`sportBr2_final.tgz`; counts per the registration (5 pretrains w/ grids; 5 evalcheaps; screens 5×3
+minus coincide-skips; fulls t64 ×5 + carrier t6/vb; probes4 ×4 w/ extended ε; breadth20k n=20000 +
+mid-if-fired; depth_t256; d3demo ×0-2 optional); generalized auditor 0-FAIL → ONE ops ledger line +
+ONE commit → STOP. ANALYSIS = fresh ingestion, `analyze_sportBr2.py` untouched (self-test 20/20),
+physics pass at analysis time; P-A/P-B adjudication per the H-47 row.
+
+## ▼ SUPERSEDED — PHASE B RUNG 2 REGISTERED + BUILT (2026-08-27 evening IST) — LAUNCH AT THE NIGHT WINDOW (~05:15-05:30 IST Aug 28 via one-shot session cron; manual fallback below)
 
 **State:** registration LOCKED in the ledger (arms C1/C1s1/C2/C3/C4 at d96 ws6; rules + predictions
 incl. the PI-conjecture P-A/P-B; adversarial review folded in). BUILT + VERIFIED: `analyze_sportBr2.py`
