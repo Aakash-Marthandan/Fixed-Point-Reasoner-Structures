@@ -247,6 +247,19 @@ cmd_supervise () {
   if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null; then
     echo "supervisor already running (pid $(cat "$PIDF")) — one instance only"; exit 1; fi
   echo $$ > "$PIDF"
+  # O1 (rung-2 ops hardening, 2026-08-27): bank a sha-named code archive once per
+  # supervise; every bring-up then pulls code in ONE remote command instead of
+  # multi-minute per-item scp passes (dispatcher falls back to scp on any miss).
+  # COPYFILE_DISABLE=1 = the 2026-08-01 AppleDouble law at create time.
+  CSHA=$(git rev-parse --short HEAD 2>/dev/null || echo nogit)
+  git diff --quiet 2>/dev/null || CSHA="${CSHA}dirty$(date -u +%H%M)"
+  if COPYFILE_DISABLE=1 tar czf /tmp/qhrrn2_code.tgz src tests tools requirements.txt pyproject.toml 2>/dev/null \
+      && gsutil -q cp /tmp/qhrrn2_code.tgz "$GCS/ops/code_${CSHA}.tgz" 2>/dev/null; then
+    export QHRRN_CODE_TGZ="$GCS/ops/code_${CSHA}.tgz"
+    say "code archive banked: code_${CSHA}.tgz (bring-ups pull from GCS; scp fallback stands)"
+  else
+    say "code archive upload failed — bring-ups use the scp path"
+  fi
   local END RELAUNCHES=0 UNKNOWN=0 SSHFAIL=0 nw z st js
   local MAXRL=${MAX_RELAUNCH:-10}   # relaunch rounds per node life (2026-08-22: 4 workers x the 8.5h wall-ceiling resume can take 2-3 rounds; the cap guards crash loops, not resumes)
   # ONE KNOB: the loop's end time IS the watchdog deadline (runs/tpu_deadline.txt,

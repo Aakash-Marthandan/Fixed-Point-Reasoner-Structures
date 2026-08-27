@@ -106,7 +106,14 @@ def main():
     ap.add_argument("--stratified", type=int, default=None,
                     help="rating-stratified subsample size from --pairs-file")
     ap.add_argument("--strat-seed", type=int, default=20260821)
+    # RUNG 2 (2026-08-27): the d64 ladder SATURATED (S(eps)=1.00 through .4 on
+    # every arm) — width out-ranged the instrument. Extended rungs via flag so
+    # the registered default (ARC's LADDER_EPS) stays byte-identical; the rung-2
+    # chain passes ".05 .1 .2 .4 .6 .8".
+    ap.add_argument("--eps-rungs", default=None,
+                    help="space-separated ladder rungs (default: ARC LADDER_EPS, unchanged)")
     a = ap.parse_args()
+    eps_rungs = tuple(float(x) for x in a.eps_rungs.split()) if a.eps_rungs else tuple(LADDER_EPS)
 
     saved = E.load_ckpt(a.ckpt)
     defaults = Config()
@@ -175,7 +182,7 @@ def main():
 
             # (3) LADDER — identical rungs, corruption, seeding as ARC
             lad = {}
-            for e in LADDER_EPS:
+            for e in eps_rungs:
                 rng = rung_rng(a.seed, tid, 0, e)
                 cy = corrupt(sol, e, rng)
                 st = P.trace(model, cfg, puz, tau=1.0, task_vec=tvj,

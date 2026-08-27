@@ -166,6 +166,21 @@ def vote_curve(cold, first_hit, k_init):
     return out
 
 
+def majority_vote_cols(draws9, sol9, ks):
+    """RUNG 2 / D3 demo (2026-08-27): UNVERIFIED cellwise majority vote — the
+    EqR-style aggregation, without Sudoku's free verifier. draws9: (B, k, 9, 9)
+    int grids; sol9: (B, 9, 9). Returns {k: bool[B]} — majority grid over the
+    first k draws equals the solution (ties -> lowest digit, deterministic).
+    Pure function (named test tests/test_eval_uv_vote.py)."""
+    B = draws9.shape[0]
+    out = {}
+    for k in ks:
+        oh = (draws9[:, :k, :, :, None] == np.arange(10)).sum(1)   # (B,9,9,10)
+        maj = oh.argmax(-1)
+        out[k] = (maj == sol9).reshape(B, -1).all(1)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt"); ap.add_argument("--npz")
@@ -195,6 +210,11 @@ def main():
                     help="DIAGNOSTIC ONLY (2026-08-23 wave-2 analysis): replace the ckpt's learned "
                          "equilibrium step eta at inference. Never a benchmark number — labeled in the summary.")
     ap.add_argument("--batch", type=int, default=512)
+    ap.add_argument("--vote-unverified", action="store_true",
+                    help="ALSO record EqR-style cellwise MAJORITY vote@k (no verifier) as "
+                         "records columns uv_vote_k* — the D3 demo instrument (2026-08-27). "
+                         "Strat-scale only (guard: selection <= 5000); merge-safe (columns "
+                         "concatenate; summarize recomputes means).")
     ap.add_argument("--bank-every", type=float, default=0,
                     help="PHASE B ops hardening (2026-08-26, registered d06fe39): every N seconds "
                          "write partial_{tag}.npz (atomic, batch-boundary) with a provenance "
@@ -248,11 +268,19 @@ def main():
     rec = dict(idx=[], rating=[], cold_exact=[], first_exact=[], first_valid=[],
                violations=[], cells=[], givens_kept=[], mi_verified=[], mi_true=[],
                mi_first_hit=[])
+    uv_ks = []
+    if a.vote_unverified:
+        if len(sel) > 5000:
+            raise SystemExit("--vote-unverified is a strat-scale instrument (selection <= 5000)")
+        uv_ks = [k for k in K_CURVE if k <= a.k_init]
+        for k in uv_ks:
+            rec[f"uv_vote_k{k}"] = []
     t0 = time.time()
     # --bank-every: resume from a provenance-matched partial (batch-boundary counts only)
     fingerprint = json.dumps(dict(ckpt=a.ckpt, npz=a.npz, split=a.split, shard=tag, n=len(sel),
                                   t=t_total, k=a.k_init, init=a.init, layout=layout, batch=a.batch,
-                                  mi_seed=a.mi_seed, fmo=bool(a.final_map_only)), sort_keys=True)
+                                  mi_seed=a.mi_seed, fmo=bool(a.final_map_only),
+                                  uv=bool(a.vote_unverified)), sort_keys=True)
     partial_p = out / f"partial_{tag}.npz"
     start = 0
     if a.bank_every and partial_p.exists():
@@ -288,15 +316,22 @@ def main():
         mask = puz9 != 0
         gk = ((pred9 == puz9) & mask).reshape(B, -1).sum(1)
         mi_v = np.zeros(B, int); mi_t = np.zeros(B, int); mi_first = np.full(B, -1, int)
+        uv_draws = np.zeros((B, len(uv_ks) and a.k_init or 0, 9, 9), np.int8) if uv_ks else None
         for j in range(a.k_init):
             y0r = np.stack([mi_canvas(a.mi_seed, int(ids[b]), j, layout) for b in range(B)])
             y0r = jax.nn.one_hot(jnp.asarray(y0r, jnp.int32), M.VOCAB).transpose(0, 3, 1, 2)
-            exr, okr, _ = run_batch(params, cfg, tvj, x_can, y0r, t_total=t_total, tau=a.tau,
-                                    gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                    layout=layout, t_norm_fixed=tnf, ab=ab)
+            exr, okr, predr = run_batch(params, cfg, tvj, x_can, y0r, t_total=t_total, tau=a.tau,
+                                       gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
+                                       layout=layout, t_norm_fixed=tnf, ab=ab)
             hit = okr[-1]
             mi_first = np.where((mi_first < 0) & hit, j, mi_first)
             mi_v += hit.astype(int); mi_t += exr[-1].astype(int)
+            if uv_draws is not None:
+                uv_draws[:, j] = np.asarray(predr, np.int8)
+        if uv_ks:
+            uv = majority_vote_cols(uv_draws, sol9, uv_ks)
+            for k in uv_ks:
+                rec[f"uv_vote_k{k}"].extend(uv[k].tolist())
         rec["idx"].extend(ids.tolist()); rec["rating"].extend(R[ids].tolist())
         rec["cold_exact"].extend(cold.tolist()); rec["first_exact"].extend(fe.tolist())
         rec["first_valid"].extend(fv.tolist()); rec["violations"].extend(viol.tolist())
@@ -356,6 +391,9 @@ def summarize(arr, Q, sel, qs, base):
         by_rating_bin_vote=[float(vote[(arr["rating"] >= qs[b]) & (arr["rating"] < qs[b + 1])].mean())
                             if ((arr["rating"] >= qs[b]) & (arr["rating"] < qs[b + 1])).any() else None for b in range(8)],
         rating_bins=[float(x) for x in qs])
+    uv_cols = sorted((k for k in arr if k.startswith("uv_vote_k")), key=lambda s: int(s[9:]))
+    if uv_cols and n:
+        summ["majority_vote_at_k"] = {c[9:]: float(arr[c].mean()) for c in uv_cols}
     return summ
 
 

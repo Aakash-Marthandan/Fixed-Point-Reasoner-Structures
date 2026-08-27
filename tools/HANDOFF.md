@@ -7,6 +7,35 @@ reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08
 HARD BOUNDARY during ops: no `tools/analyze_sportB.py` (nor analyze_sport3a.py / analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
+## ▶ LIVE — PHASE B RUNG 2 REGISTERED + BUILT (2026-08-27 evening IST) — LAUNCH AT THE NIGHT WINDOW (~05:15-05:30 IST Aug 28 via one-shot session cron; manual fallback below)
+
+**State:** registration LOCKED in the ledger (arms C1/C1s1/C2/C3/C4 at d96 ws6; rules + predictions
+incl. the PI-conjecture P-A/P-B; adversarial review folded in). BUILT + VERIFIED: `analyze_sportBr2.py`
+self-test 20/20 (untouched post-launch); `chain_sportBr2.sh` (both shapes 1×8 and 4×4) through the
+COMMITTED harness `tools/harness_chain_sportBr2.sh` = **26/26** (6 scenarios incl. the shape-change
+partition pin S6); evaluator uv-vote + batch-invariance named-tested; probe extended-ε flag
+(default byte-unchanged); pre-mortem audit in `Plan_2026-08-27_Rung2_Hardened.md` Appendix A
+(2 catches fixed: partition pin PM-1, depth-rider deadlock PM-2). Ops: O1 code-dist (pod.sh banks
+code_<sha>.tgz; dispatcher GCS-first with scp fallback), O2 compile cache (chain-side, GCS-synced),
+O3 bank quantum 128 (chain flag), full suite 125 green.
+**LAUNCH (cron does exactly this; by hand if the cron died):**
+```bash
+cd /Users/aakash/Projects/HRRN
+echo $(( $(date -u +%s) + 16*3600 )) > runs/tpu_deadline.txt
+rm -f runs/pod_strikes.txt runs/pod_accel.txt runs/pod_workers.txt
+cp tools/campaign_sportBr2.env tools/campaign.env
+DRY_SLEEP=150 nohup bash tools/pod.sh supervise 16 >/dev/null 2>&1 &
+sleep 3; nohup caffeinate -i -s -w "$(cat runs/pod_supervisor.pid)" >/dev/null 2>&1 &
+```
+Then: artifact-verify the launch at the node (SPORTBR2 START line + wave logs + fresh GCS objects,
+NEVER pgrep); re-arm monitors + hourly heartbeat per §2 (source-verified, count-invariants, spend
+tripwire at 1.5× of $150-250). v6e-16 hunted first (night window), v6e-8 fallback, 2-strike demotion.
+**Boundary:** `analyze_sportBr2.py` untouched post-launch; no accuracy values during ops. §6 (r2):
+counts per the registration + generalized auditor (--tag sportBr2 — BUILD DURING THE RIDE) 0-FAIL →
+ONE ledger line + ONE commit → analysis on fresh ingestion. Normal signatures = rung-1 set plus:
+`P4 partition pinned: N-way`, `CLAIM-STALE p4 sK — taking over`, `P4DEPTH-OK`, `D3DEMO-*-OK`
+(optional; failures never block), `COMPILE-CACHE restored/pushed`, `code archive banked`.
+
 ## ✅ ANALYZED — PHASE B RUNG 1 VERDICT LEDGERED (2026-08-27 afternoon IST; ledger §5 entry + §3 H-44/H-45/H-46 annotations + NEW H-47; report Report_2026-08-27_PhaseB_Rung1_Verdict.md; artifacts sportB_r1_verdict.txt + sportB_r1_physics_20260827.txt). WINNER B2 (FPA) 25.27 % cold record / 66.16 % vote@128 (BREADTH-FLAT, B-M1); B4-pair UNSTABLE (H-45 at width); H-47 registered (breadth–budget competition). NEXT = RUNG-2 (d96) REGISTRATION after the PI decides: insurance arm (recommend T6@20k+FPA), B1 drop, H-47 β-piggyback. The block below is the ops-close record.
 
 ## ✅ COMPLETE — PHASE B RUNG 1 (2026-08-27 07:45:49Z / 13:15 IST) — sportB_final.tgz banked (534 MB), sentinel + self-teardown + supervisor exit 0, FLEET ZERO verified (8 zones, nodes + QRs); §6 counts ALL PASS + audit --phase final 339/0/0; ops CLOSED in the ledger (2026-08-27 §5 entry = the record: tail recovery, 5-node churn, flex-start experiment, measured ops facts, spend). ANALYSIS = Fable, FRESH session, ON PI APPROVAL ONLY (`analyze_sportB.py` untouched, 16/16). The blocks below are the historical tail record.

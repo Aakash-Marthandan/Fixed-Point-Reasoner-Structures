@@ -46,3 +46,26 @@ def test_bank_resume_bit_identical(tmp_path):
     sb = json.loads((res / "summary_all.json").read_text())
     for k in set(sa) - {"wall_s"}:
         assert sa[k] == sb[k], f"summary differs on {k}"
+
+
+@pytest.mark.skipif(not (CKPT.exists() and NPZ.exists()), reason="needs banked S5 ckpt + benchmark npz")
+def test_batch_size_invariance(tmp_path):
+    # RUNG 2 O3 gate (2026-08-27): the chain moves to --batch 128 to shrink the
+    # bank quantum; per-(puzzle,draw) seeding makes results batch-invariant BY
+    # DESIGN — this test pins it empirically (records identical across sizes,
+    # incl. the new uv_vote columns).
+    env = dict(os.environ, JAX_PLATFORMS="cpu")
+    base = [sys.executable, str(ROOT / "tools" / "eval_sudoku_extreme.py"),
+            "--ckpt", str(CKPT), "--npz", str(NPZ), "--split", "test",
+            "--subsample", "24", "--t-total", "8", "--k-init", "2", "--vote-unverified"]
+    outs = {}
+    for bs in ("8", "24"):
+        o = tmp_path / f"b{bs}"
+        subprocess.run(base + ["--batch", bs, "--out", str(o)], env=env, check=True, capture_output=True)
+        outs[bs] = o
+    a = np.load(outs["8"] / "records_all.npz")
+    b = np.load(outs["24"] / "records_all.npz")
+    assert sorted(a.files) == sorted(b.files)
+    assert any(k.startswith("uv_vote_k") for k in a.files)
+    for k in a.files:
+        assert np.array_equal(a[k], b[k]), f"records differ on {k} across batch sizes"

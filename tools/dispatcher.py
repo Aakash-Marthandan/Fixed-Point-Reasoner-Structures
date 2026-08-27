@@ -172,8 +172,24 @@ def _stream(process):
 def sync_code(zone: str, dry: bool, with_data: bool):
     print(">>> Sync code" + (f" (all {WORKERS} workers)" if WORKERS > 1 else ""))
     sh(gssh(f"mkdir -p {REMOTE_PROJECT}", zone, _all()), dry=dry)
-    for item in UPLOADS:
-        sh(gscp(item, f"{TPU_NAME}:{REMOTE_PROJECT}/", zone, _all(), recurse=True), dry=dry)
+    # O1 (rung-2 ops hardening, 2026-08-27): GCS code distribution — one short
+    # remote pull replaces the multi-minute per-item scp passes (10-30 min under
+    # flake was the measured bring-up tax), and the sha-named archive makes the
+    # shipped code provably identical on every node. The supervisor uploads the
+    # archive at supervise-start and exports QHRRN_CODE_TGZ; ANY failure falls
+    # back to the proven scp path below (bring-up can be slow, never wrong).
+    url = os.environ.get("QHRRN_CODE_TGZ")
+    fast = False
+    if url and not dry:
+        r = sh(gssh(f"mkdir -p {REMOTE_PROJECT} && gsutil -q cp {url} /tmp/qhrrn2_code.tgz && "
+                    f"tar xzf /tmp/qhrrn2_code.tgz -C {REMOTE_PROJECT} --exclude \"._*\" && "
+                    "echo CODE-DIST-OK", zone, _all()), dry=dry, check=False)
+        fast = bool(r is not None and r.returncode == 0)
+        print(f">>> code from GCS archive ({url.rsplit('/', 1)[-1]})" if fast
+              else ">>> GCS code archive unavailable — falling back to scp")
+    if not fast:
+        for item in UPLOADS:
+            sh(gscp(item, f"{TPU_NAME}:{REMOTE_PROJECT}/", zone, _all(), recurse=True), dry=dry)
     if with_data:
         # 2026-08-01: recursive scp of ~800 small JSONs blew the 600 s sh()
         # ceiling (per-file overhead) AND landed at ~/qhrrn2/data — the loader
