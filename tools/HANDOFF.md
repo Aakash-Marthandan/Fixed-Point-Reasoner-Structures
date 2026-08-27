@@ -7,40 +7,98 @@ reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08
 HARD BOUNDARY during ops: no `tools/analyze_sportB.py` (nor analyze_sport3a.py / analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
-## ▶ LIVE — PHASE B RUNG 2 IN FLIGHT, SUPERVISOR SELF-DRIVING (session handoff written 2026-08-27 ~12:30Z / 18:00 IST — the PI continues OPS in a NEW session; session-scoped crons/monitors from the old session are DEAD — re-arm below)
+## ⏸ PAUSED — NIGHT CLOSE 2026-08-27 20:07Z / 01:37 IST Aug 28 (PI: "stop the work for today... pick it back up in the morning"; autonomous mode SHELVED — PI wants to be available while errors are being worked through; re-grant explicitly on resume if desired). FLEET ZERO VERIFIED (10 zones nodes + QRs incl. all Mumbai zones); supervisor/caffeinate/04:57-timer/all monitors/all crons STOPPED; launchd watchdog STANDS (deadline 07:42Z Aug 28 — RESUME MUST EXTEND IT FIRST).
 
-**CAMPAIGN STATE:** launched 11:21Z on a v6e-8 (artifact-verified: SPORTBR2 START chips=8 d=96 ws=6;
-code-from-GCS-archive fast path worked, landing→launch 5.5 min). Churn so far: one v6e-16 preempted
-mid-bring-up (11:08Z, strike 1/2 vs the 16, $≈0) and the v6e-8 PREEMPTED at 12:24Z after ~67 min
-(C1 trained ~1h, live-synced every 5 min → resume loses ≤5 min; nothing else started). SUPERVISOR
-(pid `runs/pod_supervisor.pid`, DRY_SLEEP=150) is autonomously re-hunting v6e-16-first / v6e-8 and
-relaunching — the chain SKIPs/RESUMEs everything from GCS. Deadline `runs/tpu_deadline.txt` =
-2026-08-28 02:48Z (08:18 IST) — EXTEND (+14h) whenever within ~10h of it. launchd watchdog stands.
-**NEW-SESSION PICKUP (in order):** (1) session-start discipline (memory + ledger §5 top + this block);
-(2) `bash tools/pod.sh status` + tail the pod log — the supervisor may be mid-hunt or riding a new
-node; verify any RUNNING claim at the SOURCE (node detached.log SPORTBR2 START + wave_pre_*.log
-growing + GCS mtimes/record counts — never pgrep/echoes); (3) re-arm session layers: edge monitor
-(tail -F pod log: CREATED/canary FAILED/launch w/STRIKE/DEMOTE/COMPLETE/NEEDS EYES/relaunching/DOWN),
-GCS staleness+milestone watchdog on gs://qhrrn2-rescue/sportBr2 (25-min staleness, count-not-mtime
-lesson), hourly heartbeat :23 (source-verified; per-arm step/ETA IST; chip census; spend vs $150-250
-with the 1.5× tripwire; C1 5k-grid + _live ckpts in GCS are the resume truth); (4) caffeinate must be
-pinned to the supervisor pid (outlives-everything law).
-**PI-APPROVED NIGHT SWAP (~05:43 IST Aug 28, MANUAL in the new session — the old cron is dead):**
-source-check progress first; IF in PHASE4/finalize OR <~2.5h remain OR COMPLETE → do NOT swap, ride.
-ELSE: kill supervisor + caffeinate → `rm -f runs/pod_strikes.txt` (fresh 16 budget) → `bash
-tools/pod.sh stop` → `bash tools/pod.sh down` → extend deadline (+14h) → `DRY_SLEEP=150 nohup bash
-tools/pod.sh supervise 14 &` + caffeinate. 16 lands → 4 workers pull ARMS_W0..W3 in parallel; the
-PHASE4 partition PIN (harness S6) protects any in-flight scan across the shape change.
+**BANKED (GCS-verified clean; every NaN repaired before close):** C1 grid→10k + clean retry live ~10.6k
+(HALF-LR LABELED); C1s1 grid→5k + clean live @5000 (HALF-LR LABELED, retry staged — was mid-compile
+at the stop); C2 grid→10k + live ~11.05k (registered flags, clean); C3 pretrain COMPLETE (20k +
+val_best + evalcheap MINUS ret/retfm — the repair is STAGED: chain idempotence re-runs exactly those
+two at next launch, now with the ec_one busy-retry fix); C4 barely started (live ~0-1k). BOTH carrier
+seeds NaN'd at registered lr 1e-3 at d96 (C1 ~1.5k post-resume, C1s1 later ~3.7k) while priced C2 +
+T6 C3 stayed clean — both retries are the ONE-labeled-half-lr registered contingency, symmetric on
+the pair; ANOTHER NaN on either at 5e-4 = STOP that arm (no lr iteration).
+
+**TODAY'S PATCHES (all in working tree + the GCS code archive code_ad08286dirty1959.tgz; harness
+26/26 + suite 125 + auditor 339/0/0-reproduced):** (1) auditor --tag sportBr2 (live|final; §6-ready);
+(2) venv-tarball O1 (dispatcher restore/bank, harness_venv_o1.sh 15/15, venv_v6e_eae6750e.tgz 388MiB
+banked, PROVEN live ×2 bring-ups incl. cross-continent); (3) early cache_push in PHASE1 (settle-
+detect); (4) ec_one busy-retry (the 4×4 pin-collision bug that killed C3 ret/retfm — sharded_eval's
+proven contract); (5) C1 + C1s1 labeled half-lr entries in arm_flags (with in-code labels); (6) ZONES
+Mumbai-first (asia-south1-c PROVEN granting v6e-16; -b accepts/dry; -a not a TPU zone); (7) teardown-
+verification defect REGISTERED for the ledger close (network outage 16:05-17:35Z made a delete
+false-verify "already gone" → ≤2h idle 8 ≈ ≤$14 — fix = positive describe before declaring absent).
+Sweep layer scratchpad/sweep_sportBr2.sh (20-min active source sweep) caught the C1s1 NaN + the eval
+bug on its FIRST cycle — re-arm it on resume.
+
+**RESUME (morning, in order):** (1) extend deadline +14h (`echo $(( $(date -u +%s) + 14*3600 )) >
+runs/tpu_deadline.txt`); (2) `DRY_SLEEP=150 nohup bash tools/pod.sh supervise 14 >/dev/null 2>&1 &`
++ `nohup caffeinate -i -s -w "$(cat runs/pod_supervisor.pid)" &` (Mumbai-first, 16-first, strikes
+fresh; supervise re-banks the archive from the working tree = all patches); (3) re-arm layers: edge
+monitor, GCS watchdog, 20-min sweep, hourly heartbeat; (4) on landing artifact-verify: 4× SPORTBR2
+START, C1 RESUME ~10.6k + `--lr 5e-4` in flags, C1s1 RESUME 5000 + `--lr 5e-4`, C2 ~11k ORIGINAL
+flags, w3 SKIP-C3 → ret/retfm re-run (EVAL-WAIT lines normal) → EVALCHEAP-C3-OK re-bank → C4 resume;
+(5) remaining ≈ 10-11h pretrain (C4+C1s1 poles) + ~3h PHASE2 on a 16 → COMPLETE same evening IST;
+§6 close per the spec below (auditor --tag sportBr2 --phase final 0-FAIL gate). Spend today ≈$85-95
+incl. Mumbai ~1.9h + the idle-8 (~$22 of it was rung-1's morning tail); rung-2 ≈$63-74 of $150-250.
+
+## ▼ SUPERSEDED — PHASE B RUNG 2 IN FLIGHT ON A v6e-16 (updated 2026-08-27 ~13:35Z / 19:05 IST — new ops session picked up per the pickup order; all layers RE-ARMED in THIS session)
+
+**CAMPAIGN STATE:** the supervisor's re-hunt LANDED a v6e-16 (us-east1-d) and relaunched at
+12:45-46Z — source-verified at the node: `SPORTBR2 START worker=0/4 chips=4 all_arms=[C1 C1s1 C2 C3
+C4] d=96 ws=6`, C1 `RESUMED ... at step 6000` (the banked hour survived; ≤5 min lost), 4/4 workers
+RUNNING (W0 C1 · W1 C1s1 · W2 C2 · W3 C3→C4 = the two-arm pole), GCS live-syncs fresh. Early
+measured pace: T12 d96 DP-4 ≈ 1.24 it/s (post-compile), C3 (T6) ≈ 2.3 it/s (5k ckpt banked 13:2xZ).
+Churn so far: 11:08Z 16 preempted mid-bring-up (strike 1/2 — THIS 16 is strike-budget-live), 12:24Z
+8 preempted (~1h C1 banked). Wall-ceiling recycle expected ≈21:15Z (02:45 IST) = NORMAL. Deadline
+2026-08-28 02:48Z — the hourly heartbeat extends (+14h) when within ~10h. launchd watchdog stands;
+caffeinate pinned to the supervisor pid.
+**SESSION LAYERS (armed THIS session ~13:00Z; re-arm from this list after any app restart):** edge
+monitor (tail -F `runs/pod_qhrrn2-pod2.log`: CREATED/canary FAILED/launch wN/STRIKE/DEMOT/COMPLETE/
+NEEDS EYES/relaunching/IDLE/down rc/DIVERGED/FAILED/PREEMPT); GCS staleness+milestone watchdog on
+gs://qhrrn2-rescue/sportBr2 (25-min listing-hash staleness + name-diff milestones); hourly heartbeat
+cron :23 (source-verified per-arm step/ETA IST, chip census, spend vs $150-250 w/ 1.5× tripwire
+$375, deadline rule); one-shot night-swap decision cron 05:43 IST.
+**16-SWITCH ORDER (PI, 2026-08-27 ~23:40 IST: "set a timer and switch to a 16 at around 5am ist" —
+SUPERSEDES the 05:43 conditional decision-point). EXECUTED EARLY 17:55Z on a further PI order
+("try creating a 16 in asia zones now"): supervisor RESTARTED pid 40090 (strikes cleared, 16-first,
+ZONES reordered asia-east1-c FIRST in campaign.env), caffeinate 40124 pinned, fresh code archive
+code_ad08286dirty1755.tgz banked → build (c) DEPLOYED; first v6e-16 create in asia-east1-c issued
+17:56:07Z. The 04:57 IST layer remains as a GUARDED BACKSTOP, three de-conflicted layers (PI: past
+cron switches missed — mechanical-first): (1) DETACHED SCRIPT `runs/swap16_20260828.sh` rev2
+pid 40450 (log runs/swap16_20260828.log; survives app restarts; at 04:57 IST NO-OPs if the
+supervisor is alive with strikes<2 [16-first already active], else executes the swap); (2) session
+cron 05:01 IST VERIFIES via the script log, executes only if the script died (checks the pidfile
+process first — never two supervisors); (3) session Monitor 05:05 IST second check. Residual risk:
+Mac reboot/power loss only. Procedure the script runs when the guard fails: kill supervisor+caffeinate → `rm -f
+runs/pod_strikes.txt` (clears the 2/2 demotion) → IF a node is up: `pod.sh stop` + `down` (≤5 min
+loss) → extend deadline +14h → `DRY_SLEEP=150 nohup bash tools/pod.sh supervise 14 &` + caffeinate →
+artifact-verify the 16 relaunch (START 4×4 + RESUME + VENV-RESTORE-OK ×4). Only exception: chain in
+PHASE4/finalize/COMPLETE (impossible tonight) → report instead. The restart re-banks the code
+archive from the working tree → build (c) DEPLOYS at this boundary. Context for the order: 5 node
+losses today, v6e-16 demoted at strike 2/2 (14:47Z), full v6e-8 drought from ~15:30Z, ~1.5h Mac
+network outage 16:05-17:35Z (faked a canary failure; blocked a delete whose "already gone" check
+false-positived → ≤2h idle node ≈ ≤$14 — teardown verification must be a POSITIVE describe, defect
+registered for the close); fleet ZERO + bank intact (C1 ~11k / C1s1 ~8k / C2 ~6k / C3 ~11k, C4
+unstarted) as of 17:45Z; deadline 07:42Z.
 **OPS BOUNDARY:** `analyze_sportBr2.py` UNTOUCHED; no accuracy values; MONITOR lines reported, never
 interpreted. Signatures: rung-1 set + `P4 partition pinned: N-way` / `CLAIM-STALE p4 sK — taking
 over` (self-healing, normal) / `P4DEPTH-OK` / `D3DEMO-*` (optional, failures never block) /
-`COMPILE-CACHE restored|pushed` / `code archive banked|code from GCS archive`.
-`PRETRAIN-*-DIVERGED` = report, do NOT patch (registered contingency = ONE labeled half-lr relaunch,
-the B1-d64 precedent).
-**DURING-RIDE BUILDS OWED ($0, cannot touch the run):** (a) auditor `--tag sportBr2` generalization
-(needed at §6); (b) venv-tarball half of O1; (c) noted tweak (weigh at a relaunch boundary only,
-harness-verified first): cache_push also after the FIRST arm — a mid-PHASE1 preemption currently
-loses the compile cache (bit us at 12:24Z).
+`COMPILE-CACHE restored|pushed` / `code archive banked|code from GCS archive` / `VENV-RESTORE-OK|
+VENV-RESTORE-MISS|VENV-BANKED` (new, O1 second half). `PRETRAIN-*-DIVERGED` = report, do NOT patch
+(registered contingency = ONE labeled half-lr relaunch, the B1-d64 precedent).
+**DURING-RIDE BUILDS — ALL DONE 2026-08-27 ~13:30Z (working tree; commit at the §6 close per the
+cadence policy):** (a) auditor generalized: `audit_sportB_integrity.py --tag sportBr2 --phase
+live|final` (sportB path byte-identical — re-verified 339/0/0 vs the frozen record; r2 live run
+clean: absences INFO, zero false FAILs; final = the §6 gate incl. step.txt cross-checks, pinned-NSH
+partition proof, breadth n-gate, depth rider, dynamic legit-empties from val_best). (b) venv-tarball
+O1 half: dispatcher.py `venv_url/venv_restore_cmd/venv_bank_cmd` (restore validated then boot_ok,
+wipe+fallback on any failure; bank once from worker 0), offline harness `tools/harness_venv_o1.sh`
+15/15, artifact PRE-BANKED from the live node: `gs://qhrrn2-rescue/sportBr2/ops/venv_v6e_eae6750e.tgz`
+(388.69 MiB) — the NEXT churn node restores it automatically (Mac-side dispatcher change, live now;
+canary still gates every bring-up). (c) early cache_push in `chain_sportBr2.sh` PHASE1 (one-shot
+background pusher fires when the compile-cache entry count settles; killed at QUEUES-DONE) —
+harness 26/26; NOT live on the current node (code archive frozen at launch, correct) — deploys when
+a supervisor restart re-banks the code archive at a relaunch boundary. Full suite 125 green.
 **§6 CLOSE (on CHAIN-SPORTBR2-COMPLETE):** verify final at GCS + fleet-zero (8 zones n+q); pull
 `sportBr2_final.tgz`; counts per the registration (5 pretrains w/ grids; 5 evalcheaps; screens 5×3
 minus coincide-skips; fulls t64 ×5 + carrier t6/vb; probes4 ×4 w/ extended ε; breadth20k n=20000 +

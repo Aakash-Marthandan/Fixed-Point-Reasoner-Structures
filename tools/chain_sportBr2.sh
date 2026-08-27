@@ -66,7 +66,19 @@ is_primary () { case " $PRIMARY " in *" $1 "*) return 0;; *) return 1;; esac; }
 is_carrier () { case " $CARRIER_FULLS " in *" $1 "*) return 0;; *) return 1;; esac; }
 arm_flags () {   # WIDTH-ONLY scaling of the registered recipes
   case $1 in
-    C1) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 0 --beta-flux-nl 0 --fpa-k 4 --fpa-eps 0.2 --fpa-w 1.0";;
+    # C1 LR-RETRY (PI-authorized 2026-08-28 ~00:50 IST): NaN onset ~1.5k steps
+    # after the 18:21Z preemption-resume (the B1-d64 rng-re-split signature);
+    # ONE labeled half-lr relaunch from the clean 10k ckpt — the registered
+    # contingency. The analysis pass reads C1 with this label. If C1 NaNs
+    # again at half-lr: STOP the arm (no lr iteration; C1s1 carries the pair).
+    C1) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 0 --beta-flux-nl 0 --fpa-k 4 --fpa-eps 0.2 --fpa-w 1.0 --lr 5e-4";;
+    # C1s1 LR-RETRY (autonomous-mode call 2026-08-28 ~01:45 IST, same registered
+    # contingency): NaN by step 8300 (clean at 6150) — the SECOND carrier seed to
+    # diverge at the registered lr at d96, while priced C2 and T6 C3 stay clean.
+    # ONE labeled half-lr relaunch from the clean 5k grid ckpt; if C1s1 NaNs
+    # again at half-lr: STOP the arm. Both carrier seeds now run lr 5e-4 —
+    # symmetric treatment; the analysis pass reads the pair with this label.
+    C1s1) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 0 --beta-flux-nl 0 --fpa-k 4 --fpa-eps 0.2 --fpa-w 1.0 --seed 1 --lr 5e-4";;
     C2) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 3e-5 --beta-flux-nl 1e-5";;
     C3) echo "--d $RD --width-scale $WS --T 6 --steps 20000 --beta-flux 0 --beta-flux-nl 0 --fpa-k 4 --fpa-eps 0.2 --fpa-w 1.0";;
     C4) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 1e-5 --beta-flux-nl 3.3e-6";;
@@ -141,8 +153,22 @@ eval_cheap () {   # ARM — strat t6/64/256 k16, val t64, ret_t8, retfm_t8
   [ -n "$(ls "$O" 2>/dev/null)" ] || { gsutil -q cp "$GCS/${arm}_evalcheap.tgz" "/tmp/sxec_$arm.tgz" 2>/dev/null && tar xzf "/tmp/sxec_$arm.tgz" && echo "RESTORE-$arm cheap evals from GCS"; }
   ec_one () { local kind=$1 c=$2; shift 2
     [ -f "$O/$kind/summary_all.json" ] && return 0
-    pin "$c" python3 tools/eval_sudoku_extreme.py --ckpt "$D/ckpt_latest.pkl" --npz "$NPZ" --out "$O/$kind" --batch "$EVAL_BATCH" "$@" \
-      > "runs/wave_ev_${arm}_$kind.log" 2>&1 || echo "EVAL-$arm-$kind-FAILED"
+    # Busy-retry (2026-08-28 fix, autonomous mode): on a 4-chip worker the six
+    # cheap evals pin-collide (i%4 → ret_t8/retfm_t8 land on chips still running
+    # strat evals) and the loser died instantly ("Couldn't open iommu group") —
+    # the C3 ret/retfm failure. Same retry contract as sharded_eval; the 8-chip
+    # shape (no collision) is byte-equivalent on the first try.
+    local try
+    for try in $(seq 1 60); do
+      pin "$c" python3 tools/eval_sudoku_extreme.py --ckpt "$D/ckpt_latest.pkl" --npz "$NPZ" --out "$O/$kind" --batch "$EVAL_BATCH" "$@" \
+        > "runs/wave_ev_${arm}_$kind.log" 2>&1 && return 0
+      if grep -qE "resource busy|Couldn't open iommu group" "runs/wave_ev_${arm}_$kind.log"; then
+        [ "$try" -eq 1 ] && echo "EVAL-WAIT $arm $kind (chip busy; retrying)"
+        sleep "${SHARD_RETRY_SLEEP:-120}"; continue
+      fi
+      echo "EVAL-$arm-$kind-FAILED"; return 1
+    done
+    echo "EVAL-$arm-$kind-FAILED (retries exhausted)"; return 1
   }
   for t in $SX_T_STRAT; do ec_one "strat_t$t" $((i % NCHIP)) --split test --stratified "$SX_STRAT" --t-total "$t" --k-init "$SX_K_INIT" & pids+=($!); i=$((i+1)); done
   ec_one "val_t64" $((i % NCHIP)) --split val --t-total 64 --k-init 0 & pids+=($!); i=$((i+1))
@@ -188,10 +214,22 @@ sharded_eval () {  # OUT CKPT [extra flags...] -> merged summary_all.json in OUT
 }
 
 # ---------- PHASE1 ----------
+# Early cache_push (during-ride tweak, 2026-08-27; deploys at a relaunch
+# boundary): the 12:24Z preemption lost the whole d96 compile because the only
+# PHASE1 push ran after ALL arms. This one-shot pusher banks the cache as soon
+# as the entry count is nonzero and STABLE across one poll (compile settled) —
+# a mid-PHASE1 churn then recompiles nothing. Killed at QUEUES-DONE on every
+# path; the end-of-PHASE1 push below still refreshes the final state.
+( prev=-1; for i in $(seq 1 24); do sleep "${CACHE_SETTLE_SLEEP:-300}"
+    n=$(ls jax_cache 2>/dev/null | wc -l | tr -d ' ')
+    [ "$n" -gt 0 ] && [ "$n" -eq "$prev" ] && { cache_push; break; }
+    prev=$n
+  done ) & CPUSH=$!
 for arm in $MY_JOBS; do
   if pretrain_one "$arm"; then eval_cheap "$arm"; fi
 done
 cache_push
+kill "$CPUSH" 2>/dev/null || true
 echo "QUEUES-DONE worker=$W $(date -u +%H:%M)"
 
 # ---------- PHASE2: GLOBAL claim queue ----------

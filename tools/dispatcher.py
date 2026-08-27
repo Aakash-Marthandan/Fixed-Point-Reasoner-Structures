@@ -26,6 +26,7 @@ Typical day:  up  →  run --cmd "..."  (× many)  →  down
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import shlex
 import subprocess
@@ -245,6 +246,50 @@ def rescue(zone: str, dry: bool):
         print(f"  WARNING: rescue failed: {e}")
 
 
+def venv_url(accelerator: str):
+    """O1 second half (2026-08-27, built during the rung-2 ride): the venv
+    tarball's GCS URL. Explicit QHRRN_VENV_TGZ wins; otherwise derived beside
+    the code archive (campaign bucket), keyed by accelerator family + a hash of
+    requirements.txt so a pin change can never restore a stale env. Returns
+    None (→ legacy bootstrap only) when neither var offers a location.
+    Deleting the GCS object forces a fresh pip resolve on the next bring-up."""
+    url = os.environ.get("QHRRN_VENV_TGZ")
+    if url:
+        return url
+    code = os.environ.get("QHRRN_CODE_TGZ")
+    if not code or "/" not in code:
+        return None
+    try:
+        h = hashlib.sha256(open("requirements.txt", "rb").read()).hexdigest()[:8]
+    except OSError:
+        return None
+    fam = accelerator.split("-")[0]
+    return f"{code.rsplit('/', 1)[0]}/venv_{fam}_{h}.tgz"
+
+
+def venv_restore_cmd(url: str) -> str:
+    """Remote shell for the restore attempt. Idempotent (boot_ok short-circuits);
+    validation-gated (a tarball that extracts but cannot import jax is wiped so
+    the full bootstrap that follows starts clean); ALWAYS exits 0 — the
+    authoritative bootstrap runs right after and skips per-worker on boot_ok."""
+    return ("cd ~ && test -f qhrrn2/.venv/.boot_ok && echo 'venv: already bootstrapped' || ("
+            f"gsutil -q cp {url} /tmp/qhrrn2_venv.tgz && "
+            "tar xzf /tmp/qhrrn2_venv.tgz -C ~ && "
+            "qhrrn2/.venv/bin/python -c 'import jax, optax' 2>/dev/null && "
+            "touch qhrrn2/.venv/.boot_ok && echo VENV-RESTORE-OK) || "
+            "{ rm -rf qhrrn2/.venv /tmp/qhrrn2_venv.tgz; echo 'VENV-RESTORE-MISS (full bootstrap follows)'; }")
+
+
+def venv_bank_cmd(url: str) -> str:
+    """Remote shell that banks the proven venv ONCE (worker 0): only after a
+    verified bootstrap (boot_ok) and only if the object is absent. Includes the
+    uv-managed interpreter tree — .venv/bin/python is a symlink into
+    ~/.local/share/uv/python (measured on the live 2026-08-27 node). Non-fatal."""
+    return (f"cd ~ && test -f qhrrn2/.venv/.boot_ok && {{ gsutil -q stat {url} 2>/dev/null || ("
+            "tar czf /tmp/qhrrn2_venv.tgz qhrrn2/.venv .local/share/uv/python && "
+            f"gsutil -q cp /tmp/qhrrn2_venv.tgz {url} && echo VENV-BANKED); }} || true")
+
+
 def cmd_up(args) -> int:
     guard_identity(args.dry_run)
     prof = accel_profile(args.accelerator)
@@ -260,6 +305,13 @@ def cmd_up(args) -> int:
            f"--version={prof['version']}{spot}", dry=args.dry_run)
     arm_dms(args.zone, args.dry_run)
     sync_code(args.zone, args.dry_run, args.with_data)
+    # O1 second half: venv-tarball restore attempt (non-fatal, validation-gated;
+    # the authoritative bootstrap below skips per-worker wherever it succeeded).
+    vurl = venv_url(args.accelerator)
+    if vurl and not args.dry_run:
+        print(f">>> venv restore attempt ({vurl.rsplit('/', 1)[-1]})")
+        sh(gssh(venv_restore_cmd(vurl), args.zone, _all()),
+           dry=args.dry_run, check=False, timeout=600)
     # Idempotent bootstrap: uv-managed CPython 3.14 (parity with local venv),
     # exact pins incl. jax[tpu]==0.10.2 (shakedown-1: system Python too old).
     print(">>> Bootstrap (skipped if .venv/.boot_ok present)")
@@ -286,6 +338,11 @@ def cmd_up(args) -> int:
             f"libtpu{prof['libtpu']} "
             "&& touch .venv/.boot_ok)", args.zone, _all()), dry=args.dry_run,
        timeout=1200)
+    # Bank the proven venv once (worker 0; only if absent in GCS) so the next
+    # node restores in ~1-2 min instead of re-paying the pip resolve.
+    if vurl and not args.dry_run:
+        sh(gssh(venv_bank_cmd(vurl), args.zone, 0 if WORKERS > 1 else None),
+           dry=args.dry_run, check=False, timeout=900)
     print(f">>> up: READY. DMS fires in {DMS_MINUTES} min unless re-armed; "
           f"`down` when finished.")
     return 0
