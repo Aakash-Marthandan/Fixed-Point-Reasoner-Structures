@@ -7,7 +7,9 @@ reported to the PI are in IST (UTC+5:30), with UTC in parentheses** (PI, 2026-08
 HARD BOUNDARY during ops: no `tools/analyze_sportB.py` (nor analyze_sport3a.py / analyze_sport2w2.py / analyze_sport2.py), no reading/quoting accuracy
 values from result files, no verdicts, no tuning, no chain/env edits, no second pod.
 
-## ▶ LIVE — RUNG-1 TAIL RUNNING as of 2026-08-26 16:10Z (21:40 IST) — v6e-8 us-east1-d, tail_runbook LAUNCHED 16:03Z (source-verified: PID-ALIVE, TAIL-START chips=8, REFS ok, ALL 8 shard logs exist)
+## ✅ COMPLETE — PHASE B RUNG 1 (2026-08-27 07:45:49Z / 13:15 IST) — sportB_final.tgz banked (534 MB), sentinel + self-teardown + supervisor exit 0, FLEET ZERO verified (8 zones, nodes + QRs); §6 counts ALL PASS + audit --phase final 339/0/0; ops CLOSED in the ledger (2026-08-27 §5 entry = the record: tail recovery, 5-node churn, flex-start experiment, measured ops facts, spend). ANALYSIS = Fable, FRESH session, ON PI APPROVAL ONLY (`analyze_sportB.py` untouched, 16/16). The blocks below are the historical tail record.
+
+## ▼ SUPERSEDED — RUNG-1 TAIL RUNNING as of 2026-08-26 16:10Z (21:40 IST) — v6e-8 us-east1-d, tail_runbook LAUNCHED 16:03Z (source-verified: PID-ALIVE, TAIL-START chips=8, REFS ok, ALL 8 shard logs exist)
 
 **RESUMED (Fable, PI-directed, this session):** deadline 2026-08-27 05:42Z; `campaign_tail.env` → `campaign.env`
 (ACCEL_LIST "v6e-8 v6e-4", strikes 0/3 fresh); supervisor pid `runs/pod_supervisor.pid` (DRY_SLEEP=150)
@@ -26,6 +28,24 @@ edge+inventory+GCS-staleness monitors, hourly heartbeat :23, T+55m invariant che
 thorough+critical, no new error surface; 2 idle chips T+2h→T+5.4h accepted as wall-optimal.
 On COMPLETE: §6 sportB counts + `audit_sportB_integrity.py --phase final` 0-FAIL gate → ONE ledger line
 → ONE commit → STOP (analysis = fresh session).
+
+**FLEX-START CONTINGENCY (PI-AUTHORIZED 2026-08-26 ~20:45Z: "implement the switch if proven
+necessary"; amends the 08-18 no-QR directive for this tail only).** TRIGGER: a node dies BEFORE
+banking its next batch boundary (i.e., another churn with zero new GCS partial growth — churn #2's
+signature). PROCEDURE (single-path, no spot/QR race): (1) verify trigger at source (node gone + mid
+partial sizes unchanged vs 1536-state); (2) kill supervisor + caffeinate (stop the spot create loop;
+launchd watchdog stays); (3) file: `gcloud alpha compute tpus queued-resources create qhrrn2-tail-fs
+--node-id=qhrrn2-pod2 --zone=us-east5-b --accelerator-type=v6e-8 --runtime-version=v6e-ubuntu-2404
+--provisioning-model=flex-start --max-run-duration=6h --project=quantum-llm` (flags verified in our
+gcloud; draws on preemptible quota; DWS queues, then runs UNPREEMPTED for the duration, node
+self-deletes at the end); (4) Monitor the QR state; on the node materializing READY → restart the
+supervisor (`DRY_SLEEP=150 nohup bash tools/pod.sh supervise 14 &` + caffeinate) — its NOREPO adopt
+path does full bring-up (up --with-data, canary) + launch of the same runbook (idempotent; SKIPs +
+pinned 6-way partition make acquisition-path irrelevant); (5) after COMPLETE (or if the QR is
+obsolete) `gcloud alpha compute tpus queued-resources delete qhrrn2-tail-fs --zone=us-east5-b` —
+§6 fleet-zero already checks QRs. Cost ≈$10-11/h vs $6.8 spot (noise on a 3h tail); queue wait is
+the price of the no-preemption guarantee. While the QR waits, no supervisor runs — the watchdog
+deadline (extended 08:01Z) is the billing backstop and macOS-notifies on the node appearing.
 
 ## ▼ SUPERSEDED — RUNG-1 TAIL PAUSE (as of 2026-08-26 15:35Z) — FLEET ZERO verified (all 8 door zones, nodes + QRs); PI paused for a fresh session
 
