@@ -115,7 +115,7 @@ if a.merge:
 out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
 ck = a.ckpt or ''
 arm = 'X'
-for c in ('D1','D2','D3','D4'):
+for c in ('C3X','D1','D2','D3','D4'):
     if f'_{c}/' in ck or ck.endswith(f'_{c}.pkl'): arm = c; break
 name = out.name
 kind = name.split('_')[-1] if name.startswith('sxscreen') else name
@@ -155,8 +155,9 @@ EOF
 }
 
 seed_fake_gcs () {
-  rm -rf "$FAKE"; mkdir -p "$FAKE/sportBr2b" "$FAKE/sport2"
+  rm -rf "$FAKE"; mkdir -p "$FAKE/sportBr2b" "$FAKE/sport2" "$FAKE/sportBr2"
   printf 'npzstub' > "$FAKE/sport2/sudoku_extreme_seed0.npz"
+  python3 -c "import pickle;pickle.dump(dict(step=20000),open('$FAKE/sportBr2/C3_ckpt.pkl','wb'))"
 }
 
 run_chain () {  # WORKDIR W NW [env k=v...]
@@ -172,11 +173,13 @@ echo "=== harness sandbox: $SB"
 # ---------------- S1: fresh single-worker, gate PASS ----------------
 seed_fake_gcs
 W1="$SB/w_single"; rm -rf "$W1"; make_stubs "$W1"
-run_chain "$W1" 0 1 ARMS_W0='D1 D2 D3 D4' ARMS_W1='' STUB_SCR_D1_vb=0.91 STUB_SCR_D2_vb=0.87 > "$SB/s1.log" 2>&1
+run_chain "$W1" 0 1 ARMS_W0='D1 D2 D3 D4 C3X' ARMS_W1='' STUB_SCR_D1_vb=0.91 STUB_SCR_D2_vb=0.87 > "$SB/s1.log" 2>&1
 ck "S1 sentinel COMPLETE"            "grep -q 'CHAIN-SPORTBR2B-COMPLETE' $SB/s1.log"
 ck "S1 four pretrains OK"            "[ \$(grep -c 'PRETRAIN-D.*-OK' $SB/s1.log) -eq 4 ]"
-ck "S1 all 15 screens ran"           "[ \$(grep -c 'SCREEN-D.*-OK' $SB/s1.log) -eq 15 ]"
-ck "S1 vb screens always run (4)"    "[ \$(grep -c 'SCREEN-D.*-vb-OK' $SB/s1.log) -eq 4 ]"
+ck "S1 C3X init fetched + pretrain OK" "grep -q 'C3X-INIT fetched' $SB/s1.log && grep -q 'PRETRAIN-C3X-OK' $SB/s1.log"
+ck "S1 all 18 screens ran (15 D + 3 C3X)" "[ \$(grep -cE 'SCREEN-(D|C3X).*-OK' $SB/s1.log) -eq 18 ]"
+ck "S1 vb screens always run (5)"    "[ \$(grep -cE 'SCREEN-(D.|C3X)-vb-OK' $SB/s1.log) -eq 5 ]"
+ck "S1 C3X full + in guard"          "[ -f $FAKE/sportBr2b/full_C3X_t64.tgz ]"
 ck "S1 FULLVB skip (vb=final)"       "grep -q 'FULLVB-D1-SKIP' $SB/s1.log"
 ck "S1 gate PASS + capped scan"      "grep -q 'P4-GATE: PASS' $SB/s1.log && grep -q 'PHASE4-OK D1' $SB/s1.log"
 ck "S1 spawn echoes + inflight"      "grep -q 'P4-SPAWN s0' $SB/s1.log && grep -q 'P4-INFLIGHT' $SB/s1.log"

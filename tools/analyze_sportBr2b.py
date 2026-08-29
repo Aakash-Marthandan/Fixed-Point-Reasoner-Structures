@@ -18,9 +18,16 @@
 #   R2b-4 (iff H-48-SUPPORTED): vsel-cold(D3) >= max(cold(D1), C3cold) +
 #          max(CNOISE, .01) -> DEEP-COLD-PAYS (D3-recipe = d128 cold arm);
 #          else DEEP-OPTIONAL (insurance only).
-#   CARRIERS (mechanical, d128): breadth = D1-class@50k iff FUNNEL-GROWS else
-#          C3-class@20k (the cheaper recipe carries on tie/neutral), x2 seeds;
-#          deep lane iff R2b-3 SUPPORTED (billing per R2b-4). Priced lanes: none.
+#   R2b-5 C3X CONTINUATION (REGISTERED ADDENDUM 2026-08-29 ~16:15Z, pre-data,
+#          wave-3a pattern; PI-directed): C3X = rung-2 C3 ckpt + 30k steps at
+#          constant floor lr 3e-5 (fresh optimizer, labeled). screenvb(C3X) >
+#          C3vb + FN2b -> CONTINUATION-GROWS; within +-FN2b -> CONT-NEUTRAL;
+#          below -> CONT-HURTS. Monitors min retfm >= .9 -> FLOOR-LR-STABLE
+#          else FLOOR-LR-BREAKS@step. Cold labeled (continuation != fresh).
+#   CARRIERS (mechanical, d128): breadth = argmax screen-vb over {C3@20k ref,
+#          D1, C3X} — if the argmax beats the C3 ref by <= FN2b the CHEAPER
+#          20k recipe carries; x2 seeds; deep lane iff R2b-3 SUPPORTED
+#          (billing per R2b-4). Priced lanes: none.
 #   STABILITY: any retfm < .9 named. Descriptive: dose efficacy (late-train
 #          A_total on D3/D4 vs C1-free 1.1e7; predict <= 1e5), eta, screens curve.
 """
@@ -35,10 +42,11 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNS = Path(os.environ.get("QHRRN_RUNS", ROOT / "runs"))
 OUT = RUNS / "analysis" / "sportBr2b_verdict.txt"
 TAG = "sportBr2b"
-ARMS = ["D1", "D2", "D3", "D4"]
+ARMS = ["D1", "D2", "D3", "D4", "C3X"]
 C3VB_CONST, C3COLD_CONST, C3P4_CONST = 0.8848, 0.2228, 0.8057
 DESC = {"D1": "d96 T6 FPA 50k s0 (winner extended)", "D2": "d96 T6 FPA 20k s1 (noise pair)",
-        "D3": "d96 T12 FPA 50k s0 lr5e-4 bnl1e-6", "D4": "d96 T12 FPA 50k s1 lr1e-3 bnl1e-6"}
+        "D3": "d96 T12 FPA 50k s0 lr5e-4 bnl1e-6", "D4": "d96 T12 FPA 50k s1 lr1e-3 bnl1e-6",
+        "C3X": "C3-cont +30k @ floor lr 3e-5 (addendum)"}
 LINES = []
 def say(s=""): LINES.append(str(s)); print(s)
 def jload(p):
@@ -158,8 +166,26 @@ def analyze():
         say(f"R2b-4 DEEP BILLING: D3 vsel {fpp(cold_vsel('D3'))} vs bar {fpp(bar)} -> {V['R2b-4']}")
     else:
         V["R2b-4"] = "N/A"; say("R2b-4 DEEP BILLING: N/A (H-48 not supported)")
-    # carriers
-    bc = "D1-class@50k" if V["R2b-1"] == "FUNNEL-GROWS" else "C3-class@20k"
+    # R2b-5 C3X continuation (addendum)
+    c3x = screen("C3X")
+    if c3x is None: V["R2b-5"] = "NO-DATA"
+    elif c3x > C3VB + FN2b: V["R2b-5"] = "CONTINUATION-GROWS"
+    elif c3x >= C3VB - FN2b: V["R2b-5"] = "CONT-NEUTRAL"
+    else: V["R2b-5"] = "CONT-HURTS"
+    monsx = monitors("C3X")
+    if monsx:
+        rfx = [(s, m.get("ret_final_t8")) for s, m in sorted(monsx.items()) if m.get("ret_final_t8") is not None]
+        badx = [(s, r) for s, r in rfx if r < 0.9]
+        V["R2b-5-STAB"] = "FLOOR-LR-STABLE" if not badx else f"FLOOR-LR-BREAKS@{badx[0][0]}"
+    else: V["R2b-5-STAB"] = "NO-DATA"
+    say(f"R2b-5 C3X: vb {fpp(c3x)} vs C3 {fpp(C3VB)} -> {V['R2b-5']} | {V['R2b-5-STAB']}"
+        + (f" | cold {fpp(cold('C3X'))} (labeled: continuation)" if cold("C3X") is not None else ""))
+    # carriers (generalized per the addendum: argmax over the three T6 candidates)
+    cands = [(C3VB, "C3-class@20k")]
+    if d1 is not None: cands.append((d1, "D1-class@50k"))
+    if c3x is not None: cands.append((c3x, "C3X-cont@50k"))
+    bv_, bc = max(cands, key=lambda x: x[0])
+    if bv_ <= C3VB + FN2b: bc = "C3-class@20k"
     deep = "D3-lane" if V["R2b-3"] == "H-48-SUPPORTED" else "none"
     V["CARRIERS"] = f"breadth={bc}x2 deep={deep}"
     say(f"\nCARRIERS (mechanical, d128): breadth {bc} x2 seeds | deep lane {deep}"
@@ -220,13 +246,16 @@ def selftest():
         _mk(r, "D2", cold64=.218, svb=.87)
         _mk(r, "D3", cold64=.26, svb=.78, mon_retfm=[(50000, 1.0)], A_tail=[5e4] * 45)
         _mk(r, "D4", cold64=.255, svb=.75, mon_retfm=[(50000, 1.0)])
+        _mk(r, "C3X", cold64=.235, svb=.93, mon_retfm=[(10000, 1.0), (30000, 1.0)])
     v = run(wA)
     checks += [("A grows", v["R2b-1"] == "FUNNEL-GROWS"), ("A B-M2", v.get("B-BAND") == "B-M2"),
+               ("A C3X grows + stable", v["R2b-5"] == "CONTINUATION-GROWS" and v["R2b-5-STAB"] == "FLOOR-LR-STABLE"),
+               ("A carrier = C3X (argmax .93 > .91)", "breadth=C3X-cont@50k" in v["CARRIERS"]),
                ("A anchor holds", v["R2b-2"] == "ANCHOR-HOLDS"),
                ("A H-48 supported", v["R2b-3"] == "H-48-SUPPORTED"),
                ("A lr restored", v["D4"] == "REGISTERED-LR-RESTORED"),
                ("A deep pays (.26 > max(.245,.2228)+.012)", v["R2b-4"] == "DEEP-COLD-PAYS"),
-               ("A carrier D1", "breadth=D1-class@50k" in v["CARRIERS"] and "deep=D3-lane" in v["CARRIERS"]),
+               ("A deep lane carried", "deep=D3-lane" in v["CARRIERS"]),
                ("A stable", v["STABILITY"] == "ALL-STABLE"),
                ("A FN2b floor 2pp (|.8848-.87|=1.48)", v["FN2b"] == "2.00pp")]
     # world B — neutral length; D3 stopped -> falsified regardless of D4
@@ -235,8 +264,10 @@ def selftest():
         _mk(r, "D2", cold64=.22, svb=.86)
         _mk(r, "D3", cold64=.21, svb=.60, stopped_="STOPPED final step 20000 (NaN halt)", mon_retfm=[(18000, 1.0)])
         _mk(r, "D4", cold64=.25, svb=.72, mon_retfm=[(50000, 1.0)])
+        _mk(r, "C3X", cold64=.22, svb=.88, mon_retfm=[(30000, 1.0)])
     v = run(wB)
     checks += [("B neutral", v["R2b-1"] == "LENGTH-NEUTRAL"),
+               ("B C3X neutral -> cheap carrier", v["R2b-5"] == "CONT-NEUTRAL" and "breadth=C3-class@20k" in v["CARRIERS"]),
                ("B H-48 falsified", v["R2b-3"] == "H-48-FALSIFIED"),
                ("B R2b-4 N/A", v["R2b-4"] == "N/A"),
                ("B carrier C3 no deep", "breadth=C3-class@20k" in v["CARRIERS"] and "deep=none" in v["CARRIERS"])]
@@ -246,8 +277,10 @@ def selftest():
         _mk(r, "D2", cold64=.225, svb=.90)
         _mk(r, "D3", cold64=.22, svb=.55, retfm_=.7, mon_retfm=[(50000, .7)])
         _mk(r, "D4", cold64=None, retfm_=None, stopped_="STOPPED final step 10000 (NaN halt)")
+        _mk(r, "C3X", cold64=.20, svb=.80, mon_retfm=[(10000, 1.0), (20000, .85)])
     v = run(wC)
     checks += [("C hurts", v["R2b-1"] == "LONGER-TRAINING-HURTS"),
+               ("C C3X hurts + floor-lr breaks", v["R2b-5"] == "CONT-HURTS" and v["R2b-5-STAB"] == "FLOOR-LR-BREAKS@20000"),
                ("C breaks@30000", v["R2b-2"] == "H-45-BREAKS-ANCHOR@30000"),
                ("C dose destabilizes", v["R2b-3"] == "DOSE-DESTABILIZES"),
                ("C D4 nan", v["D4"] == "D4-NAN"),

@@ -79,15 +79,25 @@ arm_flags () {   # rung-2b registered recipes (2026-08-29 registration = the aut
     # D4: registered-lr restoration probe at the same dose (seed 1; the seed
     # confound is named in the registration — seeds were not protective 0/4).
     D4) echo "--d $RD --width-scale $WS --T 12 --steps 50000 --beta-flux 0 --beta-flux-nl 1e-6 --fpa-k 4 --fpa-eps 0.2 --fpa-w 1.0 --seed 1";;
+    # C3X (REGISTERED ADDENDUM, PI-directed 2026-08-29 ~16:05Z, wave-3a pattern —
+    # registered pre-data BEFORE any 2b result was read): the C3-continuation —
+    # init from the banked rung-2 WINNER ckpt (sportBr2/C3_ckpt.pkl, 20k) and
+    # train +30k steps at CONSTANT floor lr 3e-5 (lr == lr_end -> flat after
+    # warmup; fresh optimizer per --init-from semantics, labeled). Free (no
+    # dose): floor lr = the safest measured regime (all five NaNs at >=5e-4);
+    # ONE-SHOT like every 2b arm. Screens at +10k/+20k/vb (total-equivalent
+    # 30k/40k/50k). Rides the measured w2 idle window; full in the pole tail.
+    C3X) echo "--d $RD --width-scale $WS --T 6 --steps 30000 --beta-flux 0 --beta-flux-nl 0 --fpa-k 4 --fpa-eps 0.2 --fpa-w 1.0 --lr 3e-5 --init-from runs/init_C3X.pkl";;
     *) echo "UNKNOWN-ARM $1" >&2; return 1;;
   esac
 }
-arm_steps () { case $1 in D2) echo 20000;; *) echo 50000;; esac }
+arm_steps () { case $1 in D2) echo 20000;; C3X) echo 30000;; *) echo 50000;; esac }
 screen_steps () {  # ARM -> the registered fixed screen steps (vb rides separately, ALWAYS runs)
   case $1 in
     D1) echo "010000 015000 020000 025000 040000";;
     D2) echo "010000 015000";;
     D3|D4) echo "025000 040000";;
+    C3X) echo "010000 020000";;
   esac
 }
 
@@ -186,6 +196,11 @@ pretrain_one () {   # ARM -> 0 ok  (SKIP/RESUME semantics identical to rung 1)
     gsutil -q cp "$GCS/${arm}_metrics_live.jsonl" "$D/metrics.jsonl" 2>/dev/null || true
     for f in $(gsutil ls "$GCS/${arm}_ckpt_0*.pkl" 2>/dev/null); do b=$(basename "$f"); [ -f "$D/${b#${arm}_}" ] || gsutil -q cp "$f" "$D/${b#${arm}_}"; done
     echo "RESUME-$arm from live ckpt (+metrics, +banked ckpts)"
+  fi
+  if [ "$arm" = C3X ] && [ ! -f runs/init_C3X.pkl ]; then
+    gsutil -q cp "${C3X_INIT_SRC:-gs://qhrrn2-rescue/sportBr2/C3_ckpt.pkl}" runs/init_C3X.pkl \
+      || { echo "PRETRAIN-C3X-FAILED (init ckpt fetch)"; return 1; }
+    echo "C3X-INIT fetched ($(wc -c < runs/init_C3X.pkl | tr -d ' ') bytes from rung-2 C3 20k)"
   fi
   echo "=== PRETRAIN $arm $(date -u +%H:%M) === DP x$NCHIP flags: $(arm_flags "$arm")"
   sync_loop "$arm" "$D" & local SY=$!
