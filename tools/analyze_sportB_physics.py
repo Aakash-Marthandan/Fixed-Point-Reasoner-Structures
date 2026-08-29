@@ -117,7 +117,14 @@ def probe(a):
     lad = [r["q_ladder"] for r in rows if r.get("q_ladder")]
     S = None
     if lad:
-        arr = np.array([[bool(x) for x in row] for row in lad])
+        # CORRECTED 2026-08-29 (graded-ladder retro-analysis): q_ladder is a DICT
+        # keyed by eps-string; the earlier list-iteration read bool(key) == True
+        # always -> false "saturation". Read values in eps order.
+        def _vals(q):
+            if isinstance(q, dict):
+                return [bool(v) for _, v in sorted(((float(k), v) for k, v in q.items()))]
+            return [bool(x) for x in q]
+        arr = np.array([_vals(row) for row in lad])
         base = np.array([r["gt_retention"] for r in rows if r.get("q_ladder")], dtype=bool)
         if base.sum(): S = arr[base].mean(axis=0)
     mih = np.array([r.get("multi_init_hits", 0) for r in rows]); mik = np.array([r.get("multi_init_k", 1) for r in rows])
