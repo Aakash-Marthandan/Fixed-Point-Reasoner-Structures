@@ -494,3 +494,83 @@ channel class.
 - Fishers for Free 2507.18807 — Adam-v as Fisher diagonal (V).
 - FIESTA 2503.23257 — Fisher-selective test-time adaptation (V's TTA kin).
 - VIB water-filling allocation (classic) — U's frame.
+
+# STAGED INPUTS for the next freethink (2026-08-29 session close — NOT a freethink;
+# the synthesis session writes its own entry above this line's successor.
+# Lettering continues from W. PI lenses requested: quantum geometry, information
+# theory, RG, holography; literature research; big-picture outlook.)
+
+## The day's measured findings (each committed; artifacts in runs/analysis/*_20260829.txt)
+1. MIXER DOMINANCE: the seam mixers carry 72-85% of ALL parameter displacement
+   in every 5k window of every arm at every scale (e_cb second, 5-14%). PI flag:
+   this reads as a HOLOGRAPHY statement — the boundary-acting disentangler
+   descendants are where the code physically forms. Freethink question: is
+   learning-lives-on-the-cuts a derivable consequence of the priced-cut
+   architecture, and does it predict WHICH mixers (scale profile of mixer
+   displacement) match the flux profile?
+2. IGNITION = REORGANIZATION, NOT BURST: funnel rho-expansion (C3 10k->15k)
+   shows schedule-ordinary displacement + monotone Fisher consolidation; the
+   signature is the eq->coding Fisher-share migration. SEQUENCE: eta-surge +
+   lambda-settle (5-10k, +0.25) PRECEDES ignition; eta flattens through it.
+   PI wants the eta<->ignition relationship understood. Candidate frames:
+   eta as inverse-temperature/quench-rate of the flow; settle = the ordered
+   phase forming; ignition = basin-of-attraction percolation after ordering.
+   Readiness-signal test staged on C3X/D1-redux screens.
+3. rule_H <-> DIVERSITY (new observable): the codebook DE-commits (H[q] 0->.13)
+   exactly while C4's beta/3 funnel opens late; distinct from B4's collapse-
+   decommitment. On a ONE-rule domain. Speculative lever noted (unregistered):
+   a mild H[q] floor as a diversity-preserving term. SSB reading: draw-
+   diversity requires partial symmetry restoration?
+4. (rho, r) FUNNEL PLANE (lens B, validated 7/7 out-of-sample): reachable-
+   fraction x per-draw-rate; deep-narrow = tiny-rho/high-r, wide = high-rho/
+   low-r; C3-d96 raises both (coverage-led); mid-training = rate-limited,
+   final = coverage-limited; C3@20k plateaus ~82.5% => B-M2 via TRAINING (rho)
+   not attempts (k) — the strategy conclusion the PI endorsed. Next refinement:
+   Beta-geometric (rate heterogeneity); EqR's coverage-x-refinement conjecture
+   is exactly this plane — we measure what they conjecture.
+5. TOLL NARROWS BASINS, growing with scale (corrected-reader discovery):
+   priced-vs-anchored S(eps) gap d16 .80-vs-.96 -> d96 .18-vs-.69-.79 @ .6.
+   DOMAIN INVERSION of ARC Law 3/4 (pricing widened transfer basins there).
+   Coding frame: the ~1.2k-nat code lacks redundancy for basin width; ARC's
+   many-rule codebook spends redundancy differently. Also: collapse signature
+   reads in basin space; leak-count = per-row map-class fingerprint; the
+   graded first-failure distribution = radius-vs-scale curve from disk.
+6. COLD HARD CORE 61.4% (17 arms x 422,786, paired panel) + PORTFOLIO LAW on
+   Sudoku (+6-13pp union-over-best; mechanism diversity decorrelates, J .34-.52
+   cross-mechanism) + tdoku rating = only ~35% of model difficulty (solve
+   multiplicity the better axis). Registrable lever: model-portfolio x verified
+   attempts. Paired-McNemar upgrades landed program-wide (BREADTH-SCALES
+   p<1e-300; B2>B1 cold p~7e-161; priced-cold-rises-with-width p~2e-228).
+7. THE CLIFFS ARE UNHERALDED (NaN case-control, 3 deaths vs 1,052 survivor
+   windows): no precursor at any logged resolution; C1's calmest-ever window
+   preceded death by 100 steps; lam_J is not an alarm (survivors run 0.4-0.5
+   frac>2; two deaths launched from ~0.95). H-48: free-attention-flux x
+   effective-lr x width; the 1e-6 dose = ~5 orders flux reduction, both dosed
+   arms clean through all historical death territory (live tonight). Prevention
+   is STRUCTURAL — a d128 design constant. D1's death sharpened the law:
+   free-T6 dies on the 50k cosine where the 20k cosine trains clean (lr-phase,
+   not depth). Freethink angle: the toll as a soft Lyapunov barrier in the
+   information metric (KL restoring force ~ beta*A at excursions); relation to
+   NI's accidental renorm; the z-channel as the free-vector sector where
+   FPRM-class stabilizers legitimately apply (coupled-scaling legal on z).
+8. FISHER ROTATION = CONSOLIDATION CLOCK (monotone .5->.93; priced consolidate
+   furthest); Fisher block shares: stable deep arms migrate eq->readout,
+   priced arms live in code blocks, collapsing arms never consolidate.
+
+## Discussed-but-unregistered ideas parked for the freethink/next registrations
+- Stabilizer escalation ladder (dose -> z-dials -> z-clamp/renorm -> message
+  norms -> full FPRM kit w/ twin-arm bridge); beta_nl 1e-8 barrier-form variant.
+- H[q]-floor diversity regularizer (3 above). Mixer-targeted lr/capacity as
+  the next recipe axis (1 above). Watershed interpolation probe (demoted to
+  optional top-tail; graded reader restored the ladder).
+- B2 p4 records-vs-summary -1.17pp reconciliation (named investigation, 2b analysis).
+- D11 (overtraining costs by domain: ARC=transfer erosion vs Sudoku=stability+
+  diversity) — Part 2d of the Instrument Map holds the catalog updates.
+
+## Remaining lens queue
+- LENS E (NOT yet run as its own pass): the trajectory CORPUS — eta(t)
+  universality across ~60 arms (is the progress clock one curve? quantify),
+  fp_drift corpus (H-46 wander directly), rule_H corpus beyond the windows
+  read, loss-curve shapes vs mechanism class. Cheap, feeds the freethink.
+- LENS F: ARC graded-ladder + leak fingerprints + Fisher back-port on banked
+  ARC d48/d64 grids — the ARC-extension prelude (planned ~Sep 3-6 window).
