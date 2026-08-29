@@ -13,7 +13,12 @@
 # Install: tools/install_watchdog.sh (launchd, user-level, no sudo).
 PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
 cd "$(dirname "$0")/.." || exit 1
-ZONES="us-east1-d us-east1-c us-east5-b us-central1-a us-central2-b us-west1-c us-west4-a asia-east1-c"
+# asia-south1-* added 2026-08-28 (autonomous-mode fix): the Mumbai zones joined
+# the campaign rotation on 08-27 but the watchdog never swept them — it reported
+# "none" while a Mumbai v6e-16 ran, blinding the spend meter AND leaving the
+# deadline-enforcement backstop with a coverage hole. Keep this list a SUPERSET
+# of campaign.env ZONES whenever zones are added.
+ZONES="us-east1-d us-east1-c us-east5-b us-central1-a us-central2-b us-west1-c us-west4-a asia-east1-c asia-south1-a asia-south1-b asia-south1-c"
 SNAP=runs/tpu_status.txt
 LOG=runs/tpu_status_log.txt
 mkdir -p runs

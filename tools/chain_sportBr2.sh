@@ -97,6 +97,21 @@ mstep () {  # ARM {m1|m2} -> the registered fixed screen step for the arm's leng
 sync_loop () {  # ARM DIR — every 5 min bank ckpt_latest + metrics + banked ckpts
   local arm=$1 D=$2
   while true; do sleep 300
+    # NaN guard (2026-08-28, after BOTH carrier seeds NaN'd on 08-27): NEVER
+    # push non-finite state to the live bank — yesterday the poisoned
+    # {arm}_ckpt_live needed manual GCS surgery twice. On a non-finite newest
+    # loss: emit ONE marker (detection ≤5 min), halt this arm's pretrain (the
+    # run is dead science-wise; the registered contingency decides what's
+    # next), and stop syncing so GCS keeps the last CLEAN state.
+    if [ -f "$D/metrics.jsonl" ]; then
+      lastrow=$(tail -1 "$D/metrics.jsonl")
+      case "$(grep -oE '"loss": [^,}]+' <<<"$lastrow" | awk '{print tolower($2)}')" in
+        *nan*|*inf*)
+          echo "PRETRAIN-$arm-NAN-HALTED $(grep -oE '"step": [0-9]+' <<<"$lastrow") (live bank preserved at last clean sync; registered contingency decides)"
+          pkill -f "pretrain[.]py" 2>/dev/null
+          return 0;;
+      esac
+    fi
     gsutil -q cp "$D/ckpt_latest.pkl" "$GCS/${arm}_ckpt_live.pkl" 2>/dev/null || true
     gsutil -q cp "$D/metrics.jsonl" "$GCS/${arm}_metrics_live.jsonl" 2>/dev/null || true
     for f in "$D"/ckpt_0*.pkl; do [ -f "$f" ] && gsutil -q cp -n "$f" "$GCS/${arm}_$(basename "$f")" 2>/dev/null; done
@@ -371,6 +386,16 @@ echo "PHASE2-DONE worker=$W $(date -u +%H:%M)"
 # ---------- PHASE4 (cooperative, ALL workers x ALL chips = NSH-way; rung-1-proven) ----------
 NSH=$((NCHIP * NW))
 p4_winner () {
+  # Winner-divergence fix (2026-08-29, autonomous mode): the marker in GCS is
+  # AUTHORITATIVE once written — a re-entrant worker with incompletely-hydrated
+  # local screens must never recompute a different winner (caught live 19:5xZ:
+  # one relaunched worker's silent pull failure dropped C3 from its local view
+  # and it scanned C1s1 into the pinned partition slots; zero summaries banked,
+  # partials quarantined). Recompute only when no marker exists.
+  local mw
+  if mw=$(gsutil -q cp "$GCS/p4winner.txt" - 2>/dev/null | head -1) && [ -n "$mw" ]; then
+    echo "$mw"; return 0
+  fi
   for t2 in $SCREEN_TASKS; do IFS=: read -r _ a2 ck2 <<< "$t2"
     obj2=$(task_obj "$t2"); d2=runs/sxscreen_p${R_TAG}${a2}_${ck2}
     [ -d "$d2" ] || { gsutil -q cp "$GCS/$obj2" /tmp/_s.tgz 2>/dev/null && [ -s /tmp/_s.tgz ] && tar xzf /tmp/_s.tgz 2>/dev/null || true; }

@@ -230,16 +230,39 @@ def run_sportBr2(a):
         p = pull(f"{x}_val_best.txt", cache) if f"{x}_val_best.txt" in objs else None
         vb[x] = p.read_text().split()[0] if p else None
 
+    # STOPPED arms (2026-08-28): both carrier seeds spent their ONE labeled
+    # half-lr retry (NaN again) and stopped per the registered rule; ops banked
+    # last-clean-grid finals + {arm}_STOPPED.txt labels. An arm's effective
+    # final step is then its stopped step, and screens whose fixed step exceeds
+    # it are legit-empty BY STOP (zero-byte SKIP objects banked by ops).
+    stopped = {}
+    for x in R2_ARMS:
+        if f"{x}_STOPPED.txt" in objs:
+            p = pull(f"{x}_STOPPED.txt", cache)
+            if p:
+                import re as _re
+                m = _re.search(r"STOPPED step=(\d+)", p.read_text())
+                if m:
+                    stopped[x] = int(m.group(1))
+                    ok(f"{x}: STOPPED label present (final step {stopped[x]})")
+
     # dynamic legit-empty set: the chain banks zero-byte SKIP markers when a
-    # fixed screen step coincides with vb, or full_vb when vb == final.
+    # fixed screen step coincides with vb, or full_vb when vb == final; a
+    # stopped arm additionally skips any screen beyond its stopped step.
     legit_empty = set()
     for x in R2_ARMS:
+        fin = stopped.get(x, R2_STEPS[x])
         if vb[x] is not None:
             for kind in ("m1", "m2"):
-                if int(vb[x]) == r2_mstep(x, kind):
-                    legit_empty.add(f"screen_{x}_{kind}_k{256}.tgz")
+                if int(vb[x]) == r2_mstep(x, kind) or r2_mstep(x, kind) > fin:
+                    legit_empty.add(f"screen_{x}_{kind}_k256.tgz")
+        elif x in stopped:
+            for kind in ("m1", "m2"):
+                if r2_mstep(x, kind) > fin:
+                    legit_empty.add(f"screen_{x}_{kind}_k256.tgz")
     for x in R2_CARRIERS:
-        if vb[x] is not None and int(vb[x]) == R2_STEPS[x]:
+        fin = stopped.get(x, R2_STEPS[x])
+        if vb[x] is not None and int(vb[x]) == fin:
             legit_empty.add(f"full_{x}_vb.tgz")
 
     print("== A. inventory ==")
@@ -264,7 +287,11 @@ def run_sportBr2(a):
             ok(f"{o} present ({objs[o]}B)")
     for x in R2_ARMS:
         got = {o for o in objs if o.startswith(f"{x}_ckpt_0")}
-        exp = r2_grid(x)
+        # stopped arms end their grid at the stopped step (the 08-29 final-audit
+        # catch: demanding the full-schedule grid of a stopped arm is an
+        # expectation bug, not a data gap)
+        exp = {f"{x}_ckpt_{s:06d}.pkl"
+               for s in range(5000, stopped.get(x, R2_STEPS[x]) + 1, 5000)}
         if got == exp:
             ok(f"{x}: 5k-grid complete ({len(exp)} banked ckpts)")
         elif strict:
@@ -469,7 +496,8 @@ def run_sportBr2(a):
             dedup[s] = dedup.get(s, 0) + 1
         dsteps = sorted(dedup)
         cover = bool(dsteps) and dsteps[-1] == top and len(dsteps) >= top // 100
-        structural = badnum == 0 and R2_STEPS[x] - 100 <= top <= R2_STEPS[x] and cover and len(desc) <= 25
+        exp_top = stopped.get(x, R2_STEPS[x])   # stopped arms end at their label
+        structural = badnum == 0 and exp_top - 100 <= top <= exp_top and cover and len(desc) <= 25
         if structural and not desc:
             ok(f"{x}: metrics rows={len(steps)} monotone max_step={top}/{R2_STEPS[x]} bad_rows=0")
         elif structural:
@@ -477,7 +505,7 @@ def run_sportBr2(a):
             (ok if rb_ok else fail)(
                 f"{x}: metrics rows={len(steps)} with {len(desc)} resume splice(s) "
                 f"{[f'{f}->{t}' for f, t in desc[:6]]} — lineage artifact, coverage complete "
-                f"to {top}/{R2_STEPS[x]}, bad_rows=0 (analysis pass must last-wins dedup)")
+                f"to {top}/{exp_top}, bad_rows=0 (analysis pass must last-wins dedup)")
         else:
             fail(f"{x}: metrics rows={len(steps)} max_step={top}/{R2_STEPS[x]} "
                  f"bad_rows={badnum} splices={len(desc)} coverage={cover}")
