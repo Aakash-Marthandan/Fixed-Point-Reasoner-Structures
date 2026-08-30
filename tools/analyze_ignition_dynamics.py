@@ -14,7 +14,7 @@
 # (c) trajectory signals in the window (eta delta, rule_H mean, fp_drift).
 # Question: does any cheap signal single out the ignition/condensation windows?
 """
-  .venv/bin/python tools/analyze_ignition_dynamics.py  # -> runs/analysis/ignition_dynamics_20260829.txt
+  .venv/bin/python tools/analyze_ignition_dynamics.py  # -> runs/analysis/ignition_dynamics_20260830.txt
 """
 from __future__ import annotations
 import json, pickle
@@ -24,7 +24,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs"
-OUT = RUNS / "analysis" / "ignition_dynamics_20260829.txt"
+OUT = RUNS / "analysis" / "ignition_dynamics_20260830.txt"
 L = []
 def say(s=""): L.append(str(s)); print(s)
 
@@ -123,6 +123,11 @@ ARMS = [
     ("runs/pretrainsportB_B2",     "d64 carrier; mid-25k rate-limited -> final"),
     ("runs/pretrainsportB_B3",     "d64 priced; CONDENSATION 25k->50k (71->27)"),
     ("runs/pretrainsportB_B4",     "d64 broken (retfm .34)"),
+    ("runs/pretrainsportBr2b_D2",  "2b seed pair; EARLY ignition (73.2@10k->84.8@vb)"),
+    ("runs/pretrainsportBr2b_D3",  "2b dosed T12 5e-4; LATE ignition 25k->40k (51->93)"),
+    ("runs/pretrainsportBr2b_D4",  "2b dosed T12 1e-3; ignition 68->79->89, rising@50k"),
+    ("runs/pretrainsportBr2b_C3X", "2b continuation; 81.5@+10k->91@+20k->94.5@+30k"),
+    ("runs/pretrainsportBr2b_D1",  "2b T6@50k STOPPED@10k (retfm .88 break; screen 29.5)"),
 ]
 for d, ev in ARMS:
     if Path(d).exists(): arm_windows(d, ev)

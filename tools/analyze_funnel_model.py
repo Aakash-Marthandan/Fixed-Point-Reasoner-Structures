@@ -24,7 +24,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs"
-OUT = RUNS / "analysis" / "funnel_model_20260829.txt"
+OUT = RUNS / "analysis" / "funnel_model_20260830.txt"
 K_FIT, K_VAL = 64, 128
 L = []
 def say(s=""): L.append(str(s)); print(s)
@@ -97,6 +97,12 @@ DATASETS = [
     ("B2-d64 (20k, k128)",      "sxbreadth20k_psportBB2"),
     ("B2-d64-mid25k (20k)",     "sxbreadth20k_psportBB2_mid"),
     ("C3-d96 (20k, k128)",      "sxbreadth20k_psportBr2C3"),
+    # rung-2b screens (strat-512, k256; n=512 => noisier fits, labeled)
+    ("D1-d96-vb@10k (strat512)",  "sxscreen_psportBr2bD1_vb"),
+    ("D2-d96-vb@20k (strat512)",  "sxscreen_psportBr2bD2_vb"),
+    ("D3-d96-vb@40k (strat512)",  "sxscreen_psportBr2bD3_vb"),
+    ("D4-d96-vb@50k (strat512)",  "sxscreen_psportBr2bD4_vb"),
+    ("C3X-d96-vb@30k (strat512)", "sxscreen_psportBr2bC3X_vb"),
 ]
 recs = {}
 for name, d in DATASETS:

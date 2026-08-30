@@ -13,7 +13,7 @@
 #  6. Breadth-paired: vote@128 hit bits on the shared 20k subsample (C3-d96 vs
 #     B2-d64 vs S5-d16) — G-R2-1's contrast as a paired test.
 """
-  .venv/bin/python tools/analyze_puzzle_panel.py  # -> runs/analysis/puzzle_panel_20260829.txt
+  .venv/bin/python tools/analyze_puzzle_panel.py  # -> runs/analysis/puzzle_panel_20260830.txt
 """
 from __future__ import annotations
 import math
@@ -23,7 +23,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs"
-OUT = RUNS / "analysis" / "puzzle_panel_20260829.txt"
+OUT = RUNS / "analysis" / "puzzle_panel_20260830.txt"
 L = []
 def say(s=""): L.append(str(s)); print(s)
 
@@ -60,6 +60,11 @@ FULLS = [  # (label, dir, scale-group)
     ("C2-d96-priced", "sxeval_psportBr2C2/full_t64",  "d96"),
     ("C3-d96-T6FPA",  "sxeval_psportBr2C3/full_t64",  "d96"),
     ("C4-d96-beta3",  "sxeval_psportBr2C4/full_t64",  "d96"),
+    ("D1-d96-stop10k","sxeval_psportBr2bD1/full_t64", "d96"),
+    ("D2-d96-T6s1",   "sxeval_psportBr2bD2/full_t64", "d96"),
+    ("D3-d96-dose5e4","sxeval_psportBr2bD3/full_t64", "d96"),
+    ("D4-d96-dose1e3","sxeval_psportBr2bD4/full_t64", "d96"),
+    ("C3X-d96-cont",  "sxeval_psportBr2bC3X/full_t64","d96"),
 ]
 
 say("=" * 118)

@@ -12,7 +12,7 @@
 # histogram | median cold-failure distance (violations, cells_correct) |
 # multi_init_best_wrong median | any retained_per_step leak rows.
 """
-  .venv/bin/python tools/analyze_graded_ladder.py  # -> runs/analysis/graded_ladder_20260829.txt
+  .venv/bin/python tools/analyze_graded_ladder.py  # -> runs/analysis/graded_ladder_20260830.txt
 """
 from __future__ import annotations
 import json
@@ -22,7 +22,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs"
-OUT = RUNS / "analysis" / "graded_ladder_20260829.txt"
+OUT = RUNS / "analysis" / "graded_ladder_20260830.txt"
 L = []
 def say(s=""): L.append(str(s)); print(s)
 
@@ -31,7 +31,8 @@ GROUPS = [
     ("d16/d32 wave-2 (sport2w2)",  "sudprobe_psport2w2*"),
     ("d16 wave-3a (sport3a, 50k)", "sudprobe_psport3a*"),
     ("d64 rung-1 (sportB)",        "sudprobe_psportBB*"),
-    ("d96 rung-2 (sportBr2)",      "sudprobe_psportBr2*"),
+    ("d96 rung-2 (sportBr2)",      "sudprobe_psportBr2C*"),
+    ("d96 rung-2b (sportBr2b)",    "sudprobe_psportBr2b*"),
     ("generator S-port (d16)",     "sudprobe_sud*"),
 ]
 
@@ -64,13 +65,12 @@ def analyze_dir(d: Path):
                 viol=viol, cells=cc, bw=bw, leak=leak)
 
 say("=" * 116)
-say("GRADED LADDER RETRO-ANALYSIS (corrected dict reader; 2026-08-29) — all banked Sudoku probes; sportBr2b EXCLUDED (live)")
+say("GRADED LADDER RETRO-ANALYSIS (corrected dict reader; 2026-08-29) — all banked Sudoku probes; sportBr2b INCLUDED (post-close)")
 say("=" * 116)
 say("per arm: retention | TRUE S(eps) of retained | first-failure histogram (rung: count | none=survived all) | med viol/cells@fail | leak")
 for label, pat in GROUPS:
     say(f"\n== {label} ==")
     for d in sorted(RUNS.glob(pat)):
-        if "sportBr2b" in d.name: continue
         if not (d / "results.jsonl").exists(): continue
         a = analyze_dir(d)
         arm = d.name.replace("sudprobe_p", "").replace("sudprobe_", "")
