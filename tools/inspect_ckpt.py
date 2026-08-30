@@ -45,7 +45,7 @@ def show_ckpt(p: Path) -> None:
     st = d.get("state", {}) or {}
     n_bulk = _n_leaves(st.get("model", {})) if isinstance(st, dict) else -1
     want = ("d", "T", "scales", "K", "d_task", "attn", "equilibrium",
-            "beta", "floor", "ni", "sigma", "noise", "eta", "chi")
+            "beta", "floor", "ni", "sigma", "noise", "eta", "chi", "fpa")
     keys = [k for k in cfg if any(w in k for w in want)]
     kv = ", ".join(f"{k}={cfg[k]}" for k in sorted(keys))
     print(f"{p}: step={d.get('step')} n_bulk={n_bulk} cfg{{ {kv} }}")

@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import re
 import json
 import subprocess
 import sys
@@ -81,6 +82,23 @@ def r2_mstep(arm, kind):
 def r2_grid(arm):
     """expected banked 5k-grid ckpt object names for the arm."""
     return {f"{arm}_ckpt_{s:06d}.pkl" for s in range(5000, R2_STEPS[arm] + 1, 5000)}
+
+
+# ---- rung-2b (sportBr2b) campaign spec — mirrors chain_sportBr2b.sh exactly
+# (built 2026-08-30 during the ride per the rung-2 auditor precedent; the §6
+# close gates on `--tag sportBr2b --phase final` = 0 FAIL) ----
+R2B_GCS = "gs://qhrrn2-rescue/sportBr2b"
+R2B_ARMS = ["D1", "D2", "D3", "D4", "C3X"]
+R2B_PRIMARY = ["D1", "D3"]                  # probes4 set (chain PRIMARY='D1 D3')
+R2B_STEPS = {"D1": 50000, "D2": 20000, "D3": 50000, "D4": 50000, "C3X": 30000}
+R2B_SCREEN_STEPS = {                        # chain screen_steps(); vb rides separately and ALWAYS runs
+    "D1": [10000, 15000, 20000, 25000, 40000],
+    "D2": [10000, 15000],
+    "D3": [25000, 40000],
+    "D4": [25000, 40000],
+    "C3X": [10000, 20000],
+}
+R2B_SUB = 20000                             # PHASE4 subsample (SX_SUB) — scan is GATED (p4gate.txt)
 PROV = ["ckpt", "npz", "split", "t_total", "k_init", "init", "layout", "fpopt_gamma",
         "tau", "stratified", "subsample", "subsample_seed", "mi_seed", "eta", "eta_z",
         "T", "d", "eta_learned", "eta_override", "final_map_only", "eq_coupled_ab"]
@@ -529,15 +547,277 @@ def run_sportBr2(a):
     return 1 if F else 0
 
 
+def run_sportBr2b(a):
+    strict = a.phase == "final"
+    cache = Path(a.cache); cache.mkdir(parents=True, exist_ok=True)
+    sel, n_test, n_val = selections()
+    print(f"selections recomputed: test={n_test} val={n_val} strat={len(sel['strat512'])} sub20k={len(sel['sub20k'])}")
+    objs = gcs_listing()
+
+    def info(msg):
+        print(f"  info {msg}")
+    miss = fail if strict else info
+
+    vb = {}
+    for x in R2B_ARMS:
+        p = pull(f"{x}_val_best.txt", cache) if f"{x}_val_best.txt" in objs else None
+        vb[x] = p.read_text().split()[0] if p else None
+
+    # STOPPED arms (one-shot rule; the chain's automated amputation writes the
+    # label): effective final = stopped step; fixed screens beyond it are
+    # legit-empty BY STOP. 2b label format: 'STOPPED final step N (NaN halt...'
+    stopped = {}
+    for x in R2B_ARMS:
+        if f"{x}_STOPPED.txt" in objs:
+            p = pull(f"{x}_STOPPED.txt", cache)
+            if p:
+                m = re.search(r"STOPPED final step (\d+)", p.read_text()) or \
+                    re.search(r"step[= ](\d+)", p.read_text())
+                if m:
+                    stopped[x] = int(m.group(1))
+                    ok(f"{x}: STOPPED label present (final step {stopped[x]})")
+                else:
+                    fail(f"{x}: STOPPED.txt present but step unparseable")
+
+    # legit-empty derivation (2b contract): vb SCREENS always run (never empty);
+    # fixed-step screens are zero-byte legit ONLY past a stopped arm's final;
+    # full_{x}_vb.tgz is zero-byte legit when vb == effective final (FULLVB-SKIP).
+    legit_empty = set()
+    for x in R2B_ARMS:
+        fin = stopped.get(x, R2B_STEPS[x])
+        for s in R2B_SCREEN_STEPS[x]:
+            if s > fin:
+                legit_empty.add(f"screen_{x}_s{s:06d}_k256.tgz")
+        if vb[x] is not None and int(vb[x]) == fin:
+            legit_empty.add(f"full_{x}_vb.tgz")
+
+    print("== A. inventory ==")
+    per_arm = [f"{x}_{s}" for x in R2B_ARMS
+               for s in ("ckpt.pkl", "metrics.jsonl", "val_best.txt", "evalcheap.tgz")]
+    fulls = [f"full_{x}_{k}.tgz" for x in R2B_ARMS for k in ("t64", "vb")]
+    screens = [f"screen_{x}_vb_k256.tgz" for x in R2B_ARMS] + \
+              [f"screen_{x}_s{s:06d}_k256.tgz" for x in R2B_ARMS for s in R2B_SCREEN_STEPS[x]]
+    need = per_arm + fulls + screens + ["probes4.tgz"]
+    if strict:
+        need += ["p4gate.txt", f"sportBr2b_final.tgz"]
+    for o in need:
+        if o not in objs:
+            miss(f"missing object {o}")
+        elif objs[o] == 0 and o in legit_empty:
+            ok(f"{o} empty BY DESIGN (stopped-step or FULLVB skip, label-consistent)")
+        elif objs[o] == 0:
+            (fail if strict else warn)(f"EMPTY object {o} (not a derivable legit empty)")
+        else:
+            ok(f"{o} present ({objs[o]}B)")
+    for x in R2B_ARMS:
+        got = {o for o in objs if o.startswith(f"{x}_ckpt_0")}
+        exp = {f"{x}_ckpt_{s:06d}.pkl"
+               for s in range(5000, stopped.get(x, R2B_STEPS[x]) + 1, 5000)}
+        if got == exp:
+            ok(f"{x}: 5k-grid complete ({len(exp)} banked ckpts)")
+        elif strict:
+            fail(f"{x}: 5k-grid mismatch missing={sorted(exp - got)[:4]} stray={sorted(got - exp)[:4]}")
+        else:
+            info(f"{x}: 5k-grid {len(got)}/{len(exp)} banked so far")
+    stray_empty = [o for o, s in objs.items() if s == 0 and o.endswith(".tgz") and o not in legit_empty]
+    if stray_empty:
+        (fail if strict else warn)(f"stray empty tgzs: {stray_empty}")
+
+    print("== B. sharded evals (partition proofs) ==")
+    for x in R2B_ARMS:
+        for kind, sub in (("t64", "full_t64"), ("vb", "full_t64_valbest")):
+            o = f"full_{x}_{kind}.tgz"
+            if objs.get(o, 0) == 0:
+                continue
+            tg = pull(o, cache)
+            if not tg:
+                fail(f"{o}: pull failed"); continue
+            d = extract(tg, cache) / "runs" / f"sxeval_psportBr2b{x}" / sub
+            audit_sharded(f"{o}", d, sel["full_test"])
+        o = f"{x}_evalcheap.tgz"
+        if o not in objs:
+            continue
+        tg = pull(o, cache)
+        if not tg:
+            fail(f"{o}: pull failed"); continue
+        root = extract(tg, cache) / "runs" / f"sxeval_psportBr2b{x}"
+        for kind, esel in [("strat_t6", sel["strat512"]), ("strat_t64", sel["strat512"]),
+                           ("strat_t256", sel["strat512"]), ("val_t64", sel["val"]),
+                           ("ret_t8", sel["strat512"]), ("retfm_t8", sel["strat512"])]:
+            kd = root / kind
+            if not kd.exists():
+                (fail if strict else info)(f"{o}:{kind} missing dir"); continue
+            audit_sharded(f"{o}:{kind}", kd, esel)
+    for x in R2B_ARMS:
+        for c in ["vb"] + [f"s{s:06d}" for s in R2B_SCREEN_STEPS[x]]:
+            o = f"screen_{x}_{c}_k256.tgz"
+            if objs.get(o, 0) == 0:
+                continue
+            tg = pull(o, cache)
+            if not tg:
+                fail(f"{o}: pull failed"); continue
+            d = extract(tg, cache) / "runs" / f"sxscreen_psportBr2b{x}_{c}"
+            audit_sharded(o, d, sel["strat512"])
+            st = d / "step.txt"
+            expct = vb[x] if c == "vb" else c[1:]
+            if not st.exists():
+                fail(f"{o}: step.txt missing (registered cross-check)")
+            elif expct is None:
+                warn(f"{o}: step.txt={st.read_text().strip()} but val_best not banked yet")
+            elif int(st.read_text().split()[0]) != int(expct):
+                fail(f"{o}: step.txt={st.read_text().strip()} != expected {expct} (wrong-ckpt screen)")
+            else:
+                ok(f"{o}: step.txt == expected step {int(expct)}")
+
+    print("== C. PHASE4 (GATED — p4gate.txt is marker-authoritative) ==")
+    gate = None
+    if "p4gate.txt" in objs:
+        gp = pull("p4gate.txt", cache)
+        gate = gp.read_text().split()[0] if gp else None
+        ok(f"p4gate.txt banked: {gate}")
+    else:
+        miss("p4gate.txt absent (gate not yet computed — needs D1+D2 vb screens)")
+    has_breadth = objs.get("breadth20k.tgz", 0) > 0
+    if gate == "FAIL" and not has_breadth:
+        ok("PHASE4 legitimately absent (gate FAIL — D1 stopped-funnel below the C3 band)")
+    elif gate == "PASS" or has_breadth:
+        winner_p = pull("p4winner.txt", cache) if "p4winner.txt" in objs else None
+        winner = winner_p.read_text().split()[0] if winner_p else None
+        if not has_breadth:
+            miss("gate PASS but breadth20k.tgz absent (scan pending)")
+        elif not winner:
+            fail("breadth20k.tgz present but p4winner.txt absent")
+        else:
+            tg = pull("breadth20k.tgz", cache)
+            if tg:
+                bd = extract(tg, cache) / "runs" / f"sxbreadth20k_psportBr2b{winner}"
+                if bd.exists():
+                    audit_sharded("breadth20k(winner)", bd, sel["sub20k"])
+                    sa = bd / "summary_all.json"
+                    if sa.exists():
+                        n = json.loads(sa.read_text()).get("n")
+                        (ok if n == R2B_SUB else fail)(f"breadth20k merge n-gate: n={n} (require {R2B_SUB})")
+                else:
+                    fail(f"breadth20k.tgz lacks sxbreadth20k_psportBr2b{winner}")
+            else:
+                fail("breadth20k.tgz: pull failed")
+    elif strict:
+        fail("PHASE4 state inconsistent at final (no FAIL gate and no breadth20k)")
+    if objs.get("depth_t256.tgz", 0) > 0:
+        info("depth_t256.tgz present (optional rider) — auditing")
+        winner_p = pull("p4winner.txt", cache) if "p4winner.txt" in objs else None
+        wn = winner_p.read_text().split()[0] if winner_p else None
+        tg = pull("depth_t256.tgz", cache)
+        if tg and wn:
+            d = extract(tg, cache) / "runs" / f"sxdepth_psportBr2b{wn}_t256"
+            audit_sharded("depth_t256", d, sel["full_test"])
+
+    print("== B2. probes ==")
+    if objs.get("probes4.tgz", 0) > 0:
+        tg = pull("probes4.tgz", cache)
+        if tg:
+            pr = extract(tg, cache)
+            for x in R2B_PRIMARY:
+                rf = pr / "runs" / f"sudprobe_psportBr2b{x}" / "results.jsonl"
+                if not rf.exists():
+                    fail(f"probes4:{x}: results.jsonl missing"); continue
+                rows, badj, ids = 0, 0, []
+                for line in rf.read_text().splitlines():
+                    try:
+                        j = json.loads(line); rows += 1
+                        if "idx" in j:
+                            ids.append(j["idx"])
+                    except Exception:
+                        badj += 1
+                uok = len(ids) == len(set(ids)) if ids else True
+                (ok if rows == 512 and badj == 0 and uok else fail)(
+                    f"probes4:{x}: rows={rows}/512 bad_json={badj} idx_unique={uok}")
+        else:
+            fail("probes4.tgz: pull failed")
+    else:
+        miss("probes4.tgz absent")
+    if objs.get("probe_D4.tgz", 0) > 0:
+        tg = pull("probe_D4.tgz", cache)
+        if tg:
+            rf = extract(tg, cache) / "runs" / "sudprobe_psportBr2bD4" / "results.jsonl"
+            rows = len(rf.read_text().splitlines()) if rf.exists() else 0
+            (ok if rows == 512 else fail)(f"probe_D4 (optional): rows={rows}/512")
+    else:
+        info("probe_D4.tgz absent (OPTIONAL — never blocks)")
+
+    print("== D. metrics hygiene ==")
+    for x in R2B_ARMS:
+        if f"{x}_metrics.jsonl" not in objs:
+            miss(f"{x}_metrics.jsonl absent (arm not complete)"); continue
+        mp = pull(f"{x}_metrics.jsonl", cache)
+        if not mp:
+            fail(f"{x}_metrics.jsonl: pull failed"); continue
+        steps, badnum = [], 0
+        for line in mp.read_text().splitlines():
+            try:
+                j = json.loads(line)
+            except Exception:
+                badnum += 1; continue
+            if "step" in j:
+                steps.append(int(j["step"]))
+                v = j.get("loss")
+                if v is not None and not np.isfinite(float(v)):
+                    badnum += 1
+        top = max(steps) if steps else -1
+        desc = [(steps[i], steps[i + 1]) for i in range(len(steps) - 1) if steps[i + 1] < steps[i]]
+        dedup = {}
+        for s in steps:
+            dedup[s] = dedup.get(s, 0) + 1
+        dsteps = sorted(dedup)
+        cover = bool(dsteps) and dsteps[-1] == top and len(dsteps) >= top // 100
+        exp_top = stopped.get(x, R2B_STEPS[x])
+        structural = badnum == 0 and exp_top - 100 <= top <= exp_top and cover and len(desc) <= 25
+        if structural and not desc:
+            ok(f"{x}: metrics rows={len(steps)} monotone max_step={top}/{R2B_STEPS[x]} bad_rows=0")
+        elif structural:
+            rb_ok = all(t <= f for f, t in desc)
+            (ok if rb_ok else fail)(
+                f"{x}: metrics rows={len(steps)} with {len(desc)} resume splice(s) "
+                f"{[f'{f}->{t}' for f, t in desc[:6]]} — lineage artifact, coverage complete "
+                f"to {top}/{exp_top}, bad_rows=0 (analysis pass must last-wins dedup)")
+        else:
+            fail(f"{x}: metrics rows={len(steps)} max_step={top}/{R2B_STEPS[x]} "
+                 f"bad_rows={badnum} splices={len(desc)} coverage={cover}")
+
+    print("== E. ckpt lineage ==")
+    banked = {o for o in objs if "_ckpt" in o}
+    for x in R2B_ARMS:
+        if vb[x] is None:
+            miss(f"{x}: val_best not banked yet"); continue
+        fin = stopped.get(x, R2B_STEPS[x])
+        if f"{x}_ckpt_{vb[x]}.pkl" in banked or int(vb[x]) == fin:
+            ok(f"{x}: vb step {vb[x]} ckpt banked (or == effective final {fin})")
+        else:
+            fail(f"{x}: vb step {vb[x]} ckpt NOT banked")
+
+    print("== SUMMARY ==")
+    print(f"PASS={len(P)} FAIL={len(F)} WARN={len(W)}")
+    if F:
+        print("FAILURES:")
+        for m in F:
+            print(f"  - {m}")
+    return 1 if F else 0
+
+
 def main():
     global GCS
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tag", choices=["sportB", "sportBr2"], default="sportB")
+    ap.add_argument("--tag", choices=["sportB", "sportBr2", "sportBr2b"], default="sportB")
     ap.add_argument("--phase", choices=["tail", "final", "live"], default="tail")
     ap.add_argument("--cache", default=None)
     a = ap.parse_args()
     if a.cache is None:
         a.cache = f"runs/audit_cache_{a.tag}"
+    if a.tag == "sportBr2b":
+        if a.phase == "tail":
+            a.phase = "live"
+        GCS = R2B_GCS
+        return run_sportBr2b(a)
     if a.tag == "sportBr2":
         if a.phase == "tail":
             a.phase = "live"

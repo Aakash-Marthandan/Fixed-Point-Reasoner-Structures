@@ -26,8 +26,8 @@ ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "runs" / "tpu_status_log.txt"
 POLL = timedelta(minutes=15)
 
-RATES = {"pod": 6.5, "default": 0.55}     # $/h by node-name class (v6e-8 pod)
-ACCEL_MULT = {"v6e-8": 1.0, "v6e-16": 2.0, "v6e-32": 4.0}   # 2026-08-22: accelerator ladder
+RATES = {"pod": 6.82, "default": 0.55}    # $/h by node-name class (v6e-8 pod; 6.82 billing-validated 2026-08-15)
+ACCEL_MULT = {"v6e-8": 1.0, "v6e-16": 2.35, "v6e-32": 4.7}  # 2026-08-30 PI recalibration: v6e-16 ~$16/h (not 2x the 8)
 POD_LOG = ROOT / "runs" / "pod_qhrrn2-pod2.log"
 
 
@@ -111,7 +111,7 @@ def main():
 
     print("=" * 78)
     print("TPU SPEND — spans MEASURED from the watchdog inventory log (+-15 min);")
-    print("            dollars INFERRED at list spot rates (v6e-8 $6.5/h, v6e-16 x2, v5e-1 $0.55/h)")
+    print("            dollars INFERRED at spot rates (v6e-8 $6.82/h, v6e-16 $16.0/h, v5e-1 $0.55/h)")
     print("=" * 78)
     total = 0.0
     creates = _creates()

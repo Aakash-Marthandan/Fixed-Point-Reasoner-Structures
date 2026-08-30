@@ -88,7 +88,9 @@ The per-campaign handoff (`tools/HANDOFF.md`) carries the exact commands.
 ## 8. Spend
 
 `.venv/bin/python tools/spend_report.py --since <date>` derives billed READY
-hours from the watchdog log (±15 min) at $6.82/pod-h spot v6e-8.
+hours from the watchdog log (±15 min) at $6.82/pod-h spot v6e-8 and
+~$16/pod-h spot v6e-16 (PI recalibration 2026-08-30 — the 16 is ~2.35× the 8,
+not 2×; pre-08-30 ledger spend figures for 16-shape campaigns understate ~18%).
 
 ## 9. Retired (2026-08-18; in git history before this commit)
 
