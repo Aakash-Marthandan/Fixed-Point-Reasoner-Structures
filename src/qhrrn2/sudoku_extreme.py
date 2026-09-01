@@ -193,13 +193,18 @@ def build_corpus_extreme(npz_path, *, n_aug: int = 100, seed: int = 0,
             pa, sa = augment(p_, s_, rng, digit=digit_aug)
             xs.append(SU.place_layout(pa, layout)); ys.append(SU.place_layout(sa, layout))
     P = len(xs)
+    # native9 (2026-09-01): the canvas IS the grid — no placement offsets
+    # (Sudoku constraints are absolute-position-bound in native geometry:
+    # boxes must stay box-aligned, so translation is NOT a valid augmentation
+    # there; the position GROUP above already covers the valid symmetries).
+    bound = SU.layout_canvas(layout) - ext
     corpus = Corpus(
         task_ids=("sudoku",),
         x=np.stack(xs).astype(np.int32), y=np.stack(ys).astype(np.int32),
         tidx=np.zeros(P, dtype=np.int32),
         starts=np.asarray([0, P], dtype=np.int32),
-        bound_h=np.full(P, G.CANVAS - ext, dtype=np.int32),
-        bound_w=np.full(P, G.CANVAS - ext, dtype=np.int32),
+        bound_h=np.full(P, bound, dtype=np.int32),
+        bound_w=np.full(P, bound, dtype=np.int32),
         off_stride=stride)
     val_pairs = [(np.asarray(p_, np.int8), np.asarray(s_, np.int8))
                  for p_, s_ in zip(d["val_q"], d["val_a"])]

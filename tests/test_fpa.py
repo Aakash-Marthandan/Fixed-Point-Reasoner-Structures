@@ -65,7 +65,7 @@ def test_evaluator_coupled_and_final_map_modes():
     puz, sol = SU.sample_pairs(1, seed=4, givens=40)[0]
     x_can = EV.place_batch(np.stack([puz]), "origin"); sol9 = np.stack([sol]).astype(np.int32); puz9 = np.stack([puz]).astype(np.int32)
     y0 = jax.nn.one_hot(EV.place_batch(sol9, "origin"), M.VOCAB).transpose(0, 3, 1, 2)
-    ex, ok, pred = EV.run_batch(params, cfg, tv, x_can, y0, t_total=3, tau=1.0, gamma=1.0, sol9=sol9, puz9=puz9,
+    ex, ok, pred, _ = EV.run_batch(params, cfg, tv, x_can, y0, t_total=3, tau=1.0, gamma=1.0, sol9=sol9, puz9=puz9,
                                 eta=0.5, eta_z=0.5, ab=ab, t_norm_fixed=1.0)
     assert ex.shape == (3, 1) and pred.shape == (1, 9, 9)
 

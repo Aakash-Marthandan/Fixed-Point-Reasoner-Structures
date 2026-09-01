@@ -212,17 +212,25 @@ def sample_ladder(n: int, seed: int, givens_list):
 #           pooling blocks: the 3-adic/dyadic mismatch named at the S-port
 #           launch becomes a testable arm. Placement offsets for box4 must be
 #           multiples of 4 (Corpus.off_stride) or the alignment is lost.
-LAYOUTS = ("origin", "box4")
+# "native9" (CHAMPION TRACK, 2026-09-01): the canvas IS the 9x9 grid — no
+#           placement, no padding, no offsets; pairs with the 3-adic model
+#           geometry (cfg.canvas=9, pool_arity=3, scales=2, mixer "group9").
+LAYOUTS = ("origin", "box4", "native9")
 BOX4 = 4
 BOX4_EXTENT = BOX * BOX4        # 12
 
 
 def layout_extent(layout: str = "origin") -> int:
-    if layout == "origin":
+    if layout in ("origin", "native9"):
         return N
     if layout == "box4":
         return BOX4_EXTENT
     raise ValueError(f"unknown layout {layout!r}")
+
+
+def layout_canvas(layout: str = "origin") -> int:
+    """Side length of the training/eval canvas for this layout."""
+    return N if layout == "native9" else G.CANVAS
 
 
 def box4_index() -> np.ndarray:
@@ -232,9 +240,13 @@ def box4_index() -> np.ndarray:
 
 
 def place_layout(g: np.ndarray, layout: str = "origin", oy: int = 0, ox: int = 0) -> np.ndarray:
-    """9x9 digits/blanks -> 32x32 canvas in the given layout (VOID elsewhere)."""
+    """9x9 digits/blanks -> canvas in the given layout (VOID elsewhere).
+    native9: the identity — the 9x9 grid IS the canvas."""
     g = np.asarray(g, dtype=np.int8)
     assert g.shape == (N, N), g.shape
+    if layout == "native9":
+        assert oy == 0 and ox == 0, "native9 has no placement offsets"
+        return g.copy()
     if layout == "origin":
         return G.place_at(g, oy, ox)
     if layout == "box4":
@@ -256,7 +268,7 @@ def unplace_layout(arr: np.ndarray, layout: str = "origin"):
     e = layout_extent(layout)
     if a.ndim != 2 or a.shape[0] < e or a.shape[1] < e:
         return None
-    if layout == "origin":
+    if layout in ("origin", "native9"):
         return a[:N, :N]
     idx = box4_index()
     return a[np.ix_(idx, idx)]

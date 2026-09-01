@@ -79,8 +79,9 @@ def init_params(key, cfg: Config):
         "role_emb": jax.random.normal(ks[1], (3, d)) * 0.3,
         "color_bias": jnp.zeros((N_FIELDS, d)),  # Amendment A: evidence breaks S9 (C3)
         "enc": {
-            "mixer": cell.init_mixer(ks[2], d),
-            "pool": cell.init_pool_split(ks[3], d, db),
+            "mixer": (cell.init_group_mixer(ks[2], d) if cfg.mixer_kind == "group9"
+                      else cell.init_mixer(ks[2], d)),
+            "pool": cell.init_pool_split(ks[3], d, db, cfg.pool_arity),
             "attn": cell.init_attention(ks[4], d, cfg.d_a),
             "film": cell.init_film(ks[5], d),
         },
@@ -89,7 +90,8 @@ def init_params(key, cfg: Config):
         "rule_query": jax.random.normal(ks[8], (cfg.M, cfg.d_ir, cfg.d_code)) / jnp.sqrt(cfg.d_ir),
         "dec_init": lin(ks[9], cfg.d_ir + r_dim, d),
         "dec": {
-            "mixer": cell.init_mixer(ks[10], d),
+            "mixer": (cell.init_group_mixer(ks[10], d) if cfg.mixer_kind == "group9"
+                      else cell.init_mixer(ks[10], d)),
             "attn": cell.init_attention(ks[11], d, cfg.d_a),
             "film": cell.init_film(ks[12], d),
             "inject": cell.init_inject(ks[13], db, d),
@@ -216,17 +218,18 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     def split(r):
         return jax.random.split(r) if r is not None else (None, None)
 
+    _mix = cell.group_mixer if cfg.mixer_kind == "group9" else cell.mixer
     streams, flux = [], []
     flux_nl = [jnp.zeros(())] * S           # A_s ledger (C14): enc + dec per scale
     for s in range(S):
         s_norm = s / max(S - 1, 1)
         gammas, betas = cell.film_params(params["enc"]["film"], s_norm, t_norm, d)
-        z = cell.film(cell.mixer(params["enc"]["mixer"], z), gammas[0], betas[0])
+        z = cell.film(_mix(params["enc"]["mixer"], z), gammas[0], betas[0])
         if z.shape[1] <= cfg.attn_max_hw:
             rng, sub = split(rng)
             z, a_s = cell.attention(params["enc"]["attn"], z, rng=sub)
             flux_nl[s] = flux_nl[s] + a_s
-        kept, mu, log_sigma = cell.pool_split(params["enc"]["pool"], z, db)
+        kept, mu, log_sigma = cell.pool_split(params["enc"]["pool"], z, db, cfg.pool_arity)
         if rng is not None:
             rng, sub = jax.random.split(rng)
             b = mu + jnp.exp(log_sigma) * jax.random.normal(sub, mu.shape)
@@ -272,9 +275,9 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
         g = jax.nn.sigmoid(cell._linear(params["gate"]["l2"], jax.nn.gelu(
             cell._linear(params["gate"]["l1"], jnp.concatenate([r, s_onehot])))))
         zd = cell.inject(params["dec"]["inject"], zd, streams[s], g)
-        zd = cell.upsample(zd)
+        zd = cell.upsample(zd, cfg.pool_arity)
         gammas, betas = cell.film_params(params["dec"]["film"], s_norm, t_norm, d)
-        zd = cell.film(cell.mixer(params["dec"]["mixer"], zd), gammas[0], betas[0])
+        zd = cell.film(_mix(params["dec"]["mixer"], zd), gammas[0], betas[0])
         if zd.shape[1] <= cfg.attn_max_hw:
             rng, sub = split(rng)
             zd, a_s = cell.attention(params["dec"]["attn"], zd, rng=sub)
@@ -385,7 +388,9 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
     step — the fixed-point-anchor rows and the final-map instruments; None =
     the trained ramp, bit-identical."""
     T = t_total if t_total is not None else cfg.T
-    void_can = jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
+    # canvas size derived from the input (2026-09-01 native9: 9x9 grids flow
+    # through unchanged; canvas32 sees identical values to the old constant)
+    void_can = jnp.full(jnp.shape(x_canvas), VOID, dtype=jnp.int32)
     y = (jax.nn.one_hot(void_can, VOCAB).transpose(2, 0, 1)
          if y0_probs is None else y0_probs)
     eta = cfg.eta_floor + (1.0 - cfg.eta_floor) * jax.nn.sigmoid(params["eq"]["eta"])
@@ -459,7 +464,7 @@ def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
         outs, _, _ = iterate_eq(params, cfg, x_canvas, tau=tau, rng=rng,
                                 task_vec=task_vec, y0_probs=y0)
         return outs
-    yprev = (jnp.full((CANVAS, CANVAS), VOID, dtype=jnp.int32)
+    yprev = (jnp.full(jnp.shape(x_canvas), VOID, dtype=jnp.int32)
              if yprev_init is None else jnp.asarray(yprev_init, dtype=jnp.int32))
     labs_x = None
     if cfg.use_obj:
@@ -472,7 +477,8 @@ def iterate(params, cfg: Config, x_canvas, *, tau: float, rng=None,
             labs_x = {m: OBJ.connected_components(x_canvas, m) for m in OBJ_ENC_MODES}
     # t=0 feedback is all-VOID: every cell a singleton — aggregation is the
     # identity by construction, so skip the (expensive) in-graph CC there.
-    identity_labels = jnp.arange(CANVAS * CANVAS, dtype=jnp.int32).reshape(CANVAS, CANVAS)
+    _H, _W = jnp.shape(x_canvas)
+    identity_labels = jnp.arange(_H * _W, dtype=jnp.int32).reshape(_H, _W)
     outs = []
     for t in range(cfg.T):
         t_norm = t / max(cfg.T - 1, 1)

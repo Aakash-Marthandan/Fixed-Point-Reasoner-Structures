@@ -79,8 +79,10 @@ def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
         # local contraction of the final map at its fixed point, trained.
         k_e, k_m, k_c, k_roll = jax.random.split(k_fpa, 4)
         eps = jax.random.uniform(k_e, (), minval=0.0, maxval=cfg.fpa_eps)
-        flip = jax.random.bernoulli(k_m, eps, (CANVAS, CANVAS)) & mask
-        rand = jax.random.randint(k_c, (CANVAS, CANVAS), 0, NUM_COLORS).astype(jnp.int32)
+        # canvas shape derived from the pair (2026-09-01 native9; canvas32
+        # sees identical values — the old (CANVAS, CANVAS) constant)
+        flip = jax.random.bernoulli(k_m, eps, y_canvas.shape) & mask
+        rand = jax.random.randint(k_c, y_canvas.shape, 0, NUM_COLORS).astype(jnp.int32)
         y_corr = jnp.where(flip, rand, y_canvas.astype(jnp.int32))
         y0 = jax.nn.one_hot(y_corr, VOCAB).transpose(2, 0, 1)
         outs_fp, _, _ = iterate_eq(params, cfg, x_canvas, tau=tau, rng=k_roll,

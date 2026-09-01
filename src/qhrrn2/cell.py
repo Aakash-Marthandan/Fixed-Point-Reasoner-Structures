@@ -63,18 +63,23 @@ def mixer(p, z):
     return z + delta[:, 1:H + 1, 1:W + 1, :]                     # crop back; residual
 
 
-# ── Pool & split (C5): aligned 2x2 -> kept d  ⊕  stream (mu, log_sigma) ────
+# ── Pool & split (C5): aligned axa -> kept d  ⊕  stream (mu, log_sigma) ────
+# arity 2 = the dyadic pyramid (every checkpoint before 2026-09-01, bit-exact);
+# arity 3 = the CHAMPION TRACK's 3-adic pyramid (9 -> 3 -> 1) where each
+# level-1 pooling block IS a Sudoku box (Plan_2026-09-01 §1).
 
-def init_pool_split(key, d, d_b):
+def init_pool_split(key, d, d_b, arity: int = 2):
     k1, k2 = jax.random.split(key)
-    return {"kept": _linear_init(k1, 4 * d, d), "stream": _linear_init(k2, 4 * d, 2 * d_b)}
+    n_in = arity * arity * d
+    return {"kept": _linear_init(k1, n_in, d), "stream": _linear_init(k2, n_in, 2 * d_b)}
 
 
-def pool_split(p, z, d_b):
-    """(C,H,W,d) -> kept (C,H/2,W/2,d), mu/log_sigma (C,H/2,W/2,d_b) each."""
+def pool_split(p, z, d_b, arity: int = 2):
+    """(C,H,W,d) -> kept (C,H/a,W/a,d), mu/log_sigma (C,H/a,W/a,d_b) each."""
     C, H, W, d = z.shape
-    u = z.reshape(C, H // 2, 2, W // 2, 2, d).transpose(0, 1, 3, 2, 4, 5)
-    u = u.reshape(C, H // 2, W // 2, 4 * d)
+    a = arity
+    u = z.reshape(C, H // a, a, W // a, a, d).transpose(0, 1, 3, 2, 4, 5)
+    u = u.reshape(C, H // a, W // a, a * a * d)
     kept = jax.nn.gelu(_linear(p["kept"], u))
     stats = _linear(p["stream"], u)
     mu, log_sigma = stats[..., :d_b], stats[..., d_b:]
@@ -154,5 +159,65 @@ def inject(p, z, b, gate):
     return z + _linear(p["proj"], b * gate)
 
 
-def upsample(z):
-    return jnp.repeat(jnp.repeat(z, 2, axis=1), 2, axis=2)
+def upsample(z, arity: int = 2):
+    return jnp.repeat(jnp.repeat(z, arity, axis=1), arity, axis=2)
+
+
+# ── The GROUP mixer (CHAMPION TRACK, Plan_2026-09-01 §2) ───────────────────
+# ONE shared "all-different" operator applied to every Sudoku constraint
+# group: at s0 (9x9) the partitions are rows / cols / boxes (27 groups of 9
+# cells — Sudoku's exact constraint basis); at s1 (3x3) the whole box grid is
+# one group (partition type 3). Weight-tied across partitions because the
+# all-different constraint is IDENTICAL for every unit; per-partition-type and
+# per-slot embeddings restore the (cheap) distinctions. Param-safe: ~0.5M at
+# d=96 vs ~6M for a naive 3x3-window concat mixer (the named param trap).
+# S9-safe: every op is shared over the field axis C; context = field-mean.
+
+N_GROUP = 9
+PART_TYPES = 4          # 0 = rows, 1 = cols, 2 = boxes, 3 = whole-grid (s1)
+
+
+def init_group_mixer(key, d):
+    k1, k2, k3, k4 = jax.random.split(key, 4)
+    return {
+        "l1": _linear_init(k1, 2 * N_GROUP * d, 2 * d),
+        "l2": _linear_init(k2, 2 * d, N_GROUP * d),
+        "type_emb": jax.random.normal(k3, (PART_TYPES, d)) * 0.1,
+        "slot_emb": jax.random.normal(k4, (N_GROUP, d)) * 0.1,
+    }
+
+
+def _group_apply(p, zg, zbg, ptype):
+    """zg, zbg: (C, G, 9, d) group views of z and the field-mean context.
+    Returns (C, G, 9, d) deltas."""
+    C, Gn, S, d = zg.shape
+    m = zg + p["type_emb"][ptype] + p["slot_emb"][None, None, :, :]
+    aug = jnp.concatenate([m, zbg], axis=-1).reshape(C, Gn, 2 * S * d)
+    h = jax.nn.gelu(_linear(p["l1"], aug))
+    return _linear(p["l2"], h).reshape(C, Gn, S, d)
+
+
+def group_mixer(p, z):
+    """z: (C, H, W, d) with (H, W) = (9, 9) [s0] or (3, 3) [s1]."""
+    C, H, W, d = z.shape
+    zb = jnp.broadcast_to(jnp.mean(z, axis=0, keepdims=True), z.shape)
+    if H == 3 and W == 3:   # s1: the box grid as ONE group of 9 tokens
+        zg = z.reshape(C, 1, N_GROUP, d)
+        zbg = zb.reshape(C, 1, N_GROUP, d)
+        delta = _group_apply(p, zg, zbg, 3).reshape(C, H, W, d)
+        return z + delta
+    assert H == 9 and W == 9, (H, W)
+
+    def box_view(t):        # (C,9,9,d) -> (C, box g, slot, d), g=(br,bc), slot=(r%3,c%3)
+        return (t.reshape(C, 3, 3, 3, 3, d).transpose(0, 1, 3, 2, 4, 5)
+                .reshape(C, N_GROUP, N_GROUP, d))
+
+    def box_unview(t):
+        return (t.reshape(C, 3, 3, 3, 3, d).transpose(0, 1, 3, 2, 4, 5)
+                .reshape(C, 9, 9, d))
+
+    d_rows = _group_apply(p, z, zb, 0)                                 # groups = rows
+    d_cols = _group_apply(p, z.transpose(0, 2, 1, 3),
+                          zb.transpose(0, 2, 1, 3), 1).transpose(0, 2, 1, 3)
+    d_box = box_unview(_group_apply(p, box_view(z), box_view(zb), 2))
+    return z + (d_rows + d_cols + d_box) / 3.0

@@ -75,7 +75,10 @@ def violations_dev(g9):
 
 
 def layout_gather(canvas_b, layout: str):
-    """(B, 32, 32) canvas argmax -> (B, 9, 9) digits in the layout's cells."""
+    """(B, CV, CV) canvas argmax -> (B, 9, 9) digits in the layout's cells.
+    native9 (2026-09-01): the canvas IS the 9x9 grid."""
+    if layout == "native9":
+        return canvas_b
     if layout == "origin":
         return canvas_b[:, :N, :N]
     idx = jnp.asarray(SU.box4_index())
@@ -113,13 +116,16 @@ def coupled_ab(params, cfg):
 def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
               eta, eta_z, layout="origin", t_norm_fixed=None, ab=None):
     """Returns per-puzzle numpy: exact_t (T,B), valid_ok_t (T,B) [valid & givens-
-    consistent], final pred9 (B,9,9). t_norm_fixed (wave 3a): apply one map at
+    consistent], final pred9 (B,9,9), resid3 (B,) — the mean per-step |Delta y|
+    over the FINAL 3 steps (EqR's Top-1-Converged selection signal, L=3;
+    CHAMPION TRACK 2026-09-01). t_norm_fixed (wave 3a): apply one map at
     every step (1.0 = the FINAL map — the final-map retention instrument);
     ab = (a1, a2) for eq_coupled checkpoints (mirrors model.iterate_eq)."""
     B = x_can.shape[0]
     y = y0
     z_c = None
     ex_rows, ok_rows = [], []
+    res_tail = []                 # per-step (B,) mean |dy|, last 3 kept
     pred9 = None
     sol9 = jnp.asarray(sol9, jnp.int32); puz9 = jnp.asarray(puz9, jnp.int32)
     mask = puz9 != 0
@@ -131,7 +137,11 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
         z_c = zf if first else z_c + eta_z * (zf - z_c)
         p = jax.nn.softmax(logits, axis=-1).transpose(0, 3, 1, 2)
         eta_t = eta if (gamma >= 1.0 or t < cfg.T) else eta * (gamma ** (t - cfg.T + 1))
-        y = (ab[0] * y + ab[1] * p) if ab is not None else (y + eta_t * (p - y))
+        y_new = (ab[0] * y + ab[1] * p) if ab is not None else (y + eta_t * (p - y))
+        res_tail.append(np.asarray(jnp.mean(jnp.abs(y_new - y), axis=(1, 2, 3))))
+        if len(res_tail) > 3:
+            res_tail.pop(0)
+        y = y_new
         pred9 = layout_gather(jnp.argmax(logits, axis=-1), layout).astype(jnp.int32)
         pred9 = jnp.where(pred9 == G.VOID, 0, pred9)
         exact = jnp.all((pred9 == sol9).reshape(B, -1), axis=1)
@@ -139,7 +149,8 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
         giv_ok = jnp.all(((pred9 == puz9) | ~mask).reshape(B, -1), axis=1)
         ok = (viol == 0) & giv_ok
         ex_rows.append(np.asarray(exact)); ok_rows.append(np.asarray(ok))
-    return np.stack(ex_rows), np.stack(ok_rows), np.asarray(pred9)
+    return (np.stack(ex_rows), np.stack(ok_rows), np.asarray(pred9),
+            np.mean(np.stack(res_tail), axis=0))
 
 
 def first_true(rows):             # (T,B) bool -> (B,) first index or -1
@@ -268,6 +279,13 @@ def main():
     rec = dict(idx=[], rating=[], cold_exact=[], first_exact=[], first_valid=[],
                violations=[], cells=[], givens_kept=[], mi_verified=[], mi_true=[],
                mi_first_hit=[])
+    if a.k_init:
+        # CHAMPION TRACK standing stats (2026-09-01, program-review §1 riders):
+        # per-draw exact bits + per-draw convergence residuals (EqR's L=3
+        # signal) -> the protocol-table statistics (true B=1; Top-1-residual@k)
+        # come from every scan for free. (B, k) columns; merge concatenates.
+        rec["mi_exact_k"] = []
+        rec["mi_resid_k"] = []
     uv_ks = []
     if a.vote_unverified:
         if len(sel) > 5000:
@@ -280,7 +298,7 @@ def main():
     fingerprint = json.dumps(dict(ckpt=a.ckpt, npz=a.npz, split=a.split, shard=tag, n=len(sel),
                                   t=t_total, k=a.k_init, init=a.init, layout=layout, batch=a.batch,
                                   mi_seed=a.mi_seed, fmo=bool(a.final_map_only),
-                                  uv=bool(a.vote_unverified)), sort_keys=True)
+                                  uv=bool(a.vote_unverified), ver=2), sort_keys=True)
     partial_p = out / f"partial_{tag}.npz"
     start = 0
     if a.bank_every and partial_p.exists():
@@ -301,14 +319,15 @@ def main():
         puz9 = Q[ids].astype(np.int32); sol9 = A[ids].astype(np.int32)
         x_can = place_batch(puz9, layout)
         B = len(ids)
+        cv = SU.layout_canvas(layout)
         if a.init == "solution":
             y0 = jax.nn.one_hot(place_batch(sol9, layout), M.VOCAB).transpose(0, 3, 1, 2)
         else:
-            void = jax.nn.one_hot(jnp.full((G.CANVAS, G.CANVAS), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
+            void = jax.nn.one_hot(jnp.full((cv, cv), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
             y0 = jnp.broadcast_to(void, (B,) + void.shape)
-        ex, ok, pred9 = run_batch(params, cfg, tvj, x_can, y0, t_total=t_total, tau=a.tau,
-                                  gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                  layout=layout, t_norm_fixed=tnf, ab=ab)
+        ex, ok, pred9, _ = run_batch(params, cfg, tvj, x_can, y0, t_total=t_total, tau=a.tau,
+                                     gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
+                                     layout=layout, t_norm_fixed=tnf, ab=ab)
         cold = ex[-1]
         fe, fv = first_true(ex), first_true(ok)
         viol = np.asarray(violations_dev(jnp.asarray(pred9)))
@@ -316,18 +335,25 @@ def main():
         mask = puz9 != 0
         gk = ((pred9 == puz9) & mask).reshape(B, -1).sum(1)
         mi_v = np.zeros(B, int); mi_t = np.zeros(B, int); mi_first = np.full(B, -1, int)
+        mi_ex_k = np.zeros((B, a.k_init), np.uint8) if a.k_init else None
+        mi_re_k = np.zeros((B, a.k_init), np.float16) if a.k_init else None
         uv_draws = np.zeros((B, len(uv_ks) and a.k_init or 0, 9, 9), np.int8) if uv_ks else None
         for j in range(a.k_init):
             y0r = np.stack([mi_canvas(a.mi_seed, int(ids[b]), j, layout) for b in range(B)])
             y0r = jax.nn.one_hot(jnp.asarray(y0r, jnp.int32), M.VOCAB).transpose(0, 3, 1, 2)
-            exr, okr, predr = run_batch(params, cfg, tvj, x_can, y0r, t_total=t_total, tau=a.tau,
-                                       gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                       layout=layout, t_norm_fixed=tnf, ab=ab)
+            exr, okr, predr, resr = run_batch(params, cfg, tvj, x_can, y0r, t_total=t_total, tau=a.tau,
+                                              gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
+                                              layout=layout, t_norm_fixed=tnf, ab=ab)
             hit = okr[-1]
             mi_first = np.where((mi_first < 0) & hit, j, mi_first)
             mi_v += hit.astype(int); mi_t += exr[-1].astype(int)
+            mi_ex_k[:, j] = exr[-1].astype(np.uint8)
+            mi_re_k[:, j] = resr.astype(np.float16)
             if uv_draws is not None:
                 uv_draws[:, j] = np.asarray(predr, np.int8)
+        if a.k_init:
+            rec["mi_exact_k"].extend(mi_ex_k.tolist())
+            rec["mi_resid_k"].extend(mi_re_k.tolist())
         if uv_ks:
             uv = majority_vote_cols(uv_draws, sol9, uv_ks)
             for k in uv_ks:
@@ -394,6 +420,20 @@ def summarize(arr, Q, sel, qs, base):
     uv_cols = sorted((k for k in arr if k.startswith("uv_vote_k")), key=lambda s: int(s[9:]))
     if uv_cols and n:
         summ["majority_vote_at_k"] = {c[9:]: float(arr[c].mean()) for c in uv_cols}
+    # CHAMPION TRACK standing stats (2026-09-01): true B=1 (single random-init
+    # draw, EqR's Table-4 statistic — NOT vote@1, which unions with cold) and
+    # Top-1-by-residual@k (EqR's L=3 Top-1-Converged selection, verbatim).
+    if n and "mi_exact_k" in arr and arr["mi_exact_k"].ndim == 2 and arr["mi_exact_k"].shape[1]:
+        ex_k = arr["mi_exact_k"].astype(bool)
+        re_k = arr["mi_resid_k"].astype(np.float32)
+        summ["b1_exact"] = float(ex_k[:, 0].mean())
+        t1r = {}
+        for k in K_CURVE:
+            if k > ex_k.shape[1]:
+                break
+            pick = np.argmin(re_k[:, :k], axis=1)
+            t1r[str(k)] = float(ex_k[np.arange(n), pick].mean())
+        summ["t1r_at_k"] = t1r
     return summ
 
 

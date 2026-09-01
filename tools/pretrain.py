@@ -119,9 +119,12 @@ def parse_args():
                    help="every N steps: val@t64 cold, schedule + FINAL-MAP retention (t8, solution "
                         "init), eta, and lambda_max of the final map at the solution (power iteration) "
                         "on the monitor puzzles -> metrics.jsonl {'monitor':...}; 0 = off")
-    p.add_argument("--sudoku-layout", default="origin", choices=["origin", "box4"],
+    p.add_argument("--sudoku-layout", default="origin", choices=["origin", "box4", "native9"],
                    help="wave-2 (2026-08-22): Sudoku canvas layout; box4 = the "
-                        "registered box-aligned control (carried in the ckpt cfg)")
+                        "registered box-aligned control (carried in the ckpt cfg); "
+                        "native9 (CHAMPION TRACK 2026-09-01) = 3-adic native 9x9 — "
+                        "sets canvas=9, scales=2, pool_arity=3, mixer group9, "
+                        "attn_max_hw=9 in the Config automatically")
     p.add_argument("--init-from", default=None,
                    help="warm-start params+table from this ckpt at step 0 with "
                         "a fresh optimizer (the GEN arm's 1k finetune)")
@@ -208,17 +211,19 @@ def sudoku_monitor(state, cfg, val_pairs, *, t_cold=64, t_ret=8, n_lam=16, lam_i
     ab = EV.coupled_ab(params, cfg)
     puz9 = np.stack([np.asarray(p_, np.int32) for p_, _ in val_pairs]); sol9 = np.stack([np.asarray(s_, np.int32) for _, s_ in val_pairs])
     x_can = EV.place_batch(puz9, layout); B = x_can.shape[0]
-    void = jax.nn.one_hot(jnp.full((G.CANVAS, G.CANVAS), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
+    from qhrrn2 import sudoku as SUD
+    cv = SUD.layout_canvas(layout)
+    void = jax.nn.one_hot(jnp.full((cv, cv), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
     y0v = jnp.broadcast_to(void, (B,) + void.shape)
-    ex, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0v, t_total=t_cold, tau=1.0, gamma=1.0,
-                            sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
+    ex, _, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0v, t_total=t_cold, tau=1.0, gamma=1.0,
+                               sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
     val_cold = float(ex[-1].mean())
     y0s = jax.nn.one_hot(EV.place_batch(sol9, layout), M.VOCAB).transpose(0, 3, 1, 2)
-    exr, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0s, t_total=t_ret, tau=1.0, gamma=1.0,
-                             sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
-    exf, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0s, t_total=t_ret, tau=1.0, gamma=1.0,
-                             sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab,
-                             t_norm_fixed=1.0)
+    exr, _, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0s, t_total=t_ret, tau=1.0, gamma=1.0,
+                                sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
+    exf, _, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0s, t_total=t_ret, tau=1.0, gamma=1.0,
+                                sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab,
+                                t_norm_fixed=1.0)
     # Final-map fixed-point readouts on the first n_lam puzzles (2026-08-23, refined after the
     # banked-ckpt check: the y-only/z-less spectrum does NOT separate collapsed from healthy maps;
     # the collapse reads as the FINAL map's fixed point DRIFTING off the solution). Three numbers:
@@ -298,7 +303,12 @@ def main():
                     d_ir=int(round(32 * ws)), d_code=int(round(32 * ws)))
     else:
         side = {}
-    cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat, **side,
+    # CHAMPION TRACK (2026-09-01): native9 fixes the 3-adic geometry dials —
+    # canvas IS the 9x9 grid (9 -> 3 -> 1 box-aligned), factorized group mixer.
+    geo = (dict(canvas=9, scales=2, pool_arity=3, mixer_kind="group9",
+                attn_max_hw=9)
+           if a.sudoku_layout == "native9" else {})
+    cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat, **side, **geo,
                  d_task=a.d_task, equilibrium=a.equilibrium,
                  beta_flux=a.beta_flux, beta_flux_nl=a.beta_flux_nl,
                  eta_floor=a.eta_floor, z_gate_init=a.z_gate_init,
@@ -345,9 +355,11 @@ def main():
             # the trainer's val monitor (val20_eval -> T.predict) places grids
             # at the origin; under another layout it would read a wrong-layout
             # zero. The batched evaluator (layout-aware) measures val@t for
-            # these arms (wave-2 M0 reads the evaluator, not this monitor).
-            val = []
-            print("val monitor DISABLED for non-origin layout (evaluator measures val)", flush=True)
+            # these arms. CHAMPION TRACK fix (2026-09-01): keep the val PAIRS —
+            # the trajectory monitor (sudoku_monitor -> EV.run_batch) is
+            # layout-aware and NEEDS them; only val20_eval is skipped (below).
+            print("val20 monitor DISABLED for non-origin layout "
+                  "(trajectory monitor + evaluator measure val)", flush=True)
     elif a.sudoku:
         # S-PORT (H-33): the single-attractor domain. ONE task row, generated
         # instances, no ARC corpus involved — the contamination laws below
@@ -369,6 +381,9 @@ def main():
     dev = E.corpus_to_device(corpus)
     n_tasks = len(corpus.task_ids)
     n_pairs = int(corpus.x.shape[0])
+    # val20_eval places at the ARC origin — valid only for origin-layout runs;
+    # non-origin Sudoku arms use the layout-aware trajectory monitor instead.
+    val20_ok = not (a.sudoku_extreme and a.sudoku_layout != "origin")
 
     key = jax.random.PRNGKey(a.seed)
     k_model, k_table, k_run = jax.random.split(key, 3)
@@ -518,7 +533,7 @@ def main():
                   f"{sps:.2f} it/s", flush=True)
             t_block = time.time()
 
-        if (i + 1) % a.val_every == 0 or i + 1 == a.steps:
+        if val20_ok and ((i + 1) % a.val_every == 0 or i + 1 == a.steps):
             v = val20_eval(state, cfg, val, a.tau)
             v["step"] = i + 1
             metrics_f.write(json.dumps({"val": v}) + "\n")

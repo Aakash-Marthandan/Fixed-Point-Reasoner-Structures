@@ -66,7 +66,23 @@ class Config:
     # each 3x3 box in a 4x4 block). Carried in the ckpt so the batched
     # evaluator places/unplaces consistently with training; the model graph
     # does not read it (no effect on ARC or on any old checkpoint).
+    # CHAMPION TRACK (2026-09-01): "native9" = the 3-adic native geometry —
+    # canvas IS the 9x9 grid (no padding), pool_arity 3 (9 -> 3 -> 1,
+    # box-aligned: each level-1 pooling block IS a Sudoku box), scales 2,
+    # mixer_kind "group9".
     sudoku_layout: str = "origin"
+    # CHAMPION TRACK geometry dials (2026-09-01, Plan_2026-09-01_Champion_Track
+    # §2). Defaults reproduce every prior checkpoint/graph bit-exactly; the
+    # native9 configuration sets canvas=9, scales=2, pool_arity=3,
+    # mixer_kind="group9", attn_max_hw=9.
+    pool_arity: int = 2        # RG branching factor (2 = dyadic, 3 = 3-adic)
+    mixer_kind: str = "seam"   # "seam" = offset-block seam mixer (C4);
+    #                            "group9" = the factorized all-different GROUP
+    #                            mixer: ONE shared operator applied to every
+    #                            constraint group (9 rows + 9 cols + 9 boxes at
+    #                            s0; the box grid as one group at s1), with
+    #                            per-partition-type and per-slot embeddings.
+    #                            Sudoku's 27 constraints as the operator basis.
     # SPRINT S2 wave 3a (ledger 2026-08-23, H-45 contractivity collapse): FIXED-POINT
     # ANCHOR rows — per training pair, additionally roll the FINAL map (t_norm=1)
     # for fpa_k steps from a lightly corrupted solution (eps ~ U[0, fpa_eps] of the
