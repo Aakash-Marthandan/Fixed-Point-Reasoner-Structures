@@ -94,3 +94,15 @@ PI directive 2026-08-27: the differences are shown **operationally**, not argued
 2. Sudoku wrong-stable instrument (stuck-with-violations formalized) — registered-unbuilt since 08-15; cheap; candidate rung-2 rider.
 3. Back-port register for the ARC resume: final-map retention, trajectory monitors + val-selection, answer-mode λ, Adam-v Fisher lens (and a difficulty-proxy instrument, D10).
 4. Paper-1: this catalog is the skeleton of the "two problems, one boat" section; D3/D4/D6 are its figures (verification, the two-sided iteration result, the two throats/profiles).
+
+## Part 2e — Differences catalog: additions from the champion-track pilot (2026-09-02; `Report_2026-09-02_ChampionPilot_Verdict.md`)
+
+**D5 extended — a memorizing Sudoku map acquires the ARC failure texture.** The native no-RI arm that memorized its corpus (train CE 0.000; 99.9 % of training puzzles solved cold, 19.4 % of the test) fails with near-valid, confidently wrong complete grids (median 5 violations at 51/81 cells), while every healthy map fails as a stuck partial propagation (27–32 violations at the same 51/81). The wrong-stable class Sudoku "never forms" (D5 absolute, valid_wrong 0.0000) appears as soon as the map memorizes — the failure texture is a memorization readout, not a domain constant.
+
+**D6 extended — the native (3-adic, 2-cut) pyramid routes ~12× less stream flux than the canvas (1.0–1.1e5 vs 1.3e6 nats) with 87–92 % at its finest (box-forming) cut; the registered "mass migrates to the box scale" signature was ill-posed for a two-cut pyramid (the box tokens are the OUTPUT of the first cut) and is retired as a rule; the profile stays a descriptive readout.**
+
+**D12 — NEW: data-diversity dependence.** On Sudoku the canvas placement offsets were an implicit ×576 augmentation; removing them (native9) exposed memorization at 32 epochs (aug 100). The remedy set is measured: aug1000 (+5.70pp paired at 10k), the two-phase floor schedule (train CE plateaus at .04–.05; cold flat), val-selection. ARC's corpus never showed this (many-rule inventory; orbit ×4 + offsets); the single-rule domain with a 1k-puzzle convention is where memorization binds.
+
+**D3/D9 extended — init-invariance under RI.** RI-trained maps are path-independent (b1 ≈ cold per octile): EqR's verification-free residual selector recovers ≥98 % of the free verifier's gain on them (t1r@128 52.49 vs verified 52.85), unverified majority adds +5.5pp — and the funnel is deep-narrow (ρ .36–.44). The verifier's worth (D3, +50–65pp on wide-funnel maps) collapses to ≈0 on init-invariant maps: verification value is a property of the map class, not of the domain.
+
+**Instrument added — the explosion census** (CPU, $0): fraction of cold trajectories whose state goes non-finite or exceeds 1e6 by t=64/256 on a final grid; separates η→1 (replacement-dynamics) maps that explode at inference (P2 5/64, P5 |z| 3e18) from bounded ones (P1, P3s1). Sudoku-born; back-port candidate for ARC equilibrium maps.
