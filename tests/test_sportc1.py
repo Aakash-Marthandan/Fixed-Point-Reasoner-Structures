@@ -171,7 +171,12 @@ def test_trm_segment_grad_through_last_cycle_only():
     assert float(jnp.max(jnp.abs(gl))) > 0.0
 
 
-def test_stablemax_normalizes():
+def test_stablemax_normalizes_and_grad_finite_at_one():
     lp = log_stablemax(jnp.array([[-3.0, 0.0, 2.5], [10.0, -10.0, 0.1]]))
     assert bool(jnp.allclose(jnp.exp(lp).sum(-1), 1.0, atol=1e-6))
     assert bool(jnp.all(jnp.isfinite(jax.grad(lambda x: log_stablemax(x)[0, 2])(jnp.array([[-3.0, 0.0, 2.5]])))))
+    # the launch incident (2026-09-02): a logit EXACTLY 1.0 must give a finite gradient
+    # (the discarded where-branch's derivative was inf there -> NaN)
+    for target in (0, 1, 2):
+        g = jax.grad(lambda x: log_stablemax(x)[0, target])(jnp.array([[0.3, 1.0, -2.0]]))
+        assert bool(jnp.all(jnp.isfinite(g))), (target, g)

@@ -16,8 +16,16 @@ def log_stablemax(x):
     s(x) = x + 1 for x >= 0, 1 / (1 - x) for x < 0; log(s / sum s). Used by the
     X0 field-recipe arm (cfg.loss_kind == "stablemax", labeled); f32 here
     (they compute it in f64)."""
-    s = jnp.where(x < 0, 1.0 / (1.0 - x + 1e-30), x + 1.0)
-    return jnp.log(s / jnp.sum(s, axis=-1, keepdims=True))
+    # GRADIENT-SAFE where (sportC1 launch incident, 2026-09-02 09:21Z: X0/X0n NaN at
+    # step 50 on TPU): jnp.where differentiates BOTH branches, and d/dx 1/(1-x)
+    # at x == 1.0 exactly is inf -> 0 * inf = NaN in the gradient. At 684k f32
+    # logits per step a logit equal to 1.0 lands about once per 50 steps (TRM
+    # computes in float64, where it never does). The discarded branch is now
+    # evaluated at a safe argument, so its derivative is finite everywhere.
+    neg = x < 0
+    xs = jnp.where(neg, x, 0.0)
+    s = jnp.where(neg, 1.0 / (1.0 - xs + 1e-30), x + 1.0)
+    return jnp.log(s) - jnp.log(jnp.sum(s, axis=-1, keepdims=True))
 
 
 def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
