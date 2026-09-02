@@ -114,16 +114,22 @@ def coupled_ab(params, cfg):
 
 
 def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
-              eta, eta_z, layout="origin", t_norm_fixed=None, ab=None):
+              eta, eta_z, layout="origin", t_norm_fixed=None, ab=None, z0=None):
     """Returns per-puzzle numpy: exact_t (T,B), valid_ok_t (T,B) [valid & givens-
     consistent], final pred9 (B,9,9), resid3 (B,) — the mean per-step |Delta y|
     over the FINAL 3 steps (EqR's Top-1-Converged selection signal, L=3;
     CHAMPION TRACK 2026-09-01). t_norm_fixed (wave 3a): apply one map at
     every step (1.0 = the FINAL map — the final-map retention instrument);
-    ab = (a1, a2) for eq_coupled checkpoints (mirrors model.iterate_eq)."""
+    ab = (a1, a2) for eq_coupled checkpoints (mirrors model.iterate_eq).
+    z0 (sportC1 X0): an explicit initial carry (B, ...) — EqR's RI restart draws
+    z ~ N(0, sigma) for the field-recipe cell; None = the cell's own start (the
+    fixed buffers for 'trm'; no carry for 'rg'). For cfg.cell_kind == 'trm' the
+    selection residual is on the LATENT (EqR D.3: |f(z_t) - z_t| over the last
+    L = 3 outer steps) instead of on y."""
     B = x_can.shape[0]
     y = y0
-    z_c = None
+    z_c = None if z0 is None else z0
+    trm = getattr(cfg, "cell_kind", "rg") == "trm"
     ex_rows, ok_rows = [], []
     res_tail = []                 # per-step (B,) mean |dy|, last 3 kept
     pred9 = None
@@ -131,14 +137,21 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
     mask = puz9 != 0
     for t in range(t_total):
         t_norm = (min(t, cfg.T - 1) / max(cfg.T - 1, 1)) if t_norm_fixed is None else float(t_norm_fixed)
+        if trm:
+            t_norm = 0.0   # the field cell ignores t_norm: one compiled step instead of T (sportC1 pre-mortem)
         first = z_c is None
         logits, zf = _step(cfg, float(tau), float(t_norm), first)(
             params, x_can, y, tvj, jnp.zeros(1) if first else z_c)
+        z_prev = z_c
         z_c = zf if first else z_c + eta_z * (zf - z_c)
         p = jax.nn.softmax(logits, axis=-1).transpose(0, 3, 1, 2)
         eta_t = eta if (gamma >= 1.0 or t < cfg.T) else eta * (gamma ** (t - cfg.T + 1))
         y_new = (ab[0] * y + ab[1] * p) if ab is not None else (y + eta_t * (p - y))
-        res_tail.append(np.asarray(jnp.mean(jnp.abs(y_new - y), axis=(1, 2, 3))))
+        if trm:
+            zr = z_c - z_prev if z_prev is not None else z_c - z_c
+            res_tail.append(np.asarray(jnp.mean(jnp.abs(zr), axis=tuple(range(1, zr.ndim)))))
+        else:
+            res_tail.append(np.asarray(jnp.mean(jnp.abs(y_new - y), axis=(1, 2, 3))))
         if len(res_tail) > 3:
             res_tail.pop(0)
         y = y_new
@@ -165,6 +178,14 @@ def mi_canvas(mi_seed: int, idx: int, j: int, layout: str) -> np.ndarray:
     per (puzzle, draw) => nested k-curves; identical across shards/batches."""
     rng = np.random.default_rng([int(mi_seed), int(idx), int(j)])
     return SU.place_layout(rng.integers(0, 10, size=(N, N)).astype(np.int8), layout)
+
+
+def mi_z0(mi_seed: int, idx: int, j: int, shape, sigma: float) -> np.ndarray:
+    """sportC1 X0: EqR's RI restart for draw j of puzzle idx — z0 ~ N(0, sigma I)
+    of the given carry shape, seeded per (puzzle, draw) like mi_canvas (nested
+    k-curves, shard/batch invariant)."""
+    rng = np.random.default_rng([int(mi_seed), int(idx), int(j), 7])
+    return (sigma * rng.standard_normal(shape)).astype(np.float32)
 
 
 def vote_curve(cold, first_hit, k_init):
@@ -221,6 +242,12 @@ def main():
                     help="DIAGNOSTIC ONLY (2026-08-23 wave-2 analysis): replace the ckpt's learned "
                          "equilibrium step eta at inference. Never a benchmark number — labeled in the summary.")
     ap.add_argument("--batch", type=int, default=512)
+    ap.add_argument("--ema", action="store_true",
+                    help="sportC1: evaluate the checkpoint's EMA weights (state_ema; the field's "
+                         "headline weights on R0/X0) — labeled in the summary")
+    ap.add_argument("--z0-sigma", type=float, default=1.0,
+                    help="sportC1 X0 (cell_kind trm): RI restart scale for the multi-init draws "
+                         "(EqR A.3 default 1); the cold run uses the cell's fixed start")
     ap.add_argument("--vote-unverified", action="store_true",
                     help="ALSO record EqR-style cellwise MAJORITY vote@k (no verifier) as "
                          "records columns uv_vote_k* — the D3 demo instrument (2026-08-27). "
@@ -247,11 +274,16 @@ def main():
     cfg = Config(**{k: type(getattr(defaults, k))(v) for k, v in saved["config"].items()})
     assert cfg.equilibrium, "evaluator is eq-only"
     layout = getattr(cfg, "sudoku_layout", "origin") or "origin"
-    params = saved["state"]["model"]
-    tvj = jnp.asarray(saved["state"]["table"][0])
-    eta = float(cfg.eta_floor + (1.0 - cfg.eta_floor) * jax.nn.sigmoid(params["eq"]["eta"]))
-    eta_z = float(jax.nn.sigmoid(params["eq"]["eta_z"]))
+    st = saved["state"]
+    if a.ema:
+        assert saved.get("state_ema") is not None, "--ema: this checkpoint carries no EMA weights"
+        st = saved["state_ema"]
+    params = st["model"]
+    tvj = jnp.asarray(st["table"][0])
+    eta, eta_z = (float(v) for v in M.eq_etas(params, cfg))
     eta_learned = eta
+    trm = getattr(cfg, "cell_kind", "rg") == "trm"
+    z_shape = (2, cfg.canvas * cfg.canvas + cfg.trm_puzzle_emb_len, cfg.trm_hidden) if trm else None
     if a.eta_override is not None:
         eta = float(a.eta_override)
         print(f"DIAGNOSTIC eta override: learned {eta_learned:.3f} -> {eta:.3f}", flush=True)
@@ -298,7 +330,9 @@ def main():
     fingerprint = json.dumps(dict(ckpt=a.ckpt, npz=a.npz, split=a.split, shard=tag, n=len(sel),
                                   t=t_total, k=a.k_init, init=a.init, layout=layout, batch=a.batch,
                                   mi_seed=a.mi_seed, fmo=bool(a.final_map_only),
-                                  uv=bool(a.vote_unverified), ver=2), sort_keys=True)
+                                  uv=bool(a.vote_unverified), ver=2,
+                                  **({"ema": True} if a.ema else {}), **({"z0": a.z0_sigma} if trm else {})),
+                     sort_keys=True)
     partial_p = out / f"partial_{tag}.npz"
     start = 0
     if a.bank_every and partial_p.exists():
@@ -341,9 +375,11 @@ def main():
         for j in range(a.k_init):
             y0r = np.stack([mi_canvas(a.mi_seed, int(ids[b]), j, layout) for b in range(B)])
             y0r = jax.nn.one_hot(jnp.asarray(y0r, jnp.int32), M.VOCAB).transpose(0, 3, 1, 2)
+            z0r = (jnp.asarray(np.stack([mi_z0(a.mi_seed, int(ids[b]), j, z_shape, a.z0_sigma) for b in range(B)]))
+                   if trm else None)
             exr, okr, predr, resr = run_batch(params, cfg, tvj, x_can, y0r, t_total=t_total, tau=a.tau,
                                               gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                              layout=layout, t_norm_fixed=tnf, ab=ab)
+                                              layout=layout, t_norm_fixed=tnf, ab=ab, z0=z0r)
             hit = okr[-1]
             mi_first = np.where((mi_first < 0) & hit, j, mi_first)
             mi_v += hit.astype(int); mi_t += exr[-1].astype(int)
@@ -389,6 +425,7 @@ def main():
         mi_seed=a.mi_seed, eta=eta, eta_z=eta_z, T=cfg.T, d=cfg.d,
         eta_learned=eta_learned, eta_override=a.eta_override,
         final_map_only=bool(a.final_map_only), eq_coupled_ab=ab,
+        cell_kind=getattr(cfg, "cell_kind", "rg"), ema=bool(a.ema), z0_sigma=(a.z0_sigma if trm else None),
         wall_s=round(time.time() - t0, 1)))
     (out / f"summary_{tag}.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps({k: summ[k] for k in ("n", "t_total", "k_init", "init", "exact_acc", "exact_acc_vote", "wall_s")}))

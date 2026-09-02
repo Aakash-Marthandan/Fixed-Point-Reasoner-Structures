@@ -12,6 +12,9 @@ from pathlib import Path
 
 def main():
     d = Path(sys.argv[1])
+    # sportC1: --key names the monitor field to select on (val_t64 = the native
+    # arms' raw weights; val_t64_ema / val_t16_ema = the EMA rows of R0 / X0)
+    key = sys.argv[sys.argv.index("--key") + 1] if "--key" in sys.argv else "val_t64"
     banked = {int(re.search(r"ckpt_(\d+)\.pkl$", p.name).group(1)) for p in d.glob("ckpt_[0-9]*.pkl")}
     rows = []
     for l in (d / "metrics.jsonl").read_text().splitlines():
@@ -19,8 +22,8 @@ def main():
             r = json.loads(l)
         except Exception:
             continue
-        if "monitor" in r:
-            rows.append((int(r["monitor"]["step"]), float(r["monitor"]["val_t64"])))
+        if "monitor" in r and key in r["monitor"]:
+            rows.append((int(r["monitor"]["step"]), float(r["monitor"][key])))
     cand = [(v, s) for s, v in rows if s in banked]
     if not cand:
         print("NONE", file=sys.stderr); sys.exit(1)

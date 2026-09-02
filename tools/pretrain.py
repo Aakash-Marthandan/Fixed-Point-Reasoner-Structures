@@ -38,9 +38,11 @@ from qhrrn2 import episodic as E
 from qhrrn2 import grid as G
 from qhrrn2 import sudoku_extreme as SX
 from qhrrn2 import train as T
+from qhrrn2 import trm_cell as TC
 from qhrrn2.config import Config
 from qhrrn2.model import count_params, init_params
-from qhrrn2.objective import batch_loss
+from qhrrn2.objective import batch_loss, log_stablemax
+import math
 
 
 def parse_args():
@@ -149,6 +151,32 @@ def parse_args():
                    help="merge vendored ConceptARC (minus val-hard) into the corpus")
     p.add_argument("--remat", action="store_true",
                    help="gradient-checkpoint recursion steps (HBM relief)")
+    # sportC1 (2026-09-02; Plan_2026-09-02_Champion_sportC1 §11–§12)
+    p.add_argument("--z-norm", default="", choices=["", "rms"],
+                   help="H-50 stabilizer of record: RMSNorm the carried latent at its entry (arms B0/B1/R0)")
+    p.add_argument("--cell", default="rg", choices=["rg", "trm"],
+                   help="X0: 'trm' = the TRM/EqR field-recipe cell (qhrrn2.trm_cell); 'rg' = ours")
+    p.add_argument("--trm-hidden", type=int, default=512)
+    p.add_argument("--trm-layers", type=int, default=2)
+    p.add_argument("--trm-h-cycles", type=int, default=3)
+    p.add_argument("--trm-l-cycles", type=int, default=6)
+    p.add_argument("--trm-lambda", type=float, default=0.0, help="EqR Eq. 2 damping per inner pass (.05)")
+    p.add_argument("--trm-beta", type=float, default=0.0, help="EqR path noise per inner pass (.01)")
+    p.add_argument("--trm-ri-sigma", type=float, default=0.0, help="EqR RI: z0 ~ N(0, sigma) (1)")
+    p.add_argument("--loss", default="softmax", choices=["softmax", "stablemax"],
+                   help="stablemax = HRM/TRM's cross-entropy (X0, labeled)")
+    p.add_argument("--beta2", type=float, default=0.999, help="AdamW beta2 (the field: .95)")
+    p.add_argument("--ema", type=float, default=0.0,
+                   help="EMA of the weights (rate; 0 = off) kept eval-side as state_ema in the ckpt "
+                        "(the field's .999); the monitor logs val on both raw and EMA weights")
+    p.add_argument("--sot", action="store_true",
+                   help="X0: SEGMENTED ONLINE TRAINING (HRM/TRM/EqR loop) — one outer segment per "
+                        "optimizer step with a persistent detached carry; rows that finish cfg.T "
+                        "segments (or halt under --act) are replaced by fresh samples")
+    p.add_argument("--act", action="store_true",
+                   help="X0: adaptive halting during --sot (TRM no_ACT_continue variant: q_halt head, "
+                        "BCE vs sequence-correct, halt at sigmoid(q) > .5, exploration prob --halt-explore)")
+    p.add_argument("--halt-explore", type=float, default=0.1)
     p.add_argument("--smoke", action="store_true")
     p.add_argument("--dp", action="store_true",
                    help="data-parallel pmap over local devices (P11-EXT "
@@ -206,9 +234,13 @@ def sudoku_monitor(state, cfg, val_pairs, *, t_cold=64, t_ret=8, n_lam=16, lam_i
     from qhrrn2 import model as M
     params = state["model"]; tvj = jnp.asarray(state["table"][0])
     layout = getattr(cfg, "sudoku_layout", "origin") or "origin"
-    eta = float(cfg.eta_floor + (1.0 - cfg.eta_floor) * jax.nn.sigmoid(params["eq"]["eta"]))
-    eta_z = float(jax.nn.sigmoid(params["eq"]["eta_z"]))
+    eta, eta_z = (float(v) for v in M.eq_etas(params, cfg))
     ab = EV.coupled_ab(params, cfg)
+    if cfg.cell_kind == "trm":
+        # X0: y is a readout and there is no answer register — retention / final-map
+        # readouts do not exist for this cell; val at D = cfg.T outer segments (EqR's
+        # base budget, the number their 84.8 is read at), key val_t{T}.
+        t_cold = cfg.T
     puz9 = np.stack([np.asarray(p_, np.int32) for p_, _ in val_pairs]); sol9 = np.stack([np.asarray(s_, np.int32) for _, s_ in val_pairs])
     x_can = EV.place_batch(puz9, layout); B = x_can.shape[0]
     from qhrrn2 import sudoku as SUD
@@ -218,6 +250,8 @@ def sudoku_monitor(state, cfg, val_pairs, *, t_cold=64, t_ret=8, n_lam=16, lam_i
     ex, _, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0v, t_total=t_cold, tau=1.0, gamma=1.0,
                                sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
     val_cold = float(ex[-1].mean())
+    if cfg.cell_kind == "trm":
+        return {f"val_t{t_cold}": val_cold, "eta": eta, "eta_z": eta_z, "n_val": int(B)}
     y0s = jax.nn.one_hot(EV.place_batch(sol9, layout), M.VOCAB).transpose(0, 3, 1, 2)
     exr, _, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0s, t_total=t_ret, tau=1.0, gamma=1.0,
                                 sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
@@ -308,14 +342,27 @@ def main():
     geo = (dict(canvas=9, scales=2, pool_arity=3, mixer_kind="group9",
                 attn_max_hw=9)
            if a.sudoku_layout == "native9" else {})
-    cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat, **side, **geo,
+    trm = (dict(cell_kind="trm", trm_hidden=a.trm_hidden, trm_layers=a.trm_layers,
+                trm_h_cycles=a.trm_h_cycles, trm_l_cycles=a.trm_l_cycles,
+                trm_lambda=a.trm_lambda, trm_beta=a.trm_beta, trm_ri_sigma=a.trm_ri_sigma,
+                eta_fixed=1.0, eta_z_fixed=1.0)     # y = readout; the latent carries undamped
+           if a.cell == "trm" else {})
+    if a.cell == "trm":
+        # the field-recipe cell has no answer register: our y-side mechanisms do not apply
+        assert a.equilibrium and a.sudoku_layout == "native9", "--cell trm needs --equilibrium + native9"
+        assert a.fpa_k == 0 and a.ri_p == 0 and a.anchor_p == 0 and a.ni_sigma == 0 and not a.eq_coupled, \
+            "--cell trm: FPA / RI rows / anchors / NI / eq_coupled are y-register mechanisms (use --trm-* dials)"
+    assert not a.act or a.sot, "--act needs --sot"
+    assert not a.sot or a.cell == "trm", "--sot is the field-recipe (trm) loop"
+    cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat, **side, **geo, **trm,
                  d_task=a.d_task, equilibrium=a.equilibrium,
                  beta_flux=a.beta_flux, beta_flux_nl=a.beta_flux_nl,
                  eta_floor=a.eta_floor, z_gate_init=a.z_gate_init,
                  eq_coupled=a.eq_coupled, ni_sigma=a.ni_sigma,
                  flux_floors=a.flux_floors or "",
                  sudoku_layout=a.sudoku_layout,
-                 fpa_k=a.fpa_k, fpa_eps=a.fpa_eps, fpa_w=a.fpa_w)
+                 fpa_k=a.fpa_k, fpa_eps=a.fpa_eps, fpa_w=a.fpa_w,
+                 z_norm=a.z_norm, loss_kind=a.loss)
 
     exclude = frozenset(dev30.MANIFEST)
     rearc_families = None
@@ -396,17 +443,23 @@ def main():
         init_value=0.0, peak_value=a.lr, warmup_steps=a.warmup,
         decay_steps=a.steps, end_value=a.lr_end)
     opt = optax.chain(optax.clip_by_global_norm(1.0),
-                      optax.adamw(sched, weight_decay=a.wd))
+                      optax.adamw(sched, b2=a.beta2, weight_decay=a.wd))
     opt_state = opt.init(state)
     start_step = 0
     rng = k_run
 
     latest = out / "ckpt_latest.pkl"
+    ema = jax.tree.map(lambda x: x, state) if a.ema > 0 else None   # eval-side EMA copy (the field's .999)
     if latest.exists():
         saved = E.load_ckpt(latest)
         state, opt_state = saved["state"], saved["opt_state"]
         start_step, rng = int(saved["step"]), jnp.asarray(saved["rng"])
+        if a.ema > 0:
+            ema = saved.get("state_ema") or jax.tree.map(lambda x: x, state)
         print(f"RESUMED from {latest} at step {start_step}", flush=True)
+        # sportC1 §4.7: resume steps on disk -> resume-adjacent deaths are labeled automatically
+        with open(out / "resumes.txt", "a") as rf:
+            rf.write(f"{start_step}\n")
     elif a.init_from:
         saved = E.load_ckpt(a.init_from)
         src = saved["state"]
@@ -416,6 +469,8 @@ def main():
         if np.asarray(src["table"]).shape == np.asarray(state["table"]).shape:
             state["table"] = src["table"]
         opt_state = opt.init(state)
+        if a.ema > 0:
+            ema = jax.tree.map(lambda x: x, state)
         print(f"INIT-FROM {a.init_from} (step 0, fresh optimizer)", flush=True)
 
     config_rec = {
@@ -461,12 +516,19 @@ def main():
                               yprev_batch=yp_b)
         return jax.value_and_grad(loss_fn, has_aux=True)(st)
 
+    def _ema(ema_tree, new_state):
+        if ema_tree is None:
+            return None
+        mu = a.ema
+        return jax.tree.map(lambda e, s: e * mu + s * (1.0 - mu), ema_tree, new_state)
+
     @jax.jit
-    def step_fn(state, opt_state, rng):
+    def step_fn(state, opt_state, rng, ema_tree):
         rng, rng_step = jax.random.split(rng)
         (loss, aux), grads = _sample_and_loss(state, rng_step, a.batch)
         updates, opt_state2 = opt.update(grads, opt_state, state)
-        return optax.apply_updates(state, updates), opt_state2, loss, aux, rng
+        new_state = optax.apply_updates(state, updates)
+        return new_state, opt_state2, loss, aux, rng, _ema(ema_tree, new_state)
 
     # DP path (P11-EXT registration 2026-08-11): pmap over local devices,
     # per-device batch shard (global batch preserved: a.batch // n_dev rows
@@ -477,7 +539,7 @@ def main():
         assert a.batch % n_dev == 0, f"batch {a.batch} % devices {n_dev} != 0"
 
         @functools.partial(jax.pmap, axis_name="dp")
-        def step_fn_dp(state, opt_state, rng):
+        def step_fn_dp(state, opt_state, rng, ema_tree):
             rng, rng_step = jax.random.split(rng)
             rng_step = jax.random.fold_in(rng_step, jax.lax.axis_index("dp"))
             (loss, aux), grads = _sample_and_loss(
@@ -486,28 +548,35 @@ def main():
             loss = jax.lax.pmean(loss, "dp")
             aux = jax.lax.pmean(aux, "dp")
             updates, opt_state2 = opt.update(grads, opt_state, state)
-            return optax.apply_updates(state, updates), opt_state2, loss, aux, rng
+            new_state = optax.apply_updates(state, updates)
+            return new_state, opt_state2, loss, aux, rng, _ema(ema_tree, new_state)
+
+    if a.sot:
+        return run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
+                       val, out, latest, ema, n_dev)
 
     if a.dp:
         rep = lambda tree: jax.tree.map(
             lambda x: jnp.stack([x] * n_dev), tree)
         state_r, opt_r = rep(state), rep(opt_state)
+        ema_r = rep(ema) if ema is not None else None
         rng_r = jax.random.split(rng, n_dev)
         print(f"DP: {n_dev} devices, {a.batch // n_dev} rows/device", flush=True)
     metrics_f = open(out / "metrics.jsonl", "a")
     t_block = time.time()
     for i in range(start_step, a.steps):
         if a.dp:
-            state_r, opt_r, loss_r, aux_r, rng_r = step_fn_dp(state_r, opt_r, rng_r)
+            state_r, opt_r, loss_r, aux_r, rng_r, ema_r = step_fn_dp(state_r, opt_r, rng_r, ema_r)
             loss = jax.tree.map(lambda x: x[0], loss_r)
             aux = jax.tree.map(lambda x: x[0], aux_r)
             if (i + 1) % a.val_every == 0 or (i + 1) % a.ckpt_every == 0 \
-                    or i + 1 == a.steps:
+                    or i + 1 == a.steps or (a.monitor_every and (i + 1) % a.monitor_every == 0):
                 state = jax.tree.map(lambda x: x[0], state_r)
                 opt_state = jax.tree.map(lambda x: x[0], opt_r)
                 rng = rng_r[0]
+                ema = jax.tree.map(lambda x: x[0], ema_r) if ema_r is not None else None
         else:
-            state, opt_state, loss, aux, rng = step_fn(state, opt_state, rng)
+            state, opt_state, loss, aux, rng, ema = step_fn(state, opt_state, rng, ema)
 
         if (i + 1) % a.log_every == 0 or i + 1 == a.steps:
             dt = time.time() - t_block
@@ -532,6 +601,11 @@ def main():
                   f"I {rec['I_total']:.1f}  A {rec['A_total']:.1f}  "
                   f"{sps:.2f} it/s", flush=True)
             t_block = time.time()
+            if not math.isfinite(rec["loss"]):
+                # sportC1 §4.1 EARLY-NaN ABORT (the pilot trained 25-30k steps on
+                # non-finite parameters per death): stop here; the chain's one-shot
+                # amputation banks the last FINITE grid and labels the arm STOPPED.
+                nan_abort(out, i + 1, metrics_f)
 
         if val20_ok and ((i + 1) % a.val_every == 0 or i + 1 == a.steps):
             v = val20_eval(state, cfg, val, a.tau)
@@ -548,20 +622,159 @@ def main():
                 state = jax.tree.map(lambda x: x[0], state_r)
             t_m = time.time()
             mon = sudoku_monitor(state, cfg, val[0][2])
+            if ema is not None:   # the EMA weights' val (the field's headline weights; select_ckpt --key)
+                vk = [k for k in mon if k.startswith("val_t")][0]
+                mon[vk + "_ema"] = sudoku_monitor(ema, cfg, val[0][2])[vk]
             mon["step"] = i + 1; mon["wall_s"] = round(time.time() - t_m, 1)
             metrics_f.write(json.dumps({"monitor": mon}) + "\n"); metrics_f.flush()
-            print(f"  MONITOR step {i+1}: val@t64 {mon['val_t64']:.3f} ret_sched {mon['ret_sched_t8']:.2f} "
-                  f"ret_final {mon['ret_final_t8']:.2f} eta {mon['eta']:.3f} fp_drift {mon['fp_drift_mean']:.4f} "
-                  f"lam_joint {mon['lam_joint_mean']:.3f}/{mon['lam_joint_max']:.3f} lam_y {mon['lam_max_mean']:.3f} ({mon['wall_s']}s)", flush=True)
+            print("  MONITOR step %d: %s (%ss)" % (i + 1, " ".join(f"{k} {v:.3f}" for k, v in mon.items()
+                  if isinstance(v, float) and k not in ("wall_s",)), mon["wall_s"]), flush=True)
             t_block = time.time()
 
         if (i + 1) % a.ckpt_every == 0 or i + 1 == a.steps:
             payload = {"state": state, "opt_state": opt_state, "step": i + 1,
-                       "rng": np.asarray(rng), "config": dataclasses.asdict(cfg)}
+                       "rng": np.asarray(rng), "config": dataclasses.asdict(cfg),
+                       **({"state_ema": ema} if ema is not None else {})}
             E.save_ckpt(latest, payload)
             if (i + 1) % (5 * a.ckpt_every) == 0 or i + 1 == a.steps:
                 E.save_ckpt(out / f"ckpt_{i+1:06d}.pkl", payload)
 
+    metrics_f.close()
+    print("DONE", flush=True)
+
+
+def nan_abort(out: Path, step: int, metrics_f):
+    (out / "NAN_ABORT.txt").write_text(f"NAN-ABORT at step {step} (non-finite loss at a log row; early-NaN abort, sportC1 §4.1)\n")
+    metrics_f.close()
+    print(f"NAN-ABORT step {step}: non-finite loss — stopping (the chain amputates to the last finite grid)", flush=True)
+    sys.exit(3)
+
+
+def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks, val, out, latest, ema, n_dev):
+    """X0 — SEGMENTED ONLINE TRAINING (HRM/TRM/EqR's training loop, ported from
+    trm.py + losses.py + pretrain.py, read 2026-09-02): a persistent carry of B
+    rows (x, y, z_H, z_L, steps, halted); every optimizer step advances EVERY row
+    by ONE outer segment (H_cycles x (L_cycles+1) stack passes, grad through the
+    last H-cycle), supervises that segment's logits (+ 0.5 x the halting BCE under
+    --act), takes the step, and replaces halted rows with fresh samples (fresh
+    z0 = the fixed buffers, or RI N(0, sigma)). Halting: steps >= T, or under
+    --act sigmoid(q_halt) > .5 subject to TRM's exploration rule (with prob
+    --halt-explore a row may not halt before a uniform 2..T threshold). EMA as
+    the offline loop. The carry is NOT checkpointed: a resume restarts every row
+    (labeled in the log). Eval never halts early (D outer steps)."""
+    T = cfg.T
+    H = W = cfg.canvas
+    hw = H * W
+    S = TC.seq_len(cfg, hw); hid = cfg.trm_hidden
+    B = a.batch // n_dev
+    use_ema = ema is not None
+
+    def init_carry():
+        return dict(x=jnp.zeros((B, H, W), jnp.int32), y=jnp.zeros((B, H, W), jnp.int32),
+                    z=jnp.zeros((B, 2, S, hid), jnp.float32), steps=jnp.zeros((B,), jnp.int32),
+                    halted=jnp.ones((B,), bool))
+
+    def sot_step(state, opt_state, carry, rng, ema_tree):
+        rng, k_s, k_r, k_n, k_e1, k_e2 = jax.random.split(rng, 6)
+        x_f, y_f, _, _ = E.sample_batch(k_s, dev, n_tasks, B)
+        h = carry["halted"]
+        x = jnp.where(h[:, None, None], x_f, carry["x"])
+        y = jnp.where(h[:, None, None], y_f, carry["y"])
+        z_fresh = jax.vmap(lambda k: TC.z0(cfg, hw, rng=k))(jax.random.split(k_r, B))
+        z = jnp.where(h[:, None, None, None], z_fresh, carry["z"])
+        steps = jnp.where(h, 0, carry["steps"])
+        keys = jax.random.split(k_n, B)
+
+        def loss_fn(st):
+            p = st["model"]["trm"]
+
+            def one(xx, yy, zz, kk):
+                emb = TC.embed(p, cfg, xx)
+                zH, zL = TC.segment(p, cfg, emb, zz[0], zz[1], rng=kk if cfg.trm_beta > 0 else None)
+                logits, q = TC.readout(p, cfg, zH, xx.shape)
+                logp = log_stablemax(logits) if cfg.loss_kind == "stablemax" else jax.nn.log_softmax(logits, axis=-1)
+                ce = -jnp.mean(jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0])
+                correct = jnp.all(jnp.argmax(logits, axis=-1) == yy)
+                return ce, q, correct, jnp.stack([zH, zL])
+            ce, q, corr, z_new = jax.vmap(one)(x, y, z, keys)
+            lm = jnp.mean(ce)
+            q_halt = q[:, 0]
+            q_loss = jnp.mean(optax.sigmoid_binary_cross_entropy(q_halt, corr.astype(jnp.float32)))
+            total = lm + (0.5 * q_loss if a.act else 0.0)
+            return total, dict(ce=lm, q_loss=q_loss, train_exact=jnp.mean(corr.astype(jnp.float32)),
+                               q_halt=q_halt, z_new=z_new)
+        (loss, aux), grads = jax.value_and_grad(loss_fn, has_aux=True)(state)
+        scal = dict(ce=aux["ce"], q_loss=aux["q_loss"], train_exact=aux["train_exact"])
+        if n_dev > 1:
+            grads = jax.lax.pmean(grads, "dp"); loss = jax.lax.pmean(loss, "dp"); scal = jax.lax.pmean(scal, "dp")
+        updates, opt_state = opt.update(grads, opt_state, state)
+        state = optax.apply_updates(state, updates)
+        if use_ema:
+            ema_tree = jax.tree.map(lambda e, s_: e * a.ema + s_ * (1.0 - a.ema), ema_tree, state)
+        steps = steps + 1
+        is_last = steps >= T
+        halted = is_last
+        if a.act:
+            explore = jax.random.uniform(k_e1, (B,)) < a.halt_explore
+            min_halt = jnp.where(explore, jax.random.randint(k_e2, (B,), 2, T + 1), 0)
+            halted = (is_last | (aux["q_halt"] > 0)) & (steps >= min_halt)
+        carry = dict(x=x, y=y, z=jax.lax.stop_gradient(aux["z_new"]), steps=steps, halted=halted)
+        scal["halt_frac"] = jnp.mean(halted.astype(jnp.float32))
+        scal["mean_steps"] = jnp.mean(steps.astype(jnp.float32))
+        return state, opt_state, carry, loss, scal, rng, ema_tree
+
+    if n_dev > 1:
+        step = jax.pmap(lambda st, os_, c, r, e: sot_step(st, os_, c, jax.random.fold_in(r, jax.lax.axis_index("dp")), e),
+                        axis_name="dp")
+        rep = lambda tree: jax.tree.map(lambda v: jnp.stack([v] * n_dev), tree)
+        state, opt_state = rep(state), rep(opt_state)
+        ema = rep(ema) if use_ema else None
+        carry = rep(init_carry()); rng = jax.random.split(rng, n_dev)
+        first = lambda tree: jax.tree.map(lambda v: v[0], tree)
+        print(f"SOT DP: {n_dev} devices, {B} rows/device; carry {'reset (resume)' if start_step else 'fresh'}", flush=True)
+    else:
+        step = jax.jit(sot_step)
+        carry = init_carry(); first = lambda tree: tree
+        print(f"SOT: {B} rows; carry {'reset (resume)' if start_step else 'fresh'}", flush=True)
+    metrics_f = open(out / "metrics.jsonl", "a")
+    t_block = time.time()
+    for i in range(start_step, a.steps):
+        state, opt_state, carry, loss, scal, rng, ema = step(state, opt_state, carry, rng, ema)
+        if (i + 1) % a.log_every == 0 or i + 1 == a.steps:
+            dt = time.time() - t_block; sps = a.log_every / dt if dt > 0 else 0.0
+            sc = first(scal); lv = float(first(loss))
+            rec = {"step": i + 1, "loss": lv, "ce_in": float(sc["ce"]), "q_loss": float(sc["q_loss"]),
+                   "train_exact": float(sc["train_exact"]), "halt_frac": float(sc["halt_frac"]),
+                   "mean_steps": float(sc["mean_steps"]), "I_total": 0.0, "A_total": 0.0, "rule_H": 0.0,
+                   "lr": float(sched(i + 1)), "steps_per_sec": round(sps, 3), "t": time.strftime("%Y-%m-%dT%H:%M:%S")}
+            metrics_f.write(json.dumps(rec) + "\n"); metrics_f.flush()
+            print(f"step {i+1:6d}  loss {lv:.4f}  ce {rec['ce_in']:.4f}  q {rec['q_loss']:.4f}  "
+                  f"train_exact {rec['train_exact']:.3f}  halt {rec['halt_frac']:.2f}  {sps:.2f} it/s", flush=True)
+            t_block = time.time()
+            if not math.isfinite(lv):
+                nan_abort(out, i + 1, metrics_f)
+        do_mon = a.monitor_every and val and ((i + 1) % a.monitor_every == 0 or i + 1 == a.steps)
+        do_ck = (i + 1) % a.ckpt_every == 0 or i + 1 == a.steps
+        if do_mon or do_ck:
+            st1, os1, rng1 = first(state), first(opt_state), first(rng)
+            ema1 = first(ema) if use_ema else None
+        if do_mon:
+            t_m = time.time()
+            mon = sudoku_monitor(st1, cfg, val[0][2])
+            if use_ema:
+                vk = [k for k in mon if k.startswith("val_t")][0]
+                mon[vk + "_ema"] = sudoku_monitor(ema1, cfg, val[0][2])[vk]
+            mon["step"] = i + 1; mon["wall_s"] = round(time.time() - t_m, 1)
+            metrics_f.write(json.dumps({"monitor": mon}) + "\n"); metrics_f.flush()
+            print("  MONITOR step %d: %s (%ss)" % (i + 1, " ".join(f"{k} {v:.3f}" for k, v in mon.items()
+                  if isinstance(v, float) and k != "wall_s"), mon["wall_s"]), flush=True)
+            t_block = time.time()
+        if do_ck:
+            payload = {"state": st1, "opt_state": os1, "step": i + 1, "rng": np.asarray(rng1),
+                       "config": dataclasses.asdict(cfg), **({"state_ema": ema1} if use_ema else {})}
+            E.save_ckpt(latest, payload)
+            if (i + 1) % (5 * a.ckpt_every) == 0 or i + 1 == a.steps:
+                E.save_ckpt(out / f"ckpt_{i+1:06d}.pkl", payload)
     metrics_f.close()
     print("DONE", flush=True)
 

@@ -11,13 +11,29 @@ from qhrrn2.grid import VOID, NUM_COLORS, CANVAS
 from qhrrn2.model import iterate, iterate_eq, size_candidates, size_mixture_probs, VOCAB
 
 
+def log_stablemax(x):
+    """HRM/TRM's stablemax log-probabilities (their losses.py, read 2026-09-02):
+    s(x) = x + 1 for x >= 0, 1 / (1 - x) for x < 0; log(s / sum s). Used by the
+    X0 field-recipe arm (cfg.loss_kind == "stablemax", labeled); f32 here
+    (they compute it in f64)."""
+    s = jnp.where(x < 0, 1.0 / (1.0 - x + 1e-30), x + 1.0)
+    return jnp.log(s / jnp.sum(s, axis=-1, keepdims=True))
+
+
 def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
-    logp = jax.nn.log_softmax(out.logits, axis=-1)
+    if cfg.loss_kind == "stablemax":
+        logp = log_stablemax(out.logits)
+    else:
+        logp = jax.nn.log_softmax(out.logits, axis=-1)
     ce_map = -jnp.take_along_axis(logp, y_canvas[..., None], axis=-1)[..., 0]
     n_in = jnp.maximum(mask.sum(), 1)
     n_out = jnp.maximum((~mask).sum(), 1)
     ce_in = jnp.sum(ce_map * mask) / n_in
     ce_out = jnp.sum(ce_map * ~mask) / n_out
+    if cfg.cell_kind == "trm":
+        # X0: the field-recipe cell has no size / flux / rule channels — its
+        # loss is the (stablemax or softmax) cross-entropy alone (TRM lm_loss).
+        return ce_in + cfg.w_void * ce_out, ce_in
 
     # C1 v3 (ledger 2026-08-02): size = mixture over MEASURED candidates,
     # offsets applied relative to the selected candidate. v2's relative frame

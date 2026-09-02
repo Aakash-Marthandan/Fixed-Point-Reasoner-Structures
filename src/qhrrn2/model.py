@@ -17,6 +17,7 @@ import jax.numpy as jnp
 
 from qhrrn2 import cell
 from qhrrn2 import objects as OBJ
+from qhrrn2 import trm_cell
 from qhrrn2.config import Config
 from qhrrn2.grid import CANVAS, NUM_COLORS, VOCAB, VOID
 
@@ -69,8 +70,15 @@ def init_params(key, cfg: Config):
                      # FPRM coupled residual scaling (pretrain-13): learnable,
                      # initialized contractive per their Thm-1 recipe; keys
                      # exist only when eq_coupled (old ckpts stay loadable)
-                     if cfg.eq_coupled else {})}}
+                     if cfg.eq_coupled else {}),
+                  # sportC1 z-NORM gain (H-50): the key exists only when the
+                  # norm is on, so every prior checkpoint loads unchanged
+                  **({"z_gain": jnp.ones((d,))} if cfg.z_norm else {})}}
           if cfg.equilibrium else {})
+    if cfg.cell_kind == "trm":
+        # X0: the field-recipe cell owns every weight; the eq scalars stay for
+        # the shared loop contract (pinned by cfg.eta_fixed / eta_z_fixed).
+        return {**eq, "trm": trm_cell.init_params(ks[0], cfg, hw=cfg.canvas * cfg.canvas)}
     return {**eq,
         "embed": {  # shared 3x3 conv over each field's 2 channels (x, y_prev)
             "w": jax.random.normal(ks[0], (d, 2, 3, 3)) * 0.3,
@@ -193,9 +201,29 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     pre-E4 graph, exactly.
     """
     d, db, S = cfg.d, cfg.d_b, cfg.scales
+    if cfg.cell_kind == "trm":
+        # X0 (sportC1 §11.2): the TRM/EqR block stack under the same contract —
+        # logits + carried z_fine; y is a READOUT (not read); no flux / rule /
+        # size channels exist in this cell (zeros, never priced).
+        logits, _q, z_fine = trm_cell.forward_core(params["trm"], cfg, fields, z_in=z_in, rng=rng)
+        zeros = jnp.zeros
+        return StepOutput(
+            logits=logits, size_h=zeros((30,)), size_w=zeros((30,)),
+            flux=zeros((S,)), flux_attn=zeros((S,)),
+            rule_q=jnp.full((cfg.M, cfg.K), 1.0 / cfg.K), h_ir=zeros((cfg.d_ir,)),
+            size_sel_h=zeros((N_SIZE_CANDS,)), size_sel_w=zeros((N_SIZE_CANDS,)),
+            flux_obj=zeros((N_OBJ_STREAMS,)), z_fine=z_fine)
     z = _embed(params, fields)
     if z_in is not None:  # E10 A.2: carried latent enters through a 0-init gate
-        z = z + params["eq"]["alpha_z"] * z_in
+        if cfg.z_norm == "rms":
+            # sportC1 z-NORM (H-50): the carried latent is normalized at its entry
+            # — per site over the feature axis (shared over fields: S9-safe), a
+            # learnable per-channel gain; the loop's input is bounded by
+            # construction, so a fixed-depth pass cannot reach 1e19 (report §7.4)
+            zn = z_in * jax.lax.rsqrt(jnp.mean(z_in * z_in, axis=-1, keepdims=True) + 1e-6)
+            z = z + params["eq"]["alpha_z"] * (zn * params["eq"]["z_gain"])
+        else:
+            z = z + params["eq"]["alpha_z"] * z_in
     cb_t = None
     if task_vec is not None:
         cb_t = cell._linear(params["task_proj"]["e_cb"], task_vec).reshape(N_FIELDS, d)
@@ -376,6 +404,21 @@ def build_fields_soft(x_canvas, y_probs):
     return jnp.stack([fx, y_probs], axis=-1)
 
 
+def eq_etas(params, cfg: Config):
+    """The equilibrium dampings (eta for the answer register, eta_z for the
+    carried latent) — ONE definition shared by iterate_eq, the evaluator, the
+    monitor and the census. cfg.eta_fixed / eta_z_fixed > 0 pin them (the X0
+    cell: y is a readout, the latent carries undamped); 0 = learned, the
+    pre-existing expressions bit-exactly."""
+    eta = cfg.eta_floor + (1.0 - cfg.eta_floor) * jax.nn.sigmoid(params["eq"]["eta"])
+    eta_z = jax.nn.sigmoid(params["eq"]["eta_z"])
+    if cfg.eta_fixed > 0:
+        eta = jnp.asarray(cfg.eta_fixed, dtype=eta.dtype)
+    if cfg.eta_z_fixed > 0:
+        eta_z = jnp.asarray(cfg.eta_z_fixed, dtype=eta_z.dtype)
+    return eta, eta_z
+
+
 def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
                task_vec=None, t_total=None, y0_probs=None, t_norm_fixed=None):
     """E10 equilibrium loop ([H-2'], ledger 2026-08-09): continuous carried
@@ -393,8 +436,7 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
     void_can = jnp.full(jnp.shape(x_canvas), VOID, dtype=jnp.int32)
     y = (jax.nn.one_hot(void_can, VOCAB).transpose(2, 0, 1)
          if y0_probs is None else y0_probs)
-    eta = cfg.eta_floor + (1.0 - cfg.eta_floor) * jax.nn.sigmoid(params["eq"]["eta"])
-    eta_z = jax.nn.sigmoid(params["eq"]["eta_z"])
+    eta, eta_z = eq_etas(params, cfg)
     if cfg.eq_coupled:  # pretrain-13: y <- a1*y + a2*p (FPRM two-scalar form;
         #               the damped update is the a1=1-eta, a2=eta special case)
         a1 = jax.nn.sigmoid(params["eq"]["alpha1"])
