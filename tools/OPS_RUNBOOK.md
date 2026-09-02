@@ -77,7 +77,7 @@ Never run two supervisors. Never edit `ARMS` order mid-campaign.
 ## 7. Completion
 
 The loop tears the node down itself. Then (bucket/tag from `tools/campaign.env`):
-`gcloud storage cp $GCS/r0_final.tgz .` (never `gsutil -m`) → extract into `runs/` →
+`gcloud storage cp $GCS/<obj> .` PER OBJECT and verify `gcloud storage hash --skip-md5` crc32c against `gcloud storage ls -L` before extracting (never `gsutil -m`; a serial `gsutil cp` also stalled at FULL size with a WRONG hash on 2026-09-01 — size is not integrity) → extract into `runs/` →
 `.venv/bin/python tools/inspect_ckpt.py runs/pretrain${R_TAG}_*`
 (every arm admitted at artifact level: d/T/steps/flags) → verify zero TPUs +
 zero queued-resources in all zones → the campaign's pre-registered analyzer
@@ -91,6 +91,15 @@ The per-campaign handoff (`tools/HANDOFF.md`) carries the exact commands.
 hours from the watchdog log (±15 min) at $6.82/pod-h spot v6e-8 and
 ~$16/pod-h spot v6e-16 (PI recalibration 2026-08-30 — the 16 is ~2.35× the 8,
 not 2×; pre-08-30 ledger spend figures for 16-shape campaigns understate ~18%).
+
+## 8b. Lessons that bit twice (one line each; full incident register = ledger CONSOLIDATED OPS RECORDS)
+
+- Never judge a remote command through `| tail`/`| grep` — read the rc directly (masked a connect-timeout 09-01; masked a pip failure 08-07).
+- `pgrep -f`/`pkill -f` self-match: a watcher/monitor whose command text contains the pattern matches itself or deadlocks a waiter (v_stop 08-30; a Monitor blocked the vsel chain ~1h on 09-02) — bracket the pattern (`vsel20k[.]sh`) or avoid pgrep in watchers.
+- macOS: `/bin/bash` is 3.2 (no associative arrays — use `case`); no `timeout(1)` (use `perl -e 'alarm N; exec @ARGV' --`); zsh does not word-split unquoted vars.
+- Verify by ARTIFACT (GCS object, node log, positive `describe`), never by wrapper pgrep; a resume needs the banked grids + metrics re-pulled or `select_ckpt` silently falls back to the final grid.
+- One-shot amputation truncates `metrics.jsonl` to the last finite grid (death step only bounded by the grid census) and the trainer keeps running on NaNs (early-NaN abort owed); screens beyond the death are garbage (243 violations) — skip them.
+- Rates: v6e-8 US $6.82/h · v6e-16 US $13.64 · Mumbai-16 ≈$16 (2.35×) · Mumbai-8 ≈$8; Mumbai = US-dry fallback only; US-day weekday churn, night windows land.
 
 ## 9. Retired (2026-08-18; in git history before this commit)
 
