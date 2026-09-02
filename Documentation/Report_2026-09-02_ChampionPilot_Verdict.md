@@ -135,4 +135,14 @@ Reading: every val-selected grid, every two-phase grid, and the canvas control a
 
 Reading: the canvas arm generalizes normally (train 47.3 vs test 33.5 — a +14pp gap), while the native 50k-cosine arms memorize their training set completely (P1 99.9 % vs 19.4 %) or nearly (P2@30k 95.6 %) as their test cold collapses; the two-phase arm sits at 95 % train / 37.35 test — memorization is well advanced even on the record arm, so the champion's aug1000 regime (10× the corpus, ~5 epochs at 80k steps) is not optional. The contrast is now a measurement at the puzzle level, not an inference from CE curves.
 
-### 7.3 Val-selected 20k cold evals (identical puzzle set as the canvas D4 scan; k=0) — in flight on CPU; results appended below with paired McNemar vs D4 (33.28 on this set) and vs each arm's own final-grid scan.
+### 7.3 Val-selected 20k cold evals (identical puzzle set as the canvas D4 scan; k=0; CPU, ~18 min each; `runs/analysis/sportC0_vsel20k_paired_20260902.json`)
+
+| grid | cold (20k) | canvas D4 (same set) | paired McNemar vs D4 | vs C3X (24.61) | vs the arm's own final-grid scan |
+|---|---|---|---|---|---|
+| **P1@20k (vsel, no RI)** | **36.18** | 33.28 | only-P1 2,560 / only-D4 1,981 / **p = 8.8e-18** | p = 2.0e-237 | final 19.53: only-vsel 4,232 / only-final 902 / p ≈ 0 |
+| P2@30k (vsel, RI) | 34.66 | 33.28 | only-P2 2,358 / only-D4 2,083 / p = 3.9e-05 | p = 1.2e-180 | identical checkpoint to its scan (34.66) |
+| P5@20k (vsel, RI+NI) | 34.99 | 33.28 | only-P5 2,481 / only-D4 2,140 / p = 5.6e-07 | p = 6.4e-183 | identical checkpoint to its scan (34.99) |
+
+Per-octile cold, octiles 2–8 (easiest-but-nonzero → hardest): P1@20k 72.0 / 26.5 / 22.1 / 24.0 / 24.2 / 26.1 / **24.5**; P2@30k 70.1 / 24.8 / 21.5 / 22.3 / 23.1 / 25.0 / 22.2; P5@20k 66.9 / 25.8 / 23.3 / 23.4 / 24.9 / 26.1 / 24.2; canvas D4 84.3 / 24.6 / 15.0 / 14.4 / 15.3 / 16.6 / **15.0**.
+
+**Reading (the arity question, closed at 20k-grade on identical puzzles):** every val-selected native grid beats the canvas D4 at matched recipe — including the no-RI P1@20k, the D4-strategy verbatim — and every one carries the flattened difficulty curve (hardest-octile cold 22–25 % vs 15 %) while losing the easiest octile (67–72 % vs 84 %). The flattening is therefore a property of the 3-adic geometry, not of RI (§3.1's confound is resolved). The ARITY-HURTS letter stands as issued (it read the final grids by the registered convention), and its reading is now measured rather than inferred: the native regime's memorization collapse (P1 vsel→final: only-vsel 4,232 vs only-final 902, p ≈ 0) produced the letter; the geometry helps.
