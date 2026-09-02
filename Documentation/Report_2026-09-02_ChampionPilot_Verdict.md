@@ -102,7 +102,7 @@ Offline CPU forward (cold trajectory, t=64, the probe's strat-512 puzzles): nati
 
 ## 7. Addendum — measurements completed after the main pass (same day, CPU, $0)
 
-### 7.1 Explosion census (`runs/analysis/sportC0_explosion_census_20260902.json`; strat-512 test puzzles, cold trajectories, CPU float32)
+### 7.1 Explosion census (`runs/analysis/sportC0_explosion_census_20260902.json`; strat-512 test puzzles, cold trajectories, CPU float32; t=256 on the first 64 puzzles)
 | grid | η | n | t | exploded (non-finite or \|z\|>1e6) | first blow-up step (median) | \|z\|max median / p99 |
 |---|---|---|---|---|---|---|
 | P1@20k(vb) | 0.698 | 512 | 64 | **0/512 (0.0 %)** | — | 45.5 / 66.8 |
@@ -115,8 +115,13 @@ Offline CPU forward (cold trajectory, t=64, the probe's strat-512 puzzles): nati
 | P3s1@35k(stageA) | 0.884 | 512 | 64 | **0/512 (0.0 %)** | — | 44.1 / 65.9 |
 | P3s1@50k | 0.893 | 512 | 64 | **0/512 (0.0 %)** | — | 45.5 / 71 |
 | P6@10k | 0.805 | 512 | 64 | **0/512 (0.0 %)** | — | 48.2 / 90.7 |
+| D4-canvas@50k | 0.844 | 512 | 64 | **0/512 (0.0 %)** | — | 38.6 / 65 |
+| P3s1@50k [t=256, n=64] | 0.893 | 64 | 256 | **0/64 (0.0 %)** | — | 44 / 89.4 |
+| P2@50k [t=256, n=64] | 0.980 | 64 | 256 | **18/64 (28.1 %)** | 62.5 | 66.4 / 2.53e+19 |
+| P1@20k(vb) [t=256, n=64] | 0.698 | 64 | 256 | **0/64 (0.0 %)** | — | 44.1 / 61.4 |
+| D4-canvas@50k [t=256, n=64] | 0.844 | 64 | 256 | **0/64 (0.0 %)** | — | 38.3 / 58 |
 
-Reading: every val-selected and every two-phase grid is bounded — including P2@30k at η .966 and P5@20k at η .968 — while the LATE grids of the T12 RI arms explode (P2@50k 18.9 % at η .980; P5@40k 1.0 % at η .992) and P2s1's last finite grid shows the first excursions (0.8 %) just before its death. The threshold sits sharply between η ≈ .97 and .98; the proposed champion cap η ≤ .90 (Plan §3, arm B0) is comfortably below it, and P3s1 (η .884–.893, the record arm) is bounded at both its stage-A and final grids. (Remaining rows — canvas D4 control and the t=256 subset — append below when they finish.)
+Reading: every val-selected grid, every two-phase grid, and the canvas control are bounded at t=64 AND t=256 — including P2@30k at η .966 and P5@20k at η .968 — while the LATE grids of the T12 RI arms explode (P2@50k 18.9 % at t=64 → **28.1 % at t=256**; P5@40k 1.0 %) and P2s1's last finite grid shows the first excursions (0.8 %) just before its death. The threshold sits sharply between η ≈ .97 and .98; the champion cap η ≤ .90 (Plan §3, arm B0) is comfortably below it, and P3s1 (η .884–.893, the record arm) is bounded at both its stage-A and final grids even at t=256. Deeper inference amplifies the instability on exploding maps — the depth rider on any RI arm must carry its census read.
 
 ### 7.2 Train-split memorization check (cold exact on the 1,000 seeded training puzzles, un-augmented; `scratchpad/memcheck`)
 | grid | TRAIN cold exact | mean violations on train | TEST cold (full 422,786 / strat-512) |
@@ -126,8 +131,8 @@ Reading: every val-selected and every two-phase grid is bounded — including P2
 | P2@30k (val-selected) | 95.6 % | 1.03 | 34.66 (20k scan) |
 | P2@50k (final) | 72.8 % | 53.7 (exploding map, §7.1) | 15.62 (full) |
 | P3s1@50k (final, two-phase) | 95.0 % | 1.85 | 37.35 (full) |
-| canvas D4@50k | (pending) | | 33.53 (full) |
+| canvas D4@50k (control) | **47.3 %** | 13.91 | 33.53 (full) |
 
-Reading: the native 50k-cosine arms memorize their training set completely (P1) or nearly (P2@30k 95.6 %) while their test cold collapses; the two-phase arm sits at 95 % train / 37.35 test — memorization is well advanced even on the record arm, so the champion's aug1000 regime (10× the corpus, ~5 epochs at 80k steps) is not optional.
+Reading: the canvas arm generalizes normally (train 47.3 vs test 33.5 — a +14pp gap), while the native 50k-cosine arms memorize their training set completely (P1 99.9 % vs 19.4 %) or nearly (P2@30k 95.6 %) as their test cold collapses; the two-phase arm sits at 95 % train / 37.35 test — memorization is well advanced even on the record arm, so the champion's aug1000 regime (10× the corpus, ~5 epochs at 80k steps) is not optional. The contrast is now a measurement at the puzzle level, not an inference from CE curves.
 
 ### 7.3 Val-selected 20k cold evals (identical puzzle set as the canvas D4 scan; k=0) — in flight on CPU; results appended below with paired McNemar vs D4 (33.28 on this set) and vs each arm's own final-grid scan.

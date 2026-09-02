@@ -4,7 +4,7 @@
 
 ## §1. What the pilot changed in the design (one line each, with the measurement)
 1. The native regime memorizes (train CE → 0.000 by 40k; P1@50k solves 99.9 % of its training puzzles and 19.4 % of the test) because native9 removed the canvas's implicit ×576 placement augmentation → **aug ≥ 1000 + two-phase schedule + val-selected full tests are mandatory**, and the pilot's ARITY-HURTS letter is read as a regime failure, not a geometry failure (P3s1 native cold 37.35 = program record; native ≥ canvas at every val-selected checkpoint).
-2. RI is the per-draw lever (+34–38pp b1) and makes the map init-invariant (b1 ≈ cold per octile; EqR's residual selector ≈ the free verifier) but drives η → .92–.99 with inference-time state explosions (P2 5/64 puzzles, P5 |z| 3e18) and 4/6 training deaths → **RI stays, with a one-variable stabilizer arm (η cap) and ×3 seeds; the explosion census becomes a standing eval.**
+2. RI is the per-draw lever (+34–38pp b1) and makes the map init-invariant (b1 ≈ cold per octile; EqR's residual selector ≈ the free verifier) but drives η → .92–.99 with inference-time state explosions (census, strat-512: P2@50k 18.9 % of test trajectories non-finite by t=64 at η .980; P5@40k 1.0 % at .992; P2s1 0.8 % just before its death) while every grid at η ≤ .968 is bounded (P2@30k, P5@20k, P3s1 .89, P1) — a sharp threshold between η ≈ .97 and .98 — and 4/6 training deaths → **RI stays, with a one-variable stabilizer arm (η cap .90, well below the measured threshold) and ×3 seeds; the explosion census becomes a standing eval.**
 3. RI funnels are deep-narrow (ρ .36–.44) — breadth needs a different map → **a wide-funnel arm rides alongside** (no-RI native and canvas C3X-class), and the portfolio union is a registered readout (our coverage column).
 4. aug1000 pays at equal steps (+5.70pp paired at 10k) → aug 1000 baseline (▶ 2000 if the PI wants the corpus-diversity axis pushed; the position group has 3.36M elements).
 5. Native is cheap (arm ≈ 1.75–2h incl. evals at d96 on a v6e-8) → the round affords 7–8 arms at d128 and a d160 point for ≈ $130–190.
@@ -71,3 +71,16 @@ Native d128 T16 80k steps ≈ 1.75× the d96 pace → ≈ 1.5–2h pretrain + �
 4. E0 (d160) and F0 (long floor): both recommended if the night window allows (≈ +$75).
 5. The canvas D0 arm (portfolio partner and canvas-vs-native at d128): recommended.
 6. Two-phase split 50k/30k (registered) vs 35k/15k (the pilot's surviving arm): recommend 50k/30k at aug1000 (memorization pressure is 10× lower; the tripwire guards it).
+
+## §9. AMENDMENT (2026-09-02, after Program Review #2 — `Program_Review_2026-09-02.md`)
+The review shows the field-column gap is a **training-regime gap** (aug 1000 / wd 1.0 / lr 1e-4 / batch ≥384 / 20–50M samples / pre-norm cells vs our aug 100 / wd 1e-4 / lr 1e-3 / batch 64 / 3.2M / no normalization) and that EqR's base map reaches 84.8 % single-shot before RI/NI. **Recommended Option C — this round becomes:**
+
+| arm | recipe | purpose |
+|---|---|---|
+| A0, A1, A2 | native d128 champion (T16 RI .5 FPA dose two-phase aug1000) | the native ladder point + RI survival |
+| B0 | A0 + η cap .90 | the H-50 stabilizer, one variable |
+| **R0 (NEW)** | **our native cell in THEIR regime**: aug 1000, wd 1.0, lr 1e-4, batch 384, ~20M samples (≈52k steps), RMSNorm added to the cell (the registered FPRM kit), T16, FPA, dose; RI optional per PI | architecture vs regime — the question the pilot could not answer |
+| **X0 (NEW)** | **baseline reproduction**: EqR/TRM-class pre-norm transformer cell (81 tokens, 2 blocks weight-tied ≈5M, RMSNorm, RoPE/learned positions, damped iterate λ=.05, NI β=.01, RI, D_train 16, SOT detach) in their regime; the control | does the field's 85 %@D16 / 93 %@D64 reproduce on our stack? (prerequisite for every additive claim; read EqR appendix C.1/D.1 for the exact hyperparameters BEFORE building) |
+| X1..Xk (NEXT NIGHT, on X0's success) | X0 + one ingredient each: FPA · attention toll · S9 (drop digit-aug) · group mixer · two-phase + vsel · verified breadth | the additive ledger = the paper's 'field recipe under our instruments' section |
+
+Dropped from the night: C0/E0/F0 (return once X0 reproduces). New rules to draft with the analyzer: R-C1-7 REPRODUCTION (X0 single-shot @D16 ≥ 80 → REPRODUCED; 60–80 → PARTIAL (hyperparameter audit); < 60 → NOT-REPRODUCED, stop and read their appendix) · R-C1-8 REGIME-vs-ARCHITECTURE (vsel-cold R0 vs A*: if R0 − A* ≥ CNC1 → the regime explains the gap; if R0 ≈ A* → architecture/capacity binds). Instrument portability (retention, funnel (ρ,r), explosion census, throat) runs on X0 for free. Cost ≈ $150–200 one night; the comparator table gains a training-regime column regardless.
