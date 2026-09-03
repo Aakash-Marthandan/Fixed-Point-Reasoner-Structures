@@ -1,0 +1,13 @@
+R0: solved 36.9% | cumulative flips per non-given cell in windows [(1, 2), (2, 4), (4, 8), (8, 16), (16, 32), (32, 64)]:
+   solved:   to-correct [16.0, 18.8, 31.5, 25.4, 9.6, 3.7]  to-wrong [19.1, 22.9, 27.0, 15.0, 5.2, 2.7]
+   unsolved: to-correct [14.2, 16.4, 19.6, 25.0, 22.9, 89.5]  to-wrong [25.2, 28.9, 40.0, 46.7, 54.7, 203.4]
+   step-1 WRONG non-given digits (guesses): solved 51.3% of cells, of which later corrected 100.0% | unsolved 59.0%, corrected 31.5% (19.5s)
+B0vsel: solved 40.5% | cumulative flips per non-given cell in windows [(1, 2), (2, 4), (4, 8), (8, 16), (16, 32), (32, 64)]:
+   solved:   to-correct [17.0, 24.6, 35.2, 16.3, 3.9, 1.2]  to-wrong [19.3, 24.2, 27.9, 9.7, 1.8, 0.3]
+   unsolved: to-correct [13.6, 20.2, 28.5, 29.0, 19.9, 29.6]  to-wrong [24.2, 33.5, 53.1, 56.9, 41.9, 66.1]
+   step-1 WRONG non-given digits (guesses): solved 52.1% of cells, of which later corrected 100.0% | unsolved 57.8%, corrected 34.8% (19.0s)
+X0: solved 94.0% | cumulative flips per non-given cell in windows [(1, 2), (2, 4), (4, 8), (8, 16), (16, 32), (32, 64)]:
+   solved:   to-correct [14.9, 9.9, 7.5, 8.5, 12.5, 8.1]  to-wrong [6.3, 6.1, 8.2, 11.6, 17.4, 8.1]
+   unsolved: to-correct [10.7, 12.4, 20.6, 42.7, 90.4, 167.9]  to-wrong [16.6, 22.8, 45.5, 77.7, 150.5, 330.8]
+   step-1 WRONG non-given digits (guesses): solved 30.4% of cells, of which later corrected 78.5% | unsolved 63.4%, corrected 21.2% (170.3s)
+GROUND2B-DONE

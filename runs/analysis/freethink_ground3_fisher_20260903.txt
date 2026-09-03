@@ -1,0 +1,8 @@
+== GROUND 3: curvature concentration (Adam second moment ~ diagonal Fisher) per checkpoint ==
+  ckpt | regime | n params | PR/n (effective fraction of curvature directions) | params carrying 90% of mass | top-3 blocks by mass share
+  A0 @30k                | ours, no norm, wd 1e-4       |   3004530 | 5.51e-06 |  0.669% | readout 32.7%, eq 21.1%, dec 13.8%
+  B0a @20k (vsel)        | ours, z-norm, wd 1e-4        |   3004658 | 7.30e-06 |  1.340% | eq 21.3%, dec 21.1%, gate 15.4%
+  B0 @80k (memorized)    | ours, z-norm, wd 1e-4, floor |   3004658 | 7.26e-06 |  3.030% | enc 26.1%, eq 21.8%, dec 20.9%
+  R0 @50k                | field regime wd 1.0 lr 1e-4  |   3004658 | 3.84e-04 |  8.108% | enc 25.5%, embed 24.2%, dec 21.7%
+  X0 @50k                | field cell, field regime     |   5037061 | 1.29e-02 |  9.753% | trm 100.0%, eq 0.0%
+  X0n @50k (memorized)   | field cell, no ACT           |   5037061 | 1.94e-03 | 21.465% | trm 100.0%, eq 0.0%

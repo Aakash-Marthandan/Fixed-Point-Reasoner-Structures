@@ -1,0 +1,44 @@
+== GROUND 1: reachability (any hit @128) and cold vs GIVENS count (erasures = 81 - givens) on the identical 20k ==
+  givens bin | n | X0 reach/cold | R0 reach/cold | A0 reach/cold | P3s1 reach/cold | D4 reach/cold | C3X reach/cold
+  [17,21) |   219 | 100.0/ 98.6 |  93.2/ 67.1 |  56.6/ 31.5 |  64.4/ 37.4 |  97.3/ 63.5 | 100.0/ 50.7
+  [21,23) |   578 |  99.8/ 83.6 |  25.6/ 14.7 |  23.2/ 12.3 |  21.8/ 10.0 |  85.8/  8.1 |  93.3/  9.7
+  [23,25) |  6126 |  99.7/ 89.8 |  32.1/ 21.2 |  36.2/ 24.5 |  35.0/ 21.4 |  75.9/ 15.0 |  83.6/ 12.9
+  [25,27) |  9917 |  99.7/ 93.4 |  53.6/ 39.3 |  54.5/ 42.3 |  55.8/ 41.2 |  81.1/ 36.1 |  88.9/ 26.9
+  [27,29) |  2630 |  99.7/ 98.1 |  76.3/ 56.2 |  78.1/ 63.3 |  80.0/ 63.4 |  88.5/ 55.5 |  96.8/ 30.0
+  [29,35) |   405 | 100.0/ 99.0 |  97.5/ 95.1 |  97.3/ 95.6 |  98.5/ 96.3 |  99.3/ 96.3 | 100.0/ 94.8
+  Spearman(reach, givens) per map: X0 +0.006 R0 +0.246 A0 +0.269 P3s1 +0.278 D4 +0.074 C3X +0.083 | Spearman(reach, rating): X0 -0.014 R0 -0.263 A0 -0.207
+
+== GROUND 1b: reachability and cold by TEST SOURCE ==
+  source | n | median rating | median givens | X0 reach/cold | R0 reach/cold | A0 reach/cold | P3s1 reach/cold | D4 reach/cold | C3X reach/cold
+  01_file1           |  4331 |    26 |   26 |  99.3/ 94.2 |  64.2/ 42.6 |  67.7/ 51.8 |  67.9/ 48.4 |  78.7/ 36.5 |  92.5/  4.3
+  puzzles0_kaggle    |   493 |     0 |   34 | 100.0/100.0 | 100.0/100.0 | 100.0/100.0 | 100.0/100.0 | 100.0/100.0 | 100.0/100.0
+  puzzles1_unbiased  |  4762 |     1 |   26 | 100.0/100.0 |  89.2/ 75.4 |  85.4/ 74.7 |  88.7/ 75.9 | 100.0/ 81.5 | 100.0/ 76.3
+  puzzles2_17_clue   |   219 |     0 |   17 | 100.0/ 98.6 |  93.2/ 67.1 |  56.6/ 31.5 |  64.4/ 37.4 |  97.3/ 63.5 | 100.0/ 50.7
+  puzzles3_magictour |     7 |     4 |   22 | 100.0/100.0 |  42.9/ 42.9 |  57.1/ 28.6 |  85.7/ 28.6 | 100.0/ 42.9 | 100.0/ 28.6
+  puzzles4_forum_har |  9953 |    25 |   24 |  99.7/ 88.5 |  23.9/ 13.1 |  28.0/ 16.1 |  27.3/ 14.1 |  72.5/  5.5 |  81.4/  4.9
+  puzzles5_forum_har |   233 |    32 |   24 | 100.0/ 89.3 |  21.0/ 13.3 |  21.0/ 15.0 |  20.2/  9.9 |  66.1/  3.4 |  78.1/  3.0
+  puzzles6_forum_har |     2 |    39 |   22 | 100.0/100.0 |  50.0/ 50.0 |  50.0/ 50.0 |  50.0/  0.0 |  50.0/  0.0 | 100.0/  0.0
+
+== GROUND 1c: the UNREACHABLE set of our RI maps (R0 ∪ A0 ∪ P3s1 at 128 draws each) and the field's coverage of it ==
+  reachable by any of our three RI maps: 70.47% | unreachable: 29.53% (n=5906)
+  of the unreachable: X0 cold 83.15%, X0 reach 99.22%; canvas C3X reach 82.58%, D4 reach 71.84%
+  unreachable-set profile: median rating 23 (reachable 12), median givens 24 (reachable 26); by source: 01_file1 16%, puzzles0_k 0%, puzzles1_u 3%, puzzles2_1 3%, puzzles3_m 14%, puzzles4_f 50%, puzzles5_f 58%, puzzles6_f 50%
+  X0's cold failures (n=1427, 7.13%): inside our unreachable set 69.7% (base rate 29.5%) | X0 unreachable@128 n=59: inside ours 78.0%
+  X0 cold-failure profile: median rating 23, median givens 24
+
+== GROUND 1d: per-draw rate r on reachable puzzles vs givens (does the erasure count set the per-draw rate?) ==
+  X0: [17,21) 0.932 | [21,23) 0.465 | [23,25) 0.494 | [25,27) 0.513 | [27,29) 0.728 | [29,35) 0.693
+  R0: [17,21) 0.200 | [21,23) 0.099 | [23,25) 0.125 | [25,27) 0.169 | [27,29) 0.168 | [29,35) 0.726
+  A0: [17,21) 0.143 | [21,23) 0.094 | [23,25) 0.122 | [25,27) 0.189 | [27,29) 0.212 | [29,35) 0.714
+
+== GROUND 1e: DRAW DIVERSITY — how often do random-init draws rescue a cold failure? (identical 20k) ==
+  map | cold | draw-1 (b1) | P(draw 1 solves | cold fails) | P(any of 128 draws solves | cold fails) | P(any of 128 | draw 1 fails) | mean #distinct outcomes proxy: frac puzzles where draws disagree (some hit, some miss)
+  X0                     |  92.9 |  92.1 |  29.9 |  95.9 |  96.3 |  62.5
+  R0                     |  37.1 |  36.8 |   4.1 |  21.8 |  22.1 |  27.0
+  A0                     |  40.0 |  39.9 |   3.8 |  20.4 |  20.6 |  23.7
+  P3s1                   |  38.6 |  38.5 |   4.2 |  23.2 |  23.4 |  27.3
+  P1 (no RI, memorized)  |  19.5 |   0.4 |   0.3 |  21.1 |  24.5 |  24.8
+  C3X canvas             |  24.6 |   nan |   nan |  85.3 |   nan |   nan
+  D4 canvas              |  33.3 |   nan |   nan |  71.9 |   nan |   nan
+  READ: on our RI maps a random init almost never solves what the cold start missed (draws are redundant = init-invariance's cost);
+        on the field's base and on the canvas non-RI maps, draws rescue most cold failures (exploration survives).

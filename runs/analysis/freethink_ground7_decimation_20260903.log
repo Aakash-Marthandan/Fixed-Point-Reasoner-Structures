@@ -1,0 +1,23 @@
+R0: cold @64 37.1% | stalled 161
+   stalled: top-5 confident cells correct 72.2% (mean confidence 0.96); solved-set control 100.0%
+   round 1: rescued so far 0/161 (0.0% of stalled); contradictions this round 161 (50s)
+   round 2: rescued so far 0/161 (0.0% of stalled); contradictions this round 143 (67s)
+   round 3: rescued so far 0/161 (0.0% of stalled); contradictions this round 130 (83s)
+   round 4: rescued so far 0/161 (0.0% of stalled); contradictions this round 123 (99s)
+   round 5: rescued so far 0/161 (0.0% of stalled); contradictions this round 118 (116s)
+   round 6: rescued so far 0/161 (0.0% of stalled); contradictions this round 117 (132s)
+   round 7: rescued so far 0/161 (0.0% of stalled); contradictions this round 120 (149s)
+   round 8: rescued so far 0/161 (0.0% of stalled); contradictions this round 119 (166s)
+R0 VERIFIED DECIMATION: cold 37.1% -> 37.1% (rescued 0.0% of stalled; median rounds -; puzzles with >=1 backtrack 161; rescued despite a wrong fix at some round 0) (166s)
+B0vsel: cold @64 43.4% | stalled 145
+   stalled: top-5 confident cells correct 70.1% (mean confidence 0.95); solved-set control 100.0%
+   round 1: rescued so far 2/145 (1.4% of stalled); contradictions this round 143 (53s)
+   round 2: rescued so far 2/145 (1.4% of stalled); contradictions this round 141 (69s)
+   round 3: rescued so far 2/145 (1.4% of stalled); contradictions this round 137 (86s)
+   round 4: rescued so far 3/145 (2.1% of stalled); contradictions this round 136 (102s)
+   round 5: rescued so far 3/145 (2.1% of stalled); contradictions this round 128 (119s)
+   round 6: rescued so far 3/145 (2.1% of stalled); contradictions this round 127 (136s)
+   round 7: rescued so far 3/145 (2.1% of stalled); contradictions this round 123 (152s)
+   round 8: rescued so far 3/145 (2.1% of stalled); contradictions this round 125 (169s)
+B0vsel VERIFIED DECIMATION: cold 43.4% -> 44.5% (rescued 2.1% of stalled; median rounds 1.0; puzzles with >=1 backtrack 143; rescued despite a wrong fix at some round 0) (169s)
+GROUND7-DONE

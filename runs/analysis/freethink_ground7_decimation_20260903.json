@@ -1,0 +1,1 @@
+{"R0": {"cold": 0.37109375, "total": 0.37109375, "rescued_frac_of_stalled": 0.0, "n_stalled": 161, "top_correct_stalled": 0.7217391304347827, "backtracks": 161}, "B0vsel": {"cold": 0.43359375, "total": 0.4453125, "rescued_frac_of_stalled": 0.020689655172413793, "n_stalled": 145, "top_correct_stalled": 0.7006896551724138, "backtracks": 143}}
