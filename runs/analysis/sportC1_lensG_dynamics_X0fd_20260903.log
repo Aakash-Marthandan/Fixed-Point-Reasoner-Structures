@@ -1,0 +1,4 @@
+  X0 FD t=16: lambda median 1.107 p90 4.387 (iter drift 0.0356) (39s)
+  X0 FD t=64: lambda median 1.071 p90 1.418 (iter drift 0.0286) (125s)
+X0 FD: solved@16 83.3 @64 90.5 | first_exact median 1.0 | resid t64 solved 0.00882 unsolved 0.273 | lambda64 solved 1.067 unsolved 8.689960479736328 | converged-wrong 0/8
+X0-FD-DONE

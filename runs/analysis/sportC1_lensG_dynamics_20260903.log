@@ -1,0 +1,11 @@
+puzzles 84 ratings octile edges [0, 0, 3, 10, 16, 24, 34, 47]
+  R0 (ours, field regime, z-norm, EMA) t=16: lambda_max median 0.941 p90 1.211 (10s)
+  R0 (ours, field regime, z-norm, EMA) t=64: lambda_max median 0.860 p90 1.236 (17s)
+R0 (ours, field regime, z-norm, EMA): solved@16 25.0 @64 36.9 | first_exact median 12.0 by octile [None, 11.0, 10.0, 32.5, 15.0, None, 12.0, 17.0] | resid t64 solved median 4.55e-10 unsolved median 0.00314 | lambda t64 solved median 0.728 unsolved median 1.053 | converged-wrong 0/53 | 16.8s
+  B0 (ours, z-norm, vsel A:20k, raw) t=16: lambda_max median 0.952 p90 1.366 (9s)
+  B0 (ours, z-norm, vsel A:20k, raw) t=64: lambda_max median 0.782 p90 1.365 (15s)
+B0 (ours, z-norm, vsel A:20k, raw): solved@16 33.3 @64 40.5 | first_exact median 9.0 by octile [None, 7.0, 10.0, 19.0, 9.5, 8.0, 8.0, 8.0] | resid t64 solved median 1.58e-12 unsolved median 0.001 | lambda t64 solved median 0.672 unsolved median 0.953 | converged-wrong 0/50 | 15.0s
+  X0 (field cell, EMA) t=16: lambda_max median nan p90 nan (41s)
+  X0 (field cell, EMA) t=64: lambda_max median nan p90 nan (130s)
+X0 (field cell, EMA): solved@16 81.0 @64 94.0 | first_exact median 1.0 by octile [None, 0.0, 1.0, 3.0, 2.0, 1.5, 1.0, 3.5] | resid t64 solved median 0.00891 unsolved median 0.269 | lambda t64 solved median nan unsolved median nan | converged-wrong 0/5 | 129.6s
+LENSG-DYNAMICS-DONE

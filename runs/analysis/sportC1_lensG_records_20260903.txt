@@ -1,0 +1,48 @@
+==============================================================================================================
+LENS G — the field recipe (X0) through our record-level instruments vs our cells (2026-09-03; descriptive)
+==============================================================================================================
+
+== G1. SELECTOR ANATOMY (20k scan, 128 draws/puzzle): does the convergence residual separate correct from wrong draws? ==
+  arm | draws n | frac correct | median resid correct / wrong | P(resid correct < resid wrong) | puzzles with >=1 correct draw | of those: min-resid draw correct | t1r@128 | b1 | verified@128
+  X0 (field, no RI)                  |  2560000 | 0.919 | 0.009209 / 0.2681 | 0.925 |  99.70% |  92.75% |  92.48 |  92.12 |  99.70
+      per octile: o2: AUC 0.49 wrong-below-median 53.9% | o3: AUC 0.94 wrong-below-median  5.7% | o4: AUC 0.97 wrong-below-median  3.0% | o5: AUC 0.97 wrong-below-median  2.9% | o6: AUC 0.97 wrong-below-median  2.8% | o7: AUC 0.97 wrong-below-median  3.2% | o8: AUC 0.96 wrong-below-median  3.8%
+  R0 (ours, field regime, RI)        |  2560000 | 0.369 | 0 / 0.004421 | 0.994 |  50.78% |  98.83% |  50.18 |  36.84 |  50.80
+      per octile: o2: AUC 1.00 wrong-below-median  0.0% | o3: AUC 0.99 wrong-below-median  0.0% | o4: AUC 0.99 wrong-below-median  0.0% | o5: AUC 0.99 wrong-below-median  0.0% | o6: AUC 0.99 wrong-below-median  0.0% | o7: AUC 0.98 wrong-below-median  0.0% | o8: AUC 0.99 wrong-below-median  0.0%
+  A0 (ours, RI, 30k)                 |  2560000 | 0.400 | 0 / 0.002954 | 0.997 |  52.28% |  99.67% |  52.11 |  39.91 |  52.28
+      per octile: o2: AUC 0.99 wrong-below-median  0.9% | o3: AUC 0.99 wrong-below-median  0.1% | o4: AUC 1.00 wrong-below-median  0.0% | o5: AUC 1.00 wrong-below-median  0.1% | o6: AUC 1.00 wrong-below-median  0.0% | o7: AUC 1.00 wrong-below-median  0.0% | o8: AUC 1.00 wrong-below-median  0.0%
+  B0 (ours, z-norm, MEMORIZED grid)  |  2560000 | 0.257 | 0 / 0.02019 | 0.999 |  50.45% |  98.57% |  49.73 |  25.82 |  50.48
+      per octile: o2: AUC 1.00 wrong-below-median  0.0% | o3: AUC 1.00 wrong-below-median  0.0% | o4: AUC 1.00 wrong-below-median  0.0% | o5: AUC 1.00 wrong-below-median  0.0% | o6: AUC 1.00 wrong-below-median  0.0% | o7: AUC 1.00 wrong-below-median  0.0% | o8: AUC 1.00 wrong-below-median  0.0%
+  P3s1 (d96 pilot, RI)               |  2560000 | 0.384 | 0 / 0.001275 | 0.994 |  52.85% |  99.38% |  52.52 |  38.47 |  52.85
+      per octile: o2: AUC 0.99 wrong-below-median  0.2% | o3: AUC 0.99 wrong-below-median  0.1% | o4: AUC 1.00 wrong-below-median  0.1% | o5: AUC 0.99 wrong-below-median  0.1% | o6: AUC 1.00 wrong-below-median  0.1% | o7: AUC 1.00 wrong-below-median  0.0% | o8: AUC 1.00 wrong-below-median  0.0%
+  P1 (d96 pilot, no RI, memorized)   |  2560000 | 0.004 | 0 / 0.0004752 | 0.950 |  24.80% |  81.88% |  20.30 |   0.39 |  36.55
+      per octile: o2: AUC 0.91 wrong-below-median 16.2% | o3: AUC 0.95 wrong-below-median  5.4% | o4: AUC 0.97 wrong-below-median  3.4% | o5: AUC 0.97 wrong-below-median  3.4% | o6: AUC 0.96 wrong-below-median  3.4% | o7: AUC 0.96 wrong-below-median  3.6% | o8: AUC 0.97 wrong-below-median  3.5%
+  READ: P=.5 = the residual carries no information about correctness; P->1 = converged implies correct. The selector fails whenever ANY of the
+        128 draws is a converged-WRONG state (a spurious attractor): 'wrong-below-median' = the per-draw spurious-attractor rate.
+
+== G2. TIME-TO-SOLVE (first_exact along the cold trajectory) and FAILURE TEXTURE per rating octile, FULL test (422,786) ==
+  arm | cold | solved: median first_exact step (o1..o8) | p90 first_exact (all solved) | first_valid==first_exact frac | FAILED: median violations (o1..o8) | median cells correct/81 | valid_wrong
+  X0 @D64                | 92.81 |   -     1    2    2    2    2    1    2 |   11 | 1.000 |   -    26   34   34   35   34   33   32 |  50.0 | 0.0001
+  X0 @D16                | 86.03 |   -     1    1    1    1    1    1    1 |    6 | 1.000 |   -    27   35   35   36   35   33   32 |  51.0 | 0.0001
+  X0n @D64               | 76.69 |   -     1    2    1    1    1    1    1 |    8 | 1.000 |   -    12   16   16   17   16   16   16 |  48.0 | 0.0019
+  R0 (vsel=50k)          | 37.33 |   -    10   15   15   14   14   14   15 |   32 | 1.000 |   -     7   10   10   10   10   10   11 |  50.0 | 0.0000
+  B0 (vsel A:20k)        | 42.83 |   -     8   11   10   10   10   10   11 |   24 | 1.000 |   -     7   10   10   10   10   10   10 |  50.0 | 0.0000
+  B0 final (memorized)   | 23.40 |   -     8   10    9    9    9    8    9 |   23 | 1.000 |   -    18   45   50   50   50   49   51 |  45.0 | 0.0000
+  A0 (30k)               | 39.93 |   -     8   11   10    9    9    9   10 |   22 | 1.000 |   -    11   23   25   25   25   25   26 |  50.0 | 0.0001
+  P3s1 d96               | 37.35 |   -     8   11    9    9    9    9   10 |   20 | 1.000 |   -    20   31   33   33   33   32   33 |  51.0 | 0.0004
+  D4 canvas              | 33.53 |   -     7   10   10   10   10   10   10 |   16 | 1.000 |   -     7   26   28   27   28   28   29 |  51.0 | 0.0000
+  C3X canvas             | 24.59 |   -     7   12   31   31   31   31   33 |   33 | 1.000 |   -     5    9   11   11   11   13   17 |  49.0 | 0.0000
+  READ: first_exact = the outer step at which the cold trajectory first equals the solution (propagation depth); growth with rating = search/propagation
+        cost rising with difficulty; a flat profile = the map's solves are 'one-shot' regardless of rating. Violations on failures = how far the stuck
+        state is from valid (D5 texture): near-valid (<10) vs partial propagation (>20).
+  X0 depth dividend D16 -> D64 per octile (paired): o1   nan->  nan | o2  99.7-> 99.9 | o3  83.0-> 91.5 | o4  79.1-> 89.6 | o5  79.2-> 89.5 | o6  80.6-> 90.0 | o7  83.0-> 90.8 | o8  85.2-> 92.0
+  puzzles solved only at D64: 28666 (6.78%); their median first_exact 28 (p90 52); regressions D16->D64: 0
+
+== G5. FUNNEL (rho, r) EVOLUTION ACROSS TRAINING (strat-512 screens, k=256 draws; lens-B fit on draws <= 64, checked at 128) ==
+  X0: s015000@_X0/015000: cold  67.2 v128  86.5 v256  90.0 | all rho 0.84 r 0.265 | hardest-quartile rho 0.84 r 0.210 || s035000@_X0/035000: cold  86.1 v128  99.0 v256  99.4 | all rho 0.98 r 0.421 | hardest-quartile rho 0.98 r 0.334 || vb@_X0/050000: cold  87.5 v128  99.6 v256  99.8 | all rho 0.98 r 0.597 | hardest-quartile rho 0.98 r 0.421
+  X0n: s015000@X0n/015000: cold  62.7 v128  77.1 v256  77.5 | all rho 0.76 r 0.334 | hardest-quartile rho 0.70 r 0.375 || s035000@X0n/035000: cold  71.3 v128  93.9 v256  95.7 | all rho 0.90 r 0.210 | hardest-quartile rho 0.90 r 0.166 || vb@X0n/030000: cold  72.5 v128  91.2 v256  94.5 | all rho 0.90 r 0.236 | hardest-quartile rho 0.82 r 0.265
+  B0: sAend@B0a/latest: cold  31.2 v128  54.7 v256  57.4 | all rho 0.52 r 0.148 | hardest-quartile rho 0.50 r 0.132 || sB005000@_B0/005000: cold  29.1 v128  50.8 v256  54.5 | all rho 0.48 r 0.166 | hardest-quartile rho 0.46 r 0.104 || sB015000@_B0/015000: cold  29.3 v128  52.3 v256  56.6 | all rho 0.48 r 0.148 | hardest-quartile rho 0.42 r 0.117 || vb@B0a/020000: cold  44.1 v128  55.5 v256  56.4 | all rho 0.54 r 0.334 | hardest-quartile rho 0.54 r 0.334
+  B1: sAend@B1a/latest: cold  34.0 v128  53.5 v256  57.8 | all rho 0.50 r 0.187 | hardest-quartile rho 0.46 r 0.117 || sB005000@_B1/005000: cold  31.6 v128  53.3 v256  55.9 | all rho 0.50 r 0.166 | hardest-quartile rho 0.42 r 0.117 || sB015000@_B1/015000: cold  27.7 v128  51.0 v256  52.5 | all rho 0.48 r 0.166 | hardest-quartile rho 0.44 r 0.210 || vb@B1a/020000: cold  45.5 v128  55.1 v256  55.1 | all rho 0.54 r 0.297 | hardest-quartile rho 0.46 r 0.531
+  R0: s015000@_R0/015000: cold  24.0 v128  24.4 v256  24.4 | all rho 0.24 r 0.846 | hardest-quartile rho 0.02 r 0.001 || s035000@_R0/035000: cold  30.9 v128  37.7 v256  38.7 | all rho 0.38 r 0.297 | hardest-quartile rho 0.20 r 0.297 || vb@_R0/050000: cold  36.1 v128  50.6 v256  52.1 | all rho 0.48 r 0.236 | hardest-quartile rho 0.40 r 0.265
+  A0: vb@_A0/030000: cold  38.1 v128  54.9 v256  55.7 | all rho 0.54 r 0.265 | hardest-quartile rho 0.46 r 0.187
+  READ: rho = reachable fraction (any of 128 random inits reaches the solution), r = per-draw hit rate on reachable puzzles. The field's map is
+        wide-and-fast (rho ~1, r .5-.9) from 15k on; our maps stay at rho .35-.45 at every checkpoint — the binding limit is REACHABILITY, not precision.
