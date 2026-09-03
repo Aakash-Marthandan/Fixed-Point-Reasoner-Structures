@@ -1,0 +1,37 @@
+{
+ "ckpt": "runs/pretrainsportC1_B0a/ckpt_020000.pkl",
+ "ema": false,
+ "rows": [
+  {
+   "name": "B0@A:20000(vsel, correct grid) [t64, n=512]",
+   "eta": 0.9103,
+   "eta_z": 0.74,
+   "n": 512,
+   "t": 64,
+   "exploded_frac": 0.0,
+   "n_exploded": 0,
+   "first_bad_median": null,
+   "zmax_median": 63.11309051513672,
+   "zmax_p99": 74.76517486572266,
+   "logit_max_p99": 54.66736602783203,
+   "ema": false
+  },
+  {
+   "name": "B0@A:20000(vsel, correct grid) [t256, n=64]",
+   "eta": 0.9103,
+   "eta_z": 0.74,
+   "n": 64,
+   "t": 256,
+   "exploded_frac": 0.0,
+   "n_exploded": 0,
+   "first_bad_median": null,
+   "zmax_median": 62.32305145263672,
+   "zmax_p99": 73.90217590332031,
+   "logit_max_p99": 53.52618408203125,
+   "ema": false
+  }
+ ],
+ "cell_kind": "rg",
+ "z_norm": "rms",
+ "wall_s": 108.2
+}

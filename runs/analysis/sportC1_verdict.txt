@@ -1,0 +1,35 @@
+======================================================================================================================
+CHAMPION sportC1 VERDICT — d128 native round (rules registered 2026-09-02; analyzer pre-data)
+======================================================================================================================
+INTEGRITY: PASS
+
+SECTION 1 — per arm (headline weights; vsel unless 'final'): vcold | fcold | b1 | verified@128 | t1r@128 | majority@128 | retfm | endCE | eta | census(vsel,t64) | status
+  A0  champion recipe s0 (no norm)                 vcold  39.93 | fcold  39.93 | b1  39.91 | v128  52.28 | t1r  52.11 | maj  39.26 | retfm 100.00 | CE 0.1269 | eta 0.913 | census   0.00 | STOPPED: STOPPED final step 30000 (NaN halt; one-shot
+  A1  champion recipe s1 (no norm)                 vcold  22.69 | fcold  22.69 | b1  22.68 | v128  24.45 | t1r  24.17 | maj  24.41 | retfm 100.00 | CE 0.6496 | eta 0.659 | census   0.00 | STOPPED: STOPPED final step 5000 (NaN halt; one-shot 
+  B0  A0 + z-norm                                  vcold  42.83 | fcold  23.40 | b1  25.82 | v128  50.48 | t1r  49.73 | maj  44.92 | retfm 100.00 | CE 0.0000 | eta 0.979 | census   0.00 | UNCLEAN
+  B1  A1 + z-norm                                  vcold  42.71 | fcold  24.94 | b1  24.75 | v128  47.02 | t1r  45.86 | maj  44.92 | retfm 100.00 | CE 0.0000 | eta 0.978 | census   0.00 | UNCLEAN
+  R0  our cell, FIELD regime (+z-norm, EMA)        vcold  37.33 | fcold  37.33 | b1  36.84 | v128  50.80 | t1r  50.18 | maj  36.13 | retfm 100.00 | CE 0.4230 | eta 0.637 | census   0.00 | clean
+  X0  FIELD baseline: TRM/EqR cell + SOT + ACT (EMA) vcold  86.03 | fcold  86.03 | b1  92.12 | v128  99.70 | t1r  92.48 | maj  88.87 | retfm   -   | CE 0.6025 | eta 1.000 | census   0.00 | clean
+  X0n X0 without ACT (descriptive)                 vcold  72.08 | fcold  64.18 | b1   -   | v128   -   | t1r   -   | maj  67.77 | retfm   -   | CE 0.0075 | eta 1.000 | census   0.00 | clean
+
+NOISE (A pair, clean=[]): FNC1 2.00pp | CNC1 1.00pp
+R-C1-0 REGIME: ok ['A0', 'A1', 'R0'] | memorized ['B0', 'B1'] | drift [] -> MEMORIZED:B0,B1
+R-C1-1 SURVIVAL: clean A [] -> RI-DEAD-AT-d128
+R-C1-2 STABILIZER (z-norm bridge): clean B [] | mean b1 B   -   vs A   -   - FNC1 -> NORM-FAILS
+R-C1-3 CHAMPION: candidates [('R0', 37.33)] -> PLATEAU:R0
+R-C1-4 NATIVE-vs-CANVAS: best native vcold  37.33 vs D4  33.53 -> NATIVE-CARRIES-AT-d128
+R-C1-5 BREADTH: champion R0 verified@128  50.80 vs  88.89 -> NARROW-FUNNEL
+R-C1-6 PORTFOLIO (labeled): union verified@128 over ['R0', 'C3X', 'D4'] =  96.17 -> B-M3-BY-PORTFOLIO
+R-C1-7 REPRODUCTION: X0 vcold@D16  86.03 (EqR baseline 84.8) -> REPRODUCED | X0@D64  92.81 (93.0) | b1@D64  92.12 | t1r@128  92.48 (99.8) | maj@128  88.87 | X0n@D16  72.08 (76.5) | ACT gain  13.95
+R-C1-8 REGIME-vs-ARCHITECTURE: -> NO-DATA (R0 clean=True, refs=0)
+
+SECTION 2 — prediction scoreboard (plan §12.8; bands locked pre-data)
+  A0: vcold  39.93 MISS-BELOW | b1  39.91 MISS-BELOW | t1r  52.11 MISS-BELOW | v128  52.28 MISS-BELOW | eta 0.913 HIT
+  A1: vcold  22.69 MISS-BELOW | b1  22.68 MISS-BELOW | t1r  24.17 MISS-BELOW | v128  24.45 MISS-BELOW | eta 0.659 MISS-BELOW
+  B0: vcold  42.83 HIT | b1  25.82 MISS-BELOW | t1r  49.73 MISS-BELOW | v128  50.48 MISS-BELOW | eta 0.979 ABOVE
+  B1: vcold  42.71 HIT | b1  24.75 MISS-BELOW | t1r  45.86 MISS-BELOW | v128  47.02 MISS-BELOW | eta 0.978 ABOVE
+  R0: vcold  37.33 HIT
+  X0: cold16  86.03 HIT | cold64  92.81 HIT | b1  92.12 ABOVE | t1r  92.48 HIT
+  X0n: cold16  72.08 HIT
+
+SUMMARY: INTEGRITY=PASS  STABILITY=UNCLEAN:A0,A1,B0,B1  FNC1=2.00pp  CNC1=1.00pp  R-C1-0=MEMORIZED:B0,B1  R-C1-1=RI-DEAD-AT-d128  R-C1-2=NORM-FAILS  R-C1-3=PLATEAU:R0  R-C1-4=NATIVE-CARRIES-AT-d128  R-C1-5=NARROW-FUNNEL  R-C1-6=B-M3-BY-PORTFOLIO  R-C1-7=REPRODUCED  R-C1-8=NO-DATA

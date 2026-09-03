@@ -10,7 +10,8 @@
 # + stage-A death A0a (STOP, no stage B, config.json shipped) + the trainer's
 # NAN-ABORT rc=3 path on B1; S4 fresh 4x4 static map -> COMPLETE from a worker;
 # S5 select_ckpt failure -> VB-FALLBACK-FINAL, evals proceed; S6 banked pretrain
-# with no local dir -> PRETRAIN-RESTORE re-pull before select (no fallback).
+# with no local dir -> PRETRAIN-RESTORE re-pull before select (no fallback); S7 two-stage
+# selection over both stages; S8 banked two-stage arm on a NEW node -> both dirs restored.
 set -uo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 export REAL_PY="$REPO/.venv/bin/python3"
@@ -199,6 +200,18 @@ mk_sandbox; run_chain 0 1 STUB_SELECT_VAL_A0a=0.4500
 grep -q "VALBEST A0 A:000025 0.4500 25 -> runs/pretrainsportC1_A0a/ckpt_000025.pkl" "$SB/w0.log" && ok "S7 stage-A peak selected when its val is higher" || { bad "S7 stage-A selection"; grep VALBEST "$SB/w0.log" | head -3; }
 grep -q "VALBEST A1 B:000015 0.3000 15 -> runs/pretrainsportC1_A1/ckpt_000015.pkl" "$SB/w0.log" && ok "S7 tie -> stage B (the later stage)" || { bad "S7 tie rule"; grep 'VALBEST A1' "$SB/w0.log"; }
 grep -q '"ema": false' "$SB/repo/runs/sxeval_psportC1A0/full_vsel_t64/summary_s0.json" && [ -f "$SB/gcs/sportC1/evals/full_A0_final_t64_OK" ] && ok "S7 vsel (stage-A grid) and final both evaluated" || bad "S7 fulls after stage-A selection"
+
+echo "== S8 banked TWO-STAGE arm, no local dirs (node change after PRETRAIN-OK) -> BOTH dirs restored, selection over both stages =="
+mk_sandbox
+( cd "$SB/repo" && mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainsportC1_A0a --steps 50 --ema 0.999 >/dev/null 2>&1
+  env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainsportC1_A0 --steps 30 --ema 0.999 >/dev/null 2>&1
+  tar czf "$SB/gcs/sportC1/A0a_pretrain.tgz" runs/pretrainsportC1_A0a && cp runs/pretrainsportC1_A0a/ckpt_latest.pkl "$SB/gcs/sportC1/A0_stageA_ckpt.pkl" && echo ok > "$SB/gcs/sportC1/A0_STAGEA_OK"
+  tar czf "$SB/gcs/sportC1/A0_pretrain.tgz" runs/pretrainsportC1_A0 && cp runs/pretrainsportC1_A0/ckpt_latest.pkl "$SB/gcs/sportC1/A0_ckpt.pkl" && echo ok > "$SB/gcs/sportC1/A0_PRETRAIN_OK"
+  rm -rf runs/pretrainsportC1_A0 runs/pretrainsportC1_A0a )
+run_chain 0 1 STUB_SELECT_VAL_A0a=0.4500
+grep -q "PRETRAIN-SKIP A0" "$SB/w0.log" && grep -q "PRETRAIN-RESTORE A0 " "$SB/w0.log" && grep -q "PRETRAIN-RESTORE A0a" "$SB/w0.log" && ok "S8 both stage dirs re-pulled after the node change" || { bad "S8 restore"; grep -E 'RESTORE|SKIP A0' "$SB/w0.log" | head -4; }
+grep -q "VALBEST A0 A:000025 0.4500 25 -> runs/pretrainsportC1_A0a/ckpt_000025.pkl" "$SB/w0.log" && ok "S8 selection over BOTH stages picks the stage-A peak (the B0/B1 defect closed)" || { bad "S8 selection"; grep 'VALBEST A0' "$SB/w0.log" | head -2; }
+grep -q "CHAIN-SPORTC1-COMPLETE" "$SB/w0.log" && ok "S8 complete" || bad "S8 complete"
 
 echo; echo "harness: $PASS PASS / $FAIL FAIL"
 exit $([ "$FAIL" -eq 0 ] && echo 0 || echo 1)

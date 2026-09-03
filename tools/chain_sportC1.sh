@@ -213,6 +213,19 @@ ensure_local_pretrain () {  # ARM — §4.4: after a node change the banked grid
   mkdir -p "$D"
   [ -f "$D/ckpt_latest.pkl" ] || gsutil -q cp "$GCS/${arm}_ckpt.pkl" "$D/ckpt_latest.pkl"
   [ -f "$D/STOPPED.txt" ] || gsutil -q cp "$GCS/${arm}_STOPPED.txt" "$D/STOPPED.txt" 2>/dev/null || true
+  # sportC1 analysis pass 2026-09-03 (PROVENANCE DEFECT, PM-1 class re-entering via the resume path): a two-stage
+  # arm's STAGE-A dir must be local too, else the both-stage val-selection silently degrades to stage-B-only on a
+  # new node (B0/B1's scans + vsel censuses ran on memorized stage-B grids after the 16:23Z preemption).
+  if two_stage "$arm" && [ ! -f "$D/STOPPED.txt" ]; then
+    local DA=runs/pretrain${R_TAG}_${arm}a
+    if [ ! -f "$DA/metrics.jsonl" ] || [ -z "$(ls "$DA"/ckpt_0*.pkl 2>/dev/null)" ]; then
+      if gsutil -q cp "$GCS/${arm}a_pretrain.tgz" "/tmp/${arm}a_pre_pull.tgz" 2>/dev/null; then
+        tar xzf "/tmp/${arm}a_pre_pull.tgz" 2>/dev/null && echo "PRETRAIN-RESTORE ${arm}a (stage-A grids + metrics re-pulled from GCS; selection stays two-stage)"
+      else
+        echo "STAGEA-RESTORE-MISSING $arm (no ${arm}a_pretrain.tgz in GCS: selection is STAGE-B-ONLY — labeled)"
+      fi
+    fi
+  fi
 }
 
 stopped_step () { grep -oE 'step [0-9]+' "runs/pretrain${R_TAG}_$1/STOPPED.txt" 2>/dev/null | awk '{print $2}' | head -1; }

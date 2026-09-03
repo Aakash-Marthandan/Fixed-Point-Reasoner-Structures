@@ -1,0 +1,386 @@
+========================================================================================================================
+CHAMPION sportC1 (d128 native round) — PHYSICS PASS 2026-09-03 (analysis-time, descriptive; verdict authority = analyze_sportC1.py)
+========================================================================================================================
+
+== A. ADMISSION + BANKED-GRID CENSUS + VAL-SELECTION PROVENANCE (artifact level) ==
+  A0  champion recipe s0 (no norm)                 step 30000 n_bulk 3004530 (pin 3004530 OK) ema_in_ckpt True final_finite True
+        cfg: d128 T16 cell rg z_norm '' layout native9 arity 3 mixer group9 b_nl 1e-06 b_flux 0.0 fpa_k 4 ni 0.0 loss softmax
+        argv: seed 0 ri_p 0.5 aug 1000 digit_aug False steps 50000 batch 64 lr 0.001->3e-05 warmup 500 wd 0.0001 beta2 0.999 ema 0.999 sot False act False remat False init_from False
+        STOPPED: STOPPED final step 30000 (NaN halt; one-shot amputation, sportC1) | NAN_ABORT: (stage A) NAN-ABORT at step 34550 (non-finite loss at a log row; early-NaN abort, sportC1 §4.1) | resumes: None | val_best.txt: None
+        banked grids (D): [5000, 10000, 15000, 20000, 25000, 30000] | NON-FINITE: [] | stage-A dir grids: [5000, 10000, 15000, 20000, 25000, 30000]
+  A1  champion recipe s1 (no norm)                 step 5000 n_bulk 3004530 (pin 3004530 OK) ema_in_ckpt True final_finite True
+        cfg: d128 T16 cell rg z_norm '' layout native9 arity 3 mixer group9 b_nl 1e-06 b_flux 0.0 fpa_k 4 ni 0.0 loss softmax
+        argv: seed 1 ri_p 0.5 aug 1000 digit_aug False steps 50000 batch 64 lr 0.001->3e-05 warmup 500 wd 0.0001 beta2 0.999 ema 0.999 sot False act False remat False init_from False
+        STOPPED: STOPPED final step 5000 (NaN halt; one-shot amputation, sportC1) | NAN_ABORT: (stage A) NAN-ABORT at step 5100 (non-finite loss at a log row; early-NaN abort, sportC1 §4.1) | resumes: None | val_best.txt: None
+        banked grids (D): [5000] | NON-FINITE: [] | stage-A dir grids: [5000]
+  B0  A0 + z-norm                                  step 30000 n_bulk 3004658 (pin 3004658 OK) ema_in_ckpt True final_finite True
+        cfg: d128 T16 cell rg z_norm 'rms' layout native9 arity 3 mixer group9 b_nl 1e-06 b_flux 0.0 fpa_k 4 ni 0.0 loss softmax
+        argv: seed 0 ri_p 0.5 aug 1000 digit_aug False steps 30000 batch 64 lr 3e-05->3e-05 warmup 100 wd 0.0001 beta2 0.999 ema 0.999 sot False act False remat False init_from True
+        STOPPED: None | NAN_ABORT: None | resumes: None | val_best.txt: None
+        banked grids (D): [5000, 10000, 15000, 20000, 25000, 30000] | NON-FINITE: [] | stage-A dir grids: [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000]
+  B1  A1 + z-norm                                  step 30000 n_bulk 3004658 (pin 3004658 OK) ema_in_ckpt True final_finite True
+        cfg: d128 T16 cell rg z_norm 'rms' layout native9 arity 3 mixer group9 b_nl 1e-06 b_flux 0.0 fpa_k 4 ni 0.0 loss softmax
+        argv: seed 1 ri_p 0.5 aug 1000 digit_aug False steps 30000 batch 64 lr 3e-05->3e-05 warmup 100 wd 0.0001 beta2 0.999 ema 0.999 sot False act False remat False init_from True
+        STOPPED: None | NAN_ABORT: None | resumes: None | val_best.txt: None
+        banked grids (D): [5000, 10000, 15000, 20000, 25000, 30000] | NON-FINITE: [] | stage-A dir grids: [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000]
+  R0  our cell, FIELD regime (+z-norm, EMA)        step 50000 n_bulk 3004658 (pin 3004658 OK) ema_in_ckpt True final_finite True
+        cfg: d128 T16 cell rg z_norm 'rms' layout native9 arity 3 mixer group9 b_nl 1e-06 b_flux 0.0 fpa_k 4 ni 0.0 loss softmax
+        argv: seed 0 ri_p 0.5 aug 1000 digit_aug False steps 50000 batch 384 lr 0.0001->0.0001 warmup 2000 wd 1.0 beta2 0.95 ema 0.999 sot False act False remat True init_from False
+        STOPPED: None | NAN_ABORT: None | resumes: 31000 | val_best.txt: None
+        banked grids (D): [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000] | NON-FINITE: [] | no stage-A dir
+  X0  FIELD baseline: TRM cell + SOT + ACT (EMA)   step 50000 n_bulk 5037061 (pin 5037058 MISMATCH) ema_in_ckpt True final_finite True
+        cfg: d16 T16 cell trm z_norm '' layout native9 arity 3 mixer group9 b_nl 0.0 b_flux 0.0 fpa_k 0 ni 0.0 loss stablemax trm h512 L2 H3 Lc6 lam 0.05 beta 0.01
+        argv: seed 0 ri_p 0.0 aug 1000 digit_aug True steps 50000 batch 768 lr 0.0001->0.0001 warmup 2000 wd 1.0 beta2 0.95 ema 0.999 sot True act True remat False init_from False
+        STOPPED: None | NAN_ABORT: None | resumes: None | val_best.txt: None
+        banked grids (D): [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000] | NON-FINITE: [] | no stage-A dir
+  X0n X0 without ACT                               step 50000 n_bulk 5037061 (pin 5037058 MISMATCH) ema_in_ckpt True final_finite True
+        cfg: d16 T16 cell trm z_norm '' layout native9 arity 3 mixer group9 b_nl 0.0 b_flux 0.0 fpa_k 0 ni 0.0 loss stablemax trm h512 L2 H3 Lc6 lam 0.05 beta 0.01
+        argv: seed 0 ri_p 0.0 aug 1000 digit_aug True steps 50000 batch 768 lr 0.0001->0.0001 warmup 2000 wd 1.0 beta2 0.95 ema 0.999 sot True act False remat False init_from False
+        STOPPED: None | NAN_ABORT: None | resumes: None | val_best.txt: None
+        banked grids (D): [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000] | NON-FINITE: [] | no stage-A dir
+
+  val-selection provenance (the grid each vsel eval ran on; from summary ckpt fields) + OFFLINE re-selection on the headline key over both stages:
+  A0  chain vsel =    B:30000 (eff step 80000) sources {'full_vsel': 'B:30000', 'full_alt': 'B:30000', 'scan': 'B:30000', 'census_vsel': 'B:30000', 'screen_vb': 'B:30000', 'retfm': 'B:30000'} CONSISTENT | offline argmax val_t64: :30000 val 0.391 MATCH
+  A1  chain vsel =      final (eff step None) sources {'full_vsel': 'final', 'full_alt': 'final', 'scan': 'final', 'census_vsel': 'final', 'screen_vb': 'final', 'retfm': 'final'} CONSISTENT | offline argmax val_t64: - val     - DIFFERS
+  B0  chain vsel =    A:20000 (eff step 20000) sources {'full_vsel': 'A:20000', 'full_alt': 'B:20000', 'scan': 'B:20000', 'census_vsel': 'B:20000', 'screen_vb': 'A:20000', 'retfm': 'A:20000'} INCONSISTENT | offline argmax val_t64: A:20000 val 0.484 MATCH
+  B1  chain vsel =    A:20000 (eff step 20000) sources {'full_vsel': 'A:20000', 'full_alt': 'A:20000', 'scan': 'B:30000', 'census_vsel': 'B:30000', 'screen_vb': 'A:20000', 'retfm': 'A:20000'} INCONSISTENT | offline argmax val_t64: A:20000 val 0.453 MATCH
+  R0  chain vsel =      50000 (eff step 50000) sources {'full_vsel': '50000', 'full_alt': '50000', 'scan': '50000', 'census_vsel': '50000', 'screen_vb': '50000', 'retfm': '50000'} CONSISTENT | offline argmax val_t64_ema: :50000 val 0.344 MATCH
+  X0  chain vsel =      50000 (eff step 50000) sources {'full_vsel': '50000', 'full_alt': '50000', 'scan': '50000', 'census_vsel': '50000', 'screen_vb': '50000'} CONSISTENT | offline argmax val_t16_ema: :50000 val 0.859 MATCH
+  X0n chain vsel =      30000 (eff step 30000) sources {'full_vsel': '30000', 'full_alt': '30000', 'census_vsel': '30000', 'screen_vb': '30000'} CONSISTENT | offline argmax val_t16_ema: :30000 val 0.703 MATCH
+
+== B. TRAJECTORIES (last-wins dedup; two-stage arms = stage A + stage B offset +50k; headline key per arm) ==
+  A0  rows  600 last step 30000 | first NON-FINITE row None | last finite 30000 | pace 21.08 it/s | wall 2026-09-02T09:09:33 -> 2026-09-02T09:52:57 | died in stage A: D holds the stage-A trajectory (steps as-is)
+        loss last  0.3507 | CE @10k 0.5057 @30k 0.1269 @50k      - last 0.1269 min 0.0314 | A_total peak   104188.2 @2k     192.7 @10k    139.8 last    411.1 | I_total @10k  137524.8 last  193691.8 | rule_H last 0.000
+        val_t64: 2k:0.156 4k:0.141 6k:0.125 8k:0.172 10k:0.312 12k:0.297 14k:0.297 16k:0.312 18k:0.344 20k:0.359 22k:0.344 24k:0.406 26k:0.359 28k:0.344 30k:0.391  | peak (24000, 0.40625) | end (30000, 0.390625) | rise over last 10k +3.12pp
+        EMA val: 2k:0.000 4k:0.172 6k:0.156 8k:0.172 10k:0.281 12k:0.344 14k:0.359 16k:0.359 18k:0.359 20k:0.328 22k:0.391 24k:0.422 26k:0.422 28k:0.422 30k:0.422
+        eta: 2k:0.592 4k:0.650 6k:0.676 8k:0.702 10k:0.737 12k:0.770 14k:0.799 16k:0.821 18k:0.841 20k:0.857 22k:0.872 24k:0.883 26k:0.894 28k:0.904 30k:0.913 | eta_z: 26k:0.756 28k:0.753 30k:0.747
+        lamJ_max: 2k:0.86 4k:0.60 6k:0.59 8k:0.69 10k:0.89 12k:0.84 14k:0.79 16k:0.76 18k:0.74 20k:0.66 22k:0.63 24k:0.72 26k:0.71 28k:0.76 30k:0.73
+        retfm: 2k:1.00 4k:1.00 6k:1.00 8k:1.00 10k:1.00 12k:1.00 14k:1.00 16k:1.00 18k:1.00 20k:1.00 22k:1.00 24k:1.00 26k:1.00 28k:1.00 30k:1.00 | ret_sched: 2k:0.12 4k:0.05 6k:0.06 8k:0.05 10k:0.11 12k:0.20 14k:0.12 16k:0.08 18k:0.11 20k:0.14 22k:0.14 24k:0.14 26k:0.17 28k:0.19 30k:0.16
+  A1  rows  100 last step 5000 | first NON-FINITE row None | last finite 5000 | pace 21.10 it/s | wall 2026-09-02T09:10:04 -> 2026-09-02T09:20:35 | died in stage A: D holds the stage-A trajectory (steps as-is)
+        loss last  0.7073 | CE @10k      - @30k      - @50k      - last 0.6496 min 0.5360 | A_total peak   129007.2 @2k     184.8 @10k        - last    180.1 | I_total @10k         - last   63605.2 | rule_H last 0.000
+        val_t64: 2k:0.172 4k:0.172  | peak (2000, 0.171875) | end (4000, 0.171875) | rise over last 10k -
+        EMA val: 2k:0.000 4k:0.156
+        eta: 2k:0.585 4k:0.659 | eta_z: 2k:0.734 4k:0.727
+        lamJ_max: 2k:1.48 4k:0.58
+        retfm: 2k:0.97 4k:1.00 | ret_sched: 2k:0.14 4k:0.06
+  B0  rows 1600 last step 80000 | first NON-FINITE row None | last finite 80000 | pace 20.67 it/s | wall 2026-09-02T13:01:17 -> 2026-09-02T14:57:13 | stage A trajectory present; stage B offset +50k
+        loss last  0.1503 | CE @10k 0.5063 @30k 0.0397 @50k 0.0000 last 0.0000 min 0.0000 | A_total peak   104196.9 @2k     232.2 @10k    477.3 last     31.0 | I_total @10k  126482.2 last  162287.3 | rule_H last 0.000
+        val_t64: 2k:0.125 6k:0.172 10k:0.328 14k:0.328 18k:0.453 22k:0.391 26k:0.484 30k:0.469 34k:0.453 38k:0.344 42k:0.328 46k:0.312 50k:0.328 54k:0.312 58k:0.266 62k:0.328 66k:0.312 70k:0.297 74k:0.281 78k:0.250  | peak (20000, 0.484375) | end (80000, 0.234375) | rise over last 10k -6.25pp
+        EMA val: 2k:0.000 6k:0.172 10k:0.359 14k:0.406 18k:0.453 22k:0.438 26k:0.500 30k:0.531 34k:0.453 38k:0.422 42k:0.375 46k:0.312 50k:0.328 54k:0.312 58k:0.312 62k:0.328 66k:0.328 70k:0.281 74k:0.266 78k:0.266
+        eta: 2k:0.590 6k:0.695 10k:0.780 14k:0.845 18k:0.892 22k:0.922 26k:0.943 30k:0.956 34k:0.965 38k:0.969 42k:0.972 46k:0.974 50k:0.975 54k:0.975 58k:0.976 62k:0.976 66k:0.977 70k:0.978 74k:0.978 78k:0.979 | eta_z: 76k:0.783 78k:0.784 80k:0.785
+        lamJ_max: 2k:0.80 6k:0.49 10k:0.54 14k:0.71 18k:0.68 22k:0.60 26k:0.73 30k:0.64 34k:0.74 38k:1.33 42k:0.66 46k:0.88 50k:0.79 54k:1.62 58k:0.85 62k:1.05 66k:0.72 70k:1.37 74k:0.66 78k:0.85
+        retfm: 2k:1.00 6k:1.00 10k:1.00 14k:1.00 18k:1.00 22k:1.00 26k:1.00 30k:1.00 34k:1.00 38k:1.00 42k:1.00 46k:1.00 50k:1.00 54k:1.00 58k:1.00 62k:1.00 66k:1.00 70k:1.00 74k:1.00 78k:1.00 | ret_sched: 2k:0.06 6k:0.02 10k:0.06 14k:0.12 18k:0.14 22k:0.17 26k:0.16 30k:0.16 34k:0.12 38k:0.20 42k:0.09 46k:0.11 50k:0.11 54k:0.11 58k:0.09 62k:0.11 66k:0.11 70k:0.11 74k:0.11 78k:0.09
+  B1  rows 1600 last step 80000 | first NON-FINITE row None | last finite 80000 | pace 20.66 it/s | wall 2026-09-02T12:45:57 -> 2026-09-02T14:41:53 | stage A trajectory present; stage B offset +50k
+        loss last  0.1363 | CE @10k 0.3932 @30k 0.0000 @50k 0.0000 last 0.0000 min 0.0000 | A_total peak   869189.7 @2k     290.1 @10k    313.2 last     27.5 | I_total @10k  112453.5 last  103881.6 | rule_H last 0.000
+        val_t64: 2k:0.172 6k:0.297 10k:0.438 14k:0.453 18k:0.469 22k:0.375 26k:0.312 30k:0.344 34k:0.406 38k:0.328 42k:0.344 46k:0.297 50k:0.281 54k:0.219 58k:0.281 62k:0.250 66k:0.250 70k:0.250 74k:0.250 78k:0.250  | peak (12000, 0.46875) | end (80000, 0.25) | rise over last 10k +0.00pp
+        EMA val: 2k:0.000 6k:0.172 10k:0.391 14k:0.484 18k:0.469 22k:0.406 26k:0.406 30k:0.391 34k:0.359 38k:0.344 42k:0.297 46k:0.250 50k:0.219 54k:0.250 58k:0.250 62k:0.250 66k:0.234 70k:0.250 74k:0.250 78k:0.219
+        eta: 2k:0.586 6k:0.693 10k:0.774 14k:0.842 18k:0.888 22k:0.919 26k:0.943 30k:0.956 34k:0.964 38k:0.969 42k:0.972 46k:0.973 50k:0.974 54k:0.975 58k:0.975 62k:0.976 66k:0.976 70k:0.977 74k:0.978 78k:0.978 | eta_z: 76k:0.798 78k:0.799 80k:0.800
+        lamJ_max: 2k:0.55 6k:0.54 10k:0.52 14k:0.64 18k:0.56 22k:0.66 26k:0.77 30k:0.74 34k:0.76 38k:0.78 42k:0.78 46k:0.82 50k:0.79 54k:0.81 58k:0.77 62k:0.79 66k:0.78 70k:0.80 74k:0.78 78k:0.76
+        retfm: 2k:1.00 6k:1.00 10k:1.00 14k:1.00 18k:1.00 22k:1.00 26k:1.00 30k:1.00 34k:1.00 38k:1.00 42k:1.00 46k:1.00 50k:1.00 54k:1.00 58k:1.00 62k:1.00 66k:1.00 70k:1.00 74k:1.00 78k:1.00 | ret_sched: 2k:0.23 6k:0.06 10k:0.09 14k:0.11 18k:0.11 22k:0.14 26k:0.11 30k:0.16 34k:0.16 38k:0.12 42k:0.05 46k:0.08 50k:0.06 54k:0.06 58k:0.08 62k:0.08 66k:0.09 70k:0.06 74k:0.06 78k:0.06
+  R0  rows 1000 last step 50000 | first NON-FINITE row None | last finite 50000 | pace  4.02 it/s | wall 2026-09-03T02:44:02 -> 2026-09-03T07:04:55 | 
+        loss last  0.5778 | CE @10k 0.6306 @30k 0.5417 @50k 0.4230 last 0.4230 min 0.3422 | A_total peak   125341.1 @2k    2270.3 @10k      6.0 last     18.9 | I_total @10k   28730.6 last   30464.6 | rule_H last 0.273
+        val_t64_ema: 2k:0.000 6k:0.109 10k:0.156 14k:0.141 18k:0.156 22k:0.156 26k:0.141 30k:0.203 34k:0.219 38k:0.250 42k:0.297 46k:0.344 50k:0.344  | peak (46000, 0.34375) | end (50000, 0.34375) | rise over last 10k +6.25pp
+        raw val: 2k:0.000 6k:0.141 10k:0.156 14k:0.156 18k:0.172 22k:0.156 26k:0.000 30k:0.188 34k:0.250 38k:0.219 42k:0.312 46k:0.359 50k:0.297
+        eta: 2k:0.518 6k:0.564 10k:0.602 14k:0.621 18k:0.633 22k:0.639 26k:0.641 30k:0.641 34k:0.642 38k:0.642 42k:0.641 46k:0.639 50k:0.637 | eta_z: 46k:0.607 48k:0.610 50k:0.611
+        lamJ_max: 2k:0.73 6k:0.84 10k:0.78 14k:0.80 18k:0.99 22k:1.02 26k:1.41 30k:1.18 34k:1.17 38k:0.97 42k:0.93 46k:0.89 50k:0.83
+        retfm: 2k:1.00 6k:1.00 10k:1.00 14k:1.00 18k:1.00 22k:1.00 26k:0.94 30k:1.00 34k:1.00 38k:1.00 42k:1.00 46k:1.00 50k:1.00 | ret_sched: 2k:0.06 6k:1.00 10k:0.39 14k:0.12 18k:0.05 22k:0.03 26k:0.05 30k:0.06 34k:0.09 38k:0.02 42k:0.06 46k:0.02 50k:0.05
+  X0  rows 1000 last step 50000 | first NON-FINITE row None | last finite 50000 | pace 26.98 it/s | wall 2026-09-02T11:24:51 -> 2026-09-02T12:51:14 | 
+        loss last  0.6116 | CE @10k 0.6799 @30k 0.5789 @50k 0.6025 last 0.6025 min 0.5505 | A_total peak        0.0 @2k       0.0 @10k      0.0 last      0.0 | I_total @10k       0.0 last       0.0 | rule_H last 0.000 | train_exact last 0.199 max 0.245 halt_frac last 0.214
+        val_t16_ema: 2k:0.000 6k:0.141 10k:0.391 14k:0.578 18k:0.641 22k:0.734 26k:0.781 30k:0.797 34k:0.859 38k:0.828 42k:0.844 46k:0.859 50k:0.859  | peak (48000, 0.875) | end (50000, 0.859375) | rise over last 10k +1.56pp
+        raw val: 2k:0.000 6k:0.047 10k:0.219 14k:0.516 18k:0.531 22k:0.625 26k:0.703 30k:0.734 34k:0.844 38k:0.656 42k:0.828 46k:0.781 50k:0.781
+        eta: 2k:1.000 6k:1.000 10k:1.000 14k:1.000 18k:1.000 22k:1.000 26k:1.000 30k:1.000 34k:1.000 38k:1.000 42k:1.000 46k:1.000 50k:1.000 | eta_z: 46k:1.000 48k:1.000 50k:1.000
+  X0n rows 1000 last step 50000 | first NON-FINITE row None | last finite 50000 | pace 58.02 it/s | wall 2026-09-03T00:17:36 -> 2026-09-03T00:58:12 | 
+        loss last  0.0075 | CE @10k 0.3040 @30k 0.0065 @50k 0.0075 last 0.0075 min 0.0041 | A_total peak        0.0 @2k       0.0 @10k      0.0 last      0.0 | I_total @10k       0.0 last       0.0 | rule_H last 0.000 | train_exact last 0.999 max 1.000 halt_frac last 1.000
+        val_t16_ema: 2k:0.000 6k:0.125 10k:0.422 14k:0.609 18k:0.672 22k:0.703 26k:0.703 30k:0.703 34k:0.672 38k:0.688 42k:0.625 46k:0.609 50k:0.625  | peak (24000, 0.71875) | end (50000, 0.625) | rise over last 10k -6.25pp
+        raw val: 2k:0.000 6k:0.141 10k:0.297 14k:0.422 18k:0.625 22k:0.688 26k:0.391 30k:0.641 34k:0.688 38k:0.453 42k:0.531 46k:0.594 50k:0.391
+        eta: 2k:1.000 6k:1.000 10k:1.000 14k:1.000 18k:1.000 22k:1.000 26k:1.000 30k:1.000 34k:1.000 38k:1.000 42k:1.000 46k:1.000 50k:1.000 | eta_z: 46k:1.000 48k:1.000 50k:1.000
+
+== C. DEATH CENSUS + THE z-NORM TWIN BRIDGE (H-50's test) ==
+  arm | norm | death (NAN_ABORT step / grid interval) | last monitor before death: eta / lamJ / retfm / ret_sched / val | A_total last-finite | I_total last-finite | CE last-finite
+  A0  | none   |   (30000, 34550] | eta 0.913 lamJ  0.73 retfm 1.00 ret_s 0.16 val 0.391 | A     411.1 | I  193691.8 | CE 0.1269
+  A1  | none   |     (5000, 5100] | eta 0.659 lamJ  0.58 retfm 1.00 ret_s 0.06 val 0.172 | A     180.1 | I   63605.2 | CE 0.6496
+  B0  | z-norm |            clean | eta 0.979 lamJ  0.66 retfm 1.00 ret_s 0.08 val 0.234 | A      31.0 | I  162287.3 | CE 0.0000
+  B1  | z-norm |            clean | eta 0.978 lamJ  0.77 retfm 1.00 ret_s 0.06 val 0.250 | A      27.5 | I  103881.6 | CE 0.0000
+  R0  | z-norm |            clean | eta 0.637 lamJ  0.83 retfm 1.00 ret_s 0.05 val 0.344 | A      18.9 | I   30464.6 | CE 0.4230
+  READ: A_total at every death = the dose's CLOSED value (H-48 discriminator) if <= ~500 nats; the free stream I_total is the inflating channel.
+
+  seed-paired twin trajectories at matched steps (A = no norm, B = z-norm): step | eta A/B | val A/B | CE A/B | I_total A/B | lamJ A/B | retfm A/B
+  pair A0/B0:
+      2000 | eta 0.592/0.590 | val 0.156/0.125 | CE 0.5781/0.5553 | I     33404/    34455 | lamJ  0.86/ 0.80 | retfm 1.00/1.00
+      4000 | eta 0.650/0.640 | val 0.141/0.125 | CE 0.7004/0.7083 | I     50250/    49016 | lamJ  0.60/ 0.64 | retfm 1.00/1.00
+      6000 | eta 0.676/0.695 | val 0.125/0.172 | CE 0.5732/0.5196 | I     91427/    80583 | lamJ  0.59/ 0.49 | retfm 1.00/1.00
+      8000 | eta 0.702/0.740 | val 0.172/0.297 | CE 0.5284/0.4602 | I    117245/   117126 | lamJ  0.69/ 0.79 | retfm 1.00/1.00
+     12000 | eta 0.770/0.817 | val 0.297/0.344 | CE 0.4449/0.4318 | I    169636/   147594 | lamJ  0.84/ 0.51 | retfm 1.00/1.00
+     16000 | eta 0.821/0.872 | val 0.312/0.453 | CE 0.4446/0.3207 | I    222687/   184683 | lamJ  0.76/ 0.58 | retfm 1.00/1.00
+     20000 | eta 0.857/0.910 | val 0.359/0.484 | CE 0.3113/0.2107 | I    223376/   211797 | lamJ  0.66/ 0.99 | retfm 1.00/1.00
+     24000 | eta 0.883/0.934 | val 0.406/0.422 | CE 0.1943/0.1840 | I    218836/   221181 | lamJ  0.72/ 0.58 | retfm 1.00/1.00
+     28000 | eta 0.904/0.950 | val 0.344/0.422 | CE 0.1561/0.0395 | I    195735/   199170 | lamJ  0.76/ 0.90 | retfm 1.00/1.00
+     32000 | eta     -/0.961 | val     -/0.406 | CE      -/0.0127 | I         -/   190542 | lamJ     -/ 1.13 | retfm    -/1.00
+     36000 | eta     -/0.968 | val     -/0.375 | CE      -/0.0072 | I         -/   181680 | lamJ     -/ 0.66 | retfm    -/1.00
+     40000 | eta     -/0.971 | val     -/0.406 | CE      -/0.0000 | I         -/   177721 | lamJ     -/ 0.67 | retfm    -/1.00
+     44000 | eta     -/0.973 | val     -/0.328 | CE      -/0.0000 | I         -/   177119 | lamJ     -/ 0.68 | retfm    -/1.00
+     48000 | eta     -/0.974 | val     -/0.297 | CE      -/0.0000 | I         -/   173877 | lamJ     -/ 1.89 | retfm    -/1.00
+     52000 | eta     -/0.975 | val     -/0.328 | CE      -/0.0000 | I         -/   175164 | lamJ     -/ 1.03 | retfm    -/1.00
+     56000 | eta     -/0.976 | val     -/0.328 | CE      -/0.0000 | I         -/   173306 | lamJ     -/ 0.97 | retfm    -/1.00
+     60000 | eta     -/0.976 | val     -/0.297 | CE      -/0.0000 | I         -/   169712 | lamJ     -/ 1.62 | retfm    -/1.00
+     64000 | eta     -/0.977 | val     -/0.281 | CE      -/0.0000 | I         -/   165169 | lamJ     -/ 0.97 | retfm    -/1.00
+     68000 | eta     -/0.977 | val     -/0.312 | CE      -/0.0000 | I         -/   165991 | lamJ     -/ 0.86 | retfm    -/1.00
+     72000 | eta     -/0.978 | val     -/0.266 | CE      -/0.0000 | I         -/   165106 | lamJ     -/ 0.87 | retfm    -/1.00
+     76000 | eta     -/0.978 | val     -/0.312 | CE      -/0.0000 | I         -/   166389 | lamJ     -/ 0.72 | retfm    -/1.00
+     80000 | eta     -/0.979 | val     -/0.234 | CE      -/0.0000 | I         -/   162287 | lamJ     -/ 0.66 | retfm    -/1.00
+  pair A1/B1:
+      2000 | eta 0.585/0.586 | val 0.172/0.172 | CE 0.6984/0.6691 | I     32485/    35281 | lamJ  1.48/ 0.55 | retfm 0.97/1.00
+      4000 | eta 0.659/0.643 | val 0.172/0.094 | CE 0.6089/0.5944 | I     54310/    62052 | lamJ  0.58/ 0.52 | retfm 1.00/1.00
+      6000 | eta     -/0.693 | val     -/0.297 | CE 0.6496/0.5098 | I     63605/    82670 | lamJ     -/ 0.54 | retfm    -/1.00
+      8000 | eta     -/0.737 | val     -/0.422 | CE      -/0.5448 | I         -/   106042 | lamJ     -/ 0.59 | retfm    -/1.00
+     12000 | eta     -/0.810 | val     -/0.469 | CE      -/0.3527 | I         -/   133529 | lamJ     -/ 0.50 | retfm    -/1.00
+     16000 | eta     -/0.866 | val     -/0.375 | CE      -/0.2915 | I         -/   151704 | lamJ     -/ 0.51 | retfm    -/1.00
+     20000 | eta     -/0.904 | val     -/0.453 | CE      -/0.1549 | I         -/   137238 | lamJ     -/ 0.58 | retfm    -/1.00
+     24000 | eta     -/0.932 | val     -/0.406 | CE      -/0.0823 | I         -/   121944 | lamJ     -/ 0.72 | retfm    -/1.00
+     28000 | eta     -/0.950 | val     -/0.359 | CE      -/0.0315 | I         -/   121820 | lamJ     -/ 0.69 | retfm    -/1.00
+     32000 | eta     -/0.960 | val     -/0.375 | CE      -/0.0002 | I         -/   106064 | lamJ     -/ 0.77 | retfm    -/1.00
+     36000 | eta     -/0.967 | val     -/0.359 | CE      -/0.0000 | I         -/   106335 | lamJ     -/ 0.74 | retfm    -/1.00
+     40000 | eta     -/0.971 | val     -/0.297 | CE      -/0.0000 | I         -/   102693 | lamJ     -/ 0.89 | retfm    -/1.00
+     44000 | eta     -/0.973 | val     -/0.281 | CE      -/0.0000 | I         -/   104108 | lamJ     -/ 0.76 | retfm    -/1.00
+     48000 | eta     -/0.974 | val     -/0.234 | CE      -/0.0000 | I         -/   102767 | lamJ     -/ 0.77 | retfm    -/1.00
+     52000 | eta     -/0.974 | val     -/0.250 | CE      -/0.0038 | I         -/   103155 | lamJ     -/ 0.81 | retfm    -/1.00
+     56000 | eta     -/0.975 | val     -/0.234 | CE      -/0.0000 | I         -/   102242 | lamJ     -/ 0.78 | retfm    -/1.00
+     60000 | eta     -/0.976 | val     -/0.250 | CE      -/0.0000 | I         -/   102516 | lamJ     -/ 0.77 | retfm    -/1.00
+     64000 | eta     -/0.976 | val     -/0.234 | CE      -/0.0000 | I         -/   101608 | lamJ     -/ 0.81 | retfm    -/1.00
+     68000 | eta     -/0.977 | val     -/0.219 | CE      -/0.0000 | I         -/   101649 | lamJ     -/ 0.81 | retfm    -/1.00
+     72000 | eta     -/0.977 | val     -/0.203 | CE      -/0.0000 | I         -/   101806 | lamJ     -/ 0.88 | retfm    -/1.00
+     76000 | eta     -/0.978 | val     -/0.266 | CE      -/0.0000 | I         -/   102801 | lamJ     -/ 0.77 | retfm    -/1.00
+     80000 | eta     -/0.978 | val     -/0.250 | CE      -/0.0000 | I         -/   103882 | lamJ     -/ 0.77 | retfm    -/1.00
+
+== D. EVAL TABLE (vsel grid, HEADLINE weights unless named; STOPPED arms = amputated, labeled) ==
+  arm | vcold | fcold | alt-weights vcold | b1 (B=1) | verified@1/8/32/128 | t1r@1/8/32/128 | majority@16/64/128/256 (vb screen) | retfm | census vsel t64/t256 | census final t64/t256
+  A0  |  39.93 |  39.93 |  42.04 (EMA) |  39.91 |  42.32/ 46.94/ 49.68/ 52.28 |  39.91/ 46.67/ 49.52/ 52.11 |  38.67/ 39.06/ 39.26/ 39.26 | 100.00 |   0.00/  0.00 |   0.00/  0.00
+  A1  |  22.69 |  22.69 |  22.13 (EMA) |  22.68 |  23.01/ 23.73/ 24.09/ 24.45 |  22.68/ 23.49/ 23.84/ 24.17 |  24.80/ 24.80/ 24.41/ 24.61 | 100.00 |   0.00/  0.00 |   0.00/  0.00
+  B0  |  42.83 |  23.40 |  26.28 (EMA) |  25.82 |  29.21/ 36.91/ 43.38/ 50.48 |  25.82/ 36.52/ 42.95/ 49.73 |  44.34/ 44.73/ 44.92/ 44.53 | 100.00 |   0.00/  0.00 |   0.00/  0.00
+  B1  |  42.71 |  24.94 |  45.65 (EMA) |  24.75 |  27.91/ 35.22/ 41.37/ 47.02 |  24.75/ 34.66/ 40.70/ 45.86 |  45.12/ 45.12/ 44.92/ 44.92 | 100.00 |   0.00/  0.00 |   0.00/  0.00
+  R0  |  37.33 |  37.33 |  34.61 (raw) |  36.84 |  39.66/ 44.75/ 48.08/ 50.80 |  36.84/ 44.16/ 47.55/ 50.18 |  35.35/ 36.13/ 36.13/ 36.13 | 100.00 |   0.00/  0.00 |   0.00/  0.00
+  X0  |  86.03 |  86.03 |  80.81 (raw) |  92.12 |  95.00/ 97.57/ 98.84/ 99.70 |  92.12/ 95.49/ 95.08/ 92.48 |  89.06/ 88.87/ 88.87/ 88.87 |    -   |   0.00/  0.00 |   0.00/  0.00
+  X0n |  72.08 |  64.18 |  63.00 (raw) |    -   |    -  /   -  /   -  /   -   |    -  /   -  /   -  /   -   |  57.03/ 66.99/ 67.77/ 68.75 |    -   |   0.00/  0.00 |   0.00/  0.00
+  full-test failure texture (vsel grid): arm | valid_wrong frac | mean violations | givens kept
+  A0  |  0.0001 |  13.71 | 1.0000
+  A1  |  0.0000 |  24.38 | 1.0000
+  B0  |  0.0000 |   7.21 | 1.0000
+  B1  |  0.0001 |   6.56 | 1.0000
+  R0  |  0.0000 |   8.10 | 1.0000
+  X0  |  0.0001 |   4.75 | 1.0000
+  X0n |  0.0014 |   4.49 | 0.9999
+
+  X0 / X0n depth rows (EMA headline): D16 vsel | D16 final | D16 alt(raw) | D64 vsel
+  X0  |  86.03 |  86.03 |  80.81 |  92.81
+  X0n |  72.08 |  64.18 |  63.00 |  76.69
+
+  screen curves (strat-512 k256 at the headline depth/weights; two-stage tags: sAend = stage-A final, sB005000/sB015000 = stage-B +5k/+15k):
+  A0 : vb@B:30000: v256  55.66 cold  38.09 maj256  39.26
+  A1 : vb@final: v256  26.37 cold  23.83 maj256  24.61
+  B0 : sAend@final: v256  57.42 cold  31.25 maj256  31.84 | sB005000@B:5000: v256  54.49 cold  29.10 maj256  29.69 | sB015000@B:15000: v256  56.64 cold  29.30 maj256  29.49 | vb@A:20000: v256  56.45 cold  44.14 maj256  44.53
+  B1 : sAend@final: v256  57.81 cold  33.98 maj256  32.62 | sB005000@B:5000: v256  55.86 cold  31.64 maj256  30.86 | sB015000@B:15000: v256  52.54 cold  27.73 maj256  29.69 | vb@A:20000: v256  55.08 cold  45.51 maj256  44.92
+  R0 : s015000@15000: v256  24.41 cold  24.02 maj256  24.02 | s035000@35000: v256  38.67 cold  30.86 maj256  30.66 | vb@50000: v256  52.15 cold  36.13 maj256  36.13
+  X0 : s015000@15000: v256  90.04 cold  67.19 maj256  66.21 | s035000@35000: v256  99.41 cold  86.13 maj256  84.77 | vb@50000: v256  99.80 cold  87.50 maj256  88.87
+  X0n: s015000@15000: v256  77.54 cold  62.70 maj256  62.70 | s035000@35000: v256  95.70 cold  71.29 maj256  68.36 | vb@30000: v256  94.53 cold  72.46 maj256  68.75
+
+== E. PAIRED CONTRASTS (McNemar exact; identical puzzle sets by idx) ==
+  -- the z-norm twin bridge (seed-paired; 20k scan set) --
+  B0  [scan      ] vs A0  [scan      ] cold    n= 20000:  25.62 vs  40.03 (-14.41pp) | only-B0   1174 only-A0   4055 | p=0.00e+00 | union  45.90 
+  B0  [scan      ] vs A0  [scan      ] b1      n= 20000:  25.82 vs  39.91 (-14.09pp) | only-B0   1161 only-A0   3979 | p=0.00e+00 | union  45.72 
+  B0  [scan      ] vs A0  [scan      ] vote128 n= 20000:  50.48 vs  52.28 (-1.81pp) | only-B0   2628 only-A0   2989 | p=1.55e-06 | union  65.42 
+  B0  [scan      ] vs A0  [scan      ] t1r128  n= 20000:  49.73 vs  52.11 (-2.38pp) | only-B0   2560 only-A0   3036 | p=2.11e-10 | union  64.91 
+  B1  [scan      ] vs A1  [scan      ] cold    n= 20000:  24.64 vs  22.63 (+2.01pp) | only-B1   2517 only-A1   2115 | p=3.73e-09 | union  35.22 (A1 = 5k amputee: NOT a matched-length pair)
+  B1  [scan      ] vs A1  [scan      ] b1      n= 20000:  24.75 vs  22.68 (+2.07pp) | only-B1   2528 only-A1   2114 | p=1.31e-09 | union  35.32 (labeled)
+  B0  [scan      ] vs B1  [scan      ] cold    n= 20000:  25.62 vs  24.64 (+0.98pp) | only-B0   2216 only-B1   2020 | p=2.73e-03 | union  35.73 (z-norm seed pair)
+  B0  [scan      ] vs B1  [scan      ] b1      n= 20000:  25.82 vs  24.75 (+1.07pp) | only-B0   2230 only-B1   2016 | p=1.08e-03 | union  35.90 (z-norm seed pair)
+  B0  [scan      ] vs B1  [scan      ] vote128 n= 20000:  50.48 vs  47.02 (+3.46pp) | only-B0   3414 only-B1   2722 | p=1.04e-18 | union  64.09 (z-norm seed pair)
+  -- REGIME (same cell + z-norm; ours vs the field's optimizer regime) --
+  R0  [scan      ] vs B0  [scan      ] cold    n= 20000:  37.09 vs  25.62 (+11.47pp) | only-R0   3783 only-B0   1490 | p=4.80e-226 | union  44.54 
+  R0  [scan      ] vs B1  [scan      ] cold    n= 20000:  37.09 vs  24.64 (+12.45pp) | only-R0   3995 only-B1   1506 | p=8.46e-256 | union  44.62 
+  R0  [scan      ] vs B0  [scan      ] b1      n= 20000:  36.84 vs  25.82 (+11.03pp) | only-R0   3709 only-B0   1504 | p=3.69e-211 | union  44.37 
+  R0  [scan      ] vs B1  [scan      ] b1      n= 20000:  36.84 vs  24.75 (+12.10pp) | only-R0   3953 only-B1   1534 | p=7.33e-242 | union  44.52 
+  R0  [scan      ] vs B0  [scan      ] vote128 n= 20000:  50.80 vs  50.48 (+0.32pp) | only-R0   2932 only-B0   2868 | p=4.08e-01 | union  65.14 
+  R0  [scan      ] vs B1  [scan      ] vote128 n= 20000:  50.80 vs  47.02 (+3.78pp) | only-R0   3448 only-B1   2692 | p=5.05e-22 | union  64.25 
+  R0  [scan      ] vs B0  [scan      ] t1r128  n= 20000:  50.18 vs  49.73 (+0.45pp) | only-R0   2926 only-B0   2836 | p=2.41e-01 | union  64.36 
+  R0  [scan      ] vs B1  [scan      ] t1r128  n= 20000:  50.18 vs  45.86 (+4.32pp) | only-R0   3463 only-B1   2599 | p=1.21e-28 | union  63.18 
+  -- ARCHITECTURE at matched regime (field cell X0 @D64 vs our cell R0; both EMA, field regime) --
+  X0  [scan      ] vs R0  [scan      ] cold    n= 20000:  92.86 vs  37.09 (+55.77pp) | only-X0  11249 only-R0     94 | p=0.00e+00 | union  93.34 
+  X0  [scan      ] vs R0  [scan      ] b1      n= 20000:  92.12 vs  36.84 (+55.28pp) | only-X0  11267 only-R0    211 | p=0.00e+00 | union  93.18 
+  X0  [scan      ] vs R0  [scan      ] vote128 n= 20000:  99.70 vs  50.80 (+48.91pp) | only-X0   9787 only-R0      5 | p=0.00e+00 | union  99.73 
+  X0  [scan      ] vs R0  [scan      ] t1r128  n= 20000:  92.48 vs  50.18 (+42.30pp) | only-X0   9424 only-R0    964 | p=0.00e+00 | union  97.30 
+  X0  [scan      ] vs B0  [scan      ] cold    n= 20000:  92.86 vs  25.62 (+67.24pp) | only-X0  13502 only-B0     54 | p=0.00e+00 | union  93.14 
+  X0  [scan      ] vs B0  [scan      ] b1      n= 20000:  92.12 vs  25.82 (+66.31pp) | only-X0  13379 only-B0    118 | p=0.00e+00 | union  92.72 
+  X0  [scan      ] vs B0  [scan      ] vote128 n= 20000:  99.70 vs  50.48 (+49.23pp) | only-X0   9853 only-B0      7 | p=0.00e+00 | union  99.74 
+  -- LADDER d96 -> d128 (pilot P3s1 = the d96 record arm; identical 20k set if seeds match) and canvas refs --
+  B0  [scan      ] vs P3s1[scan      ] cold    n= 20000:  25.62 vs  38.59 (-12.96pp) | only-B0   1294 only-P3s1   3886 | p=6.70e-297 | union  45.05 
+  B0  [scan      ] vs P3s1[scan      ] b1      n= 20000:  25.82 vs  38.47 (-12.65pp) | only-B0   1279 only-P3s1   3809 | p=7.30e-288 | union  44.87 
+  B0  [scan      ] vs P3s1[scan      ] vote128 n= 20000:  50.48 vs  52.85 (-2.38pp) | only-B0   2628 only-P3s1   3104 | p=3.44e-10 | union  66.00 
+  B1  [scan      ] vs P3s1[scan      ] cold    n= 20000:  24.64 vs  38.59 (-13.94pp) | only-B1   1286 only-P3s1   4074 | p=0.00e+00 | union  45.02 
+  B1  [scan      ] vs P3s1[scan      ] b1      n= 20000:  24.75 vs  38.47 (-13.72pp) | only-B1   1268 only-P3s1   4012 | p=0.00e+00 | union  44.81 
+  B1  [scan      ] vs P3s1[scan      ] vote128 n= 20000:  47.02 vs  52.85 (-5.84pp) | only-B1   2502 only-P3s1   3670 | p=3.34e-50 | union  65.36 
+  R0  [scan      ] vs P3s1[scan      ] cold    n= 20000:  37.09 vs  38.59 (-1.50pp) | only-R0   2123 only-P3s1   2422 | p=9.79e-06 | union  49.20 
+  R0  [scan      ] vs P3s1[scan      ] b1      n= 20000:  36.84 vs  38.47 (-1.62pp) | only-R0   2140 only-P3s1   2465 | p=1.78e-06 | union  49.17 
+  R0  [scan      ] vs P3s1[scan      ] vote128 n= 20000:  50.80 vs  52.85 (-2.06pp) | only-R0   2188 only-P3s1   2600 | p=2.79e-09 | union  63.80 
+  A0  [scan      ] vs P3s1[scan      ] cold    n= 20000:  40.03 vs  38.59 (+1.44pp) | only-A0   2301 only-P3s1   2012 | p=1.15e-05 | union  50.09 
+  A0  [scan      ] vs P3s1[scan      ] b1      n= 20000:  39.91 vs  38.47 (+1.44pp) | only-A0   2296 only-P3s1   2008 | p=1.21e-05 | union  49.95 
+  A0  [scan      ] vs P3s1[scan      ] vote128 n= 20000:  52.28 vs  52.85 (-0.57pp) | only-A0   2253 only-P3s1   2368 | p=9.35e-02 | union  64.12 
+  B0  [scan      ] vs D4  [scan      ] cold    n= 20000:  25.62 vs  33.28 (-7.66pp) | only-B0   1626 only-D4   3158 | p=1.85e-110 | union  41.41 
+  B0  [scan      ] vs D4  [scan      ] vote128 n= 20000:  50.48 vs  81.28 (-30.80pp) | only-B0   1277 only-D4   7438 | p=0.00e+00 | union  87.67 
+  B0  [scan      ] vs C3X [scan      ] vote128 n= 20000:  50.48 vs  88.89 (-38.42pp) | only-B0    713 only-C3X   8397 | p=0.00e+00 | union  92.46 
+  R0  [scan      ] vs D4  [scan      ] cold    n= 20000:  37.09 vs  33.28 (+3.81pp) | only-R0   2394 only-D4   1633 | p=3.07e-33 | union  45.26 
+  R0  [scan      ] vs D4  [scan      ] vote128 n= 20000:  50.80 vs  81.28 (-30.48pp) | only-R0   1066 only-D4   7163 | p=0.00e+00 | union  86.61 
+  R0  [scan      ] vs C3X [scan      ] vote128 n= 20000:  50.80 vs  88.89 (-38.10pp) | only-R0    565 only-C3X   8185 | p=0.00e+00 | union  91.72 
+  X0  [scan      ] vs D4  [scan      ] cold    n= 20000:  92.86 vs  33.28 (+59.58pp) | only-X0  11938 only-D4     22 | p=0.00e+00 | union  92.97 
+  X0  [scan      ] vs D4  [scan      ] vote128 n= 20000:  99.70 vs  81.28 (+18.43pp) | only-X0   3724 only-D4     39 | p=0.00e+00 | union  99.90 
+  X0  [scan      ] vs C3X [scan      ] vote128 n= 20000:  99.70 vs  88.89 (+10.81pp) | only-X0   2217 only-C3X     55 | p=0.00e+00 | union  99.98 
+  -- FULL 422,786 pairings (vsel grids) --
+   vsel vs final per arm (drift / memorization read):
+  A0: vsel == final grid (identical)
+  A1: vsel == final grid (identical)
+  B0  [full      ] vs B0  [full_final] cold    n=422786:  42.83 vs  23.40 (+19.43pp) | only-B0  99492 only-B0  17330 | p=0.00e+00 | union  46.93 
+  B1  [full      ] vs B1  [full_final] cold    n=422786:  42.71 vs  24.94 (+17.77pp) | only-B1  95566 only-B1  20445 | p=0.00e+00 | union  47.55 
+  R0: vsel == final grid (identical)
+  X0: vsel == final grid (identical)
+  X0n [full      ] vs X0n [full_final] cold    n=422786:  72.08 vs  64.18 (+7.89pp) | only-X0n  54489 only-X0n  21120 | p=0.00e+00 | union  77.07 
+   headline vs alternate weights per arm (EMA lens; vsel grid):
+  A0  [full      ] vs A0  [full_alt  ] cold    n=422786:  39.93 vs  42.04 (-2.11pp) | only-A0  18494 only-A0  27394 | p=0.00e+00 | union  46.41 (headline raw vs alt EMA)
+  A1  [full      ] vs A1  [full_alt  ] cold    n=422786:  22.69 vs  22.13 (+0.56pp) | only-A1  14004 only-A1  11651 | p=6.99e-49 | union  25.45 (headline raw vs alt EMA)
+  B0  [full      ] vs B0  [full_alt  ] cold    n=422786:  42.83 vs  26.28 (+16.55pp) | only-B0  90453 only-B0  20487 | p=0.00e+00 | union  47.68 (headline raw vs alt EMA)
+  B1  [full      ] vs B1  [full_alt  ] cold    n=422786:  42.71 vs  45.65 (-2.94pp) | only-B1  22673 only-B1  35114 | p=0.00e+00 | union  51.02 (headline raw vs alt EMA)
+  R0  [full      ] vs R0  [full_alt  ] cold    n=422786:  37.33 vs  34.61 (+2.72pp) | only-R0  32110 only-R0  20616 | p=0.00e+00 | union  42.21 (headline EMA vs alt raw)
+  X0  [full      ] vs X0  [full_alt  ] cold    n=422786:  86.03 vs  80.81 (+5.22pp) | only-X0  44536 only-X0  22481 | p=0.00e+00 | union  91.35 (headline EMA vs alt raw)
+  X0n [full      ] vs X0n [full_alt  ] cold    n=422786:  72.08 vs  63.00 (+9.07pp) | only-X0n  59329 only-X0n  20962 | p=0.00e+00 | union  77.04 (headline EMA vs alt raw)
+   X0 depth (D16 headline vs D64) and ACT gain (X0 vs X0n at D16), paired:
+  X0  [full64    ] vs X0  [full      ] cold    n=422786:  92.81 vs  86.03 (+6.78pp) | only-X0  28666 only-X0      0 | p=0.00e+00 | union  92.81 (D64 vs D16)
+  X0n [full64    ] vs X0n [full      ] cold    n=422786:  76.69 vs  72.08 (+4.62pp) | only-X0n  19522 only-X0n      0 | p=0.00e+00 | union  76.69 (D64 vs D16)
+  X0  [full      ] vs X0n [full      ] cold    n=422786:  86.03 vs  72.08 (+13.95pp) | only-X0  70680 only-X0n  11700 | p=0.00e+00 | union  88.80 (ACT gain @D16)
+  X0  [full64    ] vs X0n [full64    ] cold    n=422786:  92.81 vs  76.69 (+16.11pp) | only-X0  73946 only-X0n   5822 | p=0.00e+00 | union  94.19 (ACT gain @D64)
+   cross-arm (vsel grids, t64):
+  B0  [full      ] vs A0  [full      ] cold    n=422786:  42.83 vs  39.93 (+2.90pp) | only-B0  53106 only-A0  40843 | p=0.00e+00 | union  52.49 
+  B1  [full      ] vs B0  [full      ] cold    n=422786:  42.71 vs  42.83 (-0.12pp) | only-B1  45750 only-B0  46258 | p=9.46e-02 | union  53.65 
+  R0  [full      ] vs B0  [full      ] cold    n=422786:  37.33 vs  42.83 (-5.50pp) | only-R0  38452 only-B0  61705 | p=0.00e+00 | union  51.93 
+  R0  [full      ] vs B1  [full      ] cold    n=422786:  37.33 vs  42.71 (-5.38pp) | only-R0  39156 only-B1  61901 | p=0.00e+00 | union  51.97 
+  R0  [full      ] vs A0  [full      ] cold    n=422786:  37.33 vs  39.93 (-2.60pp) | only-R0  44150 only-A0  55140 | p=5.24e-267 | union  50.37 
+  X0  [full64    ] vs R0  [full      ] cold    n=422786:  92.81 vs  37.33 (+55.48pp) | only-X0 236257 only-R0   1710 | p=0.00e+00 | union  93.21 (X0 @D64 vs R0)
+  X0  [full64    ] vs B0  [full      ] cold    n=422786:  92.81 vs  42.83 (+49.98pp) | only-X0 213320 only-B0   2026 | p=0.00e+00 | union  93.29 (X0 @D64 vs B0)
+  B0  [full      ] vs D4  [full      ] cold    n=422786:  42.83 vs  33.53 (+9.30pp) | only-B0  69017 only-D4  29713 | p=0.00e+00 | union  49.86 
+  B0  [full      ] vs P3s1[full      ] cold    n=422786:  42.83 vs  37.35 (+5.48pp) | only-B0  59921 only-P3s1  36734 | p=0.00e+00 | union  51.52 
+  B1  [full      ] vs D4  [full      ] cold    n=422786:  42.71 vs  33.53 (+9.18pp) | only-B1  68884 only-D4  30088 | p=0.00e+00 | union  49.83 
+  B1  [full      ] vs P3s1[full      ] cold    n=422786:  42.71 vs  37.35 (+5.36pp) | only-B1  60255 only-P3s1  37576 | p=0.00e+00 | union  51.60 
+  R0  [full      ] vs D4  [full      ] cold    n=422786:  37.33 vs  33.53 (+3.80pp) | only-R0  51064 only-D4  35013 | p=0.00e+00 | union  45.61 
+  R0  [full      ] vs P3s1[full      ] cold    n=422786:  37.33 vs  37.35 (-0.02pp) | only-R0  48521 only-P3s1  48587 | p=8.35e-01 | union  48.82 
+  X0  [full64    ] vs D4  [full      ] cold    n=422786:  92.81 vs  33.53 (+59.27pp) | only-X0 251108 only-D4    510 | p=0.00e+00 | union  92.93 
+  X0  [full64    ] vs P3s1[full      ] cold    n=422786:  92.81 vs  37.35 (+55.46pp) | only-X0 235866 only-P3s1   1385 | p=0.00e+00 | union  93.14 
+  -- portfolio (labeled facts): unions on the 20k set, verified vote@128 / cold --
+  union B0+B1                 : vote@128  64.09 | cold  35.73
+  union B0+R0                 : vote@128  65.14 | cold  44.54
+  union B0+B1+R0              : vote@128  72.61 | cold  49.47
+  union B0+B1+R0+A0           : vote@128  77.46 | cold  56.95
+  union B0+C3X                : vote@128  92.46 | cold  37.64
+  union R0+C3X                : vote@128  91.72 | cold  42.47
+  union B0+B1+R0+C3X+D4       : vote@128  97.73 | cold  55.99
+  union B0+B1+R0+X0           : vote@128  99.80 | cold  93.77
+  union B0+B1+R0+C3X+D4+X0    : vote@128 100.00 | cold  94.09
+
+  per-octile (20k scan; rating octiles of the subsample): cold / b1 / verified@128 / t1r@128
+  A0    nan/ nan/ nan/ nan | 77.4/77.0/86.8/86.7 | 29.4/29.6/43.5/43.1 | 26.3/27.0/38.8/38.7 | 25.6/25.5/37.8/37.5 | 26.6/27.5/40.2/40.0 | 30.9/29.6/44.3/44.1 | 28.9/28.2/42.1/42.1
+  A1    nan/ nan/ nan/ nan | 79.6/79.8/84.7/84.4 | 13.1/13.0/15.5/15.0 |  2.5/ 2.6/ 3.1/ 2.8 |  2.6/ 2.6/ 3.0/ 2.8 |  2.6/ 2.7/ 3.2/ 2.9 |  2.4/ 2.4/ 3.0/ 2.7 |  2.1/ 2.0/ 2.3/ 2.2
+  B0    nan/ nan/ nan/ nan | 52.3/52.6/81.4/80.6 | 16.0/16.2/42.1/40.9 | 16.4/15.7/38.7/37.9 | 16.0/16.4/39.6/39.2 | 17.0/17.3/40.4/39.8 | 19.2/19.8/42.7/42.0 | 17.2/17.1/39.2/38.5
+  B1    nan/ nan/ nan/ nan | 47.7/48.0/71.4/70.7 | 17.1/17.1/38.7/37.4 | 16.1/15.9/39.4/37.4 | 16.9/16.7/38.3/36.7 | 17.4/17.1/38.6/37.2 | 19.7/20.1/42.0/41.2 | 15.7/16.4/37.7/36.9
+  R0    nan/ nan/ nan/ nan | 79.3/79.1/91.1/91.0 | 28.2/27.6/43.7/43.0 | 20.6/20.3/34.1/33.5 | 21.7/22.0/36.3/35.3 | 23.1/23.0/37.2/36.2 | 25.1/24.2/39.7/39.0 | 21.9/21.8/35.7/35.0
+  X0    nan/ nan/ nan/ nan | 99.9/97.3/100.0/84.6 | 92.5/91.8/99.6/92.7 | 89.8/89.5/99.6/95.2 | 89.1/88.7/99.8/95.5 | 89.3/90.1/99.6/95.4 | 90.8/91.0/99.3/95.4 | 92.2/91.8/99.7/95.9
+  P3s1  nan/ nan/ nan/ nan | 79.0/78.4/89.9/89.4 | 28.7/28.5/45.5/45.2 | 23.7/23.8/37.2/37.0 | 22.5/22.8/38.0/37.7 | 24.8/25.2/39.8/39.4 | 27.4/26.4/43.2/42.9 | 26.0/26.7/41.7/41.3
+  D4    nan/ -  / nan/ -   | 84.3/ -  /99.6/ -   | 24.6/ -  /82.3/ -   | 15.0/ -  /77.5/ -   | 14.4/ -  /77.7/ -   | 15.3/ -  /76.6/ -   | 16.6/ -  /73.4/ -   | 15.0/ -  /65.0/ -  
+  C3X   nan/ -  / nan/ -   | 79.5/ -  /99.9/ -   | 18.3/ -  /89.3/ -   |  4.7/ -  /88.0/ -   |  5.5/ -  /87.9/ -   |  5.1/ -  /86.1/ -   |  5.2/ -  /84.3/ -   |  2.7/ -  /76.7/ -  
+
+  per-octile FULL-test cold (422,786; octiles of the full rating distribution): arm | o1..o8
+  A0           nan |  77.5 |  29.3 |  26.0 |  26.0 |  28.1 |  30.1 |  27.8
+  A1           nan |  80.2 |  13.3 |   2.8 |   2.7 |   2.8 |   2.9 |   1.7
+  B0           nan |  79.2 |  32.0 |  28.5 |  29.0 |  31.0 |  33.8 |  32.8
+  B1           nan |  78.5 |  31.3 |  29.1 |  29.2 |  31.9 |  34.1 |  31.7
+  R0           nan |  80.5 |  26.8 |  21.6 |  21.8 |  23.5 |  25.0 |  22.6
+  X0   (D64)   nan |  99.9 |  91.5 |  89.6 |  89.5 |  90.0 |  90.8 |  92.0
+  X0n  (D64)   nan |  98.0 |  70.2 |  66.3 |  66.6 |  68.9 |  72.3 |  75.1
+  P3s1         nan |  75.6 |  26.7 |  23.1 |  23.1 |  25.1 |  27.1 |  25.3
+  D4           nan |  84.9 |  24.3 |  14.5 |  15.1 |  16.5 |  17.4 |  15.1
+
+== F. FUNNEL MODEL (rho, r) per octile — lens-B form, fit on draws <= 64, checked at 128 ==
+  A0: octile [rating) | n | cold | b1 | draw-hit@128 | rho | r | pred@128
+    1 [0,3) n= 4910 cold  77.39 b1  77.03 hit  86.82 rho  0.86 r  0.506 pred  86.00
+    2 [3,9) n= 2316 cold  29.36 b1  29.62 hit  43.48 rho  0.42 r  0.253 pred  42.00
+    3 [9,16) n= 2458 cold  26.28 b1  26.97 hit  38.81 rho  0.38 r  0.201 pred  38.00
+    4 [16,24) n= 2645 cold  25.56 b1  25.48 hit  37.77 rho  0.36 r  0.226 pred  36.00
+    5 [24,34) n= 2658 cold  26.56 b1  27.46 hit  40.22 rho  0.38 r  0.226 pred  38.00
+    6 [34,47) n= 2421 cold  30.90 b1  29.62 hit  44.28 rho  0.42 r  0.226 pred  42.00
+    7 [47,373) n= 2592 cold  28.94 b1  28.16 hit  42.13 rho  0.40 r  0.226 pred  40.00
+  B0: octile [rating) | n | cold | b1 | draw-hit@128 | rho | r | pred@128
+    1 [0,3) n= 4910 cold  52.32 b1  52.63 hit  81.38 rho  0.78 r  0.201 pred  78.00
+    2 [3,9) n= 2316 cold  15.98 b1  16.23 hit  42.06 rho  0.38 r  0.113 pred  38.00
+    3 [9,16) n= 2458 cold  16.40 b1  15.74 hit  38.69 rho  0.36 r  0.113 pred  36.00
+    4 [16,24) n= 2645 cold  15.99 b1  16.45 hit  39.58 rho  0.36 r  0.113 pred  36.00
+    5 [24,34) n= 2658 cold  16.97 b1  17.27 hit  40.33 rho  0.38 r  0.113 pred  38.00
+    6 [34,47) n= 2421 cold  19.17 b1  19.83 hit  42.71 rho  0.40 r  0.127 pred  40.00
+    7 [47,373) n= 2592 cold  17.17 b1  17.09 hit  39.20 rho  0.36 r  0.113 pred  36.00
+  B1: octile [rating) | n | cold | b1 | draw-hit@128 | rho | r | pred@128
+    1 [0,3) n= 4910 cold  47.72 b1  47.96 hit  71.38 rho  0.68 r  0.201 pred  68.00
+    2 [3,9) n= 2316 cold  17.14 b1  17.10 hit  38.69 rho  0.36 r  0.113 pred  36.00
+    3 [9,16) n= 2458 cold  16.11 b1  15.87 hit  39.38 rho  0.36 r  0.101 pred  36.00
+    4 [16,24) n= 2645 cold  16.86 b1  16.75 hit  38.26 rho  0.36 r  0.113 pred  36.00
+    5 [24,34) n= 2658 cold  17.42 b1  17.12 hit  38.56 rho  0.36 r  0.127 pred  36.00
+    6 [34,47) n= 2421 cold  19.66 b1  20.12 hit  42.05 rho  0.40 r  0.127 pred  40.00
+    7 [47,373) n= 2592 cold  15.74 b1  16.36 hit  37.65 rho  0.34 r  0.127 pred  34.00
+  R0: octile [rating) | n | cold | b1 | draw-hit@128 | rho | r | pred@128
+    1 [0,3) n= 4910 cold  79.35 b1  79.14 hit  91.08 rho  0.90 r  0.451 pred  90.00
+    2 [3,9) n= 2316 cold  28.24 b1  27.63 hit  43.70 rho  0.42 r  0.226 pred  42.00
+    3 [9,16) n= 2458 cold  20.59 b1  20.30 hit  34.13 rho  0.32 r  0.160 pred  32.00
+    4 [16,24) n= 2645 cold  21.66 b1  21.97 hit  36.26 rho  0.34 r  0.201 pred  34.00
+    5 [24,34) n= 2658 cold  23.10 b1  23.02 hit  37.13 rho  0.36 r  0.179 pred  36.00
+    6 [34,47) n= 2421 cold  25.11 b1  24.25 hit  39.65 rho  0.38 r  0.201 pred  38.00
+    7 [47,373) n= 2592 cold  21.88 b1  21.76 hit  35.73 rho  0.34 r  0.201 pred  34.00
+  X0: octile [rating) | n | cold | b1 | draw-hit@128 | rho | r | pred@128
+    1 [0,3) n= 4910 cold  99.90 b1  97.27 hit  99.98 rho  0.98 r  0.900 pred  98.00
+    2 [3,9) n= 2316 cold  92.53 b1  91.84 hit  99.61 rho  0.98 r  0.637 pred  98.00
+    3 [9,16) n= 2458 cold  89.79 b1  89.46 hit  99.63 rho  0.98 r  0.567 pred  98.00
+    4 [16,24) n= 2645 cold  89.07 b1  88.70 hit  99.77 rho  0.98 r  0.506 pred  98.00
+    5 [24,34) n= 2658 cold  89.28 b1  90.14 hit  99.62 rho  0.98 r  0.567 pred  98.00
+    6 [34,47) n= 2421 cold  90.83 b1  90.95 hit  99.34 rho  0.98 r  0.567 pred  98.00
+    7 [47,373) n= 2592 cold  92.21 b1  91.78 hit  99.69 rho  0.98 r  0.567 pred  98.00
+  P3s1: octile [rating) | n | cold | b1 | draw-hit@128 | rho | r | pred@128
+    1 [0,3) n= 4910 cold  79.02 b1  78.39 hit  89.86 rho  0.90 r  0.451 pred  90.00
+    2 [3,9) n= 2316 cold  28.67 b1  28.45 hit  45.47 rho  0.44 r  0.226 pred  44.00
+    3 [9,16) n= 2458 cold  23.72 b1  23.76 hit  37.18 rho  0.36 r  0.201 pred  36.00
+    4 [16,24) n= 2645 cold  22.46 b1  22.76 hit  38.00 rho  0.36 r  0.179 pred  36.00
+    5 [24,34) n= 2658 cold  24.79 b1  25.17 hit  39.80 rho  0.38 r  0.201 pred  38.00
+    6 [34,47) n= 2421 cold  27.39 b1  26.39 hit  43.25 rho  0.42 r  0.179 pred  42.00
+    7 [47,373) n= 2592 cold  26.00 b1  26.70 hit  41.74 rho  0.40 r  0.201 pred  40.00
+  C3X: octile [rating) | n | cold | b1 | draw-hit@128 | rho | r | pred@128
+    1 [0,3) n= 4910 cold  79.53 b1    -   hit  99.92 rho  0.98 r  0.358 pred  98.00
+    2 [3,9) n= 2316 cold  18.31 b1    -   hit  89.29 rho  0.80 r  0.063 pred  79.98
+    3 [9,16) n= 2458 cold   4.72 b1    -   hit  87.96 rho  0.78 r  0.045 pred  77.78
+    4 [16,24) n= 2645 cold   5.48 b1    -   hit  87.90 rho  0.82 r  0.040 pred  81.56
+    5 [24,34) n= 2658 cold   5.08 b1    -   hit  86.12 rho  0.78 r  0.040 pred  77.58
+    6 [34,47) n= 2421 cold   5.20 b1    -   hit  84.18 rho  0.76 r  0.040 pred  75.59
+    7 [47,373) n= 2592 cold   2.70 b1    -   hit  76.66 rho  0.70 r  0.032 pred  68.88
+
+== G. SELECTOR — Top-1-by-residual (verification-free) vs the free verifier, per arm (20k scan) ==
+  arm | b1 | t1r@1/8/32/128 | verified@1/8/32/128 | t1r@128 / verified@128 | majority@128 (screen)
+  A0  |  39.91 |  39.91/ 46.67/ 49.52/ 52.11 |  42.32/ 46.94/ 49.68/ 52.28 | 0.997 |  39.26
+  A1  |  22.68 |  22.68/ 23.49/ 23.84/ 24.17 |  23.01/ 23.73/ 24.09/ 24.45 | 0.989 |  24.41
+  B0  |  25.82 |  25.82/ 36.52/ 42.95/ 49.73 |  29.21/ 36.91/ 43.38/ 50.48 | 0.985 |  44.92
+  B1  |  24.75 |  24.75/ 34.66/ 40.70/ 45.86 |  27.91/ 35.22/ 41.37/ 47.02 | 0.975 |  44.92
+  R0  |  36.84 |  36.84/ 44.16/ 47.55/ 50.18 |  39.66/ 44.75/ 48.08/ 50.80 | 0.988 |  36.13
+  X0  |  92.12 |  92.12/ 95.49/ 95.08/ 92.48 |  95.00/ 97.57/ 98.84/ 99.70 | 0.928 |  88.87
+
+== H. EXTRA PREDICTIONS (plan §12.8 items the frozen analyzer does not score; descriptive) ==
+  B census 0 % at t=64 and t=256 on both grids: B0/vsel/t64=  0.00, B0/vsel/t256=  0.00, B0/final/t64=  0.00, B0/final/t256=  0.00, B1/vsel/t64=  0.00, B1/vsel/t256=  0.00, B1/final/t64=  0.00, B1/final/t256=  0.00 -> HIT
+  >= 1 A final grid > 2 % (t=64): A0=  0.00, A1=  0.00 -> MISS
+  A0 A_total closed <= 500 nats by 10k: @10k    139.8 -> HIT | last    411.1
+  A1 A_total closed <= 500 nats by 10k: @10k        - -> MISS | last    180.1
+  B0 A_total closed <= 500 nats by 10k: @10k    477.3 -> HIT | last     31.0
+  B1 A_total closed <= 500 nats by 10k: @10k    313.2 -> HIT | last     27.5
+  R0 A_total closed <= 500 nats by 10k: @10k      6.0 -> HIT | last     18.9
+  A0 death carries eta >= .92 at the last monitor: eta 0.913 -> MISS
+  A1 death carries eta >= .92 at the last monitor: eta 0.659 -> MISS
+  X0 - X0n >= +4pp at D16:  86.03 -  72.08 = +13.95pp -> HIT
+  R0 val still rising at 50k (> +1pp/10k): +6.25pp -> HIT
+  epochs seen (samples / 1,001,000 distinct pairs): A/B 80k x 64 = 5.1 | R0 50k x 384 = 19.2 | X0 50k x 768 segments = 38.4 segment-passes (~2.4 full-trajectory passes at 16 segments/row)
