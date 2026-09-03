@@ -7,6 +7,8 @@
 # ARMS: W0 (B0 + wd 1.0, the base) · R1 (+ persistent carry) · R2 (+ inner cycles K3) · R3 (+ hard
 # rows) · R4 (R0 +50k, field regime) · X1 (X0 - digit aug) · X2 (X0 + our group mixer).
 # 4x4 static map: w0 W0 R2 · w1 R1 R3 · w2 R4 X1 · w3 X2 + riders. Harness: tools/harness_sportC2.sh.
+# Pre-mortem additions (2026-09-04): pt_run = ONE --remat retry on a launch-time HBM OOM (no step logged; labeled,
+# never a NaN death; harness S9); R3's labeled hard-feedback inference rows (screen_R3_vb_hard, calib_R3_vsel_hard).
 # (sportC1 header follows for the mechanics it inherits:)
 # Derivative of the proven chain_sportC0.sh (static worker
 # map, ONE-SHOT NaN amputation, per-arm GCS banking, idempotent markers,
@@ -165,6 +167,22 @@ pt () {  # DP pretrain with per-host confinement on multi-host (93a79d4); the AR
   fi
 }
 
+has_loss_rows () { [ -f "$1/metrics.jsonl" ] && grep -q '"loss"' "$1/metrics.jsonl"; }
+pt_run () {  # LOG ARM DIR pt-args... — sportC2 pre-mortem (2026-09-04): a LAUNCH-TIME HBM exhaustion (rc != 0 before
+  # any step was logged, an OOM message in the log, and no --remat in the args) is NOT a NaN death and must not be
+  # amputated as one: ONE retry with --remat (numerics-equivalent: tests/test_eq_remat), labeled on disk
+  # (RETRY_REMAT.txt ships in the pretrain tarball). Any failure after the first logged step stays one-shot.
+  local log=$1 arm=$2 dir=$3; shift 3
+  pt "$@" > "$log" 2>&1; local rc=$?
+  if [ $rc -ne 0 ] && ! has_loss_rows "$dir" && ! printf '%s\n' "$@" | grep -qx -- '--remat' \
+     && grep -qiE 'RESOURCE_EXHAUSTED|out of memory' "$log"; then
+    echo "PRETRAIN-OOM-RETRY-REMAT $arm (rc=$rc before any logged step = HBM exhaustion, not a NaN death; one retry with --remat, numerics-equivalent, labeled)"
+    mkdir -p "$dir"; echo "OOM at launch (rc=$rc) -> retried once with --remat $(date -u +%FT%TZ)" >> "$dir/RETRY_REMAT.txt"
+    pt "$@" --remat >> "$log" 2>&1; rc=$?
+  fi
+  return $rc
+}
+
 bank_dir () {  # ARM DIR NAME — tar a run dir to GCS (grids + metrics + config + resumes)
   tar czf "/tmp/$3.tgz" "$2" 2>/dev/null && gsutil -q cp "/tmp/$3.tgz" "$GCS/$3.tgz"
 }
@@ -177,7 +195,7 @@ run_pretrain () {  # ARM — ONE-SHOT (any NaN anywhere -> amputate + STOPPED, n
   if two_stage "$arm"; then
     local DA=runs/pretrain${R_TAG}_${arm}a
     if ! gsutil -q stat "$GCS/${arm}_STAGEA_OK" 2>/dev/null; then
-      pt --out "$DA" $FL --steps "$S_A" > "$DA.log" 2>&1; rc=$?
+      pt_run "$DA.log" "$arm" "$DA" --out "$DA" $FL --steps "$S_A"; rc=$?
       if [ $rc -ne 0 ] || ! nan_check "$DA"; then
         # ONE-SHOT: a hot-phase death IS the arm's outcome — the amputated stage-A grid
         # becomes the final; stage B never runs; config.json + the stage-A dir ship (§4.3).
@@ -200,15 +218,15 @@ run_pretrain () {  # ARM — ONE-SHOT (any NaN anywhere -> amputate + STOPPED, n
     fi
     if [ ! -f "$D/STOPPED.txt" ]; then
       # stage B: floor-lr continuation, fresh optimizer (the measured C3X pattern; R2b-5)
-      pt --out "$D" $FL --steps "$S_B" --warmup 100 \
-         --lr 3e-5 --lr-end 3e-5 --init-from "$DA/ckpt_latest.pkl" > "$D.log" 2>&1; rc=$?
+      pt_run "$D.log" "$arm" "$D" --out "$D" $FL --steps "$S_B" --warmup 100 \
+         --lr 3e-5 --lr-end 3e-5 --init-from "$DA/ckpt_latest.pkl"; rc=$?
       if [ $rc -ne 0 ] || ! nan_check "$D"; then
         echo "PRETRAIN-NAN $arm stage B (rc=$rc) -> amputate"; amputate "$D" || return 1
       fi
     fi
   else
     fetch_init "$arm" || return 1
-    pt --out "$D" $FL --steps "$(arm_steps "$arm")" > "$D.log" 2>&1; rc=$?
+    pt_run "$D.log" "$arm" "$D" --out "$D" $FL --steps "$(arm_steps "$arm")"; rc=$?
     if [ $rc -ne 0 ] || ! nan_check "$D"; then
       echo "PRETRAIN-NAN $arm (rc=$rc) -> amputate"; amputate "$D" || return 1
     fi
@@ -377,6 +395,14 @@ run_arm () {  # ARM — pretrain, then the battery (vsel select, screens, retfm,
   fi
   # sportC2: the stall-calibration instrument on the vsel grid (R3's rule; standing on every arm)
   calib_one "calib_${arm}_vsel" "$VBCK" "runs/sxcalib_p${R_TAG}${arm}_vsel" 3 $HE
+  if [ "$arm" = R3 ]; then
+    # sportC2 pre-mortem (2026-09-04): R3 trained with hard feedback on half its steps but is EVALUATED soft like
+    # every arm (the registered rows); these two rows read the same vsel grid in its HARD-feedback inference mode
+    # (strat-512 cold + the calibration instrument) — descriptive, labeled, no rule reads them.
+    eval_one "screen_${arm}_vb_hard" "$VBCK" "runs/sxscreen_p${R_TAG}${arm}_vb_hard" 1 \
+      --split test --stratified "$STRAT" --t-total "$TH" --k-init 0 --hard-feedback $HE
+    calib_one "calib_${arm}_vsel_hard" "$VBCK" "runs/sxcalib_p${R_TAG}${arm}_vsel_hard" 3 --hard-feedback $HE
+  fi
   echo ok | gsutil -q cp - "$GCS/${arm}_ARM_OK"
   echo "ARM-OK $arm $(date -u +%H:%M)"
 }

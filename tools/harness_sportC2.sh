@@ -11,7 +11,12 @@
 # NAN-ABORT rc=3 path on B1; S4 fresh 4x4 static map -> COMPLETE from a worker;
 # S5 select_ckpt failure -> VB-FALLBACK-FINAL, evals proceed; S6 banked pretrain
 # with no local dir -> PRETRAIN-RESTORE re-pull before select (no fallback); S7 two-stage
-# selection over both stages; S8 banked two-stage arm on a NEW node -> both dirs restored.
+# selection over both stages; S8 banked two-stage arm on a NEW node -> both dirs restored;
+# S9 (sportC2 pre-mortem) launch-time HBM OOM before any logged step -> ONE --remat retry, labeled
+# (R2a), and an arm already on --remat (R4) is NOT retried (AMPUTATE-FAILED + INCOMPLETE = stop-and-report).
+# 2026-09-04 correction pass: the first sportC2 run (21/24) failed only on sandbox construction still carrying
+# sportC1 arm names (R4_ckpt.pkl for R0_ckpt.pkl; R2a/R3a rider tarballs for B0a/B1a; A0/A1/R0/X0 assertions) —
+# the PM-5 class; every scenario now names sportC2's arms.
 set -uo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 export REAL_PY="$REPO/.venv/bin/python3"
@@ -22,9 +27,10 @@ bad () { FAIL=$((FAIL+1)); echo "  FAIL  $1"; }
 mk_sandbox () {
   SB=$(mktemp -d /tmp/hc2.XXXXXX)
   mkdir -p "$SB/repo/tools" "$SB/repo/runs" "$SB/repo/data/sudoku_extreme" "$SB/gcs/sportC2" "$SB/gcs/sportC1" "$SB/gcs/sportBr2b" "$SB/bin"
-  echo "fake" > "$SB/gcs/sportC1/R4_ckpt.pkl"   # R4's init-from source
-  ( cd "$SB" && mkdir -p runs/pretrainsportC1_R2a runs/pretrainsportC1_R3a && echo fake > runs/pretrainsportC1_R2a/ckpt_020000.pkl && echo fake > runs/pretrainsportC1_R3a/ckpt_020000.pkl \
-    && tar czf gcs/sportC1/R2a_pretrain.tgz runs/pretrainsportC1_R2a && tar czf gcs/sportC1/R3a_pretrain.tgz runs/pretrainsportC1_R3a && rm -rf runs )
+  echo "fake" > "$SB/gcs/sportC1/R0_ckpt.pkl"   # R4's init-from source = sportC1's R0 final (chain fetch_init)
+  # the B0/B1 correct-grid riders pull sportC1's STAGE-A tarballs (B0a/B1a) and read ckpt_020000.pkl from them
+  ( cd "$SB" && mkdir -p runs/pretrainsportC1_B0a runs/pretrainsportC1_B1a && echo fake > runs/pretrainsportC1_B0a/ckpt_020000.pkl && echo fake > runs/pretrainsportC1_B1a/ckpt_020000.pkl \
+    && tar czf gcs/sportC1/B0a_pretrain.tgz runs/pretrainsportC1_B0a && tar czf gcs/sportC1/B1a_pretrain.tgz runs/pretrainsportC1_B1a && rm -rf runs )
   cp "$REPO/tools/chain_sportC2.sh" "$SB/repo/tools/"
   : > "$SB/repo/data/sudoku_extreme/sudoku_extreme_seed0.npz"
   echo "fake" > "$SB/gcs/sportBr2b/C3X_ckpt.pkl"; echo "fake" > "$SB/gcs/sportBr2b/D4_ckpt.pkl"
@@ -62,6 +68,10 @@ if tool.endswith("pretrain.py"):
     out = Path(flag("--out")); out.mkdir(parents=True, exist_ok=True)
     steps = int(flag("--steps", "100"))
     base = out.name.replace("pretrainsportC2_", "")
+    if base == os.environ.get("STUB_OOM_ARM", "") and ("--remat" not in argv or os.environ.get("STUB_OOM_ALWAYS") == "1"):
+        # S9: a LAUNCH-TIME HBM exhaustion — nothing logged, rc 1 (NOT a NaN death); the --remat retry succeeds
+        # unless STUB_OOM_ALWAYS=1 (S9b: the arm OOMs even with --remat, e.g. one already launched on it)
+        print("RESOURCE_EXHAUSTED: Out of memory while trying to allocate 17179869184 bytes.", file=sys.stderr); sys.exit(1)
     is_nan = base == os.environ.get("STUB_NAN_ARM", "")
     is_abort = base == os.environ.get("STUB_NANABORT_ARM", "")
     cell = flag("--cell", "rg"); key = "val_t16" if cell == "trm" else "val_t64"
@@ -145,14 +155,15 @@ grep -q "CHAIN-SPORTC2-COMPLETE" "$SB/w0.log" && ok "S1 complete sentinel" || { 
 n_ok=$(ls "$SB/gcs/sportC2/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" = 7 ] && ok "S1 7/7 arm markers" || bad "S1 arm markers ($n_ok)"
 [ -f "$SB/gcs/sportC2/W0_STAGEA_OK" ] && [ -f "$SB/gcs/sportC2/W0a_pretrain.tgz" ] && ok "S1 stage-A marker + stage-A dir banked" || bad "S1 stage-A banking"
 [ -f "$SB/gcs/sportC2/sportC2_final.tgz" ] && ok "S1 final tgz" || bad "S1 final tgz"
-for a in W0 R4 X0; do [ -f "$SB/gcs/sportC2/evals/census_${a}_vsel_OK" ] && [ -f "$SB/gcs/sportC2/evals/census_${a}_final_OK" ] || { bad "S1 census $a"; break; }; done; [ -f "$SB/gcs/sportC2/evals/census_X2_final_OK" ] && ok "S1 census vsel+final on every arm"
+for a in W0 R4 X1; do [ -f "$SB/gcs/sportC2/evals/census_${a}_vsel_OK" ] && [ -f "$SB/gcs/sportC2/evals/census_${a}_final_OK" ] || { bad "S1 census $a"; break; }; done; [ -f "$SB/gcs/sportC2/evals/census_X2_final_OK" ] && ok "S1 census vsel+final on every arm"
 [ -f "$SB/gcs/sportC2/evals/full_W0_vsel_t64_OK" ] && [ -f "$SB/gcs/sportC2/evals/full_W0_final_t64_OK" ] && [ -f "$SB/gcs/sportC2/evals/full_W0_vsel_t64_alt_OK" ] && ok "S1 W0 fulls vsel+final+alt" || bad "S1 W0 fulls"
 [ -f "$SB/gcs/sportC2/evals/full_X1_vsel_t16_OK" ] && [ -f "$SB/gcs/sportC2/evals/full_X1_vsel_t64_OK" ] && ok "S1 X1 headline D16 + depth D64" || bad "S1 X1 fulls"
 [ -f "$SB/gcs/sportC2/evals/scan_X1_OK" ] && [ -f "$SB/gcs/sportC2/evals/scan_X2_OK" ] && ok "S1 both field arms scanned" || bad "S1 X scans"
 [ -f "$SB/gcs/sportC2/evals/retfm_W0_OK" ] && [ ! -f "$SB/gcs/sportC2/evals/retfm_X1_OK" ] && ok "S1 retfm native-only" || bad "S1 retfm"
-grep -q '"ema": true' "$SB/repo/runs/sxeval_psportC2R0/full_vsel_t64/summary_s0.json" && grep -q '"ema": false' "$SB/repo/runs/sxeval_psportC2A0/full_vsel_t64/summary_s0.json" && ok "S1 headline weights: EMA on R0, raw on W0" || bad "S1 headline weights"
+grep -q '"ema": true' "$SB/repo/runs/sxeval_psportC2R4/full_vsel_t64/summary_s0.json" && grep -q '"ema": false' "$SB/repo/runs/sxeval_psportC2W0/full_vsel_t64/summary_s0.json" && ok "S1 headline weights: EMA on R4, raw on W0" || bad "S1 headline weights"
 grep -q "rider_C3X_sel5k_OK" <(ls "$SB/gcs/sportC2/evals/") && grep -q "rider_B0_vselA20k_scan_OK" <(ls "$SB/gcs/sportC2/evals/") && grep -q "rider_B0_vselA20k_full_ema_OK" <(ls "$SB/gcs/sportC2/evals/") && ok "S1 canvas + B0/B1 correct-grid riders ran" || bad "S1 riders"
 [ -f "$SB/gcs/sportC2/evals/calib_W0_vsel_OK" ] && [ -f "$SB/gcs/sportC2/evals/calib_X2_vsel_OK" ] && ok "S1 stall calibration on every arm" || bad "S1 calib"
+[ -f "$SB/gcs/sportC2/evals/screen_R3_vb_hard_OK" ] && [ -f "$SB/gcs/sportC2/evals/calib_R3_vsel_hard_OK" ] && [ ! -f "$SB/gcs/sportC2/evals/screen_W0_vb_hard_OK" ] && ok "S1 R3 hard-feedback rows (R3 only)" || bad "S1 R3 hard rows"
 grep -q "PRETRAIN-START R4 " "$SB/w0.log" && ok "S1 R4 init ckpt fetched (no INIT-CKPT-MISSING)" || bad "S1 R4 init"
 grep -q "screen_W0_sAend_OK" <(ls "$SB/gcs/sportC2/evals/") && grep -q "screen_R4_s015000_OK" <(ls "$SB/gcs/sportC2/evals/") 2>/dev/null; [ $? -eq 0 ] || true
 grep -q "PRETRAIN-START X1 .*prec=default" "$SB/w0.log" && grep -q "PRETRAIN-START W0 .*prec=highest" "$SB/w0.log" && ok "S1 per-arm precision" || bad "S1 precision"
@@ -165,22 +176,22 @@ grep -q "CHAIN-SPORTC2-COMPLETE" "$SB1/re.log" && ok "S2 complete again" || bad 
 n_skip=$(grep -c "PRETRAIN-SKIP" "$SB1/re.log"); [ "$n_skip" = 7 ] && ok "S2 all pretrains skipped" || bad "S2 skips ($n_skip)"
 [ "$(grep -c 'EVAL-OK\|CENSUS-OK' "$SB1/re.log")" = 0 ] && ok "S2 no re-evals" || bad "S2 re-evals ran"
 
-echo "== S3 NaN one-shot: single-stage R0; stage-A A0a; NAN-ABORT rc=3 on R3 =="
-mk_sandbox; run_chain 0 1 STUB_NAN_ARM=R0
+echo "== S3 NaN one-shot: single-stage R4; stage-A W0a; NAN-ABORT rc=3 on R3a =="
+mk_sandbox; run_chain 0 1 STUB_NAN_ARM=R4
 grep -q "PRETRAIN-NAN R4" "$SB/w0.log" && grep -q "STOPPED final step 50" "$SB/repo/runs/pretrainsportC2_R4/STOPPED.txt" && ok "S3 R4 amputated to the last finite grid" || bad "S3 R4 amputation"
 [ ! -f "$SB/repo/runs/pretrainsportC2_R4/ckpt_000100.pkl" ] && ok "S3 post-death grid removed" || bad "S3 post-death grid kept"
 grep -q "CHAIN-SPORTC2-COMPLETE" "$SB/w0.log" && ok "S3 completes despite the stop" || bad "S3 complete"
-mk_sandbox; run_chain 0 1 STUB_NAN_ARM=A0a
+mk_sandbox; run_chain 0 1 STUB_NAN_ARM=W0a
 grep -q "amputate + STOP" "$SB/w0.log" && [ -f "$SB/repo/runs/pretrainsportC2_W0/STOPPED.txt" ] && ok "S3b stage-A death -> STOP" || bad "S3b stage-A stop"
 [ -f "$SB/repo/runs/pretrainsportC2_W0/config.json" ] && [ -f "$SB/gcs/sportC2/W0a_pretrain.tgz" ] && ok "S3b config.json + stage-A dir shipped on death" || bad "S3b shipping"
 if grep -q "stage B" "$SB/repo/runs/pretrainsportC2_W0.log" 2>/dev/null; then bad "S3b stage B ran"; else ok "S3b stage B never ran"; fi
 grep -q "screen_W0_vb_OK" <(ls "$SB/gcs/sportC2/evals/") && [ ! -f "$SB/gcs/sportC2/evals/screen_W0_sAend_OK" ] && ok "S3b vb screen on the stopped final; stage screens skipped" || bad "S3b screens"
-mk_sandbox; run_chain 0 1 STUB_NANABORT_ARM=B1a
+mk_sandbox; run_chain 0 1 STUB_NANABORT_ARM=R3a
 grep -q "PRETRAIN-NAN R3 stage A (rc=3)" "$SB/w0.log" && [ -f "$SB/repo/runs/pretrainsportC2_R3/STOPPED.txt" ] && ok "S3c trainer NAN-ABORT rc=3 -> amputation" || bad "S3c nan-abort path"
 grep -q "CHAIN-SPORTC2-COMPLETE" "$SB/w0.log" && ok "S3c complete" || bad "S3c complete"
 
 echo "== S3d post-death fixed-step screens never run (single-stage R0, NaN mid-run at 40k) =="
-mk_sandbox; run_chain 0 1 STUB_NAN_ARM=R0 C1_STEPS_R=40000
+mk_sandbox; run_chain 0 1 STUB_NAN_ARM=R4 C1_STEPS_R=40000
 grep -q "AMPUTATED to ckpt_020000.pkl step 20000" "$SB/w0.log" && ok "S3d amputated to the last finite 5k grid (20000)" || { bad "S3d amputation"; grep -E 'AMPUTAT|STOPPED' "$SB/w0.log" | head -3; }
 [ -f "$SB/gcs/sportC2/evals/screen_R4_s015000_OK" ] && [ ! -f "$SB/gcs/sportC2/evals/screen_R4_s035000_OK" ] && ok "S3d s015000 screened, s035000 (post-death) never ran" || bad "S3d post-death screen"
 [ -z "$(ls "$SB/repo/runs/pretrainsportC2_R4"/ckpt_0[2-4]5000.pkl "$SB/repo/runs/pretrainsportC2_R4"/ckpt_0[34]0000.pkl 2>/dev/null)" ] && ok "S3d post-death grids removed" || bad "S3d post-death grids remain"
@@ -192,9 +203,9 @@ n_ok=$(ls "$SB/gcs/sportC2/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok"
 grep -q "PRETRAIN-START R4" "$SB/w2.log" && grep -q "PRETRAIN-START X2" "$SB/w3.log" && ok "S4 map: R4 on w2, X2 on w3" || bad "S4 map"
 
 echo "== S5 select_ckpt failure -> LOUD fallback =="
-mk_sandbox; run_chain 0 1 STUB_SELECT_FAIL=A1,A1a
+mk_sandbox; run_chain 0 1 STUB_SELECT_FAIL=R1,R1a
 grep -q "VB-FALLBACK-FINAL R1" "$SB/w0.log" && grep -q "FALLBACK-FINAL" "$SB/repo/runs/pretrainsportC2_R1/val_best.txt" && ok "S5 fallback echoed + labeled" || bad "S5 fallback"
-grep -q "FULL-FINAL R1 := vsel" "$SB/w0.log" && [ -f "$SB/repo/runs/sxeval_psportC2A1/full_final_t64/summary_all.json" ] && ok "S5 final := vsel copy" || bad "S5 final copy"
+grep -q "FULL-FINAL R1 := vsel" "$SB/w0.log" && [ -f "$SB/repo/runs/sxeval_psportC2R1/full_final_t64/summary_all.json" ] && ok "S5 final := vsel copy" || bad "S5 final copy"
 grep -q "CHAIN-SPORTC2-COMPLETE" "$SB/w0.log" && ok "S5 complete" || bad "S5 complete"
 
 echo "== S6 banked pretrain, no local dir -> re-pull before select =="
@@ -209,8 +220,8 @@ grep -q "VALBEST W0" "$SB/w0.log" && ! grep -q "VB-FALLBACK-FINAL W0" "$SB/w0.lo
 echo "== S7 two-stage selection over BOTH stages =="
 mk_sandbox; run_chain 0 1 STUB_SELECT_VAL_W0a=0.4500
 grep -q "VALBEST W0 A:000025 0.4500 25 -> runs/pretrainsportC2_W0a/ckpt_000025.pkl" "$SB/w0.log" && ok "S7 stage-A peak selected when its val is higher" || { bad "S7 stage-A selection"; grep VALBEST "$SB/w0.log" | head -3; }
-grep -q "VALBEST R1 B:000015 0.3000 15 -> runs/pretrainsportC2_R1/ckpt_000015.pkl" "$SB/w0.log" && ok "S7 tie -> stage B (the later stage)" || { bad "S7 tie rule"; grep 'VALBEST A1' "$SB/w0.log"; }
-grep -q '"ema": false' "$SB/repo/runs/sxeval_psportC2A0/full_vsel_t64/summary_s0.json" && [ -f "$SB/gcs/sportC2/evals/full_W0_final_t64_OK" ] && ok "S7 vsel (stage-A grid) and final both evaluated" || bad "S7 fulls after stage-A selection"
+grep -q "VALBEST R1 B:000015 0.3000 15 -> runs/pretrainsportC2_R1/ckpt_000015.pkl" "$SB/w0.log" && ok "S7 tie -> stage B (the later stage)" || { bad "S7 tie rule"; grep 'VALBEST R1' "$SB/w0.log"; }
+grep -q '"ema": false' "$SB/repo/runs/sxeval_psportC2W0/full_vsel_t64/summary_s0.json" && [ -f "$SB/gcs/sportC2/evals/full_W0_final_t64_OK" ] && ok "S7 vsel (stage-A grid) and final both evaluated" || bad "S7 fulls after stage-A selection"
 
 echo "== S8 banked TWO-STAGE arm, no local dirs (node change after PRETRAIN-OK) -> BOTH dirs restored, selection over both stages =="
 mk_sandbox
@@ -220,9 +231,19 @@ mk_sandbox
   tar czf "$SB/gcs/sportC2/W0_pretrain.tgz" runs/pretrainsportC2_W0 && cp runs/pretrainsportC2_W0/ckpt_latest.pkl "$SB/gcs/sportC2/W0_ckpt.pkl" && echo ok > "$SB/gcs/sportC2/W0_PRETRAIN_OK"
   rm -rf runs/pretrainsportC2_W0 runs/pretrainsportC2_W0a )
 run_chain 0 1 STUB_SELECT_VAL_W0a=0.4500
-grep -q "PRETRAIN-SKIP W0" "$SB/w0.log" && grep -q "PRETRAIN-RESTORE W0 " "$SB/w0.log" && grep -q "PRETRAIN-RESTORE W0a" "$SB/w0.log" && ok "S8 both stage dirs re-pulled after the node change" || { bad "S8 restore"; grep -E 'RESTORE|SKIP A0' "$SB/w0.log" | head -4; }
-grep -q "VALBEST W0 A:000025 0.4500 25 -> runs/pretrainsportC2_W0a/ckpt_000025.pkl" "$SB/w0.log" && ok "S8 selection over BOTH stages picks the stage-A peak (the B0/B1 defect closed)" || { bad "S8 selection"; grep 'VALBEST A0' "$SB/w0.log" | head -2; }
+grep -q "PRETRAIN-SKIP W0" "$SB/w0.log" && grep -q "PRETRAIN-RESTORE W0 " "$SB/w0.log" && grep -q "PRETRAIN-RESTORE W0a" "$SB/w0.log" && ok "S8 both stage dirs re-pulled after the node change" || { bad "S8 restore"; grep -E 'RESTORE|SKIP W0' "$SB/w0.log" | head -4; }
+grep -q "VALBEST W0 A:000025 0.4500 25 -> runs/pretrainsportC2_W0a/ckpt_000025.pkl" "$SB/w0.log" && ok "S8 selection over BOTH stages picks the stage-A peak (the B0/B1 defect closed)" || { bad "S8 selection"; grep 'VALBEST W0' "$SB/w0.log" | head -2; }
 grep -q "CHAIN-SPORTC2-COMPLETE" "$SB/w0.log" && ok "S8 complete" || bad "S8 complete"
+
+echo "== S9 launch-time HBM OOM (no step logged) -> ONE retry with --remat (R2a); an arm already on --remat (R4) is NOT retried =="
+mk_sandbox; run_chain 0 1 STUB_OOM_ARM=R2a
+grep -q "PRETRAIN-OOM-RETRY-REMAT R2" "$SB/w0.log" && [ -f "$SB/repo/runs/pretrainsportC2_R2a/RETRY_REMAT.txt" ] && ok "S9 OOM at launch -> retried once with --remat, labeled on disk" || { bad "S9 retry"; grep -E 'OOM|PRETRAIN-NAN R2|AMPUTATE' "$SB/w0.log" | head -3; }
+[ -f "$SB/gcs/sportC2/R2_ARM_OK" ] && [ ! -f "$SB/repo/runs/pretrainsportC2_R2/STOPPED.txt" ] && ok "S9 R2 completed clean after the retry (no STOPPED label)" || bad "S9 R2 outcome"
+grep -q "CHAIN-SPORTC2-COMPLETE" "$SB/w0.log" && ok "S9 complete" || bad "S9 complete"
+mk_sandbox; run_chain 0 1 STUB_OOM_ARM=R4 STUB_OOM_ALWAYS=1
+if ! grep -q "PRETRAIN-OOM-RETRY-REMAT" "$SB/w0.log" && grep -q "AMPUTATE-FAILED" "$SB/w0.log" && grep -q "SPORTC2-INCOMPLETE" "$SB/w0.log"; then ok "S9b remat arm OOM -> no retry, AMPUTATE-FAILED, INCOMPLETE (stop-and-report)"; else bad "S9b remat-arm OOM path"; grep -E 'R4|OOM|AMPUTATE' "$SB/w0.log" | head -4; fi
+mk_sandbox; run_chain 0 1 STUB_OOM_ARM=R2a STUB_OOM_ALWAYS=1
+if grep -q "PRETRAIN-OOM-RETRY-REMAT R2" "$SB/w0.log" && grep -q "AMPUTATE-FAILED" "$SB/w0.log" && [ ! -f "$SB/gcs/sportC2/R2_ARM_OK" ] && grep -q "SPORTC2-INCOMPLETE" "$SB/w0.log"; then ok "S9c OOM persists through the --remat retry -> AMPUTATE-FAILED, R2 lost, INCOMPLETE (stop-and-report; never a second retry)"; else bad "S9c persistent-OOM path"; grep -E 'R2|OOM|AMPUTATE' "$SB/w0.log" | head -4; fi
 
 echo; echo "harness: $PASS PASS / $FAIL FAIL"
 exit $([ "$FAIL" -eq 0 ] && echo 0 || echo 1)
