@@ -420,7 +420,8 @@ def eq_etas(params, cfg: Config):
 
 
 def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
-               task_vec=None, t_total=None, y0_probs=None, t_norm_fixed=None):
+               task_vec=None, t_total=None, y0_probs=None, t_norm_fixed=None,
+               z0=None, return_z=False, z_fresh=None):
     """E10 equilibrium loop ([H-2'], ledger 2026-08-09): continuous carried
     answer register with a damped update y <- y + eta*(softmax(logits) - y);
     eta = sigmoid(params['eq']['eta']) (FPRM-style learnable step). Steps
@@ -429,7 +430,17 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
     the inference halt (res < cfg.res_tau) is applied by callers/probes.
     t_norm_fixed (wave 3a): apply ONE map (e.g. 1.0 = the final map) at every
     step — the fixed-point-anchor rows and the final-map instruments; None =
-    the trained ramp, bit-identical."""
+    the trained ramp, bit-identical. A TRACED t_norm_fixed (sportC2 SOT carry)
+    selects per row: < 0 = the ramp, else that fixed value.
+    z0 (sportC2): a carried latent to continue from (None = fresh, bit-identical);
+    z_fresh (traced bool, with z0): rows flagged fresh treat the FIRST pass as a
+    fresh start (z <- z_fine) although a zero z0 entered the forward (a zero
+    carried latent is inert at the gate, so the forward is the fresh forward);
+    return_z: also return the carried latent after the last step.
+    cfg.inner_k > 1 (sportC2 R2): inner_k latent passes per outer step, the readout
+    updated from the LAST pass; cfg.hard_p > 0 (sportC2 R3, training only): with
+    that probability per step the feedback is the argmax one-hot with a
+    straight-through gradient. Both are bit-exact at their defaults."""
     T = t_total if t_total is not None else cfg.T
     # canvas size derived from the input (2026-09-01 native9: 9x9 grids flow
     # through unchanged; canvas32 sees identical values to the old constant)
@@ -442,31 +453,61 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
         a1 = jax.nn.sigmoid(params["eq"]["alpha1"])
         a2 = jax.nn.sigmoid(params["eq"]["alpha2"])
     outs, residuals = [], []
-    z_c = None
+    z_c = z0
+    K = max(1, int(getattr(cfg, "inner_k", 1)))
+    hard_p = float(getattr(cfg, "hard_p", 0.0))
     for t in range(T):
-        t_norm = (min(t, cfg.T - 1) / max(cfg.T - 1, 1)) if t_norm_fixed is None else float(t_norm_fixed)
-        step_rng = None
-        if rng is not None:
-            rng, step_rng = jax.random.split(rng)
-        if cfg.remat:
-            # Rematerialize per eq step (P11-EXT 2026-08-11: the original
-            # remat covered only the projective iterate — d48/B64 OOM'd at
-            # an unchanged 17.72G because this loop never checkpointed).
-            # z sentinel keeps the closure signature fixed across t=0/t>0.
-            def _fwd(p, yp, r, tv, zc, _t=t_norm):
-                return forward_fields(p, cfg, build_fields_soft(x_canvas, yp),
-                                      t_norm=_t, tau=tau, rng=r, task_vec=tv,
-                                      z_in=None if zc.ndim == 1 else zc)
-            out = jax.checkpoint(_fwd)(
-                params, y, step_rng, task_vec,
-                z_c if z_c is not None else jnp.zeros(1))
-        else:
-            out = forward_fields(params, cfg, build_fields_soft(x_canvas, y),
-                                 t_norm=t_norm, tau=tau, rng=step_rng,
-                                 task_vec=task_vec, z_in=z_c)
-        z_c = (out.z_fine if z_c is None
-               else z_c + eta_z * (out.z_fine - z_c))
+        ramp = min(t, cfg.T - 1) / max(cfg.T - 1, 1)
+        if t_norm_fixed is None:
+            t_norm = ramp
+        elif isinstance(t_norm_fixed, (int, float)):
+            t_norm = float(t_norm_fixed)
+        else:  # traced per-row selector (sportC2 SOT carry): < 0 -> the ramp
+            t_norm = jnp.where(t_norm_fixed < 0, ramp, t_norm_fixed)
+        for _k in range(K):
+            step_rng = None
+            if rng is not None:
+                rng, step_rng = jax.random.split(rng)
+            if cfg.remat:
+                # Rematerialize per eq step (P11-EXT 2026-08-11: the original
+                # remat covered only the projective iterate — d48/B64 OOM'd at
+                # an unchanged 17.72G because this loop never checkpointed).
+                # z sentinel keeps the closure signature fixed across t=0/t>0.
+                if isinstance(t_norm, float):
+                    def _fwd(p, yp, r, tv, zc, _t=t_norm):
+                        return forward_fields(p, cfg, build_fields_soft(x_canvas, yp),
+                                              t_norm=_t, tau=tau, rng=r, task_vec=tv,
+                                              z_in=None if zc.ndim == 1 else zc)
+                    out = jax.checkpoint(_fwd)(
+                        params, y, step_rng, task_vec,
+                        z_c if z_c is not None else jnp.zeros(1))
+                else:
+                    def _fwd_t(p, yp, r, tv, zc, tn):
+                        return forward_fields(p, cfg, build_fields_soft(x_canvas, yp),
+                                              t_norm=tn, tau=tau, rng=r, task_vec=tv,
+                                              z_in=None if zc.ndim == 1 else zc)
+                    out = jax.checkpoint(_fwd_t)(
+                        params, y, step_rng, task_vec,
+                        z_c if z_c is not None else jnp.zeros(1), t_norm)
+            else:
+                out = forward_fields(params, cfg, build_fields_soft(x_canvas, y),
+                                     t_norm=t_norm, tau=tau, rng=step_rng,
+                                     task_vec=task_vec, z_in=z_c)
+            if z_c is None:
+                z_c = out.z_fine
+            elif z_fresh is not None and t == 0 and _k == 0:
+                z_c = jnp.where(z_fresh, out.z_fine, z_c + eta_z * (out.z_fine - z_c))
+            else:
+                z_c = z_c + eta_z * (out.z_fine - z_c)
         p = jax.nn.softmax(out.logits, axis=-1).transpose(2, 0, 1)
+        if hard_p > 0 and rng is not None:
+            # sportC2 R3 hard-decision feedback rows: the argmax one-hot readout with a
+            # straight-through gradient, on a per-step Bernoulli(hard_p) draw. One extra
+            # split only on this branch (hard_p = 0 leaves the rng stream untouched).
+            rng, k_h = jax.random.split(rng)
+            p_hard = jax.nn.one_hot(jnp.argmax(out.logits, axis=-1), VOCAB).transpose(2, 0, 1)
+            p_st = p + jax.lax.stop_gradient(p_hard - p)
+            p = jnp.where(jax.random.bernoulli(k_h, hard_p), p_st, p)
         y_new = (a1 * y + a2 * p) if cfg.eq_coupled else (y + eta * (p - y))
         if cfg.ni_sigma > 0 and rng is not None:
             # pretrain-13 NI (EqR per-step training noise, raw std ni_sigma):
@@ -484,6 +525,8 @@ def iterate_eq(params, cfg: Config, x_canvas, *, tau: float, rng=None,
         residuals.append(jnp.mean(jnp.abs(y_new - y)))
         y = y_new
         outs.append(out)
+    if return_z:
+        return outs, residuals, y, z_c
     return outs, residuals, y
 
 

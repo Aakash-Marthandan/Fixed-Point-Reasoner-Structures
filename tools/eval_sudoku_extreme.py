@@ -114,7 +114,7 @@ def coupled_ab(params, cfg):
 
 
 def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
-              eta, eta_z, layout="origin", t_norm_fixed=None, ab=None, z0=None):
+              eta, eta_z, layout="origin", t_norm_fixed=None, ab=None, z0=None, hard=False):
     """Returns per-puzzle numpy: exact_t (T,B), valid_ok_t (T,B) [valid & givens-
     consistent], final pred9 (B,9,9), resid3 (B,) — the mean per-step |Delta y|
     over the FINAL 3 steps (EqR's Top-1-Converged selection signal, L=3;
@@ -125,7 +125,10 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
     z ~ N(0, sigma) for the field-recipe cell; None = the cell's own start (the
     fixed buffers for 'trm'; no carry for 'rg'). For cfg.cell_kind == 'trm' the
     selection residual is on the LATENT (EqR D.3: |f(z_t) - z_t| over the last
-    L = 3 outer steps) instead of on y."""
+    L = 3 outer steps) instead of on y.
+    sportC2: cfg.inner_k latent passes per outer step (mirrors model.iterate_eq;
+    1 = the pre-existing loop); hard=True feeds back the argmax one-hot readout
+    at every step (R3's labeled inference mode)."""
     B = x_can.shape[0]
     y = y0
     z_c = None if z0 is None else z0
@@ -135,16 +138,20 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
     pred9 = None
     sol9 = jnp.asarray(sol9, jnp.int32); puz9 = jnp.asarray(puz9, jnp.int32)
     mask = puz9 != 0
+    K = 1 if trm else max(1, int(getattr(cfg, "inner_k", 1)))
     for t in range(t_total):
         t_norm = (min(t, cfg.T - 1) / max(cfg.T - 1, 1)) if t_norm_fixed is None else float(t_norm_fixed)
         if trm:
             t_norm = 0.0   # the field cell ignores t_norm: one compiled step instead of T (sportC1 pre-mortem)
-        first = z_c is None
-        logits, zf = _step(cfg, float(tau), float(t_norm), first)(
-            params, x_can, y, tvj, jnp.zeros(1) if first else z_c)
-        z_prev = z_c
-        z_c = zf if first else z_c + eta_z * (zf - z_c)
+        for _k in range(K):
+            first = z_c is None
+            logits, zf = _step(cfg, float(tau), float(t_norm), first)(
+                params, x_can, y, tvj, jnp.zeros(1) if first else z_c)
+            z_prev = z_c
+            z_c = zf if first else z_c + eta_z * (zf - z_c)
         p = jax.nn.softmax(logits, axis=-1).transpose(0, 3, 1, 2)
+        if hard:
+            p = jax.nn.one_hot(jnp.argmax(logits, axis=-1), M.VOCAB).transpose(0, 3, 1, 2)
         eta_t = eta if (gamma >= 1.0 or t < cfg.T) else eta * (gamma ** (t - cfg.T + 1))
         y_new = (ab[0] * y + ab[1] * p) if ab is not None else (y + eta_t * (p - y))
         if trm:
@@ -248,6 +255,9 @@ def main():
     ap.add_argument("--z0-sigma", type=float, default=1.0,
                     help="sportC1 X0 (cell_kind trm): RI restart scale for the multi-init draws "
                          "(EqR A.3 default 1); the cold run uses the cell's fixed start")
+    ap.add_argument("--hard-feedback", action="store_true",
+                    help="sportC2 R3: feed back the argmax one-hot readout at every step (labeled "
+                         "inference mode; recorded in the fingerprint and summary)")
     ap.add_argument("--vote-unverified", action="store_true",
                     help="ALSO record EqR-style cellwise MAJORITY vote@k (no verifier) as "
                          "records columns uv_vote_k* — the D3 demo instrument (2026-08-27). "
@@ -331,7 +341,8 @@ def main():
                                   t=t_total, k=a.k_init, init=a.init, layout=layout, batch=a.batch,
                                   mi_seed=a.mi_seed, fmo=bool(a.final_map_only),
                                   uv=bool(a.vote_unverified), ver=2,
-                                  **({"ema": True} if a.ema else {}), **({"z0": a.z0_sigma} if trm else {})),
+                                  **({"ema": True} if a.ema else {}), **({"z0": a.z0_sigma} if trm else {}),
+                                  **({"hard": True} if a.hard_feedback else {})),
                      sort_keys=True)
     partial_p = out / f"partial_{tag}.npz"
     start = 0
@@ -361,7 +372,7 @@ def main():
             y0 = jnp.broadcast_to(void, (B,) + void.shape)
         ex, ok, pred9, _ = run_batch(params, cfg, tvj, x_can, y0, t_total=t_total, tau=a.tau,
                                      gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                     layout=layout, t_norm_fixed=tnf, ab=ab)
+                                     layout=layout, t_norm_fixed=tnf, ab=ab, hard=a.hard_feedback)
         cold = ex[-1]
         fe, fv = first_true(ex), first_true(ok)
         viol = np.asarray(violations_dev(jnp.asarray(pred9)))
@@ -379,7 +390,7 @@ def main():
                    if trm else None)
             exr, okr, predr, resr = run_batch(params, cfg, tvj, x_can, y0r, t_total=t_total, tau=a.tau,
                                               gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                              layout=layout, t_norm_fixed=tnf, ab=ab, z0=z0r)
+                                              layout=layout, t_norm_fixed=tnf, ab=ab, z0=z0r, hard=a.hard_feedback)
             hit = okr[-1]
             mi_first = np.where((mi_first < 0) & hit, j, mi_first)
             mi_v += hit.astype(int); mi_t += exr[-1].astype(int)
@@ -426,6 +437,7 @@ def main():
         eta_learned=eta_learned, eta_override=a.eta_override,
         final_map_only=bool(a.final_map_only), eq_coupled_ab=ab,
         cell_kind=getattr(cfg, "cell_kind", "rg"), ema=bool(a.ema), z0_sigma=(a.z0_sigma if trm else None),
+        inner_k=int(getattr(cfg, "inner_k", 1)), hard_feedback=bool(a.hard_feedback),
         wall_s=round(time.time() - t0, 1)))
     (out / f"summary_{tag}.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps({k: summ[k] for k in ("n", "t_total", "k_init", "init", "exact_acc", "exact_acc_vote", "wall_s")}))

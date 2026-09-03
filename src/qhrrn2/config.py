@@ -100,6 +100,15 @@ class Config:
     # feature axis, shared over fields (S9-safe). Every caller (iterate_eq,
     # the evaluator's run_batch, the monitor, the census) inherits it.
     z_norm: str = ""
+    # sportC2 grafts (2026-09-04; Freethink 2026-09-03 X-4/X-7): inner_k = latent passes per outer
+    # step before the readout update (R2; 1 = bit-exact); hard_p = probability per outer step,
+    # TRAINING only (rng threaded), that the feedback uses the HARD argmax readout with a
+    # straight-through gradient (R3; 0 = bit-exact); trm_token_mixer "group9" = our factorized
+    # group mixer as the field cell's token mixer on a trm_gm_dim projection (X2; "mlp" = TRM exact).
+    inner_k: int = 1
+    hard_p: float = 0.0
+    trm_token_mixer: str = "mlp"
+    trm_gm_dim: int = 64
     # Fixed equilibrium dampings (0 = learned, bit-exact). The TRM/EqR cell
     # carries its latent undamped across segments (eta_z_fixed 1) and reads y
     # out (eta_fixed 1); EqR's damping lambda lives INSIDE that cell.

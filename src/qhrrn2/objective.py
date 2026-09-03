@@ -75,18 +75,30 @@ def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
 
 
 def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
-              task_vec=None, labels_x=None, yprev_init=None):
+              task_vec=None, labels_x=None, yprev_init=None,
+              y0_probs=None, z0=None, t_norm_fixed=None, z_fresh=None):
     """Deep-supervised loss for one (input, output) pair; mask = true output canvas.
 
-    yprev_init: optional initial feedback canvas ([H-23] basin rows)."""
+    yprev_init: optional initial feedback canvas ([H-23] basin rows).
+    y0_probs / z0 / t_norm_fixed (sportC2 SOT carry, equilibrium only): continue
+    the loop from a carried (y, z) under a traced per-row schedule selector; the
+    carried (y, z) after the segment is returned in aux (carry_y, carry_z).
+    All None = the pre-existing path, bit-exact."""
     mask = y_canvas != VOID
     k_fpa = None
     if cfg.equilibrium and cfg.fpa_k > 0 and rng is not None:
         # wave 3a FPA: one extra split ONLY on this branch (fpa_k=0 leaves the
         # registered rng stream bit-exact — tests/test_fpa.py)
         rng, k_fpa = jax.random.split(rng)
-    outs = iterate(params, cfg, x_canvas, tau=tau, rng=rng, task_vec=task_vec,
-                   labels_x=labels_x, yprev_init=yprev_init)
+    carry = None
+    if cfg.equilibrium and (y0_probs is not None or z0 is not None or t_norm_fixed is not None):
+        outs, _, y_last, z_last = iterate_eq(params, cfg, x_canvas, tau=tau, rng=rng, task_vec=task_vec,
+                                             y0_probs=y0_probs, z0=z0, t_norm_fixed=t_norm_fixed,
+                                             return_z=True, z_fresh=z_fresh)
+        carry = (y_last, z_last)
+    else:
+        outs = iterate(params, cfg, x_canvas, tau=tau, rng=rng, task_vec=task_vec,
+                       labels_x=labels_x, yprev_init=yprev_init)
     losses, ces = zip(*(_step_loss(o, x_canvas, y_canvas, mask, cfg) for o in outs))
     total = jnp.mean(jnp.stack(losses))
     aux = {
@@ -115,6 +127,10 @@ def pair_loss(params, cfg: Config, x_canvas, y_canvas, *, tau: float, rng=None,
         l_fp, c_fp = zip(*(_step_loss(o, x_canvas, y_canvas, mask, cfg) for o in outs_fp))
         total = total + cfg.fpa_w * jnp.mean(jnp.stack(l_fp))
         aux["fpa_ce_last"] = c_fp[-1]
+    if carry is not None:
+        aux["carry_y"] = jax.lax.stop_gradient(carry[0])
+        aux["carry_z"] = jax.lax.stop_gradient(carry[1])
+        aux["exact_last"] = jnp.all((jnp.argmax(outs[-1].logits, axis=-1) == y_canvas) | ~mask)
     return total, aux
 
 

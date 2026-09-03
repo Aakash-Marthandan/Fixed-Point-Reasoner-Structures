@@ -46,13 +46,16 @@ def trajectories(params, cfg, tvj, x_can, y0, *, t_total, eta, eta_z):
     B = x_can.shape[0]
     y, z_c = y0, None
     zmax, lmax = [], []
+    trm = getattr(cfg, 'cell_kind', 'rg') == 'trm'
+    K = 1 if trm else max(1, int(getattr(cfg, "inner_k", 1)))   # sportC2 R2: mirrors the evaluator
     for t in range(t_total):
         t_norm = min(t, cfg.T - 1) / max(cfg.T - 1, 1)
-        if getattr(cfg, 'cell_kind', 'rg') == 'trm':
+        if trm:
             t_norm = 0.0   # the field cell ignores t_norm (one compiled step)
-        first = z_c is None
-        logits, zf = EV._step(cfg, 1.0, float(t_norm), first)(params, x_can, y, tvj, jnp.zeros(1) if first else z_c)
-        z_c = zf if first else z_c + eta_z * (zf - z_c)
+        for _k in range(K):
+            first = z_c is None
+            logits, zf = EV._step(cfg, 1.0, float(t_norm), first)(params, x_can, y, tvj, jnp.zeros(1) if first else z_c)
+            z_c = zf if first else z_c + eta_z * (zf - z_c)
         p = jax.nn.softmax(logits, axis=-1).transpose(0, 3, 1, 2)
         y = y + eta * (p - y)
         zmax.append(np.asarray(jnp.max(jnp.abs(z_c).reshape(B, -1), axis=1)))

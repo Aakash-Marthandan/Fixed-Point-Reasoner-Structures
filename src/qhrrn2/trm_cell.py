@@ -25,6 +25,7 @@ import jax
 import jax.numpy as jnp
 
 from qhrrn2.config import Config
+from qhrrn2 import cell as _cell
 from qhrrn2.grid import VOCAB
 
 RMS_EPS = 1e-5            # TRM rms_norm_eps
@@ -66,9 +67,22 @@ def seq_len(cfg: Config, hw: int) -> int:
 def init_params(key, cfg: Config, hw: int = 81):
     S, hid = seq_len(cfg, hw), cfg.trm_hidden
     ks = jax.random.split(key, 2 + 2 * cfg.trm_layers)
-    blocks = [{"mlp_t": _swiglu_init(ks[2 + 2 * i], S, cfg.trm_expansion),
-               "mlp": _swiglu_init(ks[3 + 2 * i], hid, cfg.trm_expansion)}
-              for i in range(cfg.trm_layers)]
+    if getattr(cfg, "trm_token_mixer", "mlp") == "group9":
+        # sportC2 X2 graft (Freethink 2026-09-03 X-7): OUR factorized all-different group mixer
+        # replaces the token-mixing SwiGLU on the 81 cell tokens, applied on a trm_gm_dim
+        # projection (hid -> gm -> hid); the prefix tokens receive a mean-pooled cell summary
+        # (they would otherwise never see the grid, and the q-head reads prefix token 0).
+        gm = cfg.trm_gm_dim
+        blocks = []
+        for i in range(cfg.trm_layers):
+            k1, k2, k3, k4 = jax.random.split(ks[2 + 2 * i], 4)
+            blocks.append({"gm": {"pin": _linear_init(k1, hid, gm), "mix": _cell.init_group_mixer(k2, gm),
+                                  "pout": _linear_init(k3, gm, hid), "pre": _linear_init(k4, hid, hid)},
+                           "mlp": _swiglu_init(ks[3 + 2 * i], hid, cfg.trm_expansion)})
+    else:
+        blocks = [{"mlp_t": _swiglu_init(ks[2 + 2 * i], S, cfg.trm_expansion),
+                   "mlp": _swiglu_init(ks[3 + 2 * i], hid, cfg.trm_expansion)}
+                  for i in range(cfg.trm_layers)]
     return {"tok_emb": _trunc_normal(ks[0], (VOCAB, hid), 1.0 / math.sqrt(hid)),
             "puzzle_emb": jnp.zeros((cfg.trm_puzzle_emb_len, hid)),   # zero-init (TRM)
             "lm_head": _linear_init(ks[1], hid, VOCAB),                # bias-free
@@ -94,18 +108,30 @@ def z0(cfg: Config, hw: int, rng=None):
     return jnp.stack([jnp.broadcast_to(H0, (S, hid)), jnp.broadcast_to(L0, (S, hid))])
 
 
-def _block(p, h):
+def _block(p, h, P=0):
     """POST-norm block (TRM comment: 'Post Norm'): token-mixing SwiGLU over
-    the sequence axis, then the channel SwiGLU, each residual + RMSNorm."""
+    the sequence axis, then the channel SwiGLU, each residual + RMSNorm.
+    With a "gm" entry (sportC2 X2) the token mixing is our group mixer on the
+    81 cell tokens (rows/cols/boxes all-different operator on a projected view)
+    plus a pooled cell summary into the P prefix tokens."""
+    if "gm" in p:
+        g = p["gm"]; S, hid = h.shape
+        cells = h[P:]                                       # (81, hid)
+        c = (cells @ g["pin"]).reshape(1, 9, 9, -1)         # (C=1, 9, 9, gm)
+        mixed = _cell.group_mixer(g["mix"], c)[0].reshape(cells.shape[0], -1)
+        cells2 = cells + (mixed - c.reshape(cells.shape[0], -1)) @ g["pout"]
+        prefix = h[:P] + (jnp.mean(cells, axis=0) @ g["pre"])[None, :]
+        h = _rms_norm(jnp.concatenate([prefix, cells2], axis=0))
+        return _rms_norm(h + _swiglu(p["mlp"], h))
     ht = h.T                                            # (hid, S)
     ht = _rms_norm(ht + _swiglu(p["mlp_t"], ht))
     h = ht.T                                            # (S, hid)
     return _rms_norm(h + _swiglu(p["mlp"], h))
 
 
-def _stack(p, h):
+def _stack(p, h, P=0):
     for b in p["blocks"]:
-        h = _block(b, h)
+        h = _block(b, h, P)
     return h
 
 
@@ -127,8 +153,10 @@ def segment(p, cfg: Config, emb, zH, zL, rng=None):
     keys = (list(jax.random.split(rng, n_keys)) if (rng is not None and beta > 0)
             else [None] * n_keys)
 
+    P = cfg.trm_puzzle_emb_len
+
     def step(z, inj, key):
-        F = _stack(p, z + inj)
+        F = _stack(p, z + inj, P)
         z2 = (z + (1.0 - lam) * (F - z)) if lam > 0 else F
         if key is not None:
             z2 = z2 + beta * jax.random.normal(key, z2.shape)
