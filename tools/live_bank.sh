@@ -76,11 +76,16 @@ restore () {
   if [ -f "$LOG" ]; then
     say "LIVE-RESTORE skip-pull (this node is the live source; local state is at least as new)"
   elif gsutil ls "$LIVE/runs/" >/dev/null 2>&1; then
-    local bx n; bx=$(banked_excl)
-    rm -rf runs/_live_restore
-    if [ -n "$bx" ]; then gsutil -q rsync -r -C -x "$bx" "$LIVE/runs" runs/_live_restore >/dev/null 2>&1
-    else gsutil -q rsync -r -C "$LIVE/runs" runs/_live_restore >/dev/null 2>&1; fi
+    local bx n rc; bx=$(banked_excl)
+    # 2026-09-04 FIX (found live on the first real node-switch): gsutil rsync REQUIRES the dest dir to EXIST — a bare
+    # `rm -rf` left it absent, so every download errored (CommandException) and, under -q 2>&1, silently pulled 0
+    # (the harness stub auto-created dest dirs and hid it; the stub now errors like real gsutil). mkdir it, bound the
+    # rsync, and log a LOUD warning on any nonzero rc so a future pull failure is never silent again.
+    rm -rf runs/_live_restore; mkdir -p runs/_live_restore
+    if [ -n "$bx" ]; then perl -e 'alarm 600; exec @ARGV' -- gsutil -q rsync -r -C -x "$bx" "$LIVE/runs" runs/_live_restore >/dev/null 2>&1; rc=$?
+    else perl -e 'alarm 600; exec @ARGV' -- gsutil -q rsync -r -C "$LIVE/runs" runs/_live_restore >/dev/null 2>&1; rc=$?; fi
     n=$(find runs/_live_restore -type f 2>/dev/null | wc -l | tr -d ' ')
+    [ "${rc:-0}" -ne 0 ] && say "LIVE-RESTORE-PULL-WARN rc=$rc ($n files pulled; rsync error — the banked _pretrain.tgz tarballs are the fallback)"
     [ -d runs/_live_restore ] && cp -Rn runs/_live_restore/. runs/ 2>/dev/null
     rm -rf runs/_live_restore
     say "LIVE-RESTORE pulled=$n files from $LIVE/runs (no-clobber; banked arms excluded: ${bx:-none})"

@@ -54,6 +54,7 @@ case $cmd in
            case $a in -x) i=$((i+1)); x=${args[$i]};; -r|-C|-n|-d|-c) ;; *) pos+=("$a");; esac; i=$((i+1)); done
          src=$(map "${pos[0]}"); dst=$(map "${pos[1]}")
          [ -d "$src" ] || exit 1
+         case "${pos[1]}" in gs://*) : ;; *) [ -d "$dst" ] || { echo "CommandException: arg ($dst) does not name a directory, bucket, or bucket subdir." >&2; exit 1; };; esac
          ( cd "$src" && find . -type f | sed 's|^\./||' ) | while read -r rel; do
            if [ -n "$x" ] && printf '%s\n' "$rel" | grep -qE "$x"; then continue; fi
            s="$src/$rel"; d="$dst/$rel"
