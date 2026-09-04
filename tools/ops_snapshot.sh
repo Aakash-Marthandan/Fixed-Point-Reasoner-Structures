@@ -34,7 +34,7 @@ P=$(cat runs/detached.pid 2>/dev/null); if [ -n "$P" ] && kill -0 "$P" 2>/dev/nu
 echo "MARK $(grep -E "ARM-OK|PRETRAIN-(START|OK|SKIP|NAN|RESTORE|OOM)|STAGEA|EVAL-(OK|SKIP|FAILED|N-BAD|SHARD)|CENSUS-(OK|SKIP|FAILED)|CALIB-(OK|SKIP|FAILED)|VALBEST|VB-FALLBACK|AMPUTAT|RIDER|WORKER-DONE|COMPLETE|INCOMPLETE|TEARDOWN|BAD-ARM|MISSING" runs/detached.log 2>/dev/null | tail -1 | cut -c1-120)"
 L=$(ls -t runs/pretrain'"$R_TAG"'_*.log 2>/dev/null | head -1)
 [ -n "$L" ] && echo "PT $(basename "$L" .log) @$(stat -c %y "$L" | cut -c12-19)Z: $(grep -E "^step |RESUMED|INIT-FROM|DP:|NAN|OOM" "$L" | tail -1 | cut -c1-110)"
-E=$(ls -td runs/sx*/ 2>/dev/null | head -1)
+E=$(ls -td runs/sx*/ runs/sx*/*/ 2>/dev/null | grep -vE "/(records|partial)" | head -1)   # nested eval dirs (sxeval_p*/full_*) too
 if [ -n "$E" ]; then
   if ls "$E"shard_*.log >/dev/null 2>&1; then echo "EV $(basename "$E") @$(stat -c %y "$E" | cut -c12-19)Z shards: $(for f in "$E"shard_*.log; do grep "banked partial" "$f" | tail -1 | sed -E "s/.*@ ([0-9]+\/[0-9]+).*/\1/"; done | tr "\n" " ")"
   else echo "EV $(basename "$E") @$(stat -c %y "$E" | cut -c12-19)Z: $(tail -1 "$E"run.log 2>/dev/null | cut -c1-100)"; fi
