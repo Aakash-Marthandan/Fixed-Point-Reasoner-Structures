@@ -54,6 +54,15 @@ echo "NPZ-OK"
 export JAX_COMPILATION_CACHE_DIR="$PWD/jax_cache"; mkdir -p "$PWD/jax_cache"
 gsutil -q cp "$GCS/jax_cache.tgz" /tmp/jc.tgz 2>/dev/null && tar xzf /tmp/jc.tgz 2>/dev/null && echo "COMPILE-CACHE restored"
 
+# ---------- LIVE 5-MIN GCS BANKING + fresh-node RESTORE (2026-09-04, PI directive mid-campaign; tools/live_bank.sh;
+# harness S10 restore+RESUMED / S10b torn ckpt -> labeled fallback / S10c a banked arm's stale live copy is never
+# restored over its final). In-flight ckpt_latest / 5k grids / metrics / eval 300 s partials now survive a preemption
+# or node switch; restore runs on EVERY start (no-clobber pull on a fresh node, sanitize a torn ckpt_latest anywhere).
+LB_ARMS="W0 R1 R2 R3 R4 X1 X2"
+GCS="$GCS" R_TAG="$R_TAG" ARMS="$LB_ARMS" bash tools/live_bank.sh restore
+GCS="$GCS" R_TAG="$R_TAG" ARMS="$LB_ARMS" bash tools/live_bank.sh loop & LB_PID=$!
+trap 'kill "$LB_PID" 2>/dev/null' EXIT
+
 # ---------- arm flag registry (locked at registration; plan §12) ----------
 native_common () {  # d128 ws8 native9 = 3,004,530 params; every measured mechanism of the champion recipe
   echo "--sudoku-extreme $NPZ --sudoku-layout native9 --equilibrium --d 128 --width-scale 8 --K 64 \
@@ -437,7 +446,12 @@ riders () {  # sportC1's owed riders: B0/B1 20k scans + B0 EMA full on the CORRE
   for src in C3X D4; do
     local CK=runs/pretrainsportBr2b_${src}/ckpt_latest.pkl
     [ -f "$CK" ] || gsutil -q cp "$GCS_R2B/${src}_ckpt.pkl" "$CK" || { echo "RIDER-CKPT-MISS $src"; continue; }
-    eval_one "rider_${src}_sel5k" "$CK" "runs/sxrider_${src}_sel5k" 3 \
+    # 2026-09-04 ops delta (mid-campaign, harness-verified, PROTOCOL UNCHANGED — same flags, sharded + merged +
+    # n-gated at 5000 like every full test): the two canvas riders ran SINGLE-chip via eval_one; at the measured
+    # rung-2b pace (k128 on the d96 canvas: 2.8 h per 1250-record chip-slice) a 5k rider is ~11 h per arm, ~22 h
+    # for the pair, holding ONE chip before the completion sentinel — sportC1's riders never started for the same
+    # reason. Takes effect at the first relaunch that redistributes the code archive (the wall recycle).
+    eval_sharded "rider_${src}_sel5k" "$CK" "runs/sxrider_${src}_sel5k" "$NCHIP" 5000 \
       --split test --subsample 5000 --t-total 64 --k-init 128 --vote-unverified
   done
 }

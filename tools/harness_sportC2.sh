@@ -31,7 +31,7 @@ mk_sandbox () {
   # the B0/B1 correct-grid riders pull sportC1's STAGE-A tarballs (B0a/B1a) and read ckpt_020000.pkl from them
   ( cd "$SB" && mkdir -p runs/pretrainsportC1_B0a runs/pretrainsportC1_B1a && echo fake > runs/pretrainsportC1_B0a/ckpt_020000.pkl && echo fake > runs/pretrainsportC1_B1a/ckpt_020000.pkl \
     && tar czf gcs/sportC1/B0a_pretrain.tgz runs/pretrainsportC1_B0a && tar czf gcs/sportC1/B1a_pretrain.tgz runs/pretrainsportC1_B1a && rm -rf runs )
-  cp "$REPO/tools/chain_sportC2.sh" "$SB/repo/tools/"
+  cp "$REPO/tools/chain_sportC2.sh" "$REPO/tools/live_bank.sh" "$SB/repo/tools/"
   : > "$SB/repo/data/sudoku_extreme/sudoku_extreme_seed0.npz"
   echo "fake" > "$SB/gcs/sportBr2b/C3X_ckpt.pkl"; echo "fake" > "$SB/gcs/sportBr2b/D4_ckpt.pkl"
   cat > "$SB/bin/gsutil" <<SH
@@ -49,6 +49,16 @@ case $cmd in
         if [ "$src" = "-" ]; then p=$(map "$dst"); mkdir -p "$(dirname "$p")"; cat > "$p"
         elif [[ "$src" == gs://* ]]; then p=$(map "$src"); [ -f "$p" ] && { mkdir -p "$(dirname "$dst")" 2>/dev/null; cp "$p" "$dst"; } || exit 1
         else p=$(map "$dst"); mkdir -p "$(dirname "$p")"; cp "$src" "$p"; fi;;
+  rsync) x=""; pos=(); i=1
+         while [ $i -lt ${#args[@]} ]; do a=${args[$i]}
+           case $a in -x) i=$((i+1)); x=${args[$i]};; -r|-C|-n|-d|-c) ;; *) pos+=("$a");; esac; i=$((i+1)); done
+         src=$(map "${pos[0]}"); dst=$(map "${pos[1]}")
+         [ -d "$src" ] || exit 1
+         ( cd "$src" && find . -type f | sed 's|^\./||' ) | while read -r rel; do
+           if [ -n "$x" ] && printf '%s\n' "$rel" | grep -qE "$x"; then continue; fi
+           s="$src/$rel"; d="$dst/$rel"
+           if [ ! -f "$d" ] || ! cmp -s "$s" "$d"; then mkdir -p "$(dirname "$d")"; cp "$s" "$d"; echo "Copying file://$rel"; fi
+         done; exit 0;;
   *) exit 0;;
 esac
 SH
@@ -68,6 +78,12 @@ if tool.endswith("pretrain.py"):
     out = Path(flag("--out")); out.mkdir(parents=True, exist_ok=True)
     steps = int(flag("--steps", "100"))
     base = out.name.replace("pretrainsportC2_", "")
+    latest = out / "ckpt_latest.pkl"   # S10: the trainer resumes from a local ckpt_latest (and crashes on a torn one)
+    if latest.exists():
+        try:
+            prev = pickle.load(open(latest, "rb")); print(f"RESUMED from {latest} at step {int(prev['step'])}", flush=True)
+        except Exception as e:
+            print(f"ckpt_latest unloadable: {e}", file=sys.stderr); sys.exit(1)
     if base == os.environ.get("STUB_OOM_ARM", "") and ("--remat" not in argv or os.environ.get("STUB_OOM_ALWAYS") == "1"):
         # S9: a LAUNCH-TIME HBM exhaustion — nothing logged, rc 1 (NOT a NaN death); the --remat retry succeeds
         # unless STUB_OOM_ALWAYS=1 (S9b: the arm OOMs even with --remat, e.g. one already launched on it)
@@ -146,7 +162,7 @@ run_chain () {  # W NW [extra VAR=val...]
   local w=$1 nw=$2; shift 2
   (cd "$SB/repo" && env PATH="$SB/bin:$PATH" CHAIN_PY="$SB/bin/stubpy" REAL_PY="$REAL_PY" \
      CHAIN_WORKER=$w CHAIN_WORKERS=$nw NCHIP_OVERRIDE=4 C1_STEPS_AB=80 C1_STEPS_R=100 C1_STEPS_X=100 \
-     C1_WAIT_PASSES=3 C1_POLL_SLEEP=1 "$@" bash tools/chain_sportC2.sh > "$SB/w${w}.log" 2>&1)
+     C1_WAIT_PASSES=3 C1_POLL_SLEEP=1 LIVE_NO_GUARD=1 "$@" bash tools/chain_sportC2.sh > "$SB/w${w}.log" 2>&1)
 }
 
 echo "== S1 fresh 1x8 =="
@@ -244,6 +260,42 @@ mk_sandbox; run_chain 0 1 STUB_OOM_ARM=R4 STUB_OOM_ALWAYS=1
 if ! grep -q "PRETRAIN-OOM-RETRY-REMAT" "$SB/w0.log" && grep -q "AMPUTATE-FAILED" "$SB/w0.log" && grep -q "SPORTC2-INCOMPLETE" "$SB/w0.log"; then ok "S9b remat arm OOM -> no retry, AMPUTATE-FAILED, INCOMPLETE (stop-and-report)"; else bad "S9b remat-arm OOM path"; grep -E 'R4|OOM|AMPUTATE' "$SB/w0.log" | head -4; fi
 mk_sandbox; run_chain 0 1 STUB_OOM_ARM=R2a STUB_OOM_ALWAYS=1
 if grep -q "PRETRAIN-OOM-RETRY-REMAT R2" "$SB/w0.log" && grep -q "AMPUTATE-FAILED" "$SB/w0.log" && [ ! -f "$SB/gcs/sportC2/R2_ARM_OK" ] && grep -q "SPORTC2-INCOMPLETE" "$SB/w0.log"; then ok "S9c OOM persists through the --remat retry -> AMPUTATE-FAILED, R2 lost, INCOMPLETE (stop-and-report; never a second retry)"; else bad "S9c persistent-OOM path"; grep -E 'R2|OOM|AMPUTATE' "$SB/w0.log" | head -4; fi
+
+echo "== S10 LIVE BANK: in-flight state in the live prefix, FRESH node -> pulled no-clobber, pretrain RESUMES from the live ckpt, eval partial in place, loop banks + cleans up =="
+mk_sandbox
+( cd "$SB/repo" && mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainsportC2_R2a --steps 40 --ema 0.999 >/dev/null 2>&1
+  mkdir -p "$SB/gcs/sportC2/live/runs/pretrainsportC2_R2a" "$SB/gcs/sportC2/live/runs/sxscan_psportC2X1"
+  cp runs/pretrainsportC2_R2a/* "$SB/gcs/sportC2/live/runs/pretrainsportC2_R2a/"; echo partial > "$SB/gcs/sportC2/live/runs/sxscan_psportC2X1/partial_s0.npz"; rm -rf runs )
+run_chain 0 1
+grep -q "LIVE-RESTORE pulled=" "$SB/w0.log" && ok "S10 live prefix pulled on a fresh node" || { bad "S10 pull"; grep LIVE "$SB/w0.log" | head -3; }
+grep -q "RESUMED from runs/pretrainsportC2_R2a/ckpt_latest.pkl at step 40" "$SB/repo/runs/pretrainsportC2_R2a.log" && ok "S10 R2 stage A RESUMED from the live ckpt (step 40)" || { bad "S10 resume"; head -3 "$SB/repo/runs/pretrainsportC2_R2a.log"; }
+[ -f "$SB/repo/runs/sxscan_psportC2X1/partial_s0.npz" ] && ok "S10 eval partial restored into place" || bad "S10 partial"
+grep -q "LIVE-BANK loop start" "$SB/w0.log" && grep -q "LIVE-BANK rc=0" "$SB/w0.log" && ok "S10 the 5-min loop started and banked" || { bad "S10 loop"; grep LIVE-BANK "$SB/w0.log" | head -3; }
+sleep 1; [ ! -f "$SB/repo/runs/live_bank.pid" ] && ok "S10 loop stopped with the chain (pidfile gone)" || bad "S10 loop cleanup"
+grep -q "CHAIN-SPORTC2-COMPLETE" "$SB/w0.log" && ok "S10 complete" || bad "S10 complete"
+
+echo "== S10b LIVE BANK negative: a TORN live ckpt_latest (staged) -> LIVE-RESTORE-FALLBACK to the newest loadable grid, RESUMED at its step, no NaN path =="
+mk_sandbox
+( cd "$SB/repo" && mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainsportC2_R2a --steps 40 --ema 0.999 >/dev/null 2>&1
+  mkdir -p "$SB/gcs/sportC2/live/runs/pretrainsportC2_R2a"; cp runs/pretrainsportC2_R2a/* "$SB/gcs/sportC2/live/runs/pretrainsportC2_R2a/"
+  head -c 1000 /dev/urandom > "$SB/gcs/sportC2/live/runs/pretrainsportC2_R2a/ckpt_latest.pkl"; rm -rf runs )
+"$REAL_PY" -c "import pickle,sys; pickle.load(open(sys.argv[1],'rb'))" "$SB/gcs/sportC2/live/runs/pretrainsportC2_R2a/ckpt_latest.pkl" 2>/dev/null && bad "S10b staged torn ckpt is loadable (stage failed)" || ok "S10b the staged torn ckpt really does not unpickle"
+run_chain 0 1
+grep -q "LIVE-RESTORE-FALLBACK runs/pretrainsportC2_R2a ckpt_latest unloadable -> ckpt_000040.pkl step 40" "$SB/w0.log" && ok "S10b torn ckpt_latest -> fallback to the newest loadable grid, labeled" || { bad "S10b fallback"; grep -E "LIVE|PRETRAIN-NAN" "$SB/w0.log" | head -4; }
+grep -q "RESUMED from runs/pretrainsportC2_R2a/ckpt_latest.pkl at step 40" "$SB/repo/runs/pretrainsportC2_R2a.log" && ! grep -q "PRETRAIN-NAN R2" "$SB/w0.log" && ok "S10b R2 resumed at step 40 and never entered the NaN/amputation path" || bad "S10b resume"
+
+echo "== S10c LIVE BANK negative: a BANKED arm's stale live copy (staged, step 7) is NOT restored over its banked final (step 80) =="
+mk_sandbox
+( cd "$SB/repo" && mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainsportC2_W0 --steps 7 --ema 0.999 >/dev/null 2>&1
+  mkdir -p "$SB/gcs/sportC2/live/runs/pretrainsportC2_W0"; cp runs/pretrainsportC2_W0/* "$SB/gcs/sportC2/live/runs/pretrainsportC2_W0/"; rm -rf runs
+  mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainsportC2_W0 --steps 80 --ema 0.999 >/dev/null 2>&1
+  tar czf "$SB/gcs/sportC2/W0_pretrain.tgz" runs/pretrainsportC2_W0 && cp runs/pretrainsportC2_W0/ckpt_latest.pkl "$SB/gcs/sportC2/W0_ckpt.pkl"
+  echo ok > "$SB/gcs/sportC2/W0_PRETRAIN_OK"; rm -rf runs )
+[ -f "$SB/gcs/sportC2/live/runs/pretrainsportC2_W0/ckpt_000007.pkl" ] && ok "S10c the stale live copy really is staged in the prefix" || bad "S10c stage"
+run_chain 0 1
+grep -q "banked arms excluded: .*pretrainsportC2_W0/" "$SB/w0.log" && grep -q "PRETRAIN-RESTORE W0 " "$SB/w0.log" && ok "S10c banked W0 excluded from the live pull; its tarball restored instead" || { bad "S10c exclusion"; grep -E "LIVE-RESTORE|PRETRAIN-RESTORE" "$SB/w0.log" | head -3; }
+st=$("$REAL_PY" -c "import pickle,sys; print(pickle.load(open(sys.argv[1],'rb'))['step'])" "$SB/repo/runs/pretrainsportC2_W0/ckpt_latest.pkl" 2>/dev/null)
+[ "$st" = 80 ] && [ ! -f "$SB/repo/runs/pretrainsportC2_W0/ckpt_000007.pkl" ] && ok "S10c W0's local final is the banked step-80 grid; no stale step-7 files" || bad "S10c final grid (step=$st)"
 
 echo; echo "harness: $PASS PASS / $FAIL FAIL"
 exit $([ "$FAIL" -eq 0 ] && echo 0 || echo 1)
