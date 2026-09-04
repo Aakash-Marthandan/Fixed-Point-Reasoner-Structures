@@ -37,7 +37,7 @@ L=$(ls -t runs/pretrain'"$R_TAG"'_*.log 2>/dev/null | head -1)
 E=$(ls -td runs/sx*/ runs/sx*/*/ 2>/dev/null | grep -vE "/(records|partial)" | head -1)   # nested eval dirs (sxeval_p*/full_*) too
 if [ -n "$E" ]; then
   if ls "$E"shard_*.log >/dev/null 2>&1; then echo "EV $(basename "$E") @$(stat -c %y "$E" | cut -c12-19)Z shards: $(for f in "$E"shard_*.log; do grep "banked partial" "$f" | tail -1 | sed -E "s/.*@ ([0-9]+\/[0-9]+).*/\1/"; done | tr "\n" " ")"
-  else echo "EV $(basename "$E") @$(stat -c %y "$E" | cut -c12-19)Z: $(tail -1 "$E"run.log 2>/dev/null | cut -c1-100)"; fi
+  else L=$(tail -1 "$E"run.log 2>/dev/null); case "$L" in \{*) L="summary written (values not read in the ops phase)";; esac; echo "EV $(basename "$E") @$(stat -c %y "$E" | cut -c12-19)Z: $(echo "$L" | cut -c1-100)"; fi
 fi
 U=$(grep -oE "USEC=[0-9]+" /run/systemd/shutdown/scheduled 2>/dev/null | cut -d= -f2)
 if [ -n "$U" ]; then echo "DMS $(date -u -d @$((U/1000000)) +%FT%TZ) (in $(( (U/1000000 - $(date +%s)) / 60 )) min)"; else echo "DMS none scheduled"; fi
