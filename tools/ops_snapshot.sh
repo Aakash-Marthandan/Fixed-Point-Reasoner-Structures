@@ -10,6 +10,7 @@
 #   EV        newest eval dir + its mtime: per-shard "banked partial" progress, or run.log's last line
 #   DMS       the guest dead-man's poweroff epoch (re-armed +10 h at every relaunch; must stay > the next wall recycle)
 #   GUARD     the node-side delete guard process (sleep-then-delete at the deadline epoch)   DISK  free space on /
+#   LB        the last line of runs/live_bank.log (the 5-min live GCS bank; stale > 15 min or absent = the loop is down)
 # usage: bash tools/ops_snapshot.sh   (zone from runs/tpu_status.txt, else a positive describe over campaign ZONES)
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -41,7 +42,8 @@ fi
 U=$(grep -oE "USEC=[0-9]+" /run/systemd/shutdown/scheduled 2>/dev/null | cut -d= -f2)
 if [ -n "$U" ]; then echo "DMS $(date -u -d @$((U/1000000)) +%FT%TZ) (in $(( (U/1000000 - $(date +%s)) / 60 )) min)"; else echo "DMS none scheduled"; fi
 G=$(pgrep -af "tpu-vm [d]elete" | head -1 | cut -c1-90); echo "GUARD ${G:-NONE PLANTED}"
-echo "DISK $(df -h / | awk "NR==2{print \$4\" free\"}")"'
+echo "DISK $(df -h / | awk "NR==2{print \$4\" free\"}")"
+echo "LB $(tail -1 runs/live_bank.log 2>/dev/null || echo "no live_bank.log — the 5-min live bank is NOT running on this node")"'
 perl -e 'alarm 120; exec @ARGV' -- gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm --worker=0 \
   --ssh-flag "-o StrictHostKeyChecking=no" --ssh-flag "-o UserKnownHostsFile=/dev/null" --ssh-flag "-o ConnectTimeout=20" \
   --command="$REMOTE" 2>/dev/null | grep -vE "^(SSH:|Using ssh|Warning:|Updating|Existing|External IP)" | sed "s/^/  /"

@@ -43,8 +43,8 @@ sync_once () {   # one serial rsync pass; the 30 s guard waits out a checkpoint 
   local fresh; fresh=$(find runs -maxdepth 2 -name 'ckpt_*.pkl' -newermt '-30 seconds' 2>/dev/null | head -1)
   [ -n "$fresh" ] && [ -z "${LIVE_NO_GUARD:-}" ] && sleep 30
   local bx x out rc n; bx=$(banked_excl); x="$EXCL"; [ -n "$bx" ] && x="$EXCL|$bx"
-  out=$(gsutil rsync -r -C -x "$x" runs "$LIVE/runs" 2>&1); rc=$?
-  n=$(printf '%s\n' "$out" | grep -c '^Copying' || true)
+  out=$(perl -e 'alarm 900; exec @ARGV' -- gsutil rsync -r -C -x "$x" runs "$LIVE/runs" 2>&1); rc=$?   # bounded: a hung upload never stalls the loop silently
+  n=$(printf '%s\n' "$out" | grep -c 'Copying' || true)
   say "LIVE-BANK rc=$rc uploaded=$n"
   [ $rc -eq 0 ] || printf '%s\n' "$out" | tail -3 >> "$LOG"
   return $rc
