@@ -115,7 +115,10 @@ preflight () {  # 60 full-batch steps of every arm this worker will run: compile
     gsutil -q stat "$GCS/${arm}_ARM_OK" 2>/dev/null && continue
     D=runs/preflight${R_TAG}_$arm; FL="$(arm_flags "$arm")" || { echo "BAD-ARM $arm"; return 1; }
     ARM_PREC=$(arm_prec "$arm")
-    pt_run "$D.log" "pf-$arm" "$D" --out "$D" $FL --steps "$PF_STEPS" --ckpt-every "$PF_STEPS" --grid-every "$PF_STEPS" --monitor-every 0 --log-every 10; rc=$?
+    # --warmup 10 AFTER $FL: the arms' 2000-step warmup exceeds the 60 preflight steps and the cosine schedule refuses a
+    # negative decay length (ValueError at launch, found at the source 2026-09-05 13:00Z on the first Night A node: every
+    # core arm aborted, A6 falsely SKIPPED; the stub harness cannot see a schedule). Numerics of the preflight are irrelevant.
+    pt_run "$D.log" "pf-$arm" "$D" --out "$D" $FL --steps "$PF_STEPS" --warmup 10 --ckpt-every "$PF_STEPS" --grid-every "$PF_STEPS" --monitor-every 0 --log-every 10; rc=$?
     if [ $rc -ne 0 ] || ! nan_check "$D"; then
       if is_optional "$arm"; then
         echo "PREFLIGHT-FAILED $arm (rc=$rc) -> SKIPPED (optional arm, labeled)"; echo "preflight failed rc=$rc $(date -u +%FT%TZ)" | gsutil -q cp - "$GCS/${arm}_SKIPPED"
