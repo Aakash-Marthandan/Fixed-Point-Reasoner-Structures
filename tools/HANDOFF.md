@@ -2,7 +2,7 @@
 
 **Read this first, then `tools/OPS_RUNBOOK.md`.** The repo outranks conversation memory. The ops model runs a campaign to completion and STOPS; the analysis pass (Fable, on PI go) adjudicates. ETAs/clocks to the PI in IST (UTC+5:30) with UTC in parentheses. **Concision pass 2026-09-02:** every superseded campaign block (2026-08-19 → 2026-09-01) is preserved verbatim in git — §8 lists the commit per campaign — and its lessons are folded into §7.
 
-## STATUS — sportC2 ANALYZED 2026-09-05 (verdict + physics pass + decoder lens landed; NOTHING LAUNCHED; fleet zero; the next night is a PI decision)
+## STATUS — sportC2 ANALYZED 2026-09-05 → FINAL-PHASE PLAN DRAFTED (`Documentation/Plan_2026-09-05_FinalPhase.md`: the DEC cell, nights A/B/C, rules §4, builds §6 — awaiting the PI go → build → harness → pre-mortem → registration → launch; NOTHING LAUNCHED; fleet zero)
 
 ### sportC2 ANALYSIS PASS — 2026-09-05 08:10Z–~10:30Z (13:40–16:00 IST), Fable. VERDICT LANDED; PI DECISION PENDING on the next night.
 - **Data:** `sportC2_final.tgz` pulled with `gcloud storage cp` (5,309,494,906 bytes, crc32c `DG8G0A==` re-verified), extracted into `runs/`; every registered count present (7 arms + 4 stage-A dirs; 24 fulls n=422,786; 5 retfm; 7 scans n=20,000; 26 screens; 14 censuses; 8 calib rows; 5 riders); every vsel eval of every arm on ONE checkpoint path; resumes R2a 29k / R3a 35k / R4 10k; grid gaps as labeled (R2a < 30k, R4 < 15k). Suite 151 green. `runs/_sportC2_pull/` holds the tgz (5.3 GB; delete when disk matters).
