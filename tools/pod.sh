@@ -178,10 +178,20 @@ v_bring_up () { # ZONE (node exists) -> 0 = chain launched on every worker
   still_ready "$1" || return 1
   v_launch "$1"
 }
+accel_allowed_in () {  # ACC ZONE -> 0 iff the accelerator may be created in that zone (ACCEL_ZONE_RESTRICT="v6e-32:us-east1-d ..." from campaign.env;
+  # FINAL PHASE 2026-09-05, PI: the 32-chip quota exists in us-east1-d ONLY — every other zone is 16 or 8). Unlisted accelerators are unrestricted.
+  local acc=$1 z=$2 r
+  for r in ${ACCEL_ZONE_RESTRICT:-}; do
+    [ "${r%%:*}" = "$acc" ] || continue
+    case ",${r#*:}," in *",$z,"*) return 0;; *) return 1;; esac
+  done
+  return 0
+}
 v_hunt () {   # try every (accelerator, zone) once in ladder order; 0 = chain launched somewhere
   local z acc
   for acc in $(hunt_accels); do
     for z in $ZONES; do
+      accel_allowed_in "$acc" "$z" || { say "  skip $acc in $z (ACCEL_ZONE_RESTRICT)"; continue; }
       say "CREATE $POD ($acc spot) in $z"
       if ! bounded 600 gcloud compute tpus tpu-vm create "$POD" --zone="$z" --project=$PROJECT \
            --accelerator-type="$acc" --version=v6e-ubuntu-2404 --spot >> "$LOG" 2>&1; then
