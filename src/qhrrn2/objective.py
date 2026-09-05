@@ -38,9 +38,10 @@ def _step_loss(out, x_canvas, y_canvas, mask, cfg: Config):
     n_out = jnp.maximum((~mask).sum(), 1)
     ce_in = jnp.sum(ce_map * mask) / n_in
     ce_out = jnp.sum(ce_map * ~mask) / n_out
-    if cfg.cell_kind == "trm":
+    if cfg.cell_kind in ("trm", "dec"):
         # X0: the field-recipe cell has no size / flux / rule channels — its
-        # loss is the (stablemax or softmax) cross-entropy alone (TRM lm_loss).
+        # loss is the (stablemax or softmax) cross-entropy alone (TRM lm_loss);
+        # the DEC cell (final phase) likewise.
         return ce_in + cfg.w_void * ce_out, ce_in
 
     # C1 v3 (ledger 2026-08-02): size = mixture over MEASURED candidates,

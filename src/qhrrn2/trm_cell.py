@@ -142,6 +142,20 @@ def embed(p, cfg: Config, x_tokens):
     return math.sqrt(cfg.trm_hidden) * e
 
 
+def carry_shape(cfg: Config, hw: int = 81):
+    return (2, seq_len(cfg, hw), cfg.trm_hidden)
+
+
+def embed_answer(p, cfg: Config, y_grid):
+    """FINAL PHASE (Plan_2026-09-05_FinalPhase §2/§6.1; arm A1): the FPA anchor state for the
+    field loop — z_H := the embedded (corrupted) solution: sqrt(hid)-scaled tok_emb rows for the
+    81 cells, the fixed H0 buffer on the prefix rows. (S, hid)."""
+    H0, _ = init_states(cfg)
+    cells = math.sqrt(cfg.trm_hidden) * p["tok_emb"][y_grid.reshape(-1)]
+    prefix = jnp.broadcast_to(H0, (cfg.trm_puzzle_emb_len, cfg.trm_hidden))
+    return jnp.concatenate([prefix, cells], axis=0)
+
+
 def segment(p, cfg: Config, emb, zH, zL, rng=None):
     """ONE outer segment = H_cycles x (L_cycles + 1) block-stack passes:
     z_L <- F(z_L + z_H + emb) L_cycles times, then z_H <- F(z_H + z_L); the

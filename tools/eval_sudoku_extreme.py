@@ -132,7 +132,7 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
     B = x_can.shape[0]
     y = y0
     z_c = None if z0 is None else z0
-    trm = getattr(cfg, "cell_kind", "rg") == "trm"
+    trm = getattr(cfg, "cell_kind", "rg") in ("trm", "dec")
     ex_rows, ok_rows = [], []
     res_tail = []                 # per-step (B,) mean |dy|, last 3 kept
     pred9 = None
@@ -292,8 +292,8 @@ def main():
     tvj = jnp.asarray(st["table"][0])
     eta, eta_z = (float(v) for v in M.eq_etas(params, cfg))
     eta_learned = eta
-    trm = getattr(cfg, "cell_kind", "rg") == "trm"
-    z_shape = (2, cfg.canvas * cfg.canvas + cfg.trm_puzzle_emb_len, cfg.trm_hidden) if trm else None
+    trm = getattr(cfg, "cell_kind", "rg") in ("trm", "dec")
+    z_shape = tuple(M.carry_shape(cfg)) if trm else None      # final phase: the cell owns its carry shape
     if a.eta_override is not None:
         eta = float(a.eta_override)
         print(f"DIAGNOSTIC eta override: learned {eta_learned:.3f} -> {eta:.3f}", flush=True)

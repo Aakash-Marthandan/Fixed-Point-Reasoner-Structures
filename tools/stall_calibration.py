@@ -31,7 +31,7 @@ def main():
     saved = E.load_ckpt(a.ckpt); defaults = Config(); cfg = Config(**{k: type(getattr(defaults, k))(v) for k, v in saved["config"].items()})
     st = saved["state_ema"] if a.ema else saved["state"]; params = st["model"]; tvj = jnp.asarray(st["table"][0])
     eta, eta_z = (float(v) for v in M.eq_etas(params, cfg)); layout = cfg.sudoku_layout or "origin"; cv = SU.layout_canvas(layout)
-    trm = cfg.cell_kind == "trm"; K = 1 if trm else max(1, int(getattr(cfg, "inner_k", 1)))
+    trm = cfg.cell_kind in ("trm", "dec"); K = 1 if trm else max(1, int(getattr(cfg, "inner_k", 1)))
     d = SX.load_prepared(a.npz); Q, A, R = d["test_q"], d["test_a"], d["test_rating"]
     ids = SX.stratified_subsample(R, a.n, a.strat_seed); t0 = time.time()
     tops_st, tops_sv, conf_st, ent1, ent_st, ent_sv, cw_st, solved_all = [], [], [], [], [], [], [], []

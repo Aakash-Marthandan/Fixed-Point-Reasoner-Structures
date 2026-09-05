@@ -39,6 +39,7 @@ from qhrrn2 import grid as G
 from qhrrn2 import sudoku_extreme as SX
 from qhrrn2 import train as T
 from qhrrn2 import trm_cell as TC
+from qhrrn2 import dec_cell as DC   # FINAL PHASE: the DEC cell shares the field loop
 from qhrrn2.config import Config
 from qhrrn2.model import count_params, init_params
 from qhrrn2.objective import batch_loss, log_stablemax
@@ -154,7 +155,7 @@ def parse_args():
     # sportC1 (2026-09-02; Plan_2026-09-02_Champion_sportC1 §11–§12)
     p.add_argument("--z-norm", default="", choices=["", "rms"],
                    help="H-50 stabilizer of record: RMSNorm the carried latent at its entry (arms B0/B1/R0)")
-    p.add_argument("--cell", default="rg", choices=["rg", "trm"],
+    p.add_argument("--cell", default="rg", choices=["rg", "trm", "dec"],
                    help="X0: 'trm' = the TRM/EqR field-recipe cell (qhrrn2.trm_cell); 'rg' = ours")
     p.add_argument("--trm-hidden", type=int, default=512)
     p.add_argument("--trm-layers", type=int, default=2)
@@ -189,6 +190,16 @@ def parse_args():
     p.add_argument("--sot-segments", type=int, default=4,
                    help="sportC2 R1 (--sot on our cell): max T-step segments a row is carried before it is "
                         "replaced (4 x T16 = the t=64 evaluation horizon); rows are also replaced when EXACT")
+    # FINAL PHASE (2026-09-05; Plan_2026-09-05_FinalPhase §2/§6): the DEC cell + the field-loop FPA rows
+    p.add_argument("--dec-width", type=int, default=256,
+                   help="DEC: per-field width w (256 = the A-night arm; 512 = X0's parameter count)")
+    p.add_argument("--no-dec-coupling", action="store_true",
+                   help="DEC ablation: drop the equivariant field-coupling sub-layer")
+    p.add_argument("--fpa-frac", type=float, default=0.25,
+                   help="field loop (trm/dec + --sot): fraction of the batch rows re-run as FPA anchor rows per step")
+    p.add_argument("--grid-every", type=int, default=0,
+                   help="banked-grid cadence in steps (0 = 5 x --ckpt-every, the pre-existing rule); "
+                        "the final phase banks grids at the monitor cadence (the 10k-resolution selection fix)")
     p.add_argument("--smoke", action="store_true")
     p.add_argument("--dp", action="store_true",
                    help="data-parallel pmap over local devices (P11-EXT "
@@ -248,7 +259,7 @@ def sudoku_monitor(state, cfg, val_pairs, *, t_cold=64, t_ret=8, n_lam=16, lam_i
     layout = getattr(cfg, "sudoku_layout", "origin") or "origin"
     eta, eta_z = (float(v) for v in M.eq_etas(params, cfg))
     ab = EV.coupled_ab(params, cfg)
-    if cfg.cell_kind == "trm":
+    if cfg.cell_kind in ("trm", "dec"):
         # X0: y is a readout and there is no answer register — retention / final-map
         # readouts do not exist for this cell; val at D = cfg.T outer segments (EqR's
         # base budget, the number their 84.8 is read at), key val_t{T}.
@@ -262,7 +273,7 @@ def sudoku_monitor(state, cfg, val_pairs, *, t_cold=64, t_ret=8, n_lam=16, lam_i
     ex, _, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0v, t_total=t_cold, tau=1.0, gamma=1.0,
                                sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
     val_cold = float(ex[-1].mean())
-    if cfg.cell_kind == "trm":
+    if cfg.cell_kind in ("trm", "dec"):
         return {f"val_t{t_cold}": val_cold, "eta": eta, "eta_z": eta_z, "n_val": int(B)}
     y0s = jax.nn.one_hot(EV.place_batch(sol9, layout), M.VOCAB).transpose(0, 3, 1, 2)
     exr, _, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0s, t_total=t_ret, tau=1.0, gamma=1.0,
@@ -343,6 +354,7 @@ def main():
         a.ckpt_every = a.val_every = 20
         a.log_every = 5
 
+    a.grid_every = a.grid_every or 5 * a.ckpt_every    # final phase: the banked-grid cadence dial
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     if a.width_scale != 1.0:
@@ -359,16 +371,19 @@ def main():
     geo = (dict(canvas=9, scales=2, pool_arity=3, mixer_kind="group9",
                 attn_max_hw=9)
            if a.sudoku_layout == "native9" else {})
-    trm = (dict(cell_kind="trm", trm_hidden=a.trm_hidden, trm_layers=a.trm_layers,
+    trm = (dict(cell_kind=a.cell, trm_hidden=a.trm_hidden, trm_layers=a.trm_layers,
+                dec_width=a.dec_width, dec_coupling=not a.no_dec_coupling,
                 trm_h_cycles=a.trm_h_cycles, trm_l_cycles=a.trm_l_cycles,
                 trm_lambda=a.trm_lambda, trm_beta=a.trm_beta, trm_ri_sigma=a.trm_ri_sigma, trm_token_mixer=a.trm_token_mixer, trm_gm_dim=a.trm_gm_dim,
                 eta_fixed=1.0, eta_z_fixed=1.0)     # y = readout; the latent carries undamped
-           if a.cell == "trm" else {})
-    if a.cell == "trm":
-        # the field-recipe cell has no answer register: our y-side mechanisms do not apply
-        assert a.equilibrium and a.sudoku_layout == "native9", "--cell trm needs --equilibrium + native9"
-        assert a.fpa_k == 0 and a.ri_p == 0 and a.anchor_p == 0 and a.ni_sigma == 0 and not a.eq_coupled, \
-            "--cell trm: FPA / RI rows / anchors / NI / eq_coupled are y-register mechanisms (use --trm-* dials)"
+           if a.cell in ("trm", "dec") else {})
+    if a.cell in ("trm", "dec"):
+        # the field-recipe cells have no answer register: our y-side mechanisms do not apply. FPA on
+        # the field loop (final phase A1/A5) = the anchor SEGMENTS in run_sot, so it needs --sot.
+        assert a.equilibrium and a.sudoku_layout == "native9", f"--cell {a.cell} needs --equilibrium + native9"
+        assert a.ri_p == 0 and a.anchor_p == 0 and a.ni_sigma == 0 and not a.eq_coupled, \
+            f"--cell {a.cell}: RI rows / anchors / NI / eq_coupled are y-register mechanisms (use --trm-* dials)"
+        assert a.fpa_k == 0 or a.sot, "--fpa-k on the field loop needs --sot (the anchor rows live in the segment loop)"
     assert not a.act or a.sot, "--act needs --sot"
     # --sot on the trm cell = the field's online segment loop (X0); on our cell = the sportC2
     # persistent (y, z) carry with verifier-replaced rows (R1; run_sot_rg)
@@ -379,7 +394,7 @@ def main():
                  eq_coupled=a.eq_coupled, ni_sigma=a.ni_sigma,
                  flux_floors=a.flux_floors or "",
                  sudoku_layout=a.sudoku_layout,
-                 fpa_k=a.fpa_k, fpa_eps=a.fpa_eps, fpa_w=a.fpa_w,
+                 fpa_k=a.fpa_k, fpa_eps=a.fpa_eps, fpa_w=a.fpa_w, fpa_frac=a.fpa_frac,
                  z_norm=a.z_norm, loss_kind=a.loss,
                  inner_k=a.inner_k, hard_p=a.hard_p)
 
@@ -570,7 +585,7 @@ def main():
             new_state = optax.apply_updates(state, updates)
             return new_state, opt_state2, loss, aux, rng, _ema(ema_tree, new_state)
 
-    if a.sot and cfg.cell_kind != "trm":
+    if a.sot and cfg.cell_kind == "rg":
         return run_sot_rg(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
                           val, out, latest, ema, n_dev)
     if a.sot:
@@ -658,7 +673,7 @@ def main():
                        "rng": np.asarray(rng), "config": dataclasses.asdict(cfg),
                        **({"state_ema": ema} if ema is not None else {})}
             E.save_ckpt(latest, payload)
-            if (i + 1) % (5 * a.ckpt_every) == 0 or i + 1 == a.steps:
+            if (i + 1) % a.grid_every == 0 or i + 1 == a.steps:
                 E.save_ckpt(out / f"ckpt_{i+1:06d}.pkl", payload)
 
     metrics_f.close()
@@ -795,10 +810,45 @@ def run_sot_rg(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tas
             payload = {"state": st1, "opt_state": os1, "step": i + 1, "rng": np.asarray(rng1),
                        "config": dataclasses.asdict(cfg), **({"state_ema": ema1} if use_ema else {})}
             E.save_ckpt(latest, payload)
-            if (i + 1) % (5 * a.ckpt_every) == 0 or i + 1 == a.steps:
+            if (i + 1) % a.grid_every == 0 or i + 1 == a.steps:
                 E.save_ckpt(out / f"ckpt_{i+1:06d}.pkl", payload)
     metrics_f.close()
     print("DONE", flush=True)
+
+
+def field_fpa_loss(TCm, p, cfg, x, y, key, hw):
+    """FINAL PHASE (Plan_2026-09-05_FinalPhase §2 / §6.1; arms A1, A5): FPA ANCHOR ROWS on the field
+    loop. The first round(B * cfg.fpa_frac) rows of the step's batch are re-run for cfg.fpa_k SEGMENTS
+    from z_H := the embedded CORRUPTED solution (TCm.embed_answer; eps ~ U[0, fpa_eps] of the NON-GIVEN
+    cells resampled uniformly over the digits 1..9; z_L = the fixed buffer), every segment's readout
+    supervised toward the solution, segments detached from each other as the SOT loop's are. Trains
+    the loop to REVISE wrong committed cells and to hold the solution as a fixed point — H-45's
+    mechanism (our maps' <= .1 % converged-wrong draws) carried onto the decimating class. Returns the
+    mean anchor cross-entropy (finite, differentiable; tests/test_final.py)."""
+    B, H, W = x.shape
+    nf = max(1, int(round(B * cfg.fpa_frac)))
+    k_e, k_m, k_c, k_n = jax.random.split(key, 4)
+    xs, ys = x[:nf], y[:nf]
+    eps = jax.random.uniform(k_e, (nf,), minval=0.0, maxval=cfg.fpa_eps)
+    flip = (jax.random.uniform(k_m, (nf, H, W)) < eps[:, None, None]) & (xs == 0)
+    rand = jax.random.randint(k_c, (nf, H, W), 1, 10)
+    y_corr = jnp.where(flip, rand, ys)
+    zL0 = TCm.z0(cfg, hw, rng=None)[1]
+    keys = jax.random.split(k_n, nf)
+
+    def one(xx, yy, yc, kk):
+        emb = TCm.embed(p, cfg, xx)
+        zH, zL = TCm.embed_answer(p, cfg, yc), zL0
+        ks = jax.random.split(kk, cfg.fpa_k)
+        ces = []
+        for j in range(cfg.fpa_k):
+            zH, zL = TCm.segment(p, cfg, emb, zH, zL, rng=ks[j] if cfg.trm_beta > 0 else None)
+            logits, _ = TCm.readout(p, cfg, zH, xx.shape)
+            logp = log_stablemax(logits) if cfg.loss_kind == "stablemax" else jax.nn.log_softmax(logits, axis=-1)
+            ces.append(-jnp.mean(jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0]))
+            zH, zL = jax.lax.stop_gradient(zH), jax.lax.stop_gradient(zL)
+        return jnp.mean(jnp.stack(ces))
+    return jnp.mean(jax.vmap(one)(xs, ys, y_corr, keys))
 
 
 def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks, val, out, latest, ema, n_dev):
@@ -816,13 +866,14 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
     T = cfg.T
     H = W = cfg.canvas
     hw = H * W
-    S = TC.seq_len(cfg, hw); hid = cfg.trm_hidden
+    TCm = TC if cfg.cell_kind == "trm" else DC     # final phase: the DEC cell shares this loop
+    zshape = tuple(TCm.carry_shape(cfg, hw))
     B = a.batch // n_dev
     use_ema = ema is not None
 
     def init_carry():
         return dict(x=jnp.zeros((B, H, W), jnp.int32), y=jnp.zeros((B, H, W), jnp.int32),
-                    z=jnp.zeros((B, 2, S, hid), jnp.float32), steps=jnp.zeros((B,), jnp.int32),
+                    z=jnp.zeros((B,) + zshape, jnp.float32), steps=jnp.zeros((B,), jnp.int32),
                     halted=jnp.ones((B,), bool))
 
     def sot_step(state, opt_state, carry, rng, ema_tree):
@@ -831,18 +882,18 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
         h = carry["halted"]
         x = jnp.where(h[:, None, None], x_f, carry["x"])
         y = jnp.where(h[:, None, None], y_f, carry["y"])
-        z_fresh = jax.vmap(lambda k: TC.z0(cfg, hw, rng=k))(jax.random.split(k_r, B))
-        z = jnp.where(h[:, None, None, None], z_fresh, carry["z"])
+        z_fresh = jax.vmap(lambda k: TCm.z0(cfg, hw, rng=k))(jax.random.split(k_r, B))
+        z = jnp.where(h.reshape((B,) + (1,) * len(zshape)), z_fresh, carry["z"])
         steps = jnp.where(h, 0, carry["steps"])
         keys = jax.random.split(k_n, B)
 
         def loss_fn(st):
-            p = st["model"]["trm"]
+            p = st["model"][cfg.cell_kind]
 
             def one(xx, yy, zz, kk):
-                emb = TC.embed(p, cfg, xx)
-                zH, zL = TC.segment(p, cfg, emb, zz[0], zz[1], rng=kk if cfg.trm_beta > 0 else None)
-                logits, q = TC.readout(p, cfg, zH, xx.shape)
+                emb = TCm.embed(p, cfg, xx)
+                zH, zL = TCm.segment(p, cfg, emb, zz[0], zz[1], rng=kk if cfg.trm_beta > 0 else None)
+                logits, q = TCm.readout(p, cfg, zH, xx.shape)
                 logp = log_stablemax(logits) if cfg.loss_kind == "stablemax" else jax.nn.log_softmax(logits, axis=-1)
                 ce = -jnp.mean(jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0])
                 correct = jnp.all(jnp.argmax(logits, axis=-1) == yy)
@@ -852,10 +903,18 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             q_halt = q[:, 0]
             q_loss = jnp.mean(optax.sigmoid_binary_cross_entropy(q_halt, corr.astype(jnp.float32)))
             total = lm + (0.5 * q_loss if a.act else 0.0)
-            return total, dict(ce=lm, q_loss=q_loss, train_exact=jnp.mean(corr.astype(jnp.float32)),
-                               q_halt=q_halt, z_new=z_new)
+            aux = dict(ce=lm, q_loss=q_loss, train_exact=jnp.mean(corr.astype(jnp.float32)),
+                       q_halt=q_halt, z_new=z_new)
+            if cfg.fpa_k > 0:
+                # final phase: the FPA anchor rows on the field loop (a fold-in of the row key:
+                # fpa_k = 0 leaves the registered rng stream bit-exact — X0's path untouched)
+                fce = field_fpa_loss(TCm, p, cfg, x, y, jax.random.fold_in(k_n, 1), hw)
+                total = total + cfg.fpa_w * fce
+                aux["fpa_ce"] = fce
+            return total, aux
         (loss, aux), grads = jax.value_and_grad(loss_fn, has_aux=True)(state)
-        scal = dict(ce=aux["ce"], q_loss=aux["q_loss"], train_exact=aux["train_exact"])
+        scal = dict(ce=aux["ce"], q_loss=aux["q_loss"], train_exact=aux["train_exact"],
+                    **({"fpa_ce": aux["fpa_ce"]} if "fpa_ce" in aux else {}))
         if n_dev > 1:
             grads = jax.lax.pmean(grads, "dp"); loss = jax.lax.pmean(loss, "dp"); scal = jax.lax.pmean(scal, "dp")
         updates, opt_state = opt.update(grads, opt_state, state)
@@ -895,6 +954,7 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             dt = time.time() - t_block; sps = a.log_every / dt if dt > 0 else 0.0
             sc = first(scal); lv = float(first(loss))
             rec = {"step": i + 1, "loss": lv, "ce_in": float(sc["ce"]), "q_loss": float(sc["q_loss"]),
+                   **({"fpa_ce": float(sc["fpa_ce"])} if "fpa_ce" in sc else {}),
                    "train_exact": float(sc["train_exact"]), "halt_frac": float(sc["halt_frac"]),
                    "mean_steps": float(sc["mean_steps"]), "I_total": 0.0, "A_total": 0.0, "rule_H": 0.0,
                    "lr": float(sched(i + 1)), "steps_per_sec": round(sps, 3), "t": time.strftime("%Y-%m-%dT%H:%M:%S")}
@@ -924,7 +984,7 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             payload = {"state": st1, "opt_state": os1, "step": i + 1, "rng": np.asarray(rng1),
                        "config": dataclasses.asdict(cfg), **({"state_ema": ema1} if use_ema else {})}
             E.save_ckpt(latest, payload)
-            if (i + 1) % (5 * a.ckpt_every) == 0 or i + 1 == a.steps:
+            if (i + 1) % a.grid_every == 0 or i + 1 == a.steps:
                 E.save_ckpt(out / f"ckpt_{i+1:06d}.pkl", payload)
     metrics_f.close()
     print("DONE", flush=True)

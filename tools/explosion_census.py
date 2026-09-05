@@ -46,7 +46,7 @@ def trajectories(params, cfg, tvj, x_can, y0, *, t_total, eta, eta_z):
     B = x_can.shape[0]
     y, z_c = y0, None
     zmax, lmax = [], []
-    trm = getattr(cfg, 'cell_kind', 'rg') == 'trm'
+    trm = getattr(cfg, 'cell_kind', 'rg') in ('trm', 'dec')   # final phase: the DEC cell reads like the field cell
     K = 1 if trm else max(1, int(getattr(cfg, "inner_k", 1)))   # sportC2 R2: mirrors the evaluator
     for t in range(t_total):
         t_norm = min(t, cfg.T - 1) / max(cfg.T - 1, 1)

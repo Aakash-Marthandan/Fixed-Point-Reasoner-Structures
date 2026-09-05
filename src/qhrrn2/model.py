@@ -18,6 +18,7 @@ import jax.numpy as jnp
 from qhrrn2 import cell
 from qhrrn2 import objects as OBJ
 from qhrrn2 import trm_cell
+from qhrrn2 import dec_cell
 from qhrrn2.config import Config
 from qhrrn2.grid import CANVAS, NUM_COLORS, VOCAB, VOID
 
@@ -79,6 +80,9 @@ def init_params(key, cfg: Config):
         # X0: the field-recipe cell owns every weight; the eq scalars stay for
         # the shared loop contract (pinned by cfg.eta_fixed / eta_z_fixed).
         return {**eq, "trm": trm_cell.init_params(ks[0], cfg, hw=cfg.canvas * cfg.canvas)}
+    if cfg.cell_kind == "dec":
+        # FINAL PHASE: the DEC cell under the same contract (qhrrn2.dec_cell)
+        return {**eq, "dec": dec_cell.init_params(ks[0], cfg, hw=cfg.canvas * cfg.canvas)}
     return {**eq,
         "embed": {  # shared 3x3 conv over each field's 2 channels (x, y_prev)
             "w": jax.random.normal(ks[0], (d, 2, 3, 3)) * 0.3,
@@ -149,6 +153,17 @@ def _init_obj(key, cfg: Config, d, r_dim, lin):
     }}
 
 
+def carry_shape(cfg: Config):
+    """The carried-latent shape of the field-loop cells (None for the rg cell): every consumer
+    (run_sot's carry, the evaluator's RI draws) reads it here instead of assuming (2, S, hid)."""
+    hw = cfg.canvas * cfg.canvas
+    if cfg.cell_kind == "trm":
+        return trm_cell.carry_shape(cfg, hw)
+    if cfg.cell_kind == "dec":
+        return dec_cell.carry_shape(cfg, hw)
+    return None
+
+
 def count_params(tree) -> int:
     return sum(x.size for x in jax.tree.leaves(tree))
 
@@ -201,11 +216,13 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     pre-E4 graph, exactly.
     """
     d, db, S = cfg.d, cfg.d_b, cfg.scales
-    if cfg.cell_kind == "trm":
+    if cfg.cell_kind in ("trm", "dec"):
         # X0 (sportC1 §11.2): the TRM/EqR block stack under the same contract —
         # logits + carried z_fine; y is a READOUT (not read); no flux / rule /
-        # size channels exist in this cell (zeros, never priced).
-        logits, _q, z_fine = trm_cell.forward_core(params["trm"], cfg, fields, z_in=z_in, rng=rng)
+        # size channels exist in this cell (zeros, never priced). "dec" (final
+        # phase) = the DEC cell under the identical contract.
+        core = trm_cell.forward_core if cfg.cell_kind == "trm" else dec_cell.forward_core
+        logits, _q, z_fine = core(params[cfg.cell_kind], cfg, fields, z_in=z_in, rng=rng)
         zeros = jnp.zeros
         return StepOutput(
             logits=logits, size_h=zeros((30,)), size_w=zeros((30,)),

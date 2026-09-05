@@ -131,3 +131,17 @@ class Config:
     trm_beta: float = 0.0        # EqR path noise per inner pass, training only (EqR .01)
     trm_ri_sigma: float = 0.0    # EqR RI: z0 ~ N(0, sigma) when an rng is threaded (A.3 default 1)
     loss_kind: str = "softmax"   # "stablemax" = HRM/TRM's stablemax cross-entropy (X0, labeled)
+    # FINAL PHASE (2026-09-05; Plan_2026-09-05_FinalPhase §2): cell_kind "dec" = the DECIMATING
+    # EQUILIBRIUM CELL (qhrrn2.dec_cell): the field's block + two-timescale loop on OUR 9-field
+    # state, every weight shared over the digit fields (exact S9, no digit augmentation), an
+    # equivariant field-coupling sub-layer per block (dec_coupling; False = the ablation), the
+    # trm_* loop dials reused (layers / cycles / lambda / beta / RI sigma / expansion);
+    # dec_width = the per-field width w (256 = the A-night arm; 512 = X0's parameter count).
+    dec_width: int = 256
+    dec_coupling: bool = True
+    # FINAL PHASE FPA on the FIELD LOOP (cell_kind trm / dec under --sot; pretrain.field_fpa_loss):
+    # per optimizer step the first round(B * fpa_frac) rows are re-run for fpa_k SEGMENTS from
+    # z_H := the embedded corrupted solution (eps ~ U[0, fpa_eps] of the NON-GIVEN cells resampled
+    # over the digits), every segment supervised toward the solution, weight fpa_w. rg cells
+    # ignore fpa_frac (their FPA rows are per pair, objective.pair_loss). fpa_k = 0 = off, bit-exact.
+    fpa_frac: float = 0.25

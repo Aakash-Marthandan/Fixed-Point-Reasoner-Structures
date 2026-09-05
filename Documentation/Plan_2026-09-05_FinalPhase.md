@@ -162,3 +162,19 @@ Build calendar: Sep 6 (Sat/Sun): items 1, 2, 6 (chain + harness), 7 (cadence); S
 2. **The rate term (B1, C19)** — the theory-completing objective, on the DEC's priced coupling once B4 has read.
 3. **Scale:** d160/d192 stretch after the paper, seeded, matched compute.
 4. **Instrument back-ports:** the lens as a standing analyzer module for every campaign (thresholds, dynamics, E3 as registered letters); the reference-decoder ladder for any CSP the program touches next.
+
+## §11. NIGHT A — REGISTERED 2026-09-05 (build complete; launch on the explicit PI go) + PRE-MORTEM AUDIT
+
+**Locked:** rules in `tools/analyze_finalA.py` (selftest 25/25); chain `tools/chain_final.sh`; harness `tools/harness_final.sh` 52/52; env `tools/campaign_final.env`; ledger §5 entry of this date. Gates: `tests/test_final.py` 5/5, suite 156 green, CPU smokes rc 0 on every tool, the X0 path bit-exact vs HEAD.
+
+**Pre-mortem (run after the harness, before the go; each item names its countermeasure):**
+- **PM-A-1 HBM at w256 under DP-4 (v6e-16 workers, 192 rows/chip).** Activations per stack pass ≈ 192 × 729 tokens × ~2.3k floats ≈ 1.3 GB, ~14 live passes under the last-H-cycle gradient ≈ 18 GB of 32 GB: borderline. Countermeasure: `pt_run`'s ONE `--remat` retry (harness S9), now honoured by the DEC's segment (`jax.checkpoint` per stack pass); on the 1×8 fallback the per-chip batch halves.
+- **PM-A-2 Pace unknown for the DEC.** The canary + the first A3 log lines re-price the walls; the 8.5 h wall recycles idempotently (markers + live bank); the 1×8 sequential order puts the DEC arms first so their pace is read early.
+- **PM-A-3 The evaluator's RI draws on the DEC carry.** `mi_z0` draws the cell's own shape (2, 9, 81, 256) per row per draw (≈ 373k floats per row; ≈ 380 MB at batch 256): fine; smoke 2b exercised the screen-style scan with k = 2.
+- **PM-A-4 A4's digit augmentation on an exactly equivariant model** changes the augmented data stream, not the function class: the A4 − A3 contrast carries data-order noise; read only beyond 2×FLOOR (the rule) and labeled.
+- **PM-A-5 The spurious rate needs `mi_resid_k` in the scan records.** The evaluator writes the latent residual for cell_kind in {trm, dec} on the same code path as X0's sportC1 scan (lens E5 read it); X0's reference records are on disk (`runs/sxscan_psportC1X0`) — the analyzer reads them, else the labeled constant .078.
+- **PM-A-6 Disk and bank volume at the 2k grid cadence:** 25 grids × ≈ 80 MB per X0-class arm (≈ 2 GB; the DEC-w256 ≈ 0.6 GB) → ≈ 8 GB per campaign on the node and in `*_pretrain.tgz`; the 5-min live bank syncs deltas only.
+- **PM-A-7 bf16 numerics of the padded logits:** −1e4 is representable in bf16; stablemax at −1e4 gives s ≈ 1e-4 (finite gradient); the smokes ran in f32 on CPU — the first TPU log lines (finite loss at step 5) are the check.
+- **PM-A-8 The launch procedure (owed since sportC2):** `cp tools/campaign_final.env tools/campaign.env` → bump `runs/tpu_deadline.txt` (in the PAST now) → `bash tools/pod.sh supervise` with `caffeinate -s` on AC → `plant_guard` per node → Monitor + hourly heartbeat; the DMS past the deadline; the analyzer never runs in the ops phase.
+- **PM-A-9 The harness stub cannot see a TPU-only runtime failure of the new cell** (compile, sharding, bf16): the chain's canary + the first PRETRAIN-START log of A3 are read at the source within 15 min of launch, per the standing verify-at-source rule.
+- **PM-A-10 Seeds:** A0 is the only pair; every A-night contrast is single-seed by design and the floor rule reads FLAT inside 2×FLOOR — Night B seeds the claim-bearing arm.
