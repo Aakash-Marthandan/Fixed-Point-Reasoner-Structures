@@ -22,7 +22,7 @@
 # mechanics: static worker map, ONE-SHOT NaN amputation, per-arm banking, idempotent markers, n-gated merges,
 # pt_run's ONE --remat retry on a launch-time HBM OOM, live 5-min GCS banking + fresh-node restore).
 # 8x4 static map (v6e-32): w0 A3 · w1 A4 · w2 A5 · w3 A6 · w4 A7 · w5 A8 · w6 A0 A1 · w7 A2.
-# 4x4 (v6e-16): w0 A3 · w1 A4 · w2 A5 · w3 A6 A0 A1 A2. 1x8: A3 A4 A5 A0 A1 A2 (A6/A7/A8 skipped, labeled).
+# 4x4 (v6e-16): w0 A3 · w1 A4 · w2 A5 · w3 A6 A0 A1 A2. 1x8: A0 A3 A1 A2 A4 A5 (A6/A7/A8 skipped, labeled; science per hour after the preemption).
 # 2026-09-05 13:30Z RE-MAP at the source (Night A on the 16): a wide arm at w384 needs 54.8 GB of HLO temporaries at 192
 # rows/chip (the remat retry fires by design) and then trains at 1.32 it/s on 4 chips (the metrics timestamps; the logged
 # steps_per_sec reads 2x too high) => ~10.5 h + ~3.5 h battery; the field-cell arms queued behind them would cross the
@@ -112,7 +112,7 @@ is_wide ()     { case $1 in A3|A4|A5|A6|A7|A8) return 0;; *) return 1;; esac; } 
 worker_arms () {  # the arms THIS worker runs, in order
   if [ "$NW" -ge 8 ]; then case $W in 0) echo "A3";; 1) echo "A4";; 2) echo "A5";; 3) echo "A6";; 4) echo "A7";; 5) echo "A8";; 6) echo "A0 A1";; 7) echo "A2";; esac
   elif [ "$NW" -ge 4 ]; then case $W in 0) echo "A3";; 1) echo "A4";; 2) echo "A5";; 3) echo "A6 A0 A1 A2";; esac   # 13:30Z re-map (below)
-  else echo "A3 A4 A5 A0 A1 A2"; fi
+  else echo "A0 A3 A1 A2 A4 A5"; fi   # 1x8 = science per hour (18:05Z, after the 17:45Z preemption): the floor and the field ledger first, the expensive wide arms last
 }
 preflight () {  # 60 full-batch steps of every arm this worker will run: compile + pace at the source, before any arm
   gsutil -q stat "$GCS/PREFLIGHT_OK_w${W}_nw${NW}" 2>/dev/null && { echo "PREFLIGHT-SKIP worker=$W nw=$NW"; return 0; }

@@ -165,6 +165,7 @@ n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" 
 ! grep -q "PRETRAIN-START A6" "$SB/w0.log" && [ ! -f "$SB/gcs/finalA/A6_ARM_OK" ] && ok "S1 A6 never runs on the 8-shape" || bad "S1 A6 ran on the 8-shape"
 [ "$(grep -c 'PREFLIGHT-OK' "$SB/w0.log")" = 6 ] && grep -q "PREFLIGHT-OK A3 99.0 it/s" "$SB/w0.log" && ok "S1 preflight of all six arms before any arm (pace read)" || { bad "S1 preflight"; grep PREFLIGHT "$SB/w0.log" | head -3; }
 first_pf=$(grep -n "PREFLIGHT-OK" "$SB/w0.log" | tail -1 | cut -d: -f1); first_arm=$(grep -n "PRETRAIN-START" "$SB/w0.log" | head -1 | cut -d: -f1); [ "$first_pf" -lt "$first_arm" ] && ok "S1 every preflight precedes the first arm" || bad "S1 preflight order"
+grep -m1 "PRETRAIN-START" "$SB/w0.log" | grep -q "PRETRAIN-START A0" && grep "PRETRAIN-START" "$SB/w0.log" | tail -1 | grep -q "A5" && ok "S1 1x8 order: A0 first, A5 last (science per hour)" || bad "S1 1x8 order"
 [ -f "$SB/gcs/finalA/finalA_final.tgz" ] && ok "S1 final tgz" || bad "S1 final tgz"
 allc=1; for a in A0 A1 A2 A3 A4 A5; do [ -f "$SB/gcs/finalA/evals/census_${a}_vsel_OK" ] && [ -f "$SB/gcs/finalA/evals/census_${a}_final_OK" ] || allc=0; done; [ $allc = 1 ] && ok "S1 census vsel+final on every arm" || bad "S1 census"
 allf=1; for a in A0 A1 A2 A3 A4 A5; do for r in full_${a}_vsel_t16 full_${a}_final_t16 full_${a}_vsel_t16_alt full_${a}_vsel_t64; do [ -f "$SB/gcs/finalA/evals/${r}_OK" ] || allf=0; done; done; [ $allf = 1 ] && ok "S1 fulls vsel+final+alt at D16 + the D64 depth row on every arm" || bad "S1 fulls"
