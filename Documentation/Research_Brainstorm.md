@@ -35,6 +35,38 @@
 - Scale-regression flag (rides wave-2 analysis)
 - Lit anchors (this pass)
 
+# sportC2 READBACK — 2026-09-05 (not a freethink; the freethink's X-7 design was run and every mechanism prediction is scored here; staged inputs for the next freethink; nothing registered)
+
+*Source: `Report_2026-09-05_sportC2_Verdict.md` (analyzer letters), the physics pass, the decoder lens. Everything below is measured unless marked inferred.*
+
+**Kills (the freethink's bets that died in the data).**
+1. "The SOT carry widens reachability" — killed in the opposite direction: R1's reachable set is 43.8 % vs the base's 56.9 % (paired p 6e-304); single-shot +2.9pp. The carry sharpens init-invariance (per-draw rate .28–.32, ρ .22–.34) and creates stationary soft WRONG states (residual AUC .62). Its one merit: still improving at 80k (final 38.4).
+2. "RG time per readout (trained inner cycles) deepens propagation" — killed at K=3/d128: first-exact median 9 vs 11, reach at 21–25 givens 19 vs 40 %, cold unchanged; EMA worth +5.3 on this arm.
+3. "Hard-decision rows calibrate commitment" — not achieved (top-5 correct at stalls 76.4 vs 70.6 %, bar 90; entropy at step 1 unchanged .57). What the rows DO: accelerate fitting — R3 = the champion by rule at 43.57 / 44.65 EMA (+8.9pp over the base paired) at its 40k peak, then B0's memorization 20k later (final 21.8). A fitting accelerator, not a decimator.
+4. "wd 1.0 stops memorization at our lr" — partial and costly: W0 34.63 (−8.2pp vs B0) with the collapse delayed to 48–56k; the floor phase (rate 3e-5) lets it return. The lever is the decay RATE lr × wd (5e-4 hot / 3e-5 floor vs the field's 1e-4). Next one-variable arm: wd 0.1 at lr 1e-3.
+5. "R0 was undertrained in the field regime" — killed: +50k steps (100k total, 38 epochs) leave it at 37.12 vs 37.33; the reachable set widens slowly (50.8 → 56.1) and the training error keeps falling (.32 → .13) with val flat — the plateau, with memorization onset.
+6. "The 27 constraint groups are the token graph already; our mixer on their loop is ±1pp" — killed: −47pp at 50k (38.9 @D16; CE .71 still falling; b1 .01 % = zero restart robustness). The all-to-all token-mixing MLP is load-bearing in TRM's loop.
+7. "Digit augmentation is a several-point effect for the field cell" — killed by size: −65pp (21.2 @D16 / 24.2 @D64); the TRM cell memorizes the 1k corpus by 10k steps without the digit orbit (train-exact .99; 5.9 % valid-but-given-violating recalls). Exact S9 ≈ 65 points in their units.
+8. "The matched-pair noise CNC2 is a floor" — killed as an instrument: it read 8.2pp = the wd effect itself; noise comes from seed pairs (B0c/B1c: .30 cold / .44 b1 / .16 verified, all p > .18) or fixed floors from now on.
+
+**Survivals and upgrades.**
+- Zero deaths with z-norm + FPA + the attention toll across seven arms incl. the K=3 unroll and the carry loop (retfm 1.00 everywhere but R1's early settle and one .88 on R2); census 0 % on 28 grids.
+- The selector law: no spurious attractors on W0 / R3 / R4 / B0c / B1c (residual AUC ≥ .98, wrong-below-median ≤ .7 %); the exception is the carried map (a new attractor class, D5).
+- Val-selection caught every peak (R3's 40k, R1's late rise excepted — its final beat its vsel by .85pp); EMA +1–5pp on every native.
+- The canvas two-phase map's residual selector: t1r@128 88.16 vs verifier 89.20 (sel-5k) — verification-free selection at EqR's column on our own wide-funnel map; D4's 58.4/80.5.
+- The riders closed sportC1's provenance gap exactly (B0/B1 correct grids: cold 42.76/42.45, b1 42.75/42.31, verified@128 52.97/52.81; B0 EMA full 45.42).
+- The decoder lens (E0–E7 in `sportC2_ecc_20260905.txt`) as the paper's frame for "a measurable decoder": erasure thresholds g50 ≈ 26–27 givens for our natives (width 11–15) vs none for the field's map; search yield on rating > 0 puzzles 25–36 % vs 92 %; a bimodal per-puzzle per-draw channel on our maps (43–57 % never / 33–43 % always / 6–9 % list-helped) vs the field's 93.5 % above .5; the peeling reference (11 % of the natural distribution; 77 % of rating 0).
+
+**Staged inputs for the next freethink / registration.**
+- The decay-rate law (lr × wd) with the matched-rate arms as the cheapest decisive test; a schedule-aware decay (constant rate across the two phases).
+- The carry's stationary wrong states: the field's RI/NI remedy (noise in the carry) or a verifier-driven kick in the loop as the one-variable follow-up; alternatively drop the carry.
+- Hard rows as a training-signal amplifier: at matched training error, does R3 beat W0 (early-stopped) on cold? Is the gain a sharper answer-register supervision (labeled hypothesis)?
+- The field's dependence on the digit orbit and the all-to-all mixer → the paper's efficiency statement (exact symmetry replaces 9!-fold augmentation) and the interpretability statement (which parts of the field's recipe are load-bearing, measured one at a time).
+- The portfolio column (natives 78.0 / + canvas 98.25 verified@128) and the canvas selector (88.2 verification-free) as the coverage-route numbers.
+- Calendar: freeze Sep 10–12; the next night is a PI decision (report §7: seed-and-rate at d128 recommended).
+
+---
+
 # Freethink 2026-09-03 — the amalgamation: our architecture × the field's regime, read through five lenses, and the design of the last phase before parity
 
 *PI-directed ("a deeper freethink … the culmination of our architecture with the field's regime and frontier work … quantum geometry, RG, holography, error-correcting codes, information theory … design the next steps to test any ideas before we commit to the parameter-parity run"). Inputs: the sportC1 verdict + lens G (`Report_2026-09-03_Champion_sportC1_Verdict.md`, `Program_Review_2026-09-03.md`), the complete ledger, and SEVEN grounding computations run on the banked corpus BEFORE writing (Mac CPU/disk, $0; artifacts `runs/analysis/freethink_ground{1,2,2b,3,4,5_6,7}_*_20260903.*`; scripts in the session scratchpad, to be promoted to `tools/` with the registration). Everything numbered below is measured unless marked inferred/hypothesis; nothing is registered until it moves to the ledger with a named test. Lettering continues from AF.*
