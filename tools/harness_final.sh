@@ -217,7 +217,7 @@ echo "== S4 fresh 4x4 static map =="
 mk_sandbox; for w in 0 1 2 3; do run_chain $w 4 & done; wait
 if grep -q "CHAIN-FINALA-COMPLETE" "$SB"/w*.log; then ok "S4 complete from a worker"; else bad "S4 complete"; tail -3 "$SB"/w*.log; fi
 n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" = 7 ] && ok "S4 7/7 arms across the static map (A6 on the 16)" || bad "S4 arms ($n_ok)"
-grep -q "PRETRAIN-START A3" "$SB/w0.log" && grep -q "PRETRAIN-START A4" "$SB/w1.log" && grep -q "PRETRAIN-START A5" "$SB/w2.log" && grep -q "PRETRAIN-START A6" "$SB/w3.log" && ok "S4 map: A3 w0 · A4 w1 · A5 w2 · A6 w3" || bad "S4 map"
+grep -q "PRETRAIN-START A3" "$SB/w0.log" && ! grep -q "PRETRAIN-START A0" "$SB/w0.log" && grep -q "PRETRAIN-START A4" "$SB/w1.log" && grep -q "PRETRAIN-START A5" "$SB/w2.log" && grep -q "PRETRAIN-START A6" "$SB/w3.log" && grep -q "PRETRAIN-START A0" "$SB/w3.log" && grep -q "PRETRAIN-START A2" "$SB/w3.log" && ok "S4 map (13:30Z re-map): A3 w0 · A4 w1 · A5 w2 · A6 A0 A1 A2 w3" || bad "S4 map"
 a6=$("$REAL_PY" -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['argv']))" "$SB/repo/runs/pretrainfinalA_A6/config.json")
 echo "$a6" | grep -q -- "--cell dec" && echo "$a6" | grep -q -- "--dec-width 512" && echo "$a6" | grep -q -- "--remat" && ! echo "$a6" | grep -q -- "--sudoku-digit-aug" && ok "S4r A6 = DEC w512, remat, no digit aug" || bad "S4r A6 flags: $a6"
 grep -q "PREFLIGHT-OK A6" "$SB/w3.log" && [ -f "$SB/gcs/finalA/PREFLIGHT_OK_w3_nw4" ] && ok "S4 A6 preflighted on its own worker (shape-specific marker)" || bad "S4 A6 preflight"
