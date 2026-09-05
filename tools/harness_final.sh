@@ -247,6 +247,21 @@ grep -q "RESUMED from runs/pretrainfinalA_A3/ckpt_latest.pkl at step 40" "$SB/re
 grep -q "PREFLIGHT-OK A3" "$SB/w0.log" && ! grep -q "PREFLIGHT-SKIP" "$SB/w0.log" && [ -f "$SB/gcs/finalA/PREFLIGHT_OK_w0_nw4" ] && ok "S12 the 16 re-preflighted its shape (the 32's marker did not satisfy it)" || { bad "S12 preflight on the new shape"; grep PREFLIGHT "$SB/w0.log" | head -3; }
 grep -q "COMPLETION-SET nw=4 need=\[A0 A1 A2 A3 A4 A5 A6\] optional-not-awaited=\[A7 A8 \]" "$SB"/w*.log && grep -q "CHAIN-FINALA-COMPLETE" "$SB"/w*.log && [ "$(ls "$SB/gcs/finalA/"*_ARM_OK | wc -l | tr -d ' ')" = 7 ] && ok "S12 completes with the 16's seven arms, the seed arms named as not awaited" || { bad "S12 completion"; grep COMPLETION "$SB"/w*.log | head -2; }
 
+echo "== S13 RESUME after a remat-needing OOM (the 14:25Z defect): the arm dir holds loss rows + RETRY_REMAT.txt; the relaunch must start WITH remat and RESUME, never amputate =="
+mk_sandbox
+( cd "$SB/repo" && mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainfinalA_A3 --steps 40 --ema 0.999 --cell dec >/dev/null 2>&1
+  echo "OOM at launch (rc=1) -> retried once with --remat" > runs/pretrainfinalA_A3/RETRY_REMAT.txt
+  mkdir -p "$SB/gcs/finalA/live/runs/pretrainfinalA_A3"; cp runs/pretrainfinalA_A3/* "$SB/gcs/finalA/live/runs/pretrainfinalA_A3/"; rm -rf runs )
+run_chain 0 1 STUB_OOM_ARM=A3
+grep -q "REMAT-PERSISTED A3" "$SB/w0.log" && grep -q "RESUMED from runs/pretrainfinalA_A3/ckpt_latest.pkl at step 40" "$SB/repo/runs/pretrainfinalA_A3.log" && ok "S13 remat persisted: the relaunch resumed at step 40 with --remat, no OOM" || { bad "S13 persisted remat"; grep -E 'REMAT|OOM|NAN|AMPUT' "$SB/w0.log" | head -4; }
+! grep -q "PRETRAIN-NAN A3" "$SB/w0.log" && ! grep -q "AMPUTATE" "$SB/w0.log" && [ -f "$SB/gcs/finalA/A3_ARM_OK" ] && ok "S13 no NaN path, no amputation, A3 completes" || bad "S13 misclassification"
+echo "== S13b RESUME with loss rows but NO remat record (e.g. a shape change): a compile-time OOM in THIS launch is an OOM (retry with remat), not a NaN death =="
+mk_sandbox
+( cd "$SB/repo" && mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainfinalA_A3 --steps 40 --ema 0.999 --cell dec >/dev/null 2>&1
+  mkdir -p "$SB/gcs/finalA/live/runs/pretrainfinalA_A3"; cp runs/pretrainfinalA_A3/* "$SB/gcs/finalA/live/runs/pretrainfinalA_A3/"; rm -rf runs )
+run_chain 0 1 STUB_OOM_ARM=A3
+grep -q "PRETRAIN-OOM-RETRY-REMAT A3" "$SB/w0.log" && ! grep -q "PRETRAIN-NAN A3" "$SB/w0.log" && grep -q "RESUMED from runs/pretrainfinalA_A3/ckpt_latest.pkl at step 40" "$SB/repo/runs/pretrainfinalA_A3.log" && [ -f "$SB/gcs/finalA/A3_ARM_OK" ] && ok "S13b OOM on a resume -> remat retry -> resumed, completes" || { bad "S13b resume OOM path"; grep -E 'REMAT|OOM|NAN|AMPUT|RESUMED' "$SB/w0.log" "$SB/repo/runs/pretrainfinalA_A3.log" | head -5; }
+
 echo "== S12b DEMOTION 16 -> 8: A3 banked (ARM_OK), A4 in flight at step 40 on the 16's w1; the 8's single worker skips A3, resumes A4, preflights the five unbanked arms, completes with 6 =="
 mk_sandbox
 ( cd "$SB/repo" && mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainfinalA_A3 --steps 100 --ema 0.999 --cell dec >/dev/null 2>&1

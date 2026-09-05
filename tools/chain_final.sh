@@ -209,13 +209,21 @@ pt () {  # DP pretrain with per-host confinement on multi-host (93a79d4); the AR
 }
 
 has_loss_rows () { [ -f "$1/metrics.jsonl" ] && grep -q '"loss"' "$1/metrics.jsonl"; }
+log_has_step () { grep -qE '^step +[0-9]+ ' "$1"; }   # THIS launch logged a step (the log is rewritten per launch)
 pt_run () {  # LOG ARM DIR pt-args... — sportC2 pre-mortem (2026-09-04): a LAUNCH-TIME HBM exhaustion (rc != 0 before
   # any step was logged, an OOM message in the log, and no --remat in the args) is NOT a NaN death and must not be
   # amputated as one: ONE retry with --remat (numerics-equivalent: tests/test_eq_remat), labeled on disk
   # (RETRY_REMAT.txt ships in the pretrain tarball). Any failure after the first logged step stays one-shot.
+  # Night A source lesson (2026-09-05 14:25Z): on a RESUME the run dir already holds loss rows, so the old "no loss
+  # rows in the dir" test misread the same compile-time OOM as a NaN death (amputation, no grid, three arms dead).
+  # Two fixes: (a) an arm that once needed remat launches WITH it (RETRY_REMAT.txt persists the decision);
+  # (b) "before any logged step" is judged from THIS launch's log, never from the dir.
   local log=$1 arm=$2 dir=$3; shift 3
+  if [ -f "$dir/RETRY_REMAT.txt" ] && ! printf '%s\n' "$@" | grep -qx -- '--remat'; then
+    echo "REMAT-PERSISTED $arm (this arm needed --remat before; launching with it)"; set -- "$@" --remat
+  fi
   pt "$@" > "$log" 2>&1; local rc=$?
-  if [ $rc -ne 0 ] && ! has_loss_rows "$dir" && ! printf '%s\n' "$@" | grep -qx -- '--remat' \
+  if [ $rc -ne 0 ] && ! log_has_step "$log" && ! printf '%s\n' "$@" | grep -qx -- '--remat' \
      && grep -qiE 'RESOURCE_EXHAUSTED|out of memory' "$log"; then
     echo "PRETRAIN-OOM-RETRY-REMAT $arm (rc=$rc before any logged step = HBM exhaustion, not a NaN death; one retry with --remat, numerics-equivalent, labeled)"
     mkdir -p "$dir"; echo "OOM at launch (rc=$rc) -> retried once with --remat $(date -u +%FT%TZ)" >> "$dir/RETRY_REMAT.txt"
