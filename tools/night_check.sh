@@ -7,7 +7,7 @@
 cd "$(dirname "$0")/.." || exit 1
 source tools/campaign.env
 INTERVAL=${NIGHT_CHECK_INTERVAL:-900}
-ZONE=${NIGHT_CHECK_ZONE:-us-east1-d}
+ZONE=us-east1-d   # overwritten by the per-check discovery below
 NW=${NIGHT_CHECK_WORKERS:-4}
 REMOTE_ONE='cd ~/qhrrn2 && python3 -c "
 import json,glob,datetime as dt,subprocess,re,os
@@ -34,10 +34,11 @@ print(\"procs \"+procs+\" | \"+\" | \".join(out)+\" | last: \"+last+(\" | NO-PRO
 while true; do
   [ "${NIGHT_CHECK_ONCE:-0}" = 1 ] || sleep "$INTERVAL"
   DL=$(tr -dc '0-9' < runs/tpu_deadline.txt 2>/dev/null); left=$(( (DL - $(date -u +%s)) / 60 ))
-  state=$(gcloud compute tpus tpu-vm describe "$POD" --zone "$ZONE" --format='value(state)' 2>/dev/null); [ -n "$state" ] || state=ABSENT
+  state=ABSENT   # discover the live zone (the ladder can land anywhere in ZONES, Mumbai included)
+  for z in ${NIGHT_CHECK_ZONE:-$ZONES}; do st=$(gcloud compute tpus tpu-vm describe "$POD" --zone "$z" --format='value(state)' 2>/dev/null); [ -n "$st" ] && { state="$st"; ZONE=$z; break; }; done
   sup=$(pgrep -f "pod.sh supervise" >/dev/null && echo alive || echo DEAD)
   nok=$(gsutil ls "$GCS/" 2>/dev/null | grep -c "_ARM_OK"); nsk=$(gsutil ls "$GCS/" 2>/dev/null | grep -c "_SKIPPED")
-  echo "== CHECK $(date -u +%H:%MZ) | node $state | supervisor $sup | ARM_OK $nok SKIPPED $nsk | cap in ${left} min"
+  echo "== CHECK $(date -u +%H:%MZ) | node $state in $ZONE | supervisor $sup | ARM_OK $nok SKIPPED $nsk | cap in ${left} min"
   # ONE gcloud invocation for all workers (each gcloud ssh costs ~40 s of key/metadata setup); lines carry the host's worker index
   gcloud compute tpus tpu-vm ssh "$POD" --zone "$ZONE" --worker=all --ssh-flag="-o ConnectTimeout=25" --ssh-flag="-o ServerAliveInterval=15" \
     --command "echo \"WORKER \$(hostname | sed 's/.*-w-//') \$($REMOTE_ONE)\"" 2>/dev/null | grep "^WORKER" | sort | sed 's/^WORKER /  w/' || echo "  SSH-FAIL"
