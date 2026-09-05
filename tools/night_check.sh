@@ -10,13 +10,16 @@ INTERVAL=${NIGHT_CHECK_INTERVAL:-900}
 ZONE=${NIGHT_CHECK_ZONE:-us-east1-d}
 NW=${NIGHT_CHECK_WORKERS:-4}
 REMOTE_ONE='cd ~/qhrrn2 && python3 -c "
-import json,glob,datetime as dt,subprocess
+import json,glob,datetime as dt,subprocess,re,os
 now=dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
 procs=subprocess.run(\"pgrep -f \\\"tools/pretrain.py|tools/eval_sudoku_extreme.py|explosion_census.py|stall_calibration.py\\\" | wc -l\",shell=True,capture_output=True,text=True).stdout.strip()
 last=subprocess.run(\"grep -E \\\"PRETRAIN-START|PRETRAIN-OK|PRETRAIN-NAN|OOM|REMAT|AMPUTAT|EVAL-OK|EVAL-FAILED|EVAL-N-BAD|CENSUS|CALIB|ARM-OK|ARM-SKIPPED|PREFLIGHT|WORKER-DONE|INCOMPLETE|COMPLETE\\\" runs/detached.log 2>/dev/null | tail -1 | cut -c1-80\",shell=True,capture_output=True,text=True).stdout.strip()
+mine=set(re.findall(r\"(?:PRETRAIN-START|PRETRAIN-SKIP|ARM-OK|PRETRAIN-OK) (A[0-9])\", open(\"runs/detached.log\").read())) if os.path.exists(\"runs/detached.log\") else set()
 out=[]
 for p in sorted(glob.glob(\"runs/pretrainfinalA_A*/metrics.jsonl\")):
-    arm=p.split(\"/\")[1].replace(\"pretrainfinalA_\",\"\"); rows=[json.loads(l) for l in open(p) if \"\\\"loss\\\"\" in l]
+    arm=p.split(\"/\")[1].replace(\"pretrainfinalA_\",\"\")
+    if mine and arm not in mine: continue
+    rows=[json.loads(l) for l in open(p) if \"\\\"loss\\\"\" in l]
     if not rows: out.append(arm+\":no-rows\"); continue
     b=rows[-1]; tb=dt.datetime.fromisoformat(b[\"t\"]); age=(now-tb).total_seconds()/60; pace=\"-\"
     if len(rows)>=2:
