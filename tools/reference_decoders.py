@@ -3,8 +3,10 @@
 # cells (a puzzle = a codeword with 81 - givens cells erased): (1) PEELING = naked + hidden singles to a fixpoint
 # (the propagation decoder; the lens's 11.1 % reference); (2) SUM-PRODUCT BP on the factor graph (81 cell
 # variables x 9 values; 27 all-different factors) with the EXACT all-different factor-to-variable message
-# (the permanent of the 8x8 minor of the incoming-message matrix, Ryser's formula, vectorized), damping .5,
-# up to --iters iterations, decoded by the argmax of the beliefs; (3) BP + DECIMATION (BPD) = guided decimation
+# (the permanent of the 8x8 minor of the incoming-message matrix; the non-negative subset DP, vectorized), NO
+# damping (damping keeps stale mass and leaves BP confidently wrong even on singles-solvable puzzles: measured
+# 2026-09-05; undamped, exact zeros propagate = generalized arc consistency inside sum-product), up to --iters
+# iterations, decoded by the argmax of the beliefs; (3) BP + DECIMATION (BPD) = guided decimation
 # without backtracking: run BP; if the argmax grid is not a valid completion, COMMIT the most polarized undecided
 # cell to its argmax and re-run; stop on a valid grid or a contradiction (an empty candidate set / a zero belief).
 # Maximum-likelihood decoding solves 100 % (unique solutions). Output: per-puzzle solved flags for each decoder
@@ -123,7 +125,7 @@ def _floor(m):
     return m / m.sum(-1, keepdims=True)
 
 
-def bp_iterate(prior, mf, iters, damp=0.5, tol=1e-5):
+def bp_iterate(prior, mf, iters, damp=0.0, tol=1e-5):
     """Sum-product with exact all-different factors, fully vectorized. mf (27, 9, 9) factor->variable messages
     (warm start). Returns (mf, converged, contradiction)."""
     conv = False
@@ -215,7 +217,7 @@ def main():
             print(f"  {n+1}/{len(idx)}  peel {100*res['peel'][:n+1].mean():.1f}  bp {100*res['bp'][:n+1].mean():.1f}  bpd {100*res['bpd'][:n+1].mean():.1f}  ({time.time()-t0:.0f}s)", flush=True)
     out = Path(a.out); out.parent.mkdir(parents=True, exist_ok=True)
     bands = [(0, 0), (1, 9), (10, 29), (30, 59), (60, 10**9)]
-    L = [f"== REFERENCE DECODERS on {len(idx)} rating-stratified scan puzzles (seed {a.seed}; BP iters {a.iters}, damping .5) ==",
+    L = [f"== REFERENCE DECODERS on {len(idx)} rating-stratified scan puzzles (seed {a.seed}; BP iters {a.iters}, undamped, exact all-different factors) ==",
          "decoder | solved | by rating band 0 / 1-9 / 10-29 / 30-59 / 60+ | search-class yield (rating > 0) | g50 (givens)"]
     summ = {}
     for k in ("peel", "bp", "bpd"):
