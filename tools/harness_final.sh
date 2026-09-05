@@ -116,7 +116,7 @@ if tool.endswith("eval_sudoku_extreme.py"):
     out = Path(flag("--out")); out.mkdir(parents=True, exist_ok=True)
     shard = flag("--shard"); sub = flag("--subsample"); strat = flag("--stratified")
     n_total = int(sub) if sub else (int(strat) if strat else 422786)
-    prov = {"t_total": int(flag("--t-total", "64")), "ema": "--ema" in argv}
+    prov = {"t_total": int(flag("--t-total", "64")), "ema": "--ema" in argv, "argv": argv}
     if shard:
         i, K = map(int, shard.split("/")); n = n_total // K + (1 if i < n_total % K else 0)
         np.savez(out / f"records_s{i}.npz", n=np.asarray(n)); (out / f"summary_s{i}.json").write_text(json.dumps({"n": n, **prov}))
@@ -170,6 +170,14 @@ allc=1; for a in A0 A1 A2 A3 A4 A5; do [ -f "$SB/gcs/finalA/evals/census_${a}_vs
 allf=1; for a in A0 A1 A2 A3 A4 A5; do for r in full_${a}_vsel_t16 full_${a}_final_t16 full_${a}_vsel_t16_alt full_${a}_vsel_t64; do [ -f "$SB/gcs/finalA/evals/${r}_OK" ] || allf=0; done; done; [ $allf = 1 ] && ok "S1 fulls vsel+final+alt at D16 + the D64 depth row on every arm" || bad "S1 fulls"
 alls=1; for a in A0 A1 A2 A3 A4 A5; do [ -f "$SB/gcs/finalA/evals/scan_${a}_OK" ] && [ -f "$SB/gcs/finalA/evals/calib_${a}_vsel_OK" ] || alls=0; done; [ $alls = 1 ] && ok "S1 scan + calib on every arm" || bad "S1 scans/calib"
 [ -z "$(ls "$SB/gcs/finalA/evals/" | grep retfm)" ] && ok "S1 no retfm (field-loop cells)" || bad "S1 retfm ran"
+eargv () { "$REAL_PY" -c "import json,sys; print(' '.join(json.load(open(sys.argv[1])).get('argv', [])))" "$1"; }
+sa0=$(eargv "$SB/repo/runs/sxscan_pfinalAA0/summary_s0.json"); sa3=$(eargv "$SB/repo/runs/sxscan_pfinalAA3/summary_s0.json")
+echo "$sa0" | grep -q -- "--subsample 20000 --t-total 64 --k-init 128" && echo "$sa3" | grep -q -- "--subsample 5000 --t-total 64 --k-init 32" && ok "S1 scans: X0-class 20k x k128, wide 5k x k32 (labeled)" || bad "S1 scan classes: A0 [$sa0] A3 [$sa3]"
+d0=$(eargv "$SB/repo/runs/sxeval_pfinalAA0/full_vsel_t64/summary_s0.json"); d3=$(eargv "$SB/repo/runs/sxeval_pfinalAA3/full_vsel_t64/summary_s0.json")
+! echo "$d0" | grep -q -- "--subsample" && echo "$d3" | grep -q -- "--subsample 100000" && ok "S1 D64 row: full for X0-class, 100k for the wide arms" || bad "S1 D64 classes"
+v3=$(eargv "$SB/repo/runs/sxeval_pfinalAA3/full_vsel_t16/summary_s0.json"); a3=$(eargv "$SB/repo/runs/sxeval_pfinalAA3/full_vsel_t16_alt/summary_s0.json")
+! echo "$v3" | grep -q -- "--subsample" && echo "$a3" | grep -q -- "--subsample 50000" && ok "S1 wide arm: headline D16 vsel full on 422,786; alt on 50k" || bad "S1 wide fulls"
+n3=$("$REAL_PY" -c "import json; print(json.load(open('$SB/repo/runs/sxscan_pfinalAA3/summary_all.json'))['n'])"); [ "$n3" = 5000 ] && ok "S1 wide scan n-gate 5000" || bad "S1 wide scan n ($n3)"
 grep -q '"ema": true' "$SB/repo/runs/sxeval_pfinalAA3/full_vsel_t16/summary_s0.json" && ok "S1 EMA headline" || bad "S1 headline weights"
 grep -q "screen_A3_vb_OK" <(ls "$SB/gcs/finalA/evals/") && ok "S1 vb screen on every arm (fixed-step screens need 15k grids: asserted in S3d)" || bad "S1 screens"
 grep -q "PRETRAIN-START A3 .*prec=default" "$SB/w0.log" && ok "S1 bf16 precision on the field arms" || bad "S1 precision"
@@ -177,13 +185,13 @@ grep -q "PRETRAIN-START A3 .*prec=default" "$SB/w0.log" && ok "S1 bf16 precision
 echo "== S1r the ARM REGISTRY reaches the trainer (the 2026-09-04 PM-5 lesson: arm names/flags verified by the run) =="
 argv () { "$REAL_PY" -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['argv']))" "$SB/repo/runs/pretrainfinalA_$1/config.json"; }
 a3=$(argv A3); a4=$(argv A4); a1=$(argv A1); a2=$(argv A2); a5=$(argv A5); a0=$(argv A0)
-echo "$a3" | grep -q -- "--cell dec --dec-width 256" && ! echo "$a3" | grep -q -- "--sudoku-digit-aug" && ok "S1r A3 = DEC w256 WITHOUT digit aug" || bad "S1r A3 flags: $a3"
+echo "$a3" | grep -q -- "--cell dec --dec-width 384" && ! echo "$a3" | grep -q -- "--sudoku-digit-aug" && ok "S1r A3 = DEC w384 WITHOUT digit aug" || bad "S1r A3 flags: $a3"
 echo "$a4" | grep -q -- "--cell dec" && echo "$a4" | grep -q -- "--sudoku-digit-aug" && ok "S1r A4 = DEC + digit aug" || bad "S1r A4 flags"
 echo "$a1" | grep -q -- "--cell trm --trm-hidden 512 --sudoku-digit-aug" && echo "$a1" | grep -q -- "--fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25" && ok "S1r A1 = X0 + FPA anchor rows" || bad "S1r A1 flags"
 echo "$a2" | grep -q -- "--trm-ri-sigma 1.0" && ! echo "$a2" | grep -q -- "--fpa-k 1" && ok "S1r A2 = X0 + RI only" || bad "S1r A2 flags"
 echo "$a5" | grep -q -- "--cell dec" && echo "$a5" | grep -q -- "--fpa-k 1" && echo "$a5" | grep -q -- "--trm-ri-sigma 1.0" && ! echo "$a5" | grep -q -- "--sudoku-digit-aug" && ok "S1r A5 = DEC + FPA + RI, no digit aug" || bad "S1r A5 flags"
 echo "$a0" | grep -q -- "--seed 1" && echo "$a1" | grep -q -- "--seed 0" && ok "S1r A0 seed 1, A1 seed 0 (the noise pair vs sportC1's X0 seed 0)" || bad "S1r seeds"
-for a in A0 A3; do echo "$(argv $a)" | grep -q -- "--grid-every 2000" && echo "$(argv $a)" | grep -q -- "--monitor-every 2000" || { bad "S1r grid cadence $a"; break; }; done; ok "S1r grids banked at the monitor cadence (2000)"
+for a in A0 A3; do echo "$(argv $a)" | grep -q -- "--grid-every 2000" && echo "$(argv $a)" | grep -q -- "--monitor-every 2000" && echo "$(argv $a)" | grep -q -- "--ckpt-every 500" || { bad "S1r cadences $a"; break; }; done; ok "S1r grids at the monitor cadence (2000), ckpt_latest every 500 steps (the 5-min bank)"
 SB1=$SB
 
 echo "== S2 idempotent rerun =="
@@ -212,8 +220,44 @@ n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" 
 grep -q "PRETRAIN-START A3" "$SB/w0.log" && grep -q "PRETRAIN-START A4" "$SB/w1.log" && grep -q "PRETRAIN-START A5" "$SB/w2.log" && grep -q "PRETRAIN-START A6" "$SB/w3.log" && ok "S4 map: A3 w0 · A4 w1 · A5 w2 · A6 w3" || bad "S4 map"
 a6=$("$REAL_PY" -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['argv']))" "$SB/repo/runs/pretrainfinalA_A6/config.json")
 echo "$a6" | grep -q -- "--cell dec" && echo "$a6" | grep -q -- "--dec-width 512" && echo "$a6" | grep -q -- "--remat" && ! echo "$a6" | grep -q -- "--sudoku-digit-aug" && ok "S4r A6 = DEC w512, remat, no digit aug" || bad "S4r A6 flags: $a6"
-grep -q "PREFLIGHT-OK A6" "$SB/w3.log" && [ -f "$SB/gcs/finalA/PREFLIGHT_OK_w3" ] && ok "S4 A6 preflighted on its own worker" || bad "S4 A6 preflight"
+grep -q "PREFLIGHT-OK A6" "$SB/w3.log" && [ -f "$SB/gcs/finalA/PREFLIGHT_OK_w3_nw4" ] && ok "S4 A6 preflighted on its own worker (shape-specific marker)" || bad "S4 A6 preflight"
 [ -f "$SB/gcs/finalA/evals/full_A6_vsel_t16_OK" ] && [ -f "$SB/gcs/finalA/evals/scan_A6_OK" ] && ok "S4 A6 full battery" || bad "S4 A6 battery"
+
+echo "== S4b fresh 8x4 static map (the v6e-32): one wide arm per worker, the seed pairs on w4/w5 =="
+mk_sandbox; for w in 0 1 2 3 4 5 6 7; do run_chain $w 8 & done; wait
+if grep -q "CHAIN-FINALA-COMPLETE" "$SB"/w*.log; then ok "S4b complete from a worker"; else bad "S4b complete"; tail -3 "$SB"/w*.log; fi
+n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" = 9 ] && ok "S4b 9/9 arms across the 8x4 map" || bad "S4b arms ($n_ok)"
+grep -q "PRETRAIN-START A7" "$SB/w4.log" && grep -q "PRETRAIN-START A8" "$SB/w5.log" && grep -q "PRETRAIN-START A0" "$SB/w6.log" && grep -q "PRETRAIN-START A1" "$SB/w6.log" && grep -q "PRETRAIN-START A2" "$SB/w7.log" && ok "S4b map: A7 w4 · A8 w5 · A0+A1 w6 · A2 w7" || bad "S4b map"
+a7=$(argv A7); a8=$(argv A8)
+echo "$a7" | grep -q -- "--cell dec --dec-width 384" && echo "$a7" | grep -q -- "--seed 1" && ! echo "$a7" | grep -q -- "--sudoku-digit-aug" && ok "S4b A7 = A3's flags at seed 1" || bad "S4b A7 flags: $a7"
+echo "$a8" | grep -q -- "--dec-width 512" && echo "$a8" | grep -q -- "--remat" && echo "$a8" | grep -q -- "--seed 1" && ok "S4b A8 = A6's flags at seed 1" || bad "S4b A8 flags: $a8"
+sa7=$(eargv "$SB/repo/runs/sxscan_pfinalAA7/summary_s0.json"); echo "$sa7" | grep -q -- "--subsample 5000 --t-total 64 --k-init 32" && ok "S4b the seed arms get the wide battery" || bad "S4b A7 battery"
+echo "== S4c the 16 does NOT run the seed arms (A7/A8 absent, the night completes with 7) =="
+mk_sandbox; for w in 0 1 2 3; do run_chain $w 4 & done; wait
+n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" = 7 ] && ! grep -q "PRETRAIN-START A7\|PRETRAIN-START A8" "$SB"/w*.log && grep -q "CHAIN-FINALA-COMPLETE" "$SB"/w*.log && ok "S4c 7 arms on the 16, A7/A8 never run, complete" || bad "S4c ($n_ok)"
+
+echo "== S12 DEMOTION 32 -> 16 with arms IN FLIGHT: A3 (w0) and A7 (w4) live-banked at step 40; the 16 resumes A3, never starts A7, re-preflights on its shape, completes with 7 =="
+mk_sandbox
+( cd "$SB/repo" && mkdir -p runs && for a in A3 A7; do env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainfinalA_$a --steps 40 --ema 0.999 --cell dec >/dev/null 2>&1
+    mkdir -p "$SB/gcs/finalA/live/runs/pretrainfinalA_$a"; cp runs/pretrainfinalA_$a/* "$SB/gcs/finalA/live/runs/pretrainfinalA_$a/"; done; rm -rf runs
+  echo ok > "$SB/gcs/finalA/PREFLIGHT_OK_w0_nw8" )   # the 32's own preflight marker must NOT satisfy the 16
+for w in 0 1 2 3; do run_chain $w 4 & done; wait
+grep -q "RESUMED from runs/pretrainfinalA_A3/ckpt_latest.pkl at step 40" "$SB/repo/runs/pretrainfinalA_A3.log" && ok "S12 A3 resumed from the live bank on the 16" || { bad "S12 A3 resume"; head -3 "$SB/repo/runs/pretrainfinalA_A3.log" 2>/dev/null; }
+! grep -q "PRETRAIN-START A7" "$SB"/w*.log && [ ! -f "$SB/gcs/finalA/A7_ARM_OK" ] && [ -f "$SB/gcs/finalA/live/runs/pretrainfinalA_A7/ckpt_latest.pkl" ] && ok "S12 A7 not started on the 16; its live state left banked" || bad "S12 A7 handling"
+grep -q "PREFLIGHT-OK A3" "$SB/w0.log" && ! grep -q "PREFLIGHT-SKIP" "$SB/w0.log" && [ -f "$SB/gcs/finalA/PREFLIGHT_OK_w0_nw4" ] && ok "S12 the 16 re-preflighted its shape (the 32's marker did not satisfy it)" || { bad "S12 preflight on the new shape"; grep PREFLIGHT "$SB/w0.log" | head -3; }
+grep -q "COMPLETION-SET nw=4 need=\[A0 A1 A2 A3 A4 A5 A6\] optional-not-awaited=\[A7 A8 \]" "$SB"/w*.log && grep -q "CHAIN-FINALA-COMPLETE" "$SB"/w*.log && [ "$(ls "$SB/gcs/finalA/"*_ARM_OK | wc -l | tr -d ' ')" = 7 ] && ok "S12 completes with the 16's seven arms, the seed arms named as not awaited" || { bad "S12 completion"; grep COMPLETION "$SB"/w*.log | head -2; }
+
+echo "== S12b DEMOTION 16 -> 8: A3 banked (ARM_OK), A4 in flight at step 40 on the 16's w1; the 8's single worker skips A3, resumes A4, preflights the five unbanked arms, completes with 6 =="
+mk_sandbox
+( cd "$SB/repo" && mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainfinalA_A3 --steps 100 --ema 0.999 --cell dec >/dev/null 2>&1
+  tar czf "$SB/gcs/finalA/A3_pretrain.tgz" runs/pretrainfinalA_A3 && cp runs/pretrainfinalA_A3/ckpt_latest.pkl "$SB/gcs/finalA/A3_ckpt.pkl"; echo ok > "$SB/gcs/finalA/A3_PRETRAIN_OK"; echo ok > "$SB/gcs/finalA/A3_ARM_OK"; rm -rf runs
+  mkdir -p runs && env PATH="$SB/bin:$PATH" "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainfinalA_A4 --steps 40 --ema 0.999 --cell dec >/dev/null 2>&1
+  mkdir -p "$SB/gcs/finalA/live/runs/pretrainfinalA_A4"; cp runs/pretrainfinalA_A4/* "$SB/gcs/finalA/live/runs/pretrainfinalA_A4/"; rm -rf runs
+  echo ok > "$SB/gcs/finalA/PREFLIGHT_OK_w1_nw4" )
+run_chain 0 1
+grep -q "RESUMED from runs/pretrainfinalA_A4/ckpt_latest.pkl at step 40" "$SB/repo/runs/pretrainfinalA_A4.log" && ok "S12b A4 resumed from the live bank on the 8" || { bad "S12b A4 resume"; head -3 "$SB/repo/runs/pretrainfinalA_A4.log" 2>/dev/null; }
+grep -q "PRETRAIN-SKIP A3" "$SB/w0.log" && [ "$(grep -c 'PREFLIGHT-OK' "$SB/w0.log")" = 5 ] && ! grep -q "PREFLIGHT-OK A3" "$SB/w0.log" && ok "S12b banked A3 skipped everywhere; the five unbanked arms preflighted on the 8" || { bad "S12b skip/preflight"; grep -E 'PREFLIGHT|SKIP' "$SB/w0.log" | head -4; }
+grep -q "CHAIN-FINALA-COMPLETE" "$SB/w0.log" && [ "$(ls "$SB/gcs/finalA/"*_ARM_OK | wc -l | tr -d ' ')" = 6 ] && ok "S12b completes with the 8's six arms" || bad "S12b completion"
 
 echo "== S5 select_ckpt failure -> LOUD fallback =="
 mk_sandbox; run_chain 0 1 STUB_SELECT_FAIL=A1

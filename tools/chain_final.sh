@@ -4,8 +4,13 @@
 #   A0 X0 seed 2 (the NOISE FLOOR pair with sportC1's X0)      A3 DEC-w256, NO digit aug (THE arm)
 #   A1 X0 + FPA anchor rows (k1 eps.2 frac.25; A1's lift)      A4 DEC-w256 + digit aug (the redundancy control)
 #   A2 X0 + RI sigma 1 (EqR's own RI on the field loop)         A5 DEC-w256 + FPA + RI (the assembled objectives)
+#   (amendment 2, 2026-09-05: the core DEC arms at w384 = 2.78M, OUR champion's parameter class; the wide arms' evaluation
+#    battery scales with the cell's compute, so their final/alt fulls run on 50k, the D64 row on 100k, the scan on 5k x k32,
+#    all LABELED; the headline D16 val-selected full stays on the full 422,786 for every arm)
 #   A6 DEC-w512 (X0's parameter class, 5.37M), no digit aug, --remat — the WIDTH de-confound, on the 16's fourth
 #      worker only (the optional arm: SKIPPED, labeled, on the 8-shape or on a preflight failure)
+#   A7 = A3 seed 1 (the DEC's OWN noise floor at w384) · A8 = A6 seed 1 (the parity arm's pair) — amendment 3 (the
+#      v6e-32, eight workers): optional arms that run on the 32 only (SKIPPED, labeled, on the 16 and the 8).
 # PREFLIGHT (adversarial pass 2026-09-05): every worker first runs 60 full-batch steps of EACH arm it will run
 # (compile + pace read at the source); a core-arm failure aborts the night (stop-and-report), an optional-arm
 # failure skips that arm, labeled.
@@ -16,7 +21,8 @@
 # 10k-resolution selection defect closed — --grid-every $MON). Derivative of chain_sportC2.sh (identical
 # mechanics: static worker map, ONE-SHOT NaN amputation, per-arm banking, idempotent markers, n-gated merges,
 # pt_run's ONE --remat retry on a launch-time HBM OOM, live 5-min GCS banking + fresh-node restore).
-# 4x4 static map: w0 A3 A0 · w1 A4 A1 · w2 A5 A2 · w3 A6. 1x8: A3 A4 A5 A0 A1 A2 (A6 skipped, labeled).
+# 8x4 static map (v6e-32): w0 A3 · w1 A4 · w2 A5 · w3 A6 · w4 A7 · w5 A8 · w6 A0 A1 · w7 A2.
+# 4x4 (v6e-16): w0 A3 A0 · w1 A4 A1 · w2 A5 A2 · w3 A6. 1x8: A3 A4 A5 A0 A1 A2 (A6/A7/A8 skipped, labeled).
 # Harness: tools/harness_final.sh.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -32,9 +38,11 @@ STEPS_AB=${C1_STEPS_AB:-80000}          # two-phase total: 50k cosine (1e-3 -> 3
 S_A=$((STEPS_AB * 5 / 8)); S_B=$((STEPS_AB - S_A))
 STEPS_R=${C1_STEPS_R:-50000}            # R0: the field's 50k steps (batch 384)
 STEPS_X=${C1_STEPS_X:-50000}            # every arm: the field's 50k SOT steps (batch 768)
-DEC_W=${FINAL_DEC_W:-256}               # the DEC's per-field width (A-night)
+DEC_W=${FINAL_DEC_W:-384}               # the DEC's per-field width: 384 = 2.78M, our champion's parameter class (amendment 2)
+N_FIN_WIDE=${C1_N_FIN_WIDE:-50000}; N_D64_WIDE=${C1_N_D64_WIDE:-100000}; N_SCAN_WIDE=${C1_N_SCAN_WIDE:-5000}; K_SCAN_WIDE=${C1_K_SCAN_WIDE:-32}
 PF_STEPS=${C1_PF_STEPS:-60}             # preflight steps per arm config
-OPTIONAL_ARMS="A6"
+CKPT_EVERY=${C1_CKPT_EVERY:-500}        # ckpt_latest cadence (amendment 3b: <= 5 min at the wide arms' pace; the live bank loop banks every 5 min)
+OPTIONAL_ARMS="A6 A7 A8"
 MON=${C1_MON:-2000}
 SOT_SEG=${C2_SOT_SEGMENTS:-4}
 SUB=${C1_SUB:-20000}; STRAT=${C1_STRAT:-512}
@@ -55,7 +63,7 @@ gsutil -q cp "$GCS/jax_cache.tgz" /tmp/jc.tgz 2>/dev/null && tar xzf /tmp/jc.tgz
 # harness S10 restore+RESUMED / S10b torn ckpt -> labeled fallback / S10c a banked arm's stale live copy is never
 # restored over its final). In-flight ckpt_latest / 5k grids / metrics / eval 300 s partials now survive a preemption
 # or node switch; restore runs on EVERY start (no-clobber pull on a fresh node, sanitize a torn ckpt_latest anywhere).
-LB_ARMS="A0 A1 A2 A3 A4 A5 A6"
+LB_ARMS="A0 A1 A2 A3 A4 A5 A6 A7 A8"
 GCS="$GCS" R_TAG="$R_TAG" ARMS="$LB_ARMS" bash tools/live_bank.sh restore
 GCS="$GCS" R_TAG="$R_TAG" ARMS="$LB_ARMS" bash tools/live_bank.sh loop & LB_PID=$!
 trap 'kill "$LB_PID" 2>/dev/null' EXIT
@@ -65,7 +73,7 @@ loop_common () {  # the field's loop + regime, shared by every arm (= sportC1 x_
   echo "--sudoku-extreme $NPZ --sudoku-layout native9 --equilibrium --sot --act \
         --trm-layers 2 --trm-h-cycles 3 --trm-l-cycles 6 --T 16 --trm-lambda 0.05 --trm-beta 0.01 \
         --sudoku-aug 1000 --loss stablemax --batch 768 --wd 1.0 --warmup 2000 --lr 1e-4 --lr-end 1e-4 --beta2 0.95 --ema 0.999 \
-        --fpa-k 0 --beta-flux-nl 0 --monitor-every $MON --grid-every $MON --ckpt-every 1000 --val-every 100000 --dp"
+        --fpa-k 0 --beta-flux-nl 0 --monitor-every $MON --grid-every $MON --ckpt-every $CKPT_EVERY --val-every 100000 --dp"
 }
 x_common ()   { echo "$(loop_common) --cell trm --trm-hidden 512 --sudoku-digit-aug"; }   # = sportC1's X0 (5.03M) + the grid cadence
 dec_common () { echo "$(loop_common) --cell dec --dec-width $DEC_W"; }                    # the DEC: exact S9, no digit aug
@@ -78,6 +86,8 @@ arm_flags () {   # one variable per arm from its base (a later flag overrides an
     A4)  echo "$(dec_common) --seed 0 --sudoku-digit-aug";;
     A5)  echo "$(dec_common) --seed 0 --fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25 --trm-ri-sigma 1.0";;
     A6)  echo "$(dec_common) --seed 0 --dec-width 512 --remat";;
+    A7)  echo "$(dec_common) --seed 1";;
+    A8)  echo "$(dec_common) --seed 1 --dec-width 512 --remat";;
     *)   return 1;;
   esac
 }
@@ -92,12 +102,14 @@ head_t ()    { echo 16; }                        # headline = EqR's D=16 column;
 screen_steps () { echo "015000 035000"; }
 fetch_init () { return 0; }
 is_optional () { case " $OPTIONAL_ARMS " in *" $1 "*) return 0;; *) return 1;; esac; }
+is_wide ()     { case $1 in A3|A4|A5|A6|A7|A8) return 0;; *) return 1;; esac; }   # the DEC arms: the trimmed, labeled battery
 worker_arms () {  # the arms THIS worker runs, in order
-  if [ "$NW" -ge 4 ]; then case $W in 0) echo "A3 A0";; 1) echo "A4 A1";; 2) echo "A5 A2";; 3) echo "A6";; esac
+  if [ "$NW" -ge 8 ]; then case $W in 0) echo "A3";; 1) echo "A4";; 2) echo "A5";; 3) echo "A6";; 4) echo "A7";; 5) echo "A8";; 6) echo "A0 A1";; 7) echo "A2";; esac
+  elif [ "$NW" -ge 4 ]; then case $W in 0) echo "A3 A0";; 1) echo "A4 A1";; 2) echo "A5 A2";; 3) echo "A6";; esac
   else echo "A3 A4 A5 A0 A1 A2"; fi
 }
 preflight () {  # 60 full-batch steps of every arm this worker will run: compile + pace at the source, before any arm
-  gsutil -q stat "$GCS/PREFLIGHT_OK_w$W" 2>/dev/null && { echo "PREFLIGHT-SKIP worker=$W"; return 0; }
+  gsutil -q stat "$GCS/PREFLIGHT_OK_w${W}_nw${NW}" 2>/dev/null && { echo "PREFLIGHT-SKIP worker=$W nw=$NW"; return 0; }
   local arm D FL rc ips
   for arm in $(worker_arms); do
     gsutil -q stat "$GCS/${arm}_ARM_OK" 2>/dev/null && continue
@@ -115,7 +127,7 @@ preflight () {  # 60 full-batch steps of every arm this worker will run: compile
     ips=$(${REAL_PY:-python3} -c "import json; r=[json.loads(l) for l in open('$D/metrics.jsonl') if '\"loss\"' in l]; print(r[-1].get('steps_per_sec','nan') if r else 'nan')" 2>/dev/null)
     echo "PREFLIGHT-OK $arm ${ips} it/s $(date -u +%H:%M)"
   done
-  echo ok | gsutil -q cp - "$GCS/PREFLIGHT_OK_w$W"
+  echo ok | gsutil -q cp - "$GCS/PREFLIGHT_OK_w${W}_nw${NW}"
 }
 
 nan_check () {  # DIR -> 0 clean / 1 non-finite tail or missing metrics (the trainer's NAN-ABORT rc=3 lands here too)
@@ -389,23 +401,26 @@ run_arm () {  # ARM — pretrain, then the battery (vsel select, screens, retfm,
   # full test at vsel AND final (§4.2), headline weights; the alternate-weights row on vsel (§12.4)
   eval_sharded "full_${arm}_vsel_t${TH}" "$VBCK" "runs/sxeval_p${R_TAG}${arm}/full_vsel_t${TH}" "$NCHIP" 422786 \
       --split test --t-total "$TH" $HE
+  # per-class battery sizes (amendment 2): X0-class arms = the full protocol; the wide DEC arms = labeled subsamples
+  local NFIN=422786 ND64=422786 NSC=$SUB KSC=128 SUBFIN="" SUBD64=""
+  if is_wide "$arm"; then NFIN=$N_FIN_WIDE; ND64=$N_D64_WIDE; NSC=$N_SCAN_WIDE; KSC=$K_SCAN_WIDE; SUBFIN="--subsample $N_FIN_WIDE"; SUBD64="--subsample $N_D64_WIDE"; fi
   if [ "$VBCK" = "$D/ckpt_latest.pkl" ]; then
     mkdir -p "runs/sxeval_p${R_TAG}${arm}/full_final_t${TH}"
     cp -f "runs/sxeval_p${R_TAG}${arm}/full_vsel_t${TH}/"summary_all.json "runs/sxeval_p${R_TAG}${arm}/full_final_t${TH}/" 2>/dev/null
     echo "FULL-FINAL $arm := vsel (identical grid)"
     bank_eval "full_${arm}_final_t${TH}" "runs/sxeval_p${R_TAG}${arm}/full_final_t${TH}"
   else
-    eval_sharded "full_${arm}_final_t${TH}" "$D/ckpt_latest.pkl" "runs/sxeval_p${R_TAG}${arm}/full_final_t${TH}" "$NCHIP" 422786 \
-        --split test --t-total "$TH" $HE
+    eval_sharded "full_${arm}_final_t${TH}" "$D/ckpt_latest.pkl" "runs/sxeval_p${R_TAG}${arm}/full_final_t${TH}" "$NCHIP" "$NFIN" \
+        --split test --t-total "$TH" $SUBFIN $HE
   fi
-  eval_sharded "full_${arm}_vsel_t${TH}_alt" "$VBCK" "runs/sxeval_p${R_TAG}${arm}/full_vsel_t${TH}_alt" "$NCHIP" 422786 \
-      --split test --t-total "$TH" $AE
-  # the field arms' depth row (EqR's D=64 column) on the vsel grid
-  is_field "$arm" && eval_sharded "full_${arm}_vsel_t64" "$VBCK" "runs/sxeval_p${R_TAG}${arm}/full_vsel_t64" "$NCHIP" 422786 \
-      --split test --t-total 64 $HE
-  # 20k breadth scan k128 at t64 (the protocol-table stats ride the records); X0n has none (descriptive rider)
-  [ "$arm" = X0n ] || eval_sharded "scan_${arm}" "$VBCK" "runs/sxscan_p${R_TAG}${arm}" "$NCHIP" "$SUB" \
-      --split test --subsample "$SUB" --t-total 64 --k-init 128 $HE
+  eval_sharded "full_${arm}_vsel_t${TH}_alt" "$VBCK" "runs/sxeval_p${R_TAG}${arm}/full_vsel_t${TH}_alt" "$NCHIP" "$NFIN" \
+      --split test --t-total "$TH" $SUBFIN $AE
+  # the depth row (EqR's D=64 column) on the vsel grid: full for the X0-class arms, 100k labeled for the wide arms
+  eval_sharded "full_${arm}_vsel_t64" "$VBCK" "runs/sxeval_p${R_TAG}${arm}/full_vsel_t64" "$NCHIP" "$ND64" \
+      --split test --t-total 64 $SUBD64 $HE
+  # the breadth scan at t64: 20k x k128 (the protocol) for the X0-class arms; 5k x k32, labeled, for the wide arms
+  eval_sharded "scan_${arm}" "$VBCK" "runs/sxscan_p${R_TAG}${arm}" "$NCHIP" "$NSC" \
+      --split test --subsample "$NSC" --t-total 64 --k-init "$KSC" $HE
   # explosion census on the vsel AND final grids (§4.5)
   census_one "census_${arm}_vsel" "$VBCK" "runs/sxcensus_p${R_TAG}${arm}_vsel" 3 $HE
   if [ "$VBCK" = "$D/ckpt_latest.pkl" ]; then
@@ -437,7 +452,10 @@ preflight || { echo "$SENT-PREFLIGHT-ABORT worker=$W $(date -u +%FT%TZ)"; exit 1
 for arm in $(worker_arms); do run_arm "$arm" || rc=1; done
 
 # ---------- completion (any worker; idempotent) ----------
-need="A0 A1 A2 A3 A4 A5"; [ "$NW" -ge 4 ] && need="$need A6"
+need="A0 A1 A2 A3 A4 A5"; [ "$NW" -ge 4 ] && need="$need A6"; [ "$NW" -ge 8 ] && need="$need A7 A8"
+not_awaited=""
+for o in $OPTIONAL_ARMS; do case " $need " in *" $o "*) ;; *) not_awaited="$not_awaited$o ";; esac; done   # a case pattern's ')' cannot live inside $( ) — bash parses it as the substitution's end
+echo "COMPLETION-SET nw=$NW need=[$need] optional-not-awaited=[$not_awaited] (a demotion drops optional arms; their live-banked state stays in $GCS/live for a re-promotion)"
 for pass in $(seq 1 "${C1_WAIT_PASSES:-200}"); do
   all=1
   for armx in $need; do gsutil -q stat "$GCS/${armx}_ARM_OK" 2>/dev/null || gsutil -q stat "$GCS/${armx}_SKIPPED" 2>/dev/null || all=0; done
