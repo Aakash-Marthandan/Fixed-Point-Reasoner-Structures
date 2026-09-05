@@ -4,6 +4,11 @@
 #   A0 X0 seed 2 (the NOISE FLOOR pair with sportC1's X0)      A3 DEC-w256, NO digit aug (THE arm)
 #   A1 X0 + FPA anchor rows (k1 eps.2 frac.25; A1's lift)      A4 DEC-w256 + digit aug (the redundancy control)
 #   A2 X0 + RI sigma 1 (EqR's own RI on the field loop)         A5 DEC-w256 + FPA + RI (the assembled objectives)
+#   A6 DEC-w512 (X0's parameter class, 5.37M), no digit aug, --remat — the WIDTH de-confound, on the 16's fourth
+#      worker only (the optional arm: SKIPPED, labeled, on the 8-shape or on a preflight failure)
+# PREFLIGHT (adversarial pass 2026-09-05): every worker first runs 60 full-batch steps of EACH arm it will run
+# (compile + pace read at the source); a core-arm failure aborts the night (stop-and-report), an optional-arm
+# failure skips that arm, labeled.
 # Every arm: the field regime (batch 768, wd 1.0, lr 1e-4 const, beta2 .95, EMA .999, stablemax, ACT), 50k
 # SOT steps, bf16 matmul (the field's precision), headline = EMA weights at D16 (EqR's base column), the
 # battery: fixed-step screens (15k/35k) + vb, fulls at vsel/final/alt (D16) + the D64 depth row, the 20k k128
@@ -11,7 +16,7 @@
 # 10k-resolution selection defect closed — --grid-every $MON). Derivative of chain_sportC2.sh (identical
 # mechanics: static worker map, ONE-SHOT NaN amputation, per-arm banking, idempotent markers, n-gated merges,
 # pt_run's ONE --remat retry on a launch-time HBM OOM, live 5-min GCS banking + fresh-node restore).
-# 4x4 static map: w0 A3 A0 · w1 A4 A1 · w2 A5 A2 · w3 (idle, completion poll). 1x8: A3 A4 A5 A0 A1 A2.
+# 4x4 static map: w0 A3 A0 · w1 A4 A1 · w2 A5 A2 · w3 A6. 1x8: A3 A4 A5 A0 A1 A2 (A6 skipped, labeled).
 # Harness: tools/harness_final.sh.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -28,6 +33,8 @@ S_A=$((STEPS_AB * 5 / 8)); S_B=$((STEPS_AB - S_A))
 STEPS_R=${C1_STEPS_R:-50000}            # R0: the field's 50k steps (batch 384)
 STEPS_X=${C1_STEPS_X:-50000}            # every arm: the field's 50k SOT steps (batch 768)
 DEC_W=${FINAL_DEC_W:-256}               # the DEC's per-field width (A-night)
+PF_STEPS=${C1_PF_STEPS:-60}             # preflight steps per arm config
+OPTIONAL_ARMS="A6"
 MON=${C1_MON:-2000}
 SOT_SEG=${C2_SOT_SEGMENTS:-4}
 SUB=${C1_SUB:-20000}; STRAT=${C1_STRAT:-512}
@@ -48,7 +55,7 @@ gsutil -q cp "$GCS/jax_cache.tgz" /tmp/jc.tgz 2>/dev/null && tar xzf /tmp/jc.tgz
 # harness S10 restore+RESUMED / S10b torn ckpt -> labeled fallback / S10c a banked arm's stale live copy is never
 # restored over its final). In-flight ckpt_latest / 5k grids / metrics / eval 300 s partials now survive a preemption
 # or node switch; restore runs on EVERY start (no-clobber pull on a fresh node, sanitize a torn ckpt_latest anywhere).
-LB_ARMS="A0 A1 A2 A3 A4 A5"
+LB_ARMS="A0 A1 A2 A3 A4 A5 A6"
 GCS="$GCS" R_TAG="$R_TAG" ARMS="$LB_ARMS" bash tools/live_bank.sh restore
 GCS="$GCS" R_TAG="$R_TAG" ARMS="$LB_ARMS" bash tools/live_bank.sh loop & LB_PID=$!
 trap 'kill "$LB_PID" 2>/dev/null' EXIT
@@ -70,6 +77,7 @@ arm_flags () {   # one variable per arm from its base (a later flag overrides an
     A3)  echo "$(dec_common) --seed 0";;
     A4)  echo "$(dec_common) --seed 0 --sudoku-digit-aug";;
     A5)  echo "$(dec_common) --seed 0 --fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25 --trm-ri-sigma 1.0";;
+    A6)  echo "$(dec_common) --seed 0 --dec-width 512 --remat";;
     *)   return 1;;
   esac
 }
@@ -83,6 +91,32 @@ select_key (){ echo val_t16_ema; }
 head_t ()    { echo 16; }                        # headline = EqR's D=16 column; the D64 row rides on every arm
 screen_steps () { echo "015000 035000"; }
 fetch_init () { return 0; }
+is_optional () { case " $OPTIONAL_ARMS " in *" $1 "*) return 0;; *) return 1;; esac; }
+worker_arms () {  # the arms THIS worker runs, in order
+  if [ "$NW" -ge 4 ]; then case $W in 0) echo "A3 A0";; 1) echo "A4 A1";; 2) echo "A5 A2";; 3) echo "A6";; esac
+  else echo "A3 A4 A5 A0 A1 A2"; fi
+}
+preflight () {  # 60 full-batch steps of every arm this worker will run: compile + pace at the source, before any arm
+  gsutil -q stat "$GCS/PREFLIGHT_OK_w$W" 2>/dev/null && { echo "PREFLIGHT-SKIP worker=$W"; return 0; }
+  local arm D FL rc ips
+  for arm in $(worker_arms); do
+    gsutil -q stat "$GCS/${arm}_ARM_OK" 2>/dev/null && continue
+    D=runs/preflight${R_TAG}_$arm; FL="$(arm_flags "$arm")" || { echo "BAD-ARM $arm"; return 1; }
+    ARM_PREC=$(arm_prec "$arm")
+    pt_run "$D.log" "pf-$arm" "$D" --out "$D" $FL --steps "$PF_STEPS" --ckpt-every "$PF_STEPS" --grid-every "$PF_STEPS" --monitor-every 0 --log-every 10; rc=$?
+    if [ $rc -ne 0 ] || ! nan_check "$D"; then
+      if is_optional "$arm"; then
+        echo "PREFLIGHT-FAILED $arm (rc=$rc) -> SKIPPED (optional arm, labeled)"; echo "preflight failed rc=$rc $(date -u +%FT%TZ)" | gsutil -q cp - "$GCS/${arm}_SKIPPED"
+      else
+        echo "PREFLIGHT-FAILED $arm (rc=$rc) -> the night stops here (core arm; stop-and-report)"; return 1
+      fi
+      continue
+    fi
+    ips=$(${REAL_PY:-python3} -c "import json; r=[json.loads(l) for l in open('$D/metrics.jsonl') if '\"loss\"' in l]; print(r[-1].get('steps_per_sec','nan') if r else 'nan')" 2>/dev/null)
+    echo "PREFLIGHT-OK $arm ${ips} it/s $(date -u +%H:%M)"
+  done
+  echo ok | gsutil -q cp - "$GCS/PREFLIGHT_OK_w$W"
+}
 
 nan_check () {  # DIR -> 0 clean / 1 non-finite tail or missing metrics (the trainer's NAN-ABORT rc=3 lands here too)
   ${REAL_PY:-python3} - "$1" <<'PYEOF'
@@ -308,6 +342,7 @@ screen () {  # ARM TAG CK CHIP — strat-512 k256 (+ majority) at the arm's head
 
 run_arm () {  # ARM — pretrain, then the battery (vsel select, screens, retfm, fulls vsel+final+alt, scan, census)
   local arm=$1 D=runs/pretrain${R_TAG}_$1
+  gsutil -q stat "$GCS/${arm}_SKIPPED" 2>/dev/null && { echo "ARM-SKIPPED $arm (labeled)"; return 0; }
   ARM_PREC=$(arm_prec "$arm")
   run_pretrain "$arm" || return 1
   ensure_local_pretrain "$arm"
@@ -398,28 +433,20 @@ calib_one () {  # NAME CK OUTDIR CHIP EXTRA — stall calibration (tools/stall_c
 
 # ---------- static assignment (plan §12.7) ----------
 rc=0
-if [ "$NW" -ge 4 ]; then
-  case $W in
-    0) run_arm A3 || rc=1; run_arm A0 || rc=1;;
-    1) run_arm A4 || rc=1; run_arm A1 || rc=1;;
-    2) run_arm A5 || rc=1; run_arm A2 || rc=1;;
-    3) echo "WORKER-3-IDLE (completion poll)";;
-  esac
-else
-  for arm in A3 A4 A5 A0 A1 A2; do run_arm "$arm" || rc=1; done   # 8-shape priority order (the DEC arms first)
-fi
+preflight || { echo "$SENT-PREFLIGHT-ABORT worker=$W $(date -u +%FT%TZ)"; exit 1; }
+for arm in $(worker_arms); do run_arm "$arm" || rc=1; done
 
 # ---------- completion (any worker; idempotent) ----------
-need="A0 A1 A2 A3 A4 A5"
+need="A0 A1 A2 A3 A4 A5"; [ "$NW" -ge 4 ] && need="$need A6"
 for pass in $(seq 1 "${C1_WAIT_PASSES:-200}"); do
   all=1
-  for armx in $need; do gsutil -q stat "$GCS/${armx}_ARM_OK" 2>/dev/null || all=0; done
+  for armx in $need; do gsutil -q stat "$GCS/${armx}_ARM_OK" 2>/dev/null || gsutil -q stat "$GCS/${armx}_SKIPPED" 2>/dev/null || all=0; done
   if [ "$all" -eq 1 ]; then
     if ! gsutil -q stat "$GCS/finalA_final.tgz" 2>/dev/null; then
       for f in $(gsutil ls "$GCS/evals/*.tgz" "$GCS"/*_pretrain.tgz 2>/dev/null); do
         b=$(basename "$f"); [ -f "/tmp/pull_$b" ] || { gsutil -q cp "$f" "/tmp/pull_$b" && tar xzf "/tmp/pull_$b" 2>/dev/null; }
       done
-      tar czf /tmp/finalA_final.tgz runs/pretrain${R_TAG}_* runs/sxscreen_p${R_TAG}* runs/sxeval_p${R_TAG}* runs/sxscan_p${R_TAG}* runs/sxcensus_p${R_TAG}* runs/sxcalib_p${R_TAG}* runs/sxscan_psportC1*_vselA20k runs/sxeval_psportC1B0/full_vselA20k_t64_ema 2>/dev/null
+      tar czf /tmp/finalA_final.tgz runs/pretrain${R_TAG}_* runs/preflight${R_TAG}_*.log runs/sxscreen_p${R_TAG}* runs/sxeval_p${R_TAG}* runs/sxscan_p${R_TAG}* runs/sxcensus_p${R_TAG}* runs/sxcalib_p${R_TAG}* runs/sxscan_psportC1*_vselA20k runs/sxeval_psportC1B0/full_vselA20k_t64_ema 2>/dev/null
       gsutil -q cp /tmp/finalA_final.tgz "$GCS/finalA_final.tgz"
     fi
     tar czf /tmp/jc.tgz jax_cache 2>/dev/null && gsutil -q cp /tmp/jc.tgz "$GCS/jax_cache.tgz" || true

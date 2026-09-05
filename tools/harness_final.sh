@@ -67,7 +67,9 @@ def flag(name, default=None):
 if tool.endswith("pretrain.py"):
     out = Path(flag("--out")); out.mkdir(parents=True, exist_ok=True)
     steps = int(flag("--steps", "100"))
-    base = out.name.replace("pretrainfinalA_", "")
+    base = out.name.replace("pretrainfinalA_", "").replace("preflightfinalA_", "")
+    if "preflight" in out.name and base == os.environ.get("STUB_PREFLIGHT_FAIL", ""):
+        print("XLA compile error: staged preflight failure", file=sys.stderr); sys.exit(1)
     latest = out / "ckpt_latest.pkl"   # S10: the trainer resumes from a local ckpt_latest (and crashes on a torn one)
     if latest.exists():
         try:
@@ -78,8 +80,9 @@ if tool.endswith("pretrain.py"):
         # S9: a LAUNCH-TIME HBM exhaustion — nothing logged, rc 1 (NOT a NaN death); the --remat retry succeeds
         # unless STUB_OOM_ALWAYS=1 (S9b: the arm OOMs even with --remat, e.g. one already launched on it)
         print("RESOURCE_EXHAUSTED: Out of memory while trying to allocate 17179869184 bytes.", file=sys.stderr); sys.exit(1)
-    is_nan = base == os.environ.get("STUB_NAN_ARM", "")
-    is_abort = base == os.environ.get("STUB_NANABORT_ARM", "")
+    arm_run = out.name.startswith("pretrainfinalA_")      # a mid-training NaN is staged in the ARM run only (a 60-step preflight never sees a step-25k death)
+    is_nan = arm_run and base == os.environ.get("STUB_NAN_ARM", "")
+    is_abort = arm_run and base == os.environ.get("STUB_NANABORT_ARM", "")
     cell = flag("--cell", "rg"); key = "val_t16" if cell in ("trm", "dec") else "val_t64"
     if "--ema" in argv: key_ema = key + "_ema"
     rows = []
@@ -158,7 +161,10 @@ run_chain () {  # W NW [extra VAR=val...]
 echo "== S1 fresh 1x8 =="
 mk_sandbox; run_chain 0 1
 grep -q "CHAIN-FINALA-COMPLETE" "$SB/w0.log" && ok "S1 complete sentinel" || { bad "S1 sentinel"; tail -8 "$SB/w0.log"; }
-n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" = 6 ] && ok "S1 6/6 arm markers" || bad "S1 arm markers ($n_ok)"
+n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" = 6 ] && ok "S1 6/6 core arm markers (A6 not run on the 8-shape)" || bad "S1 arm markers ($n_ok)"
+! grep -q "PRETRAIN-START A6" "$SB/w0.log" && [ ! -f "$SB/gcs/finalA/A6_ARM_OK" ] && ok "S1 A6 never runs on the 8-shape" || bad "S1 A6 ran on the 8-shape"
+[ "$(grep -c 'PREFLIGHT-OK' "$SB/w0.log")" = 6 ] && grep -q "PREFLIGHT-OK A3 99.0 it/s" "$SB/w0.log" && ok "S1 preflight of all six arms before any arm (pace read)" || { bad "S1 preflight"; grep PREFLIGHT "$SB/w0.log" | head -3; }
+first_pf=$(grep -n "PREFLIGHT-OK" "$SB/w0.log" | tail -1 | cut -d: -f1); first_arm=$(grep -n "PRETRAIN-START" "$SB/w0.log" | head -1 | cut -d: -f1); [ "$first_pf" -lt "$first_arm" ] && ok "S1 every preflight precedes the first arm" || bad "S1 preflight order"
 [ -f "$SB/gcs/finalA/finalA_final.tgz" ] && ok "S1 final tgz" || bad "S1 final tgz"
 allc=1; for a in A0 A1 A2 A3 A4 A5; do [ -f "$SB/gcs/finalA/evals/census_${a}_vsel_OK" ] && [ -f "$SB/gcs/finalA/evals/census_${a}_final_OK" ] || allc=0; done; [ $allc = 1 ] && ok "S1 census vsel+final on every arm" || bad "S1 census"
 allf=1; for a in A0 A1 A2 A3 A4 A5; do for r in full_${a}_vsel_t16 full_${a}_final_t16 full_${a}_vsel_t16_alt full_${a}_vsel_t64; do [ -f "$SB/gcs/finalA/evals/${r}_OK" ] || allf=0; done; done; [ $allf = 1 ] && ok "S1 fulls vsel+final+alt at D16 + the D64 depth row on every arm" || bad "S1 fulls"
@@ -184,6 +190,7 @@ echo "== S2 idempotent rerun =="
 (cd "$SB1/repo" && env PATH="$SB1/bin:$PATH" CHAIN_PY="$SB1/bin/stubpy" REAL_PY="$REAL_PY" CHAIN_WORKER=0 CHAIN_WORKERS=1 NCHIP_OVERRIDE=4 C1_STEPS_X=100 C1_WAIT_PASSES=3 C1_POLL_SLEEP=1 LIVE_NO_GUARD=1 bash tools/chain_final.sh > "$SB1/re.log" 2>&1)
 grep -q "CHAIN-FINALA-COMPLETE" "$SB1/re.log" && ok "S2 complete again" || bad "S2 complete"
 n_skip=$(grep -c "PRETRAIN-SKIP" "$SB1/re.log"); [ "$n_skip" = 6 ] && ok "S2 all pretrains skipped" || bad "S2 skips ($n_skip)"
+grep -q "PREFLIGHT-SKIP" "$SB1/re.log" && ok "S2 preflight idempotent" || bad "S2 preflight reran"
 [ "$(grep -c 'EVAL-OK\|CENSUS-OK\|CALIB-OK' "$SB1/re.log")" = 0 ] && ok "S2 no re-evals" || bad "S2 re-evals ran"
 
 echo "== S3 NaN one-shot (A2); the trainer's NAN-ABORT rc=3 (A1); S3d post-death screens never run =="
@@ -201,8 +208,12 @@ grep -q "AMPUTATED to ckpt_020000.pkl step 20000" "$SB/w0.log" && ok "S3d amputa
 echo "== S4 fresh 4x4 static map =="
 mk_sandbox; for w in 0 1 2 3; do run_chain $w 4 & done; wait
 if grep -q "CHAIN-FINALA-COMPLETE" "$SB"/w*.log; then ok "S4 complete from a worker"; else bad "S4 complete"; tail -3 "$SB"/w*.log; fi
-n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" = 6 ] && ok "S4 6/6 arms across the static map" || bad "S4 arms ($n_ok)"
-grep -q "PRETRAIN-START A3" "$SB/w0.log" && grep -q "PRETRAIN-START A4" "$SB/w1.log" && grep -q "PRETRAIN-START A5" "$SB/w2.log" && grep -q "WORKER-3-IDLE" "$SB/w3.log" && ok "S4 map: A3 w0 · A4 w1 · A5 w2 · w3 idle" || bad "S4 map"
+n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' '); [ "$n_ok" = 7 ] && ok "S4 7/7 arms across the static map (A6 on the 16)" || bad "S4 arms ($n_ok)"
+grep -q "PRETRAIN-START A3" "$SB/w0.log" && grep -q "PRETRAIN-START A4" "$SB/w1.log" && grep -q "PRETRAIN-START A5" "$SB/w2.log" && grep -q "PRETRAIN-START A6" "$SB/w3.log" && ok "S4 map: A3 w0 · A4 w1 · A5 w2 · A6 w3" || bad "S4 map"
+a6=$("$REAL_PY" -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['argv']))" "$SB/repo/runs/pretrainfinalA_A6/config.json")
+echo "$a6" | grep -q -- "--cell dec" && echo "$a6" | grep -q -- "--dec-width 512" && echo "$a6" | grep -q -- "--remat" && ! echo "$a6" | grep -q -- "--sudoku-digit-aug" && ok "S4r A6 = DEC w512, remat, no digit aug" || bad "S4r A6 flags: $a6"
+grep -q "PREFLIGHT-OK A6" "$SB/w3.log" && [ -f "$SB/gcs/finalA/PREFLIGHT_OK_w3" ] && ok "S4 A6 preflighted on its own worker" || bad "S4 A6 preflight"
+[ -f "$SB/gcs/finalA/evals/full_A6_vsel_t16_OK" ] && [ -f "$SB/gcs/finalA/evals/scan_A6_OK" ] && ok "S4 A6 full battery" || bad "S4 A6 battery"
 
 echo "== S5 select_ckpt failure -> LOUD fallback =="
 mk_sandbox; run_chain 0 1 STUB_SELECT_FAIL=A1
@@ -225,7 +236,7 @@ grep -q "PRETRAIN-OOM-RETRY-REMAT A3" "$SB/w0.log" && [ -f "$SB/repo/runs/pretra
 [ -f "$SB/gcs/finalA/A3_ARM_OK" ] && [ ! -f "$SB/repo/runs/pretrainfinalA_A3/STOPPED.txt" ] && ok "S9 A3 completed clean after the retry (no STOPPED label)" || bad "S9 A3 outcome"
 grep -q "CHAIN-FINALA-COMPLETE" "$SB/w0.log" && ok "S9 complete" || bad "S9 complete"
 mk_sandbox; run_chain 0 1 STUB_OOM_ARM=A3 STUB_OOM_ALWAYS=1
-if grep -q "PRETRAIN-OOM-RETRY-REMAT A3" "$SB/w0.log" && grep -q "AMPUTATE-FAILED" "$SB/w0.log" && [ ! -f "$SB/gcs/finalA/A3_ARM_OK" ] && grep -q "FINALA-INCOMPLETE" "$SB/w0.log"; then ok "S9b always-OOM: one retry, then AMPUTATE-FAILED + INCOMPLETE (stop-and-report, no silent ARM_OK)"; else bad "S9b always-OOM path"; grep -E 'OOM|AMPUTATE|INCOMPLETE|COMPLETE' "$SB/w0.log" | head -4; fi
+if grep -q "PRETRAIN-OOM-RETRY-REMAT pf-A3" "$SB/w0.log" && grep -q "PREFLIGHT-FAILED A3" "$SB/w0.log" && grep -q "FINALA-PREFLIGHT-ABORT" "$SB/w0.log" && [ ! -f "$SB/gcs/finalA/A3_ARM_OK" ] && ! grep -q "CHAIN-FINALA-COMPLETE" "$SB/w0.log" && ! grep -q "PRETRAIN-START" "$SB/w0.log"; then ok "S9b always-OOM: the preflight's own --remat retry fails too -> abort BEFORE any arm (stop-and-report, no silent ARM_OK)"; else bad "S9b always-OOM path"; grep -E 'OOM|PREFLIGHT|ABORT|COMPLETE' "$SB/w0.log" | head -4; fi
 
 echo "== S10 LIVE BANK: in-flight state in the live prefix, FRESH node -> pulled no-clobber, pretrain RESUMES, eval partial in place, loop banks + cleans up =="
 mk_sandbox
@@ -262,6 +273,15 @@ run_chain 0 1
 grep -q "banked arms excluded: .*pretrainfinalA_A0/" "$SB/w0.log" && grep -q "PRETRAIN-RESTORE A0 " "$SB/w0.log" && ok "S10c banked A0 excluded from the live pull; its tarball restored instead" || { bad "S10c exclusion"; grep -E 'LIVE|RESTORE' "$SB/w0.log" | head -4; }
 st=$("$REAL_PY" -c "import pickle,sys; print(pickle.load(open(sys.argv[1],'rb'))['step'])" "$SB/repo/runs/pretrainfinalA_A0/ckpt_latest.pkl" 2>/dev/null)
 [ "$st" = 100 ] && [ ! -f "$SB/repo/runs/pretrainfinalA_A0/ckpt_000007.pkl" ] && ok "S10c A0's local final is the banked step-100 grid; no stale step-7 files" || bad "S10c final grid (step=$st)"
+
+echo "== S11 PREFLIGHT negatives: the optional arm's failure is SKIPPED (labeled) and the night completes; a core arm's failure aborts before any arm =="
+mk_sandbox; for w in 0 1 2 3; do run_chain $w 4 STUB_PREFLIGHT_FAIL=A6 & done; wait
+grep -q "PREFLIGHT-FAILED A6 .*SKIPPED" "$SB/w3.log" && [ -f "$SB/gcs/finalA/A6_SKIPPED" ] && ok "S11 A6 preflight failure -> SKIPPED marker, labeled" || { bad "S11 A6 skip"; grep PREFLIGHT "$SB/w3.log" | head -3; }
+! grep -q "PRETRAIN-START A6" "$SB"/w*.log && [ ! -f "$SB/gcs/finalA/A6_ARM_OK" ] && ok "S11 A6 never trained" || bad "S11 A6 trained after a failed preflight"
+grep -q "CHAIN-FINALA-COMPLETE" "$SB"/w*.log && n_ok=$(ls "$SB/gcs/finalA/"*_ARM_OK | wc -l | tr -d ' ') && [ "$n_ok" = 6 ] && ok "S11 night completes with the six core arms" || bad "S11 completion ($n_ok)"
+mk_sandbox; run_chain 0 1 STUB_PREFLIGHT_FAIL=A3
+grep -q "PREFLIGHT-FAILED A3 .*stop-and-report" "$SB/w0.log" && grep -q "FINALA-PREFLIGHT-ABORT" "$SB/w0.log" && ok "S11b core-arm preflight failure -> abort, stop-and-report" || { bad "S11b abort"; grep -E 'PREFLIGHT|ABORT' "$SB/w0.log" | head -3; }
+[ -z "$(ls "$SB/gcs/finalA/"*_ARM_OK 2>/dev/null)" ] && ! grep -q "CHAIN-FINALA-COMPLETE" "$SB/w0.log" && ok "S11b no arm ran, no sentinel" || bad "S11b arms ran after the abort"
 
 echo; echo "harness: $PASS PASS / $FAIL FAIL"
 exit $([ "$FAIL" -eq 0 ] && echo 0 || echo 1)

@@ -152,3 +152,22 @@ def test_field_fpa_anchor_rows_on_both_field_cells():
     p_trm = M.init_params(jax.random.PRNGKey(0), TRM_TINY)["trm"]
     za = TC.embed_answer(p_trm, TRM_TINY, y[0]); H0, _ = TC.init_states(TRM_TINY)
     assert za.shape == (81 + TRM_TINY.trm_puzzle_emb_len, 32) and np.allclose(np.asarray(za[0]), np.asarray(H0))
+
+
+def test_dec_remat_is_numerically_equivalent():
+    """A6 trains with --remat (the chain's OOM path too): the checkpointed segment must reproduce the plain one."""
+    x, _ = _pair()
+    p = M.init_params(jax.random.PRNGKey(0), DEC_TINY)
+    outs, _, _, zc = M.iterate_eq(p, DEC_TINY, x, tau=1.0, t_total=2, return_z=True)
+    cr = Config(**{**DEC_TINY.__dict__, "remat": True})
+    outs_r, _, _, zr = M.iterate_eq(p, cr, x, tau=1.0, t_total=2, return_z=True)
+    for o, orr in zip(outs, outs_r):
+        assert np.allclose(np.asarray(o.logits), np.asarray(orr.logits), atol=1e-5)
+    assert np.allclose(np.asarray(zc), np.asarray(zr), atol=1e-5)
+    # and the gradient through the remat path is finite and matches
+    from qhrrn2.objective import pair_loss
+    _, y = _pair(); tv = jnp.zeros((DEC_TINY.d_task,), jnp.float32)
+    g0 = jax.grad(lambda p_: pair_loss(p_, DEC_TINY, x, y, tau=1.0, rng=None, task_vec=tv)[0])(p)
+    g1 = jax.grad(lambda p_: pair_loss(p_, cr, x, y, tau=1.0, rng=None, task_vec=tv)[0])(p)
+    n0 = float(sum(jnp.sum(jnp.abs(v)) for v in jax.tree.leaves(g0["dec"]))); n1 = float(sum(jnp.sum(jnp.abs(v)) for v in jax.tree.leaves(g1["dec"])))
+    assert n0 > 0 and abs(n0 - n1) / n0 < 1e-4

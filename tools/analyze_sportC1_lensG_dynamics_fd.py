@@ -9,10 +9,13 @@ from qhrrn2 import episodic as E, grid as G, model as M, sudoku as SU, sudoku_ex
 from qhrrn2.config import Config
 import eval_sudoku_extreme as EV
 N_PER_OCT = int(sys.argv[1]) if len(sys.argv) > 1 else 12; ITERS = 8; EPS = 1e-3
+# FINAL PHASE (2026-09-05): any field-loop checkpoint (X0 / A1 / the DEC arms) — argv[2] = ckpt path, argv[3] = tag
+CKPT = sys.argv[2] if len(sys.argv) > 2 else "runs/pretrainsportC1_X0/ckpt_latest.pkl"
+TAG = sys.argv[3] if len(sys.argv) > 3 else "X0fd_20260903"
 d = SX.load_prepared("data/sudoku_extreme/sudoku_extreme_seed0.npz"); Q, A, R = d["test_q"], d["test_a"], d["test_rating"]
 sel = SX.stratified_subsample(R, 512, 20260821); qs = np.quantile(R[sel], np.linspace(0, 1, 9)); qs[-1] += 1
 ids = np.concatenate([sel[(R[sel] >= qs[b]) & (R[sel] < qs[b+1])][:N_PER_OCT] for b in range(8)])
-saved = E.load_ckpt("runs/pretrainsportC1_X0/ckpt_latest.pkl"); defaults = Config()
+saved = E.load_ckpt(CKPT); defaults = Config()
 cfg = Config(**{k: type(getattr(defaults, k))(v) for k, v in saved["config"].items()}); st = saved["state_ema"]
 params = st["model"]; tvj = jnp.asarray(st["table"][0]); layout = cfg.sudoku_layout; cv = SU.layout_canvas(layout)
 puz9 = Q[ids].astype(np.int32); sol9 = jnp.asarray(A[ids].astype(np.int32)); B = len(ids)
@@ -47,4 +50,4 @@ o = dict(solved16=float(ex_t[15].mean()), solved64=float(solved.mean()), exact_v
          lam64_solved_median=float(np.median(lam[64][solved])), lam64_unsolved_median=(float(np.median(lam[64][~solved])) if (~solved).any() else None),
          unsolved_converged=int(np.sum(res_t[-1, ~solved] <= np.median(res_t[-1, solved]))), n_unsolved=int((~solved).sum()))
 print(f"X0 FD: solved@16 {100*o['solved16']:.1f} @64 {100*o['solved64']:.1f} | first_exact median {o['first_exact_median_solved']} | resid t64 solved {np.median(res_t[-1, solved]):.3g} unsolved {np.median(res_t[-1, ~solved]) if (~solved).any() else float('nan'):.3g} | lambda64 solved {o['lam64_solved_median']:.3f} unsolved {o['lam64_unsolved_median']} | converged-wrong {o['unsolved_converged']}/{o['n_unsolved']}", flush=True)
-Path("runs/analysis/sportC1_lensG_dynamics_X0fd_20260903.json").write_text(json.dumps(o)); print("X0-FD-DONE")
+Path(f"runs/analysis/sportC1_lensG_dynamics_{TAG}.json").write_text(json.dumps(o)); print(f"{TAG}-FD-DONE")

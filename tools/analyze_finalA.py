@@ -2,7 +2,9 @@
 # §3 Night A / §4); the launch registration locks these rules verbatim. Arms (one variable each, the field regime,
 # 50k SOT steps, EMA headline at D16 = EqR's base column): A0 (X0 seed 2: the NOISE FLOOR pair with sportC1's X0
 # seed 0) · A1 (X0 + FPA anchor rows) · A2 (X0 + RI sigma 1) · A3 (DEC-w256, no digit aug: THE arm) · A4 (DEC +
-# digit aug: the redundancy control) · A5 (DEC + FPA + RI).
+# digit aug: the redundancy control) · A5 (DEC + FPA + RI) · A6 (DEC-w512 = X0's parameter class, --remat, no digit
+# aug: the WIDTH de-confound; runs on the 16's fourth worker only — absent on the 8-shape or after a preflight failure,
+# labeled; registration AMENDED pre-data 2026-09-05 on the PI's adversarial pass).
 #   REFERENCES (the record, sportC1 verdict 2026-09-03 / sportC2 verdict 2026-09-05): X0 cold@D16 .8603, @D64 .9281,
 #     b1 .9212, t1r@128 .9248, verified@128 .9970; X1 (X0 - digit aug) cold@D16 .2120; EqR base 84.8 / D64 93.0;
 #     TRM-MLP 87.4. X0's spurious rate is READ from its banked sportC1 scan records when present (else the lens's
@@ -29,11 +31,13 @@
 #   R-A-4 DECODER-CLASS (every arm, from the scan's cold column): g50 = the logistic 50 % crossing of cold exact vs
 #     givens (None if no crossing in 17..35 or no rising fit); YIELD = cold solve rate on rating > 0 puzzles.
 #     DECIMATING iff g50 is None AND YIELD >= .70; SOFT iff g50 >= 24 AND YIELD <= .45; else MIXED.
-#   R-A-5 CARRY-TO-B (mechanical): CHAMP = argmax cold16 over STABLE non-memorized DEC arms {A3, A4, A5};
-#     B0 := A5 iff R-A-3 in {HELPS, FLAT} and SPURIOUS(A5) <= .01 (missing -> A3) else A3;
-#     AUG := carried iff R-A-0 in {FAILS, PARTIAL} else dropped.
+#   R-A-6 WIDTH (A6 vs A3): d = cold16(A6) - cold16(A3): WIDTH-HELPS (> 2 FLOOR) / HURTS (< -2 FLOOR) / FLAT;
+#     tags +PARITY-AT-D16 iff cold16(A6) >= .848; +PARITY iff cold64(A6) >= .920; A6 absent -> NO-DATA (labeled).
+#   R-A-5 CARRY-TO-B (mechanical): CHAMP = argmax cold16 over STABLE non-memorized DEC arms {A3, A4, A5, A6};
+#     B0 := A5's objective set iff R-A-3 in {HELPS, FLAT} and SPURIOUS(A5) <= .01 (missing -> A3's) else A3's;
+#     W := 512 iff R-A-6 reads WIDTH-HELPS else 256; AUG := carried iff R-A-0 in {FAILS, PARTIAL} else dropped.
 #   PREDICTIONS (pre-data): A0 cold16 [.850, .870]; A1 SPURIOUS < .01 and t1r >= .97, cold16 [.845, .875]; A2 cold16
-#     [.850, .870]; A3 cold16 [.70, .90]; A4 - A3 [-.02, .02]; A5 - A3 [-.01, .03].
+#     [.850, .870]; A3 cold16 [.70, .90]; A4 - A3 [-.02, .02]; A5 - A3 [-.01, .03]; A6 cold16 [.78, .93], A6 - A3 [0, .08].
 """
   .venv/bin/python tools/analyze_finalA.py            # -> runs/analysis/finalA_verdict.txt
   .venv/bin/python tools/analyze_finalA.py --selftest
@@ -48,16 +52,16 @@ RUNS = Path(os.environ.get("QHRRN_RUNS", ROOT / "runs"))
 NPZ = Path(os.environ.get("QHRRN_NPZ", ROOT / "data/sudoku_extreme/sudoku_extreme_seed0.npz"))
 OUT = RUNS / "analysis" / "finalA_verdict.txt"
 TAG = "finalA"
-X_ARMS = ["A0", "A1", "A2"]; DEC_ARMS = ["A3", "A4", "A5"]; ARMS = X_ARMS + DEC_ARMS
+X_ARMS = ["A0", "A1", "A2"]; DEC_ARMS = ["A3", "A4", "A5", "A6"]; ARMS = X_ARMS + DEC_ARMS
 X0_COLD16, X0_COLD64, X0_B1, X0_T1R, X0_V128, X1_COLD16 = 0.8603, 0.9281, 0.9212, 0.9248, 0.9970, 0.2120
 EQR_BASE, EQR_D64, TRM_MLP, X0_SPUR_CONST = 0.848, 0.930, 0.874, 0.078
 N_FULL, N_SCAN = 422786, 20000
 SCAN_PROTO = dict(t_total=64, k_init=128, subsample_seed=20260822)
 HEADLINE_T = 16
 PRED = {"A0": dict(cold16=(.850, .870)), "A1": dict(cold16=(.845, .875), spur=(0.0, .01), t1r=(.97, 1.0)), "A2": dict(cold16=(.850, .870)),
-        "A3": dict(cold16=(.70, .90)), "A4": dict(d_a3=(-.02, .02)), "A5": dict(d_a3=(-.01, .03))}
+        "A3": dict(cold16=(.70, .90)), "A4": dict(d_a3=(-.02, .02)), "A5": dict(d_a3=(-.01, .03)), "A6": dict(cold16=(.78, .93), d_a3=(0.0, .08))}
 DESC = {"A0": "X0 seed 2 (noise floor pair)", "A1": "X0 + FPA anchor rows", "A2": "X0 + RI sigma 1",
-        "A3": "DEC-w256, no digit aug", "A4": "DEC-w256 + digit aug (control)", "A5": "DEC-w256 + FPA + RI"}
+        "A3": "DEC-w256, no digit aug", "A4": "DEC-w256 + digit aug (control)", "A5": "DEC-w256 + FPA + RI", "A6": "DEC-w512 (X0's class), remat"}
 LINES = []
 def say(s=""): LINES.append(str(s)); print(s)
 def jload(p):
@@ -254,22 +258,32 @@ def analyze():
     # R-A-4 DECODER-CLASS
     V["R-A-4"] = " ".join(f"{a}:{rows[a]['cls']}" for a in ARMS)
     say(f"R-A-4 DECODER-CLASS: {V['R-A-4']}")
+    # R-A-6 WIDTH
+    if None in (c["A3"], c["A6"]): V["R-A-6"] = "NO-DATA" + ("" if c["A6"] is not None else " (A6 absent: 8-shape or preflight-skipped, labeled)")
+    else:
+        d = c["A6"] - c["A3"]
+        V["R-A-6"] = "WIDTH-HELPS" if d > 2 * FLOOR else ("WIDTH-HURTS" if d < -2 * FLOOR else "WIDTH-FLAT")
+        if c["A6"] >= EQR_BASE: V["R-A-6"] += "+PARITY-AT-D16"
+        if rows["A6"]["cold64"] is not None and rows["A6"]["cold64"] >= .920: V["R-A-6"] += "+PARITY"
+    say(f"R-A-6 WIDTH (A6 - A3 = {'-' if None in (c['A3'], c['A6']) else f'{c['A6'] - c['A3']:+.4f}'}; A6 cold64 {fpp(rows['A6']['cold64'])}): {V['R-A-6']}")
     # R-A-5 CARRY-TO-B
     cands = [a for a in DEC_ARMS if rows[a]["stable"] and not rows[a]["mem"] and c[a] is not None]
     champ = max(cands, key=lambda a: c[a]) if cands else None
     b0 = "A5" if (V["R-A-3"].startswith(("OBJ-HELPS", "OBJ-FLAT")) and rows["A5"]["spur"] is not None and rows["A5"]["spur"] <= .01) else "A3"
+    width = 512 if V["R-A-6"].startswith("WIDTH-HELPS") else 256
     aug = "carried" if V["R-A-0"].startswith(("EXACT-S9-FAILS", "EXACT-S9-PARTIAL")) else "dropped"
-    V["R-A-5"] = f"CHAMP:{champ or 'none'}|B0:={b0}|AUG:{aug}"
+    V["R-A-5"] = f"CHAMP:{champ or 'none'}|B0:={b0}|W:={width}|AUG:{aug}"
     say(f"R-A-5 CARRY-TO-B: {V['R-A-5']}" + (f" (champion cold16 {100*c[champ]:.2f}; memorized/unstable DEC arms excluded: {[a for a in DEC_ARMS if a not in cands]})" if champ else ""))
     # predictions
     say("\nPREDICTION SCOREBOARD (bands locked pre-data):")
     sc = {"A0": hm(c["A0"], PRED["A0"]["cold16"]), "A1": f"cold {hm(c['A1'], PRED['A1']['cold16'])} spur {hm(s1, PRED['A1']['spur'])} t1r {hm(t1, PRED['A1']['t1r'])}",
           "A2": hm(c["A2"], PRED["A2"]["cold16"]), "A3": hm(c["A3"], PRED["A3"]["cold16"]),
           "A4": hm(None if None in (c["A3"], c["A4"]) else c["A4"] - c["A3"], PRED["A4"]["d_a3"]),
-          "A5": hm(None if None in (c["A3"], c["A5"]) else c["A5"] - c["A3"], PRED["A5"]["d_a3"])}
+          "A5": hm(None if None in (c["A3"], c["A5"]) else c["A5"] - c["A3"], PRED["A5"]["d_a3"]),
+          "A6": f"cold {hm(c['A6'], PRED['A6']['cold16'])} d_a3 {hm(None if None in (c['A3'], c['A6']) else c['A6'] - c['A3'], PRED['A6']['d_a3'])}"}
     for a in ARMS: say(f"  {a}: {sc[a]}")
     V["PRED"] = sc
-    say("\nLETTERS: " + " · ".join(f"{k} {V[k]}" for k in ("INTEGRITY", "STABILITY", "MEMORIZATION", "R-A-0", "R-A-1", "R-A-2", "R-A-3", "R-A-5")))
+    say("\nLETTERS: " + " · ".join(f"{k} {V[k]}" for k in ("INTEGRITY", "STABILITY", "MEMORIZATION", "R-A-0", "R-A-1", "R-A-2", "R-A-3", "R-A-6", "R-A-5")))
     _write(); return V
 
 def _write():
@@ -328,12 +342,14 @@ def selftest():
         _mk(r, "A3", g, vc=.85, fc=.85, c64=.925, b1v=.91, v128v=.996, t1rv=.92, spur=.05)
         _mk(r, "A4", g, vc=.855, fc=.855, c64=.93, b1v=.91, v128v=.996, t1rv=.92, spur=.05)
         _mk(r, "A5", g, vc=.87, fc=.87, c64=.935, b1v=.92, v128v=.998, t1rv=.99, spur=.003)
+        _mk(r, "A6", g, vc=.89, fc=.89, c64=.94, b1v=.93, v128v=.998, t1rv=.93, spur=.05)
     v = run(wA)
     checks += [("A integrity", v["INTEGRITY"] == "PASS"), ("A floor = the .005 clamp (|A0 - X0| = .0023 below it)", v["FLOOR"] == .005),
                ("A orbit exact + parity at D16 + parity", v["R-A-0"] == "EXACT-S9-REPLACES-AUG+PARITY-AT-D16+PARITY"),
                ("A selector lift free", v["R-A-1"] == "LIFT-FREE"), ("A RI helps", v["R-A-2"] == "RI-HELPS"),
                ("A objectives help + clean", v["R-A-3"] == "OBJ-HELPS+SELECTOR-CLEAN"), ("A decimating class on every arm", all(x.endswith("DECIMATING") for x in v["R-A-4"].split())),
-               ("A carry: champ A5, B0 := A5, aug dropped", v["R-A-5"] == "CHAMP:A5|B0:=A5|AUG:dropped"),
+               ("A width helps + parity on the matched arm", v["R-A-6"] == "WIDTH-HELPS+PARITY-AT-D16+PARITY"),
+               ("A carry: champ A6, B0 := A5's objectives at w512, aug dropped", v["R-A-5"] == "CHAMP:A6|B0:=A5|W:=512|AUG:dropped"),
                ("A all stable, none memorized", v["STABILITY"] == "ALL-STABLE" and v["MEMORIZATION"] == "NONE")]
     def wB(r, g):  # kills: symmetry fails (A3 low, soft class, memorized); selector flat; RI hurts; objectives flat with a dirty selector; A2 stopped
         _mk(r, "A0", g, vc=.852, fc=.852, c64=.92, b1v=.92, v128v=.997, t1rv=.92, spur=.07)
@@ -346,7 +362,8 @@ def selftest():
     checks += [("B orbit fails", v["R-A-0"] == "EXACT-S9-FAILS"), ("B selector flat", v["R-A-1"] == "LIFT-FLAT"), ("B RI hurts", v["R-A-2"] == "RI-HURTS"),
                ("B objectives flat, selector dirty", v["R-A-3"] == "OBJ-FLAT"), ("B A3 soft class", "A3:SOFT" in v["R-A-4"] and "A5:SOFT" in v["R-A-4"]),
                ("B A3 memorized (end-CE + drop) labeled", v["MEMORIZATION"] == "MEMORIZED:A3"), ("B A2 unstable (STOPPED)", v["STABILITY"] == "UNSTABLE:A2"),
-               ("B carry: champ A4 (A3 memorized excluded), B0 := A3, aug carried", v["R-A-5"] == "CHAMP:A4|B0:=A3|AUG:carried")]
+               ("B width no-data (A6 absent, labeled)", v["R-A-6"].startswith("NO-DATA")),
+               ("B carry: champ A4 (A3 memorized excluded), B0 := A3, w256, aug carried", v["R-A-5"] == "CHAMP:A4|B0:=A3|W:=256|AUG:carried")]
     def wC(r, g):  # integrity breach: A1's scan on a different grid than its full
         wA(r, g); _mk(r, "A1", g, vc=.862, fc=.862, c64=.93, b1v=.92, v128v=.997, t1rv=.985, spur=.004, scan_ckpt=f"runs/pretrain{TAG}_A1/ckpt_030000.pkl")
     v = run(wC)
@@ -357,9 +374,13 @@ def selftest():
     v = run(wD)
     checks += [("D floor default", v["FLOOR"] == .01), ("D orbit partial (aug still adds 5 pp)", v["R-A-0"] == "EXACT-S9-PARTIAL"),
                ("D no-data rules named", v["R-A-1"] == "NO-DATA" and v["R-A-2"] == "NO-DATA" and v["R-A-3"] == "NO-DATA"),
-               ("D carry: champ A4, B0 := A3, aug carried", v["R-A-5"] == "CHAMP:A4|B0:=A3|AUG:carried")]
+               ("D carry: champ A4, B0 := A3, w256, aug carried", v["R-A-5"] == "CHAMP:A4|B0:=A3|W:=256|AUG:carried")]
     v = run(lambda r, g: None)
-    checks += [("E no data at all", v["R-A-0"] == "NO-DATA" and v["R-A-5"] == "CHAMP:none|B0:=A3|AUG:dropped")]
+    checks += [("E no data at all", v["R-A-0"] == "NO-DATA" and v["R-A-5"] == "CHAMP:none|B0:=A3|W:=256|AUG:dropped")]
+    def wF(r, g):  # width flat: the wide arm adds nothing beyond the floor -> W := 256 carried
+        wA(r, g); _mk(r, "A6", g, vc=.853, fc=.853, c64=.926, b1v=.92, v128v=.998, t1rv=.93, spur=.05)
+    v = run(wF)
+    checks += [("F width flat -> w256 carried, parity tags still on the matched arm", v["R-A-6"] == "WIDTH-FLAT+PARITY-AT-D16+PARITY" and "|W:=256|" in v["R-A-5"])]
     # the g50 fitter: a threshold decoder crosses at ~26; a givens-independent decoder has no crossing
     rng = np.random.default_rng(0); g = rng.integers(17, 36, size=5000)
     y_soft = (g >= 26) ^ (rng.random(5000) < .05); y_flat = rng.random(5000) < .9

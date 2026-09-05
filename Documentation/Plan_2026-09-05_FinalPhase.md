@@ -61,11 +61,12 @@
 | **A3** | **DEC-w256, no digit aug** (build §6.2) | X0's loop and regime | 50k | 2–2.5 h + evals | w1 |
 | **A4** | DEC-w256 **+ digit aug** (the redundancy control) | A3 | 50k | 2–2.5 h + evals | w1 |
 | **A5** | DEC-w256 + FPA + RI (the assembled objectives) | A3 | 50k | 2–2.5 h + evals | w1 |
+| **A6** (added 2026-09-05, adversarial pass) | **DEC-w512** = X0's parameter class (5.37M), `--remat`, no digit aug — the WIDTH de-confound of the symmetry result and the parity arm a night early | A3 | 50k | ≈ 8–10 h + evals (the long pole; the 16's fourth worker, otherwise idle) | w3 (16 only; SKIPPED, labeled, on the 8-shape) |
 | rider | BP and BP+decimation reference decoders (CPU, §6.5); the decoder lens on every A arm at analysis | — | — | — | Mac |
 
 Evals per arm (standing battery): full test at D16 and D64 (cold, EMA), 20k stratified k128 scan (b1, t1r@k, verified@k, per-draw exact bits + residuals), calibration rows (`stall_calibration.py`), census, monitors; the lens's thresholds / yield / dynamics / E3 at analysis time.
 
-**Predictions (bands locked at registration):** A0 within ±1.0 of X0 at D16 (the noise floor); A1 converged-wrong 3–6 % → < 1 %, t1r@128 92.5 → ≥ 97, cold within ±1.5 (SELECTOR-LIFT); A2 cold within ±1, ρ within ±1, selector AUC up (RI-ON-FIELD ∈ {FLAT, HELPS, HURTS}); **A3 cold@D16 ∈ [70, 90]** (X1's 21.2 is the floor; ≥ 61 = +40 over X1 reads ORBIT-EXACT; ≥ 84.8 = the EqR base → PARITY-AT-D16); A4 − A3 ∈ [−2, +2] (AUG-REDUNDANT); A5 − A3 ∈ [−1, +3] with converged-wrong < 1 %.
+**Predictions (bands locked at registration):** A0 within ±1.0 of X0 at D16 (the noise floor); A1 converged-wrong 3–6 % → < 1 %, t1r@128 92.5 → ≥ 97, cold within ±1.5 (SELECTOR-LIFT); A2 cold within ±1, ρ within ±1, selector AUC up (RI-ON-FIELD ∈ {FLAT, HELPS, HURTS}); **A3 cold@D16 ∈ [70, 90]** (X1's 21.2 is the floor; ≥ 61 = +40 over X1 reads ORBIT-EXACT; ≥ 84.8 = the EqR base → PARITY-AT-D16); A4 − A3 ∈ [−2, +2] (AUG-REDUNDANT); A5 − A3 ∈ [−1, +3] with converged-wrong < 1 %. **A6 cold@D16 ∈ [78, 93], A6 − A3 ∈ [0, +8] (WIDTH-HELPS expected; PARITY-AT-D16 on the matched arm 50 %).**
 
 ### Night B — Sep 10 → 11: "commitment" (≈ $200–300)
 
@@ -165,7 +166,7 @@ Build calendar: Sep 6 (Sat/Sun): items 1, 2, 6 (chain + harness), 7 (cadence); S
 
 ## §11. NIGHT A — REGISTERED 2026-09-05 (build complete; launch on the explicit PI go) + PRE-MORTEM AUDIT
 
-**Locked:** rules in `tools/analyze_finalA.py` (selftest 25/25); chain `tools/chain_final.sh`; harness `tools/harness_final.sh` 52/52; env `tools/campaign_final.env`; ledger §5 entry of this date. Gates: `tests/test_final.py` 5/5, suite 156 green, CPU smokes rc 0 on every tool, the X0 path bit-exact vs HEAD.
+**Locked (amended 2026-09-05, adversarial pass: A6 + preflight):** rules in `tools/analyze_finalA.py` (selftest 28/28); chain `tools/chain_final.sh` (7 arms; per-worker preflight); harness `tools/harness_final.sh` 64/64; env `tools/campaign_final.env`; ledger §5 entries of this date. Gates: `tests/test_final.py` 6/6 (incl. remat equivalence), suite 156 green, CPU smokes rc 0 on every tool, the X0 path bit-exact vs HEAD, the CPU learning check (PM-A-14).
 
 **Pre-mortem (run after the harness, before the go; each item names its countermeasure):**
 - **PM-A-1 HBM at w256 under DP-4 (v6e-16 workers, 192 rows/chip).** Activations per stack pass ≈ 192 × 729 tokens × ~2.3k floats ≈ 1.3 GB, ~14 live passes under the last-H-cycle gradient ≈ 18 GB of 32 GB: borderline. Countermeasure: `pt_run`'s ONE `--remat` retry (harness S9), now honoured by the DEC's segment (`jax.checkpoint` per stack pass); on the 1×8 fallback the per-chip batch halves.
@@ -177,4 +178,8 @@ Build calendar: Sep 6 (Sat/Sun): items 1, 2, 6 (chain + harness), 7 (cadence); S
 - **PM-A-7 bf16 numerics of the padded logits:** −1e4 is representable in bf16; stablemax at −1e4 gives s ≈ 1e-4 (finite gradient); the smokes ran in f32 on CPU — the first TPU log lines (finite loss at step 5) are the check.
 - **PM-A-8 The launch procedure (owed since sportC2):** `cp tools/campaign_final.env tools/campaign.env` → bump `runs/tpu_deadline.txt` (in the PAST now) → `bash tools/pod.sh supervise` with `caffeinate -s` on AC → `plant_guard` per node → Monitor + hourly heartbeat; the DMS past the deadline; the analyzer never runs in the ops phase.
 - **PM-A-9 The harness stub cannot see a TPU-only runtime failure of the new cell** (compile, sharding, bf16): the chain's canary + the first PRETRAIN-START log of A3 are read at the source within 15 min of launch, per the standing verify-at-source rule.
+- **PM-A-11 (adversarial pass, 2026-09-05) Width confound + the idle worker.** Night A's symmetry contrast at w256 (1.44M) against a 5.04M field cell would have left "the DEC is weaker because it is narrower" open; A6 (w512 = X0's class, remat) closes it on the 16's otherwise idle fourth worker; on the 8-shape it is SKIPPED, labeled, and Night B's B3 covers it.
+- **PM-A-12 Preflight.** Every worker runs 60 full-batch steps of each arm it will run before any arm (compile, HBM, pace at the source); a core-arm failure aborts the night as stop-and-report, an optional-arm failure skips it (harness S11/S11b); the measured it/s lines re-price the walls before the first arm.
+- **PM-A-13 The remat path of the new cell** is numerically equivalent to the plain one (tests/test_final.py::test_dec_remat_is_numerically_equivalent), so A6's `--remat` and the OOM retry never change a result.
+- **PM-A-14 Learning check on CPU** (before the go): the DEC-tiny and the field cell-tiny under the identical loop for 1,500 steps on a 64-puzzle corpus — the DEC's cross-entropy must fall comparably (a build that compiles but does not learn is the failure this catches).
 - **PM-A-10 Seeds:** A0 is the only pair; every A-night contrast is single-seed by design and the floor rule reads FLAT inside 2×FLOOR — Night B seeds the claim-bearing arm.
