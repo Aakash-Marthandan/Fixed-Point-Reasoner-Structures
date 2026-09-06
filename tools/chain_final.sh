@@ -364,8 +364,11 @@ census_one () {  # NAME CK OUTDIR CHIP EXTRA — the explosion census (§4.5), i
 }
 
 screen () {  # ARM TAG CK CHIP — strat-512 k256 (+ majority) at the arm's headline depth/weights
+  # 2026-09-06 09:05Z (two-pod mode, measured): a single-chip screen costs 1.6 h at w384 and ~2.5 h at w512 (k256 draws)
+  # — the wide arms' pole on an 8. SHARDED over the pod's chips like every full/scan (contiguous splits of the
+  # stratified selection; the merge carries the vote/t1r keys), n-gated at $STRAT; the marker name is unchanged.
   local arm=$1 tag=$2 CK=$3 chip=$4
-  eval_one "screen_${arm}_${tag}" "$CK" "runs/sxscreen_p${R_TAG}${arm}_${tag}" "$chip" \
+  eval_sharded "screen_${arm}_${tag}" "$CK" "runs/sxscreen_p${R_TAG}${arm}_${tag}" "$NCHIP" "$STRAT" \
     --split test --stratified "$STRAT" --t-total "$(head_t "$arm")" --k-init 256 --vote-unverified $(head_ema "$arm")
 }
 
