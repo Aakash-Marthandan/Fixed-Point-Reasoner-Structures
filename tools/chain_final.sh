@@ -318,7 +318,7 @@ eval_one () {  # NAME CK OUTDIR CHIP EXTRA... — chip-pinned single eval, idemp
   local name=$1 CK=$2 O=$3 chip=$4; shift 4
   gsutil -q stat "$GCS/evals/${name}_OK" 2>/dev/null && { echo "EVAL-SKIP $name"; return 0; }
   mkdir -p "$O"
-  pin "$chip" $PY tools/eval_sudoku_extreme.py --ckpt "$CK" --npz "$NPZ" --out "$O" "$@" > "$O/run.log" 2>&1 \
+  pin "$chip" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/eval_sudoku_extreme.py --ckpt "$CK" --npz "$NPZ" --out "$O" "$@" > "$O/run.log" 2>&1 \
     || { echo "EVAL-FAILED $name"; return 1; }
   [ -f "$O/summary_all.json" ] || $PY tools/eval_sudoku_extreme.py --merge "$O" >> "$O/run.log" 2>&1
   tar czf "/tmp/${name}.tgz" "$O" && gsutil -q cp "/tmp/${name}.tgz" "$GCS/evals/${name}.tgz"
@@ -331,7 +331,7 @@ eval_sharded () {  # NAME CK OUTDIR NSH NGATE EXTRA... — NSH-way sharded over 
   gsutil -q stat "$GCS/evals/${name}_OK" 2>/dev/null && { echo "EVAL-SKIP $name"; return 0; }
   mkdir -p "$O"; local pids=() rc=0
   for i in $(seq 0 $((NSH - 1))); do
-    pin $((i % NCHIP)) $PY tools/eval_sudoku_extreme.py --ckpt "$CK" --npz "$NPZ" --out "$O" \
+    pin $((i % NCHIP)) ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/eval_sudoku_extreme.py --ckpt "$CK" --npz "$NPZ" --out "$O" \
         --shard "$i/$NSH" --bank-every 300 "$@" > "$O/shard_$i.log" 2>&1 & pids+=($!)
   done
   for p in "${pids[@]}"; do wait "$p" || rc=1; done
@@ -356,7 +356,7 @@ census_one () {  # NAME CK OUTDIR CHIP EXTRA — the explosion census (§4.5), i
   local name=$1 CK=$2 O=$3 chip=$4; shift 4
   gsutil -q stat "$GCS/evals/${name}_OK" 2>/dev/null && { echo "CENSUS-SKIP $name"; return 0; }
   mkdir -p "$O"
-  pin "$chip" $PY tools/explosion_census.py --ckpt "$CK" --npz "$NPZ" --out "$O" --name "$name" "$@" > "$O/run.log" 2>&1 \
+  pin "$chip" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/explosion_census.py --ckpt "$CK" --npz "$NPZ" --out "$O" --name "$name" "$@" > "$O/run.log" 2>&1 \
     || { echo "CENSUS-FAILED $name"; return 1; }
   tar czf "/tmp/${name}.tgz" "$O" && gsutil -q cp "/tmp/${name}.tgz" "$GCS/evals/${name}.tgz"
   echo ok | gsutil -q cp - "$GCS/evals/${name}_OK"
@@ -438,6 +438,10 @@ run_arm () {  # ARM — pretrain, then the battery (vsel select, screens, retfm,
   # the depth row (EqR's D=64 column) on the vsel grid: full for the X0-class arms, 100k labeled for the wide arms
   eval_sharded "full_${arm}_vsel_t64" "$VBCK" "runs/sxeval_p${R_TAG}${arm}/full_vsel_t64" "$NCHIP" "$ND64" \
       --split test --t-total 64 $SUBD64 $HE
+  # WIDE-ARM EVAL TIMEOUT (2026-09-06, measured at the source): the DEC-cell multi-draw scan deadlocks (futex_wait, 795 threads, 7.7GB, 0 progress
+  # in 34 min); A7 census/calib did NOT hang, only the scan. Bound the wide arms' scan/census/calib so a hang self-terminates (EVAL-SHARD/CENSUS/
+  # CALIB-FAILED -> the arm proceeds without that row) instead of stalling the pod. Field-cell scans (A1/A2, ~3h) UNBOUNDED; fulls/D64/screens unbounded.
+  if is_wide "$arm"; then export EVAL_TIMEOUT="${WIDE_EVAL_TIMEOUT:-1800}"; else unset EVAL_TIMEOUT; fi
   # the breadth scan at t64: 20k x k128 (the protocol) for the X0-class arms; 5k x k32, labeled, for the wide arms
   eval_sharded "scan_${arm}" "$VBCK" "runs/sxscan_p${R_TAG}${arm}" "$NCHIP" "$NSC" \
       --split test --subsample "$NSC" --t-total 64 --k-init "$KSC" $HE
@@ -451,6 +455,7 @@ run_arm () {  # ARM — pretrain, then the battery (vsel select, screens, retfm,
   fi
   # sportC2: the stall-calibration instrument on the vsel grid (R3's rule; standing on every arm)
   calib_one "calib_${arm}_vsel" "$VBCK" "runs/sxcalib_p${R_TAG}${arm}_vsel" 3 $HE
+  unset EVAL_TIMEOUT
   echo ok | gsutil -q cp - "$GCS/${arm}_ARM_OK"
   echo "ARM-OK $arm $(date -u +%H:%M)"
 }
@@ -459,7 +464,7 @@ calib_one () {  # NAME CK OUTDIR CHIP EXTRA — stall calibration (tools/stall_c
   local name=$1 CK=$2 O=$3 chip=$4; shift 4
   gsutil -q stat "$GCS/evals/${name}_OK" 2>/dev/null && { echo "CALIB-SKIP $name"; return 0; }
   mkdir -p "$O"
-  pin "$chip" $PY tools/stall_calibration.py --ckpt "$CK" --npz "$NPZ" --out "$O" "$@" > "$O/run.log" 2>&1 \
+  pin "$chip" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/stall_calibration.py --ckpt "$CK" --npz "$NPZ" --out "$O" "$@" > "$O/run.log" 2>&1 \
     || { echo "CALIB-FAILED $name"; return 1; }
   tar czf "/tmp/${name}.tgz" "$O" && gsutil -q cp "/tmp/${name}.tgz" "$GCS/evals/${name}.tgz"
   echo ok | gsutil -q cp - "$GCS/evals/${name}_OK"

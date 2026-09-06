@@ -54,6 +54,7 @@ esac
 SH
   chmod +x "$SB/bin/gsutil"
   printf '#!/bin/bash\necho "gcloud-stub $*"; exit 0\n' > "$SB/bin/gcloud"; chmod +x "$SB/bin/gcloud"
+  printf '#!/bin/bash\nshift\nexec "$@"\n' > "$SB/bin/timeout"; chmod +x "$SB/bin/timeout"   # node has real timeout; the harness shim strips the duration (wide-arm EVAL_TIMEOUT guard)
   cat > "$SB/bin/stubpy" <<'PYEOF'
 #!/usr/bin/env python3
 import json, os, pickle, sys
