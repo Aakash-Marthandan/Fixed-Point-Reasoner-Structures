@@ -112,7 +112,7 @@ is_wide ()     { case $1 in A3|A4|A5|A6|A7|A8) return 0;; *) return 1;; esac; } 
 worker_arms () {  # the arms THIS worker runs, in order
   if [ "$NW" -ge 8 ]; then case $W in 0) echo "A3";; 1) echo "A4";; 2) echo "A5";; 3) echo "A6";; 4) echo "A7";; 5) echo "A8";; 6) echo "A0 A1";; 7) echo "A2";; esac
   elif [ "$NW" -ge 4 ]; then case $W in 0) echo "A3";; 1) echo "A4";; 2) echo "A5";; 3) echo "A6 A0 A1 A2";; esac   # 13:30Z re-map (below)
-  else echo "A0 A3 A1 A2 A4 A5"; fi   # 1x8 = science per hour (18:05Z, after the 17:45Z preemption): the floor and the field ledger first, the expensive wide arms last
+  else echo "${FINAL_ARMS_1X8:-A0 A3 A1 A2 A4 A5}"; fi   # TWO-POD mode: each 8 runs its own list (FINAL_ARMS_1X8 from the env); default 1x8 = science per hour (18:05Z, after the 17:45Z preemption): the floor and the field ledger first, the expensive wide arms last
 }
 preflight () {  # 60 full-batch steps of every arm this worker will run: compile + pace at the source, before any arm
   gsutil -q stat "$GCS/PREFLIGHT_OK_w${W}_nw${NW}" 2>/dev/null && { echo "PREFLIGHT-SKIP worker=$W nw=$NW"; return 0; }
@@ -470,6 +470,7 @@ for arm in $(worker_arms); do run_arm "$arm" || rc=1; done
 
 # ---------- completion (any worker; idempotent) ----------
 need="A0 A1 A2 A3 A4 A5"; [ "$NW" -ge 4 ] && need="$need A6"; [ "$NW" -ge 8 ] && need="$need A7 A8"
+[ -n "${FINAL_NEED_EXTRA:-}" ] && need="$need $FINAL_NEED_EXTRA"   # TWO-POD mode: the other pod's arms are awaited too (both pods share the bucket)
 not_awaited=""
 for o in $OPTIONAL_ARMS; do case " $need " in *" $o "*) ;; *) not_awaited="$not_awaited$o ";; esac; done   # a case pattern's ')' cannot live inside $( ) — bash parses it as the substitution's end
 echo "COMPLETION-SET nw=$NW need=[$need] optional-not-awaited=[$not_awaited] (a demotion drops optional arms; their live-banked state stays in $GCS/live for a re-promotion)"

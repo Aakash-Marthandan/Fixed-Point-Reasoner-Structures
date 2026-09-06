@@ -5,7 +5,7 @@
 # high on the field loop), the age of the last row, the live pretrain/eval processes and the chain's last marker line;
 # STALE = a live trainer whose last row is older than 12 min; NO-PROC = no trainer/eval alive and no ARM-OK on that worker.
 cd "$(dirname "$0")/.." || exit 1
-source tools/campaign.env
+source "${POD_ENV:-tools/campaign.env}"
 INTERVAL=${NIGHT_CHECK_INTERVAL:-900}
 ZONE=us-east1-d   # overwritten by the per-check discovery below
 NW=${NIGHT_CHECK_WORKERS:-4}

@@ -275,6 +275,15 @@ grep -q "RESUMED from runs/pretrainfinalA_A4/ckpt_latest.pkl at step 40" "$SB/re
 grep -q "PRETRAIN-SKIP A3" "$SB/w0.log" && [ "$(grep -c 'PREFLIGHT-OK' "$SB/w0.log")" = 5 ] && ! grep -q "PREFLIGHT-OK A3" "$SB/w0.log" && ok "S12b banked A3 skipped everywhere; the five unbanked arms preflighted on the 8" || { bad "S12b skip/preflight"; grep -E 'PREFLIGHT|SKIP' "$SB/w0.log" | head -4; }
 grep -q "CHAIN-FINALA-COMPLETE" "$SB/w0.log" && [ "$(ls "$SB/gcs/finalA/"*_ARM_OK | wc -l | tr -d ' ')" = 6 ] && ok "S12b completes with the 8's six arms" || bad "S12b completion"
 
+echo "== S14 TWO-POD mode: a single-worker chain runs ITS list (FINAL_ARMS_1X8) and awaits the other pod's arms (FINAL_NEED_EXTRA) =="
+mk_sandbox; for a in A0 A1 A2 A3 A4; do echo ok > "$SB/gcs/finalA/${a}_ARM_OK"; done; echo skip > "$SB/gcs/finalA/A6_SKIPPED"
+( cd "$SB/repo" && env PATH="$SB/bin:$PATH" CHAIN_PY="$SB/bin/stubpy" REAL_PY="$REAL_PY" CHAIN_WORKER=0 CHAIN_WORKERS=1 NCHIP_OVERRIDE=4 C1_STEPS_X=100 C1_WAIT_PASSES=2 C1_POLL_SLEEP=1 LIVE_NO_GUARD=1 FINAL_ARMS_1X8="A7 A5" FINAL_NEED_EXTRA="A7 A8" bash tools/chain_final.sh > "$SB/w0.log" 2>&1 )
+grep -q "PRETRAIN-START A7" "$SB/w0.log" && ! grep -q "PRETRAIN-START A3" "$SB/w0.log" && [ -f "$SB/gcs/finalA/A7_ARM_OK" ] && ok "S14 pod A ran ITS list (A7, then the banked A5 skipped) and not the default order" || { bad "S14 list"; grep -E "PRETRAIN|SKIP" "$SB/w0.log" | head -4; }
+grep -q "COMPLETION-SET nw=1 need=\[A0 A1 A2 A3 A4 A5 A7 A8\]" "$SB/w0.log" && ! grep -q "CHAIN-FINALA-COMPLETE" "$SB/w0.log" && grep -q "FINALA-INCOMPLETE" "$SB/w0.log" && ok "S14 awaits the other pod's A8 (no sentinel while it is missing)" || { bad "S14 need-extra"; grep -E "COMPLETION|COMPLETE" "$SB/w0.log" | head -3; }
+echo ok > "$SB/gcs/finalA/A8_ARM_OK"
+( cd "$SB/repo" && env PATH="$SB/bin:$PATH" CHAIN_PY="$SB/bin/stubpy" REAL_PY="$REAL_PY" CHAIN_WORKER=0 CHAIN_WORKERS=1 NCHIP_OVERRIDE=4 C1_STEPS_X=100 C1_WAIT_PASSES=2 C1_POLL_SLEEP=1 LIVE_NO_GUARD=1 FINAL_ARMS_1X8="A7 A5" FINAL_NEED_EXTRA="A7 A8" bash tools/chain_final.sh > "$SB/w0b.log" 2>&1 )
+grep -q "CHAIN-FINALA-COMPLETE" "$SB/w0b.log" && [ -f "$SB/gcs/finalA/finalA_final.tgz" ] && ok "S14 completes once the other pod's arm is banked; the final tgz assembles from the shared bucket" || bad "S14 completion"
+
 echo "== S5 select_ckpt failure -> LOUD fallback =="
 mk_sandbox; run_chain 0 1 STUB_SELECT_FAIL=A1
 grep -q "VB-FALLBACK-FINAL A1" "$SB/w0.log" && grep -q "FALLBACK-FINAL" "$SB/repo/runs/pretrainfinalA_A1/val_best.txt" && ok "S5 fallback echoed + labeled" || bad "S5 fallback"

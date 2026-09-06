@@ -13,7 +13,7 @@
 #   usage: bash tools/plant_guard.sh [attempts]   (default 10, 45s apart)
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
-source tools/campaign.env
+source "${POD_ENV:-tools/campaign.env}"
 DL=$(cat runs/tpu_deadline.txt)
 DMS_MIN=${DMS_MIN:-780}
 ATTEMPTS=${1:-10}

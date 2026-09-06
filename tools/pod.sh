@@ -43,19 +43,19 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 export PATH="$PWD/.venv/bin:$PATH"
 # shellcheck source=campaign.env
-source tools/campaign.env
+source "${POD_ENV:-tools/campaign.env}"   # TWO-POD mode (PI 2026-09-06): each supervisor reads its own env (POD_ENV) and keeps per-POD state files
 # shellcheck source=r0_tasks.sh
 source tools/r0_tasks.sh          # VH RG RB RT
 PY=.venv/bin/python
 PROJECT=quantum-llm
 LOG=${POD_LOG:-runs/pod_${POD}.log}          # overridable ONLY for the offline harness
-PIDF=${POD_PIDF:-runs/pod_supervisor.pid}
+PIDF=${POD_PIDF:-runs/pod_${POD}_supervisor.pid}
 POLL=${POLL:-300}
 ACCELS=${ACCEL_LIST:-$ACCEL}                 # hunt order; the last entry is the fallback
 BIG_MAX_STRIKES=${BIG_MAX_STRIKES:-2}
-WFILE=${POD_WFILE:-runs/pod_workers.txt}     # workers of the LIVE node (written at create; read on adopt)
-AFILE=${POD_AFILE:-runs/pod_accel.txt}       # accelerator of the LIVE node
-SFILE=${POD_SFILE:-runs/pod_strikes.txt}     # big-accelerator strikes (persist across supervisor restarts)
+WFILE=${POD_WFILE:-runs/pod_${POD}_workers.txt}     # workers of the LIVE node (written at create; read on adopt)
+AFILE=${POD_AFILE:-runs/pod_${POD}_accel.txt}       # accelerator of the LIVE node
+SFILE=${POD_SFILE:-runs/pod_${POD}_strikes.txt}     # big-accelerator strikes (persist across supervisor restarts)
 WDONE_MARK="${SENTINEL%COMPLETE}WORKER-DONE"  # per-worker "my share is done" marker (multi-host chains)
 CHAIN_CMD="${CHAIN_EXTRA_ENV:+$CHAIN_EXTRA_ENV }R_TAG='$R_TAG' R_D='$R_D' R_STEPS='$R_STEPS' R0_ARMS='$ARMS' bash ${CHAIN_SCRIPT:-tools/chain_r0.sh} $VH $RG $RB $RT"
 
