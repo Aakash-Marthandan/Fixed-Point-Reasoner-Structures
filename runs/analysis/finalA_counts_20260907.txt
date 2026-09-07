@@ -1,0 +1,150 @@
+
+### A0  dir=present
+  ckpt_latest: yes | banked grids: 25 [2000..50000] | metrics.jsonl: yes
+  resumes.txt: '27000'
+  config: cell_kind=trm, dec_width=256, trm_hidden=512, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=False, T=16, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6
+  argv: {'out': 'runs/pretrainfinalA_A0', 'steps': 50000, 'd': 16, 'equilibrium': True, 'anchor_p': 0.0, 'anchor_eps': 0.15, 'ri_p': 0.0, 'ni_sigma': 0.0, 'eq_coupled': False, 'flux_floors': None, 'beta_flux': 0.0, 'beta_flux_nl': 0.0, 'eta_floor': 0.0, 'z_gate_init': 0.0, 'K': 64, 'T': 16, 'batch': 768, 'lr': 0.0001, 'lr_end': 0.0001, 'warmup': 2000, 'wd': 1.0, 'tau': 1.0, 'seed': 1, 'n_val': 20, 'ckpt_e
+  ckpt: step=50000 params=5037061 cell=trm dec_width=256 digit_aug=None fpa_k=0 ri=0.0 seed=None remat=False ema=yes
+  metrics: 1008 loss rows (last step 50000), 25 monitors (steps 2000..50000; keys ['eta', 'eta_z', 'n_val', 'step', 'val_t16', 'val_t16_ema', 'wall_s'])
+  full_vsel_t16     : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A0/ckpt_040000.pkl shard=merged recs=yes
+  full_final_t16    : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A0/ckpt_latest.pkl shard=merged recs=yes
+  full_vsel_t16_alt : n=422786 t=16 k=0 sub=None ema=False ckpt=runs/pretrainfinalA_A0/ckpt_040000.pkl shard=merged recs=yes
+  full_vsel_t64     : n=422786 t=64 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A0/ckpt_040000.pkl shard=merged recs=yes
+  scan              : n=20000 t=64 k=128 sub=20000 seed=20260822 ema=True ckpt=runs/pretrainfinalA_A0/ckpt_040000.pkl recs=yes
+  screen_vb           : n=512 t=16 k=256 strat=512 ema=True ckpt=runs/pretrainfinalA_A0/ckpt_040000.pkl uv=True
+  census_vsel       : rows t=[64, 256] ckpt=runs/pretrainfinalA_A0/ckpt_040000.pkl
+  census_final      : rows t=[64, 256] ckpt=runs/pretrainfinalA_A0/ckpt_latest.pkl
+  calib_vsel        : keys=['ckpt', 'cold', 'conf_wrong_frac_stalled', 'ema', 'entropy_step1', 'entropy_t_solved', 'entropy_t_stalled', 'hard_feedback', 'inner_k', 'mean_conf_stalled'] ckpt=runs/pretrainfinalA_A0/ckpt_040000.pkl n_stalled=35
+
+### A1  dir=present
+  ckpt_latest: yes | banked grids: 25 [2000..50000] | metrics.jsonl: yes
+  val_best.txt: '042000 0.9062 42000'
+  config: cell_kind=trm, dec_width=256, trm_hidden=512, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=False, T=16, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6
+  argv: {'out': 'runs/pretrainfinalA_A1', 'steps': 50000, 'd': 16, 'equilibrium': True, 'anchor_p': 0.0, 'anchor_eps': 0.15, 'ri_p': 0.0, 'ni_sigma': 0.0, 'eq_coupled': False, 'flux_floors': None, 'beta_flux': 0.0, 'beta_flux_nl': 0.0, 'eta_floor': 0.0, 'z_gate_init': 0.0, 'K': 64, 'T': 16, 'batch': 768, 'lr': 0.0001, 'lr_end': 0.0001, 'warmup': 2000, 'wd': 1.0, 'tau': 1.0, 'seed': 0, 'n_val': 20, 'ckpt_e
+  ckpt: step=50000 params=5037061 cell=trm dec_width=256 digit_aug=None fpa_k=1 ri=0.0 seed=None remat=False ema=yes
+  metrics: 1000 loss rows (last step 50000), 25 monitors (steps 2000..50000; keys ['eta', 'eta_z', 'n_val', 'step', 'val_t16', 'val_t16_ema', 'wall_s'])
+  full_vsel_t16     : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A1/ckpt_042000.pkl shard=merged recs=yes
+  full_final_t16    : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A1/ckpt_latest.pkl shard=merged recs=yes
+  full_vsel_t16_alt : n=422786 t=16 k=0 sub=None ema=False ckpt=runs/pretrainfinalA_A1/ckpt_042000.pkl shard=merged recs=yes
+  full_vsel_t64     : n=422786 t=64 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A1/ckpt_042000.pkl shard=merged recs=yes
+  scan              : n=20000 t=64 k=128 sub=20000 seed=20260822 ema=True ckpt=runs/pretrainfinalA_A1/ckpt_042000.pkl recs=yes
+  screen_vb           : n=512 t=16 k=256 strat=512 ema=True ckpt=runs/pretrainfinalA_A1/ckpt_042000.pkl uv=True
+  census_vsel       : rows t=[64, 256] ckpt=runs/pretrainfinalA_A1/ckpt_042000.pkl
+  census_final      : rows t=[64, 256] ckpt=runs/pretrainfinalA_A1/ckpt_latest.pkl
+  calib_vsel        : keys=['ckpt', 'cold', 'conf_wrong_frac_stalled', 'ema', 'entropy_step1', 'entropy_t_solved', 'entropy_t_stalled', 'hard_feedback', 'inner_k', 'mean_conf_stalled'] ckpt=runs/pretrainfinalA_A1/ckpt_042000.pkl n_stalled=26
+
+### A2  dir=present
+  ckpt_latest: yes | banked grids: 25 [2000..50000] | metrics.jsonl: yes
+  config: cell_kind=trm, dec_width=256, trm_hidden=512, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=1.0, remat=False, T=16, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6
+  argv: {'out': 'runs/pretrainfinalA_A2', 'steps': 50000, 'd': 16, 'equilibrium': True, 'anchor_p': 0.0, 'anchor_eps': 0.15, 'ri_p': 0.0, 'ni_sigma': 0.0, 'eq_coupled': False, 'flux_floors': None, 'beta_flux': 0.0, 'beta_flux_nl': 0.0, 'eta_floor': 0.0, 'z_gate_init': 0.0, 'K': 64, 'T': 16, 'batch': 768, 'lr': 0.0001, 'lr_end': 0.0001, 'warmup': 2000, 'wd': 1.0, 'tau': 1.0, 'seed': 0, 'n_val': 20, 'ckpt_e
+  ckpt: step=50000 params=5037061 cell=trm dec_width=256 digit_aug=None fpa_k=0 ri=1.0 seed=None remat=False ema=yes
+  metrics: 1000 loss rows (last step 50000), 25 monitors (steps 2000..50000; keys ['eta', 'eta_z', 'n_val', 'step', 'val_t16', 'val_t16_ema', 'wall_s'])
+  full_vsel_t16     : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A2/ckpt_048000.pkl shard=merged recs=yes
+  full_final_t16    : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A2/ckpt_latest.pkl shard=merged recs=yes
+  full_vsel_t16_alt : n=422786 t=16 k=0 sub=None ema=False ckpt=runs/pretrainfinalA_A2/ckpt_048000.pkl shard=merged recs=yes
+  full_vsel_t64     : n=422786 t=64 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A2/ckpt_048000.pkl shard=merged recs=yes
+  scan              : n=20000 t=64 k=128 sub=20000 seed=20260822 ema=True ckpt=runs/pretrainfinalA_A2/ckpt_048000.pkl recs=yes
+  screen_vb           : n=512 t=16 k=256 strat=512 ema=True ckpt=runs/pretrainfinalA_A2/ckpt_048000.pkl uv=True
+  census_vsel       : rows t=[64, 256] ckpt=runs/pretrainfinalA_A2/ckpt_048000.pkl
+  census_final      : rows t=[64, 256] ckpt=runs/pretrainfinalA_A2/ckpt_latest.pkl
+  calib_vsel        : keys=['ckpt', 'cold', 'conf_wrong_frac_stalled', 'ema', 'entropy_step1', 'entropy_t_solved', 'entropy_t_stalled', 'hard_feedback', 'inner_k', 'mean_conf_stalled'] ckpt=runs/pretrainfinalA_A2/ckpt_048000.pkl n_stalled=41
+
+### A3  dir=present
+  ckpt_latest: yes | banked grids: 25 [2000..50000] | metrics.jsonl: yes
+  RETRY_REMAT.txt: 'OOM at launch (rc=1) -> retried once with --remat 2026-09-05T18:35:00Z'
+  resumes.txt: '500\n500\n14500'
+  val_best.txt: '042000 0.9688 42000'
+  config: cell_kind=dec, dec_width=384, trm_hidden=512, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=True, T=16, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6
+  argv: {'out': 'runs/pretrainfinalA_A3', 'steps': 50000, 'd': 16, 'equilibrium': True, 'anchor_p': 0.0, 'anchor_eps': 0.15, 'ri_p': 0.0, 'ni_sigma': 0.0, 'eq_coupled': False, 'flux_floors': None, 'beta_flux': 0.0, 'beta_flux_nl': 0.0, 'eta_floor': 0.0, 'z_gate_init': 0.0, 'K': 64, 'T': 16, 'batch': 768, 'lr': 0.0001, 'lr_end': 0.0001, 'warmup': 2000, 'wd': 1.0, 'tau': 1.0, 'seed': 0, 'n_val': 20, 'ckpt_e
+  ckpt: step=50000 params=2780933 cell=dec dec_width=384 digit_aug=None fpa_k=0 ri=0.0 seed=None remat=True ema=yes
+  metrics: 1005 loss rows (last step 50000), 25 monitors (steps 2000..50000; keys ['eta', 'eta_z', 'n_val', 'step', 'val_t16', 'val_t16_ema', 'wall_s'])
+  full_vsel_t16     : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A3/ckpt_042000.pkl shard=merged recs=yes
+  full_final_t16    : n=50000 t=16 k=0 sub=50000 ema=True ckpt=runs/pretrainfinalA_A3/ckpt_latest.pkl shard=merged recs=yes
+  full_vsel_t16_alt : n=50000 t=16 k=0 sub=50000 ema=False ckpt=runs/pretrainfinalA_A3/ckpt_042000.pkl shard=merged recs=yes
+  full_vsel_t64     : n=100000 t=64 k=0 sub=100000 ema=True ckpt=runs/pretrainfinalA_A3/ckpt_042000.pkl shard=merged recs=yes
+  scan              : ABSENT
+    scan dir partials: [] shards: []
+  screen_vb           : n=512 t=16 k=256 strat=512 ema=True ckpt=runs/pretrainfinalA_A3/ckpt_042000.pkl uv=True
+  census_vsel       : rows t=[64, 256] ckpt=runs/pretrainfinalA_A3/ckpt_042000.pkl
+  census_final      : rows t=[64, 256] ckpt=runs/pretrainfinalA_A3/ckpt_latest.pkl
+  calib_vsel        : keys=['ckpt', 'cold', 'conf_wrong_frac_stalled', 'ema', 'entropy_step1', 'entropy_t_solved', 'entropy_t_stalled', 'hard_feedback', 'inner_k', 'mean_conf_stalled'] ckpt=runs/pretrainfinalA_A3/ckpt_042000.pkl n_stalled=27
+
+### A4  dir=present
+  ckpt_latest: yes | banked grids: 25 [2000..50000] | metrics.jsonl: yes
+  RETRY_REMAT.txt: 'OOM at launch (rc=1) -> retried once with --remat 2026-09-05T18:35:25Z'
+  resumes.txt: '500\n500\n14500'
+  config: cell_kind=dec, dec_width=384, trm_hidden=512, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=True, T=16, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6
+  argv: {'out': 'runs/pretrainfinalA_A4', 'steps': 50000, 'd': 16, 'equilibrium': True, 'anchor_p': 0.0, 'anchor_eps': 0.15, 'ri_p': 0.0, 'ni_sigma': 0.0, 'eq_coupled': False, 'flux_floors': None, 'beta_flux': 0.0, 'beta_flux_nl': 0.0, 'eta_floor': 0.0, 'z_gate_init': 0.0, 'K': 64, 'T': 16, 'batch': 768, 'lr': 0.0001, 'lr_end': 0.0001, 'warmup': 2000, 'wd': 1.0, 'tau': 1.0, 'seed': 0, 'n_val': 20, 'ckpt_e
+  ckpt: step=50000 params=2780933 cell=dec dec_width=384 digit_aug=None fpa_k=0 ri=0.0 seed=None remat=True ema=yes
+  metrics: 1002 loss rows (last step 50000), 25 monitors (steps 2000..50000; keys ['eta', 'eta_z', 'n_val', 'step', 'val_t16', 'val_t16_ema', 'wall_s'])
+  full_vsel_t16     : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A4/ckpt_010000.pkl shard=merged recs=yes
+  full_final_t16    : n=50000 t=16 k=0 sub=50000 ema=True ckpt=runs/pretrainfinalA_A4/ckpt_latest.pkl shard=merged recs=yes
+  full_vsel_t16_alt : n=50000 t=16 k=0 sub=50000 ema=False ckpt=runs/pretrainfinalA_A4/ckpt_010000.pkl shard=merged recs=yes
+  full_vsel_t64     : n=100000 t=64 k=0 sub=100000 ema=True ckpt=runs/pretrainfinalA_A4/ckpt_010000.pkl shard=merged recs=yes
+  scan              : ABSENT
+  screen_vb           : n=512 t=16 k=256 strat=512 ema=True ckpt=runs/pretrainfinalA_A4/ckpt_010000.pkl uv=True
+  census_vsel       : rows t=[64, 256] ckpt=runs/pretrainfinalA_A4/ckpt_010000.pkl
+  census_final      : rows t=[64, 256] ckpt=runs/pretrainfinalA_A4/ckpt_latest.pkl
+  calib_vsel        : keys=['ckpt', 'cold', 'conf_wrong_frac_stalled', 'ema', 'entropy_step1', 'entropy_t_solved', 'entropy_t_stalled', 'hard_feedback', 'inner_k', 'mean_conf_stalled'] ckpt=runs/pretrainfinalA_A4/ckpt_010000.pkl n_stalled=12
+
+### A5  dir=present
+  ckpt_latest: yes | banked grids: 25 [2000..50000] | metrics.jsonl: yes
+  RETRY_REMAT.txt: 'OOM at launch (rc=1) -> retried once with --remat 2026-09-05T18:35:51Z'
+  resumes.txt: '11000\n11000\n11000\n43500'
+  val_best.txt: '028000 0.9688 28000'
+  config: cell_kind=dec, dec_width=384, trm_hidden=512, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=1.0, remat=True, T=16, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6
+  argv: {'out': 'runs/pretrainfinalA_A5', 'steps': 50000, 'd': 16, 'equilibrium': True, 'anchor_p': 0.0, 'anchor_eps': 0.15, 'ri_p': 0.0, 'ni_sigma': 0.0, 'eq_coupled': False, 'flux_floors': None, 'beta_flux': 0.0, 'beta_flux_nl': 0.0, 'eta_floor': 0.0, 'z_gate_init': 0.0, 'K': 64, 'T': 16, 'batch': 768, 'lr': 0.0001, 'lr_end': 0.0001, 'warmup': 2000, 'wd': 1.0, 'tau': 1.0, 'seed': 0, 'n_val': 20, 'ckpt_e
+  ckpt: step=50000 params=2780933 cell=dec dec_width=384 digit_aug=None fpa_k=1 ri=1.0 seed=None remat=True ema=yes
+  metrics: 1016 loss rows (last step 50000), 25 monitors (steps 2000..50000; keys ['eta', 'eta_z', 'n_val', 'step', 'val_t16', 'val_t16_ema', 'wall_s'])
+  full_vsel_t16     : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A5/ckpt_028000.pkl shard=merged recs=yes
+  full_final_t16    : n=50000 t=16 k=0 sub=50000 ema=True ckpt=runs/pretrainfinalA_A5/ckpt_latest.pkl shard=merged recs=yes
+  full_vsel_t16_alt : n=50000 t=16 k=0 sub=50000 ema=False ckpt=runs/pretrainfinalA_A5/ckpt_028000.pkl shard=merged recs=yes
+  full_vsel_t64     : n=100000 t=64 k=0 sub=100000 ema=True ckpt=runs/pretrainfinalA_A5/ckpt_028000.pkl shard=merged recs=yes
+  scan              : ABSENT
+    scan dir partials: [] shards: []
+  screen_vb           : n=512 t=16 k=256 strat=512 ema=True ckpt=runs/pretrainfinalA_A5/ckpt_028000.pkl uv=True
+  census_vsel       : rows t=[64, 256] ckpt=runs/pretrainfinalA_A5/ckpt_028000.pkl
+  census_final      : rows t=[64, 256] ckpt=runs/pretrainfinalA_A5/ckpt_latest.pkl
+  calib_vsel        : keys=['ckpt', 'cold', 'conf_wrong_frac_stalled', 'ema', 'entropy_step1', 'entropy_t_solved', 'entropy_t_stalled', 'hard_feedback', 'inner_k', 'mean_conf_stalled'] ckpt=runs/pretrainfinalA_A5/ckpt_028000.pkl n_stalled=10
+
+### A6  dir=ABSENT
+
+### A7  dir=present
+  ckpt_latest: yes | banked grids: 25 [2000..50000] | metrics.jsonl: yes
+  RETRY_REMAT.txt: 'OOM at launch (rc=1) -> retried once with --remat 2026-09-06T08:51:13Z'
+  resumes.txt: '1000\n1000\n40500'
+  val_best.txt: '022000 1.0000 22000'
+  config: cell_kind=dec, dec_width=384, trm_hidden=512, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=True, T=16, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6
+  argv: {'out': 'runs/pretrainfinalA_A7', 'steps': 50000, 'd': 16, 'equilibrium': True, 'anchor_p': 0.0, 'anchor_eps': 0.15, 'ri_p': 0.0, 'ni_sigma': 0.0, 'eq_coupled': False, 'flux_floors': None, 'beta_flux': 0.0, 'beta_flux_nl': 0.0, 'eta_floor': 0.0, 'z_gate_init': 0.0, 'K': 64, 'T': 16, 'batch': 768, 'lr': 0.0001, 'lr_end': 0.0001, 'warmup': 2000, 'wd': 1.0, 'tau': 1.0, 'seed': 1, 'n_val': 20, 'ckpt_e
+  ckpt: step=50000 params=2780933 cell=dec dec_width=384 digit_aug=None fpa_k=0 ri=0.0 seed=None remat=True ema=yes
+  metrics: 1023 loss rows (last step 50000), 25 monitors (steps 2000..50000; keys ['eta', 'eta_z', 'n_val', 'step', 'val_t16', 'val_t16_ema', 'wall_s'])
+  full_vsel_t16     : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A7/ckpt_022000.pkl shard=merged recs=yes
+  full_final_t16    : n=50000 t=16 k=0 sub=50000 ema=True ckpt=runs/pretrainfinalA_A7/ckpt_latest.pkl shard=merged recs=yes
+  full_vsel_t16_alt : n=50000 t=16 k=0 sub=50000 ema=False ckpt=runs/pretrainfinalA_A7/ckpt_022000.pkl shard=merged recs=yes
+  full_vsel_t64     : n=100000 t=64 k=0 sub=100000 ema=True ckpt=runs/pretrainfinalA_A7/ckpt_022000.pkl shard=merged recs=yes
+  scan              : ABSENT
+    scan dir partials: [] shards: []
+  screen_vb           : n=512 t=16 k=256 strat=512 ema=True ckpt=runs/pretrainfinalA_A7/ckpt_022000.pkl uv=True
+  census_vsel       : rows t=[64, 256] ckpt=runs/pretrainfinalA_A7/ckpt_022000.pkl
+  census_final      : rows t=[64, 256] ckpt=runs/pretrainfinalA_A7/ckpt_latest.pkl
+  calib_vsel        : keys=['ckpt', 'cold', 'conf_wrong_frac_stalled', 'ema', 'entropy_step1', 'entropy_t_solved', 'entropy_t_stalled', 'hard_feedback', 'inner_k', 'mean_conf_stalled'] ckpt=runs/pretrainfinalA_A7/ckpt_022000.pkl n_stalled=14
+
+### A8  dir=present
+  ckpt_latest: yes | banked grids: 25 [2000..50000] | metrics.jsonl: yes
+  resumes.txt: '1000\n1000'
+  config: cell_kind=dec, dec_width=512, trm_hidden=512, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=True, T=16, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6
+  argv: {'out': 'runs/pretrainfinalA_A8', 'steps': 50000, 'd': 16, 'equilibrium': True, 'anchor_p': 0.0, 'anchor_eps': 0.15, 'ri_p': 0.0, 'ni_sigma': 0.0, 'eq_coupled': False, 'flux_floors': None, 'beta_flux': 0.0, 'beta_flux_nl': 0.0, 'eta_floor': 0.0, 'z_gate_init': 0.0, 'K': 64, 'T': 16, 'batch': 768, 'lr': 0.0001, 'lr_end': 0.0001, 'warmup': 2000, 'wd': 1.0, 'tau': 1.0, 'seed': 1, 'n_val': 20, 'ckpt_e
+  ckpt: step=50000 params=5370373 cell=dec dec_width=512 digit_aug=None fpa_k=0 ri=0.0 seed=None remat=True ema=yes
+  metrics: 1012 loss rows (last step 50000), 25 monitors (steps 2000..50000; keys ['eta', 'eta_z', 'n_val', 'step', 'val_t16', 'val_t16_ema', 'wall_s'])
+  full_vsel_t16     : n=422786 t=16 k=0 sub=None ema=True ckpt=runs/pretrainfinalA_A8/ckpt_012000.pkl shard=merged recs=yes
+  full_final_t16    : n=50000 t=16 k=0 sub=50000 ema=True ckpt=runs/pretrainfinalA_A8/ckpt_latest.pkl shard=merged recs=yes
+  full_vsel_t16_alt : n=50000 t=16 k=0 sub=50000 ema=False ckpt=runs/pretrainfinalA_A8/ckpt_012000.pkl shard=merged recs=yes
+  full_vsel_t64     : n=100000 t=64 k=0 sub=100000 ema=True ckpt=runs/pretrainfinalA_A8/ckpt_012000.pkl shard=merged recs=yes
+  scan              : ABSENT
+  screen_vb           : n=512 t=16 k=256 strat=512 ema=True ckpt=runs/pretrainfinalA_A8/ckpt_012000.pkl uv=True
+  census_vsel       : rows t=[64, 256] ckpt=runs/pretrainfinalA_A8/ckpt_012000.pkl
+  census_final      : rows t=[64, 256] ckpt=runs/pretrainfinalA_A8/ckpt_latest.pkl
+  calib_vsel        : keys=['ckpt', 'cold', 'conf_wrong_frac_stalled', 'ema', 'entropy_step1', 'entropy_t_solved', 'entropy_t_stalled', 'hard_feedback', 'inner_k', 'mean_conf_stalled'] ckpt=runs/pretrainfinalA_A8/ckpt_012000.pkl n_stalled=11
+
+### preflight logs: ['preflightfinalA_A0.log', 'preflightfinalA_A1.log', 'preflightfinalA_A2.log', 'preflightfinalA_A3.log', 'preflightfinalA_A4.log', 'preflightfinalA_A5.log', 'preflightfinalA_A6.log', 'preflightfinalA_A7.log']
+### other finalA dirs: ['plant_guard_finalA_1.log', 'plant_guard_finalA_2.log', 'plant_guard_finalA_3.log', 'plant_guard_finalA_4.log', 'plant_guard_finalA_5.log', 'plant_guard_finalA_6.log', 'plant_guard_finalA_7.log', 'plant_guard_finalA_8.log']

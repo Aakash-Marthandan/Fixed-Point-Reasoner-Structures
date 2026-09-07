@@ -1,0 +1,250 @@
+========================================================================================================================
+FINAL PHASE Night A — PHYSICS PASS (2026-09-07; analysis-time, descriptive, no rules; verdict authority = tools/analyze_finalA.py)
+========================================================================================================================
+
+== A. ADMISSION (ckpt_latest config + parameter count; argv from config.json; markers; grids) ==
+  A0 [X0 seed 1 (the noise-floor pair)]: step 50000 | params 5037061 (config.json 5037061) | ema True | opt_state True | final finite True | git 
+     cfg: cell_kind=trm, dec_width=256, dec_coupling=True, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=0.0, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, fpa_w=1.0, remat=False, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=1, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_digit_aug=True, sot=True, act=True, cell=trm, dec_width=256, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=False, grid_every=2000, monitor_every=2000, ckpt_every=500, loss=stablemax
+     grids: 25 banked [2000..50000] | val_best None | resumes '27000'
+  A1 [X0 + FPA k1 eps.2 frac.25 (seed 0)]: step 50000 | params 5037061 (config.json 5037061) | ema True | opt_state True | final finite True | git 
+     cfg: cell_kind=trm, dec_width=256, dec_coupling=True, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=0.0, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, fpa_w=1.0, remat=False, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_digit_aug=True, sot=True, act=True, cell=trm, dec_width=256, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=False, grid_every=2000, monitor_every=2000, ckpt_every=500, loss=stablemax
+     grids: 25 banked [2000..50000] | val_best '042000 0.9062 42000' | resumes None
+  A2 [X0 + RI sigma 1 (seed 0)]: step 50000 | params 5037061 (config.json 5037061) | ema True | opt_state True | final finite True | git 
+     cfg: cell_kind=trm, dec_width=256, dec_coupling=True, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=1.0, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, fpa_w=1.0, remat=False, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_digit_aug=True, sot=True, act=True, cell=trm, dec_width=256, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=1.0, remat=False, grid_every=2000, monitor_every=2000, ckpt_every=500, loss=stablemax
+     grids: 25 banked [2000..50000] | val_best None | resumes None
+  A3 [DEC-w384, no digit aug (seed 0)]: step 50000 | params 2780933 (config.json 2780933) | ema True | opt_state True | final finite True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=0.0, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, fpa_w=1.0, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_digit_aug=False, sot=True, act=True, cell=dec, dec_width=384, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, loss=stablemax
+     grids: 25 banked [2000..50000] | val_best '042000 0.9688 42000' | resumes '500\n500\n14500'
+     RETRY_REMAT.txt: 'OOM at launch (rc=1) -> retried once with --remat 2026-09-05T18:35:00Z'
+  A4 [DEC-w384 + digit aug (seed 0)]: step 50000 | params 2780933 (config.json 2780933) | ema True | opt_state True | final finite True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=0.0, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, fpa_w=1.0, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_digit_aug=True, sot=True, act=True, cell=dec, dec_width=384, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, loss=stablemax
+     grids: 25 banked [2000..50000] | val_best None | resumes '500\n500\n14500'
+     RETRY_REMAT.txt: 'OOM at launch (rc=1) -> retried once with --remat 2026-09-05T18:35:25Z'
+  A5 [DEC-w384 + FPA + RI (seed 0)]: step 50000 | params 2780933 (config.json 2780933) | ema True | opt_state True | final finite True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=1.0, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, fpa_w=1.0, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_digit_aug=False, sot=True, act=True, cell=dec, dec_width=384, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=1.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, loss=stablemax
+     grids: 25 banked [2000..50000] | val_best '028000 0.9688 28000' | resumes '11000\n11000\n11000\n43500'
+     RETRY_REMAT.txt: 'OOM at launch (rc=1) -> retried once with --remat 2026-09-05T18:35:51Z'
+  A6: ABSENT (DEC-w512 (seed 0; SKIPPED))
+  A7 [DEC-w384 seed 1 (the DEC floor)]: step 50000 | params 2780933 (config.json 2780933) | ema True | opt_state True | final finite True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=0.0, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, fpa_w=1.0, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=1, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_digit_aug=False, sot=True, act=True, cell=dec, dec_width=384, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, loss=stablemax
+     grids: 25 banked [2000..50000] | val_best '022000 1.0000 22000' | resumes '1000\n1000\n40500'
+     RETRY_REMAT.txt: 'OOM at launch (rc=1) -> retried once with --remat 2026-09-06T08:51:13Z'
+  A8 [DEC-w512 seed 1 (remat)]: step 50000 | params 5370373 (config.json 5370373) | ema True | opt_state True | final finite True | git 
+     cfg: cell_kind=dec, dec_width=512, dec_coupling=True, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=0.0, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, fpa_w=1.0, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=1, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_digit_aug=False, sot=True, act=True, cell=dec, dec_width=512, fpa_k=0, fpa_eps=0.2, fpa_frac=0.25, trm_ri_sigma=0.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, loss=stablemax
+     grids: 25 banked [2000..50000] | val_best None | resumes '1000\n1000'
+
+  PROVENANCE (one ckpt path per (arm, vsel)) + offline re-selection on val_t16_ema among banked grids:
+  A0: vsel evals on 1 path(s) ['runs/pretrainfinalA_A0/ckpt_040000.pkl'] | final path runs/pretrainfinalA_A0/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 40000 -> AGREES
+  A1: vsel evals on 1 path(s) ['runs/pretrainfinalA_A1/ckpt_042000.pkl'] | final path runs/pretrainfinalA_A1/ckpt_latest.pkl | chain val_best '042000 0.9062 42000' | offline argmax(val_t16_ema over banked) = 42000 -> AGREES
+  A2: vsel evals on 1 path(s) ['runs/pretrainfinalA_A2/ckpt_048000.pkl'] | final path runs/pretrainfinalA_A2/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 48000 -> AGREES
+  A3: vsel evals on 1 path(s) ['runs/pretrainfinalA_A3/ckpt_042000.pkl'] | final path runs/pretrainfinalA_A3/ckpt_latest.pkl | chain val_best '042000 0.9688 42000' | offline argmax(val_t16_ema over banked) = 42000 -> AGREES
+  A4: vsel evals on 1 path(s) ['runs/pretrainfinalA_A4/ckpt_010000.pkl'] | final path runs/pretrainfinalA_A4/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 10000 -> AGREES
+  A5: vsel evals on 1 path(s) ['runs/pretrainfinalA_A5/ckpt_028000.pkl'] | final path runs/pretrainfinalA_A5/ckpt_latest.pkl | chain val_best '028000 0.9688 28000' | offline argmax(val_t16_ema over banked) = 28000 -> AGREES
+  A7: vsel evals on 1 path(s) ['runs/pretrainfinalA_A7/ckpt_022000.pkl'] | final path runs/pretrainfinalA_A7/ckpt_latest.pkl | chain val_best '022000 1.0000 22000' | offline argmax(val_t16_ema over banked) = 22000 -> AGREES
+  A8: vsel evals on 1 path(s) ['runs/pretrainfinalA_A8/ckpt_012000.pkl'] | final path runs/pretrainfinalA_A8/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 12000 -> AGREES
+
+== B. TRAJECTORIES (train rows every 50 steps; monitors every 2k on the 64 train-file puzzles; pace measured from timestamps) ==
+  arm | rows | last | CE 5k/10k/20k/30k/40k/50k | CE end / min (step) | train_exact end | halt_frac end | mean_steps end | q_loss end | wall h | pace ts it/s (printed) | val_t16_ema peak (step) / end | val_t16 raw at peak | extra keys
+  A0 | 1000 | 50000 | 0.73/0.69/0.62/0.59/0.62/0.58 | 0.597 / 0.549 (45300) | 0.225 | 0.250 |  5.06 | 0.019 |  1.59 |  9.54 (26.71) |  90.62 (32000) /  84.38 |  76.56 | []
+  A1 | 1000 | 50000 | 0.72/0.70/0.62/0.61/0.59/0.59 | 0.589 / 0.553 (49300) | 0.185 | 0.240 |  5.19 | 0.012 |  1.70 |  8.19 (22.92) |  90.62 (40000) /  87.50 |  78.12 | ['fpa_ce']
+     extra (last row): {'fpa_ce': 0.004581238608807325}
+  A2 | 1000 | 50000 | 0.73/0.68/0.61/0.59/0.58/0.59 | 0.579 / 0.526 (44800) | 0.189 | 0.167 |  5.05 | 0.031 |  0.68 | 20.44 (57.86) |  92.19 (46000) /  85.94 |  85.94 | []
+  A3 | 1000 | 50000 | 0.65/0.48/0.45/0.39/0.17/0.08 | 0.075 / 0.020 (49550) | 0.809 | 0.635 |  1.54 | 0.203 | 13.74 |  1.32 ( 2.46) |  96.88 (16000) /  87.50 |  96.88 | []
+  A4 | 1000 | 50000 | 0.68/0.52/0.44/0.38/0.10/0.12 | 0.124 / 0.019 (49650) | 0.768 | 0.682 |  2.31 | 0.076 | 13.64 |  1.34 ( 2.48) |  98.44 (10000) /  84.38 |  96.88 | []
+  A5 | 1000 | 50000 | 0.64/0.49/0.45/0.44/0.35/0.17 | 0.162 / 0.119 (49800) | 0.703 | 0.651 |  1.55 | 0.075 | 15.12 |  1.07 ( 2.39) |  96.88 (12000) /  87.50 |  96.88 | ['fpa_ce']
+     extra (last row): {'fpa_ce': 0.0018008749466389418}
+  A7 | 1000 | 50000 | 0.65/0.54/0.44/0.38/0.19/0.05 | 0.070 / 0.022 (47700) | 0.905 | 0.823 |  1.22 | 0.050 |  5.82 |  2.19 ( 7.49) | 100.00 (22000) /  78.12 |  93.75 | []
+  A8 | 1000 | 50000 | 0.59/0.45/0.08/0.01/0.01/0.01 | 0.008 / 0.002 (40650) | 0.964 | 0.875 |  1.18 | 0.039 |  7.24 |  1.96 ( 5.47) |  95.31 (12000) /  71.88 |  89.06 | []
+  val_t16_ema every 10k (monitors; the selection key): A0: 10k=43.8 20k=76.6 30k=79.7 40k=90.6 50k=84.4 | A1: 10k=50.0 20k=76.6 30k=89.1 40k=90.6 50k=87.5 | A2: 10k=46.9 20k=75.0 30k=82.8 40k=79.7 50k=85.9 | A3: 10k=93.8 20k=96.9 30k=95.3 40k=90.6 50k=87.5 | A4: 10k=98.4 20k=92.2 30k=90.6 40k=96.9 50k=84.4 | A5: 10k=95.3 20k=95.3 30k=95.3 40k=93.8 50k=87.5 | A7: 10k=96.9 20k=95.3 30k=98.4 40k=89.1 50k=78.1 | A8: 10k=93.8 20k=78.1 30k=79.7 40k=71.9 50k=71.9
+  segment CE every 10k: A0: 10k=0.69 20k=0.62 30k=0.59 40k=0.62 50k=0.58 | A1: 10k=0.70 20k=0.62 30k=0.61 40k=0.59 50k=0.59 | A2: 10k=0.68 20k=0.61 30k=0.59 40k=0.58 50k=0.59 | A3: 10k=0.48 20k=0.45 30k=0.39 40k=0.17 50k=0.08 | A4: 10k=0.52 20k=0.44 30k=0.38 40k=0.10 50k=0.12 | A5: 10k=0.49 20k=0.45 30k=0.44 40k=0.35 50k=0.17 | A7: 10k=0.54 20k=0.44 30k=0.38 40k=0.19 50k=0.05 | A8: 10k=0.45 20k=0.08 30k=0.01 40k=0.01 50k=0.01
+
+== C. STABILITY (explosion census on the vsel and final grids; STOPPED markers) ==
+  A0: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  A1: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  A2: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  A3: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  A4: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  A5: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  A7: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  A8: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+
+== D. EVAL TABLE (headline = EMA at D16 on the vsel grid; full test unless labeled; the wide arms' final/alt on 50k and D64 on 100k, labeled) ==
+  arm | cold16 vsel (n) | final (n) | alt raw (n) | cold64 (n) | first_exact D16 med/p90 (frac step1) | first_exact D64 med/p90 | valid-wrong | mean viol | givens kept
+  A0 |  87.79 (422786) |  88.22 (422786) |  79.55 (422786) |  94.27 (422786) |   1/  6 ( 23.44) |   1/ 11 | 0.00041 |   4.1 | 1.0000
+  A1 |  86.46 (422786) |  87.45 (422786) |  79.15 (422786) |  93.94 (422786) |   1/  6 ( 27.02) |   1/ 12 | 0.00023 |   4.5 | 1.0000
+  A2 |  85.65 (422786) |  85.55 (422786) |  76.85 (422786) |  92.13 (422786) |   1/  6 ( 14.36) |   1/ 11 | 0.00001 |   4.5 | 1.0000
+  A3 |  90.04 (422786) |  86.24 (50000) |  81.55 (50000) |  94.66 (100000) |   1/  5 ( 37.90) |   1/  8 | 0.00004 |   3.1 | 1.0000
+  A4 |  93.22 (422786) |  87.22 (50000) |  93.54 (50000) |  97.63 (100000) |   1/  6 ( 22.40) |   1/  8 | 0.00003 |   2.3 | 1.0000
+  A5 |  95.08 (422786) |  84.49 (50000) |  94.18 (50000) |  98.11 (100000) |   1/  5 ( 39.45) |   1/  6 | 0.00019 |   1.6 | 1.0000
+  A7 |  95.12 (422786) |  80.65 (50000) |  92.94 (50000) |  98.04 (100000) |   1/  5 ( 31.00) |   1/  6 | 0.00002 |   1.6 | 1.0000
+  A8 |  93.67 (422786) |  72.36 (50000) |  88.77 (50000) |  97.00 (100000) |   1/  4 ( 36.97) |   1/  6 | 0.00001 |   2.0 | 1.0000
+  X0 ref |  86.03 (422786) | - | - |  92.81 (422786) |   1/  6 ( 24.55) |   1/ 11 | | |
+  X1 ref |  21.20 (422786) | - | - |  24.23 (422786) |   2/  8 ( 19.69) |   2/ 20 | | |
+  per-octile cold16 (the summary's 8 rating bins over the full split; wide arms on the full test too):
+    A0: - 99.52 84.98 82.13 82.04 83.29 85.30 86.57   || cold64 by bin: - 99.74 93.17 92.21 92.11 92.21 92.59 92.88
+    A1: - 99.66 83.89 79.92 79.99 81.09 83.46 85.24   || cold64 by bin: - 99.88 92.95 91.31 91.45 91.66 92.16 92.83
+    A2: - 99.70 82.41 78.46 78.54 80.33 82.57 84.72   || cold64 by bin: - 99.88 90.36 88.50 88.54 89.23 90.15 91.17
+    A3: - 99.69 87.63 85.09 85.04 86.54 87.95 89.55   || cold64 by bin: - 99.81 93.52 92.29 91.86 92.87 93.50 93.96
+    A4: - 99.83 91.60 89.90 89.75 90.50 91.93 92.97   || cold64 by bin: - 99.93 97.19 96.87 96.88 96.88 96.68 96.85
+    A5: - 99.89 93.87 92.60 92.55 93.33 94.07 94.84   || cold64 by bin: - 99.94 97.67 97.47 97.41 97.67 97.41 97.52
+    A7: - 99.89 93.96 92.84 92.75 93.23 94.01 94.84   || cold64 by bin: - 99.96 97.64 97.35 97.35 97.59 97.26 97.34
+    A8: - 99.87 92.18 90.38 90.49 91.27 92.30 93.56   || cold64 by bin: - 99.94 96.61 95.69 95.82 95.93 96.07 96.28
+    X0: - 99.68 83.02 79.08 79.20 80.63 83.01 85.16   || cold64 by bin: - 99.86 91.45 89.58 89.48 90.03 90.84 92.00
+    X1: - 60.73 17.83 7.71 7.71 7.05 6.38 5.32   || cold64 by bin: - 63.24 21.52 11.30 11.11 10.32 9.24 7.66
+
+  SCREENS (vb grid, strat-512, k256, headline depth/weights; labeled): arm | cold | b1 | t1r@128 | t1r@256 | verified@128 | verified@256 | majority@128 | majority@256 | rho@256 | selector AUC | spurious | mean first_exact
+  A0 |  87.50 |  54.10 |  42.77 |  39.65 | 100.00 | 100.00 |  83.98 |  84.77 | 100.00 | 0.560 |  45.69 |   2.1
+  A1 |  87.50 |  48.24 |  18.36 |  17.77 |  99.61 |  99.61 |  73.63 |  74.61 |  99.61 | 0.419 |  64.12 |   2.2
+  A2 |  85.94 |  87.70 |  97.46 |  98.24 |  97.66 |  98.24 |  88.87 |  89.06 |  98.24 | 0.989 |   0.00 |   2.1
+  A3 |  89.45 |  91.60 |  85.55 |  81.45 | 100.00 | 100.00 |  93.55 |  93.55 | 100.00 | 0.962 |   3.11 |   1.5
+  A4 |  92.97 |  92.19 |  96.09 |  93.36 | 100.00 | 100.00 |  95.12 |  95.31 | 100.00 | 0.973 |   2.07 |   2.1
+  A5 |  93.95 |  95.12 |  99.61 |  99.41 |  99.61 |  99.80 |  95.70 |  95.51 |  99.80 | 0.992 |   0.03 |   1.4
+  A7 |  94.34 |  91.99 |   9.38 |   3.12 | 100.00 | 100.00 |  96.68 |  96.68 | 100.00 | 0.530 |  46.91 |   1.6
+  A8 |  94.73 |  93.95 |  99.61 |  99.61 | 100.00 | 100.00 |  95.31 |  95.70 | 100.00 | 0.993 |   0.11 |   1.5
+  X0 |  87.50 |  88.48 |  95.90 |  96.29 |  99.61 |  99.80 |  88.87 |  88.87 |  99.80 | 0.939 |   5.00 |   2.1
+
+  SCANS (20k, k128, t64; the registered X0-class protocol; A3-A8 absent = the deferred offline re-run): arm | cold | b1 | t1r@128 | verified@128 | majority - | rho | AUC | spurious | ratio t1r/verified
+  A0 |  94.47 |  58.49 |  53.64 |  99.76 | |  99.76 | 0.601 |  38.01 | 0.538  [n=20000]
+  A1 |  94.03 |  53.31 |  38.22 |  99.87 | |  99.87 | 0.497 |  52.42 | 0.383  [n=20000]
+  A2 |  92.07 |  91.99 |  98.30 |  98.32 | |  98.32 | 0.999 |   0.00 | 1.000  [n=20000]
+  X0 |  92.86 |  92.12 |  92.48 |  99.70 | |  99.70 | 0.925 |   7.80 | 0.928  [n=20000]
+  X1 |  24.57 |  26.55 |  62.76 |  69.53 | |  69.53 | 0.979 |   1.55 | 0.903  [n=20000]
+  R3 |  43.36 |  43.11 |  50.97 |  51.66 | |  51.66 | 0.986 |   0.00 | 0.987  [n=20000]
+
+  CALIBRATION AT STALLS (strat-512 on the vsel grid): arm | cold | n stalled | top-5 correct | mean conf | gap | entropy step1 | entropy stalled t64 | conf-wrong frac stalled | committed frac
+  A0 |  93.16 | 35 |  53.14 | 1.000 |  0.469 | 0.014 | 0.033 |  46.82 |    -  
+  A1 |  94.92 | 26 |  45.38 | 1.000 |  0.546 | 0.011 | 0.026 |  51.60 |    -  
+  A2 |  91.99 | 41 |  46.83 | 1.000 |  0.532 | 0.020 | 0.030 |  50.61 |    -  
+  A3 |  94.73 | 27 |  56.30 | 1.000 |  0.437 | 0.010 | 0.038 |  48.07 |    -  
+  A4 |  97.66 | 12 |  61.67 | 1.000 |  0.383 | 0.025 | 0.044 |  44.47 |    -  
+  A5 |  98.05 | 10 |  54.00 | 1.000 |  0.460 | 0.013 | 0.033 |  49.58 |    -  
+  A7 |  97.27 | 14 |  60.00 | 1.000 |  0.400 | 0.019 | 0.038 |  46.84 |    -  
+  A8 |  97.85 | 11 |  61.82 | 1.000 |  0.382 | 0.015 | 0.032 |  47.76 |    -  
+
+== E. PAIRED McNemar on identical puzzle sets (cold, headline weights; A vs B; p two-sided exact binomial) ==
+  D16 (the headline column; full test):
+  A0 vs X0 (seed pair = the floor)    :  87.79 vs  86.03 (delta  +1.76pp) | only-A   27526 / only-B   20065 | p 2.46e-257 | n 422786 identical idx 
+  A1 vs X0 (FPA k1, matched seed 0)   :  86.46 vs  86.03 (delta  +0.43pp) | only-A   25218 / only-B   23388 | p 1.07e-16 | n 422786 identical idx 
+  A2 vs X0 (RI, matched seed 0)       :  85.65 vs  86.03 (delta  -0.38pp) | only-A   23132 / only-B   24741 | p 1.98e-13 | n 422786 identical idx 
+  A1 vs A0                            :  86.46 vs  87.79 (delta  -1.33pp) | only-A   21229 / only-B   26860 | p 1.08e-145 | n 422786 identical idx 
+  A2 vs A0                            :  85.65 vs  87.79 (delta  -2.15pp) | only-A   19763 / only-B   28833 | p 0.00e+00 | n 422786 identical idx 
+  A3 vs X1 (symmetry vs no-orbit field cell):  90.04 vs  21.20 (delta +68.84pp) | only-A  294556 / only-B    3508 | p 0.00e+00 | n 422786 identical idx 
+  A3 vs X0 (DEC-w384 vs the field cell):  90.04 vs  86.03 (delta  +4.02pp) | only-A   37304 / only-B   20320 | p 0.00e+00 | n 422786 identical idx 
+  A4 vs A3 (+ digit aug)              :  93.22 vs  90.04 (delta  +3.17pp) | only-A   27554 / only-B   14146 | p 0.00e+00 | n 422786 identical idx 
+  A5 vs A3 (+ FPA + RI)               :  95.08 vs  90.04 (delta  +5.03pp) | only-A   29082 / only-B    7807 | p 0.00e+00 | n 422786 identical idx 
+  A7 vs A3 (DEC seed pair)            :  95.12 vs  90.04 (delta  +5.08pp) | only-A   29411 / only-B    7937 | p 0.00e+00 | n 422786 identical idx 
+  A8 vs A3 (w512 s1 vs w384 s0)       :  93.67 vs  90.04 (delta  +3.63pp) | only-A   26630 / only-B   11295 | p 0.00e+00 | n 422786 identical idx 
+  A8 vs A7 (w512 vs w384, matched seed 1):  93.67 vs  95.12 (delta  -1.45pp) | only-A    8823 / only-B   14962 | p 0.00e+00 | n 422786 identical idx 
+  A8 vs X0                            :  93.67 vs  86.03 (delta  +7.64pp) | only-A   43060 / only-B   10741 | p 0.00e+00 | n 422786 identical idx 
+  A4 vs X0                            :  93.22 vs  86.03 (delta  +7.19pp) | only-A   42682 / only-B   12290 | p 0.00e+00 | n 422786 identical idx 
+  A5 vs X0                            :  95.08 vs  86.03 (delta  +9.05pp) | only-A   45929 / only-B    7670 | p 0.00e+00 | n 422786 identical idx 
+  D64 (the depth row; X0-class on the full test; wide arms on their 100k subsample -> intersections with the full-test references, labeled):
+  A0 vs X0                            :  94.27 vs  92.81 (delta  +1.46pp) | only-A   16564 / only-B   10371 | p 2.77e-314 | n 422786 identical idx 
+  A1 vs X0                            :  93.94 vs  92.81 (delta  +1.13pp) | only-A   16158 / only-B   11360 | p 8.42e-185 | n 422786 identical idx 
+  A2 vs X0                            :  92.13 vs  92.81 (delta  -0.68pp) | only-A   13284 / only-B   16156 | p 6.07e-63 | n 422786 identical idx 
+  A3 vs X0                            :  94.66 vs  92.75 (delta  +1.91pp) | only-A    5092 / only-B    3187 | p 4.36e-98 | n 100000 INTERSECTION n=100000 (labeled) 
+  A3 vs X1                            :  94.66 vs  24.39 (delta +70.26pp) | only-A   70892 / only-B     630 | p 0.00e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  A3 vs R3 (our champion by rule, D64):  94.66 vs  43.49 (delta +51.17pp) | only-A   51450 / only-B     283 | p 0.00e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  A4 vs A3                            :  97.63 vs  94.66 (delta  +2.97pp) | only-A    4106 / only-B    1132 | p 0.00e+00 | n 100000 identical idx 
+  A5 vs A3                            :  98.11 vs  94.66 (delta  +3.46pp) | only-A    4150 / only-B     694 | p 0.00e+00 | n 100000 identical idx 
+  A7 vs A3                            :  98.04 vs  94.66 (delta  +3.38pp) | only-A    4102 / only-B     719 | p 0.00e+00 | n 100000 identical idx 
+  A8 vs A3                            :  97.00 vs  94.66 (delta  +2.34pp) | only-A    3729 / only-B    1386 | p 4.23e-244 | n 100000 identical idx 
+  A8 vs A7                            :  97.00 vs  98.04 (delta  -1.04pp) | only-A     746 / only-B    1786 | p 1.64e-97 | n 100000 identical idx 
+  A8 vs X0                            :  97.00 vs  92.75 (delta  +4.25pp) | only-A    5675 / only-B    1427 | p 0.00e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  D16 -> D64 per arm (regressions = solved at 16 and not at 64):
+  A0 D64 vs D16                       :  94.27 vs  87.79 (delta  +6.48pp) | only-A   27398 / only-B       0 | p 0.00e+00 | n 422786 identical idx 
+  A1 D64 vs D16                       :  93.94 vs  86.46 (delta  +7.48pp) | only-A   31634 / only-B       0 | p 0.00e+00 | n 422786 identical idx 
+  A2 D64 vs D16                       :  92.13 vs  85.65 (delta  +6.48pp) | only-A   27403 / only-B       0 | p 0.00e+00 | n 422786 identical idx 
+  A3 D64 vs D16                       :  94.66 vs  89.89 (delta  +4.76pp) | only-A    4768 / only-B       8 | p 0.00e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  A4 D64 vs D16                       :  97.63 vs  92.98 (delta  +4.64pp) | only-A    4648 / only-B       3 | p 0.00e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  A5 D64 vs D16                       :  98.11 vs  94.95 (delta  +3.16pp) | only-A    3158 / only-B       0 | p 0.00e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  A7 D64 vs D16                       :  98.04 vs  95.01 (delta  +3.02pp) | only-A    3027 / only-B       2 | p 0.00e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  A8 D64 vs D16                       :  97.00 vs  93.61 (delta  +3.39pp) | only-A    3397 / only-B       5 | p 0.00e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  X0 D64 vs D16                       :  92.81 vs  86.03 (delta  +6.78pp) | only-A   28666 / only-B       0 | p 0.00e+00 | n 422786 identical idx 
+  X1 D64 vs D16                       :  24.23 vs  21.20 (delta  +3.02pp) | only-A   12789 / only-B       1 | p 0.00e+00 | n 422786 identical idx 
+  vsel vs final and headline (EMA) vs alt (raw) per arm (wide arms: 50k intersections, labeled):
+  A0 vsel vs final                    :  87.79 vs  88.22 (delta  -0.42pp) | only-A   19881 / only-B   21671 | p 1.67e-18 | n 422786 identical idx 
+  A0 EMA (headline) vs raw (alt)      :  87.79 vs  79.55 (delta  +8.25pp) | only-A   52850 / only-B   17987 | p 0.00e+00 | n 422786 identical idx 
+  A1 vsel vs final                    :  86.46 vs  87.45 (delta  -0.99pp) | only-A   19840 / only-B   24023 | p 7.72e-89 | n 422786 identical idx 
+  A1 EMA (headline) vs raw (alt)      :  86.46 vs  79.15 (delta  +7.31pp) | only-A   48155 / only-B   17251 | p 0.00e+00 | n 422786 identical idx 
+  A2 vsel vs final                    :  85.65 vs  85.55 (delta  +0.10pp) | only-A   19780 / only-B   19366 | p 3.69e-02 | n 422786 identical idx 
+  A2 EMA (headline) vs raw (alt)      :  85.65 vs  76.85 (delta  +8.79pp) | only-A   54071 / only-B   16896 | p 0.00e+00 | n 422786 identical idx 
+  A3 vsel vs final                    :  89.99 vs  86.24 (delta  +3.76pp) | only-A    3490 / only-B    1611 | p 5.67e-156 | n 50000 INTERSECTION n=50000 (labeled) 
+  A3 EMA (headline) vs raw (alt)      :  89.99 vs  81.55 (delta  +8.45pp) | only-A    5837 / only-B    1614 | p 0.00e+00 | n 50000 INTERSECTION n=50000 (labeled) 
+  A4 vsel vs final                    :  92.97 vs  87.22 (delta  +5.74pp) | only-A    4528 / only-B    1657 | p 5.78e-303 | n 50000 INTERSECTION n=50000 (labeled) 
+  A4 EMA (headline) vs raw (alt)      :  92.97 vs  93.54 (delta  -0.57pp) | only-A    1709 / only-B    1994 | p 3.02e-06 | n 50000 INTERSECTION n=50000 (labeled) 
+  A5 vsel vs final                    :  95.06 vs  84.49 (delta +10.57pp) | only-A    5967 / only-B     682 | p 0.00e+00 | n 50000 INTERSECTION n=50000 (labeled) 
+  A5 EMA (headline) vs raw (alt)      :  95.06 vs  94.18 (delta  +0.88pp) | only-A    1790 / only-B    1349 | p 3.66e-15 | n 50000 INTERSECTION n=50000 (labeled) 
+  A7 vsel vs final                    :  95.12 vs  80.65 (delta +14.47pp) | only-A    7913 / only-B     679 | p 0.00e+00 | n 50000 INTERSECTION n=50000 (labeled) 
+  A7 EMA (headline) vs raw (alt)      :  95.12 vs  92.94 (delta  +2.18pp) | only-A    2382 / only-B    1292 | p 3.09e-73 | n 50000 INTERSECTION n=50000 (labeled) 
+  A8 vsel vs final                    :  93.72 vs  72.36 (delta +21.36pp) | only-A   11288 / only-B     606 | p 0.00e+00 | n 50000 INTERSECTION n=50000 (labeled) 
+  A8 EMA (headline) vs raw (alt)      :  93.72 vs  88.77 (delta  +4.95pp) | only-A    3545 / only-B    1068 | p 1.00e-306 | n 50000 INTERSECTION n=50000 (labeled) 
+  unions (cold16, full test; labeled portfolio facts):
+    A3 u A4 u A5 u A7 u A8:  98.88
+    A3 u A7:  97.00
+    A3 u X0:  94.85
+    A8 u X0:  96.21
+    A0 u A1 u A2 u X0:  95.67
+
+== F. FUNNEL (rho, r) per rating quartile — vb screens (strat-512, k256; fit on draws <= 64; labeled) and the 20k scans (k128) ==
+  screen A0: [0,3) cold 100.00 b1 49.19 hit 100.00 rho 1.00 r 0.451 | [3,16) cold 88.64 b1 53.79 hit 100.00 rho 1.00 r 0.506 | [16,34) cold 78.40 b1 53.60 hit 100.00 rho 0.98 r 0.284 | [34,133) cold 83.21 b1 59.54 hit 100.00 rho 1.00 r 0.253
+  screen A1: [0,3) cold 100.00 b1 34.68 hit 100.00 rho 1.00 r 0.319 | [3,16) cold 87.88 b1 59.09 hit 100.00 rho 1.00 r 0.402 | [16,34) cold 79.20 b1 51.20 hit 100.00 rho 0.98 r 0.402 | [34,133) cold 83.21 b1 47.33 hit 98.47 rho 0.98 r 0.402
+  screen A2: [0,3) cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) cold 81.82 b1 87.12 hit 99.24 rho 0.98 r 0.451 | [16,34) cold 76.80 b1 80.80 hit 96.80 rho 0.96 r 0.358 | [34,133) cold 85.50 b1 83.21 hit 96.95 rho 0.96 r 0.506
+  screen A3: [0,3) cold 100.00 b1 97.58 hit 100.00 rho 1.00 r 0.900 | [3,16) cold 93.18 b1 93.18 hit 100.00 rho 1.00 r 0.802 | [16,34) cold 82.40 b1 84.80 hit 100.00 rho 1.00 r 0.637 | [34,133) cold 82.44 b1 90.84 hit 100.00 rho 1.00 r 0.802
+  screen A4: [0,3) cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) cold 90.91 b1 91.67 hit 100.00 rho 1.00 r 0.802 | [16,34) cold 92.80 b1 90.40 hit 100.00 rho 1.00 r 0.802 | [34,133) cold 88.55 b1 87.02 hit 100.00 rho 1.00 r 0.715
+  screen A5: [0,3) cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) cold 93.18 b1 96.97 hit 99.24 rho 0.98 r 0.900 | [16,34) cold 92.00 b1 92.00 hit 100.00 rho 0.98 r 0.637 | [34,133) cold 90.84 b1 91.60 hit 100.00 rho 1.00 r 0.567
+  screen A7: [0,3) cold 100.00 b1 94.35 hit 100.00 rho 1.00 r 0.900 | [3,16) cold 95.45 b1 93.94 hit 100.00 rho 1.00 r 0.900 | [16,34) cold 91.20 b1 90.40 hit 100.00 rho 0.98 r 0.900 | [34,133) cold 90.84 b1 89.31 hit 100.00 rho 1.00 r 0.900
+  screen A8: [0,3) cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) cold 96.97 b1 93.18 hit 100.00 rho 1.00 r 0.900 | [16,34) cold 89.60 b1 88.80 hit 100.00 rho 1.00 r 0.506 | [34,133) cold 92.37 b1 93.89 hit 100.00 rho 1.00 r 0.900
+  screen X0: [0,3) cold 100.00 b1 97.58 hit 100.00 rho 1.00 r 0.900 | [3,16) cold 84.09 b1 88.64 hit 100.00 rho 0.98 r 0.637 | [16,34) cold 80.80 b1 85.60 hit 100.00 rho 0.98 r 0.637 | [34,133) cold 85.50 b1 82.44 hit 99.24 rho 0.98 r 0.451
+  scan   A0: [0,3) cold 99.82 b1 49.31 hit 100.00 rho 1.00 r 0.451 | [3,16) cold 92.56 b1 59.72 hit 99.64 rho 0.98 r 0.451 | [16,34) cold 92.63 b1 61.96 hit 99.68 rho 0.98 r 0.451 | [34,373) cold 92.98 b1 62.64 hit 99.70 rho 0.98 r 0.451
+  scan   A1: [0,3) cold 99.94 b1 44.44 hit 99.98 rho 1.00 r 0.358 | [3,16) cold 91.87 b1 55.51 hit 99.83 rho 0.98 r 0.402 | [16,34) cold 91.95 b1 56.46 hit 99.81 rho 0.98 r 0.402 | [34,373) cold 92.48 b1 56.59 hit 99.82 rho 0.98 r 0.402
+  scan   A2: [0,3) cold 99.84 b1 99.90 hit 99.98 rho 0.98 r 0.900 | [3,16) cold 89.44 b1 89.23 hit 97.67 rho 0.98 r 0.637 | [16,34) cold 88.61 b1 88.57 hit 97.91 rho 0.98 r 0.567 | [34,373) cold 90.62 b1 90.48 hit 97.73 rho 0.98 r 0.567
+  scan   X0: [0,3) cold 99.90 b1 97.27 hit 99.98 rho 0.98 r 0.900 | [3,16) cold 91.12 b1 90.62 hit 99.62 rho 0.98 r 0.567 | [16,34) cold 89.18 b1 89.42 hit 99.70 rho 0.98 r 0.567 | [34,373) cold 91.54 b1 91.38 hit 99.52 rho 0.98 r 0.567
+  scan   X1: [0,3) cold 64.58 b1 70.45 hit 98.53 rho 0.98 r 0.319 | [3,16) cold 15.84 b1 16.80 hit 65.46 rho 0.56 r 0.071 | [16,34) cold 10.54 b1 11.24 hit 60.48 rho 0.52 r 0.057 | [34,373) cold 8.54 b1 9.04 hit 54.38 rho 0.46 r 0.050
+
+== H. EXTRA READINGS (descriptive) ==
+  one-shot vs propagation — first_exact on solved puzzles (D16 / D64): median, p90, fraction exact at outer step 1:
+    A0: D16 med   1 p90   6 step1  23.44 step<=2  62.75 | D64 med   1 p90  11 step1  21.83
+    A1: D16 med   1 p90   6 step1  27.02 step<=2  61.59 | D64 med   1 p90  12 step1  24.87
+    A2: D16 med   1 p90   6 step1  14.36 step<=2  59.73 | D64 med   1 p90  11 step1  13.35
+    A3: D16 med   1 p90   5 step1  37.90 step<=2  68.15 | D64 med   1 p90   8 step1  35.93
+    A4: D16 med   1 p90   6 step1  22.40 step<=2  63.94 | D64 med   1 p90   8 step1  21.46
+    A5: D16 med   1 p90   5 step1  39.45 step<=2  69.17 | D64 med   1 p90   6 step1  38.17
+    A7: D16 med   1 p90   5 step1  31.00 step<=2  70.12 | D64 med   1 p90   6 step1  29.98
+    A8: D16 med   1 p90   4 step1  36.97 step<=2  73.40 | D64 med   1 p90   6 step1  35.71
+    X0: D16 med   1 p90   6 step1  24.55 step<=2  62.73 | D64 med   1 p90  11 step1  22.76
+    X1: D16 med   2 p90   8 step1  19.69 step<=2  46.28 | D64 med   2 p90  20 step1  17.23
+  wide arms by rating band at D64 (100k subsample; identical idx across the wide arms -> paired deltas): band | A3 | A4 | A5 | A7 | A8 | X0 (subset) | X1 (subset)
+    [0,1) n= 14398 | A3 99.89 | A4 99.97 | A5 99.97 | A7 99.99 | A8 99.97 | X0 99.95 | X1 66.93
+    [1,10) n= 23185 | A3 95.98 | A4 98.28 | A5 98.58 | A7 98.56 | A8 97.93 | X0 94.79 | X1 36.92
+    [10,30) n= 32148 | A3 92.33 | A4 96.90 | A5 97.51 | A7 97.40 | A8 95.75 | X0 89.64 | X1 11.01
+    [30,60) n= 23997 | A3 93.56 | A4 96.81 | A5 97.57 | A7 97.38 | A8 96.23 | X0 90.86 | X1 9.30
+    [60,1000000) n=  6272 | A3 93.83 | A4 96.68 | A5 97.27 | A7 97.40 | A8 96.09 | X0 91.87 | X1 6.81
+  memorization signatures: segment CE end / min, train_exact end, vsel-vs-final drop (analyzer's CLEAN split reads these; here the values):
+    A0: CE end 0.597 min 0.549 @ 45300 | train_exact end 0.225 | cold16 vsel  87.79 final  88.22 (drop -0.0042; wide arms' final on 50k, labeled)
+    A1: CE end 0.589 min 0.553 @ 49300 | train_exact end 0.185 | cold16 vsel  86.46 final  87.45 (drop -0.0099; wide arms' final on 50k, labeled)
+    A2: CE end 0.579 min 0.526 @ 44800 | train_exact end 0.189 | cold16 vsel  85.65 final  85.55 (drop 0.0010; wide arms' final on 50k, labeled)
+    A3: CE end 0.075 min 0.020 @ 49550 | train_exact end 0.809 | cold16 vsel  90.04 final  86.24 (drop 0.0381; wide arms' final on 50k, labeled)
+    A4: CE end 0.124 min 0.019 @ 49650 | train_exact end 0.768 | cold16 vsel  93.22 final  87.22 (drop 0.0599; wide arms' final on 50k, labeled)
+    A5: CE end 0.162 min 0.119 @ 49800 | train_exact end 0.703 | cold16 vsel  95.08 final  84.49 (drop 0.1059; wide arms' final on 50k, labeled)
+    A7: CE end 0.070 min 0.022 @ 47700 | train_exact end 0.905 | cold16 vsel  95.12 final  80.65 (drop 0.1447; wide arms' final on 50k, labeled)
+    A8: CE end 0.008 min 0.002 @ 40650 | train_exact end 0.964 | cold16 vsel  93.67 final  72.36 (drop 0.2132; wide arms' final on 50k, labeled)
+
+== J. CURVATURE CONCENTRATION from Adam-v (ckpt_latest opt_state; PR/n = participation ratio per parameter; k90 = fraction of parameters carrying 90 % of the curvature mass) ==
+  A0: n 5037061 | PR/n 3.91e-04 | k90 5.83 % | top blocks trm 100.0%, eq 0.0%
+  A1: n 5037061 | PR/n 8.57e-03 | k90 7.22 % | top blocks trm 100.0%, eq 0.0%
+  A2: n 5037061 | PR/n 8.63e-03 | k90 6.14 % | top blocks trm 100.0%, eq 0.0%
+  A3: n 2780933 | PR/n 4.47e-04 | k90 8.59 % | top blocks dec 100.0%, eq 0.0%
+  A4: n 2780933 | PR/n 4.37e-03 | k90 12.79 % | top blocks dec 100.0%, eq 0.0%
+  A5: n 2780933 | PR/n 8.96e-04 | k90 6.69 % | top blocks dec 100.0%, eq 0.0%
+  A7: n 2780933 | PR/n 7.38e-03 | k90 7.21 % | top blocks dec 100.0%, eq 0.0%
+  A8: n 5370373 | PR/n 6.36e-03 | k90 4.04 % | top blocks dec 100.0%, eq 0.0%
+  X0: n 5037061 | PR/n 1.29e-02 | k90 9.75 % | top blocks trm 100.0%, eq 0.0%

@@ -1,0 +1,13 @@
+== Night A analysis-time check (2026-09-07, CPU, $0; descriptive, no rule): is the DEC seed spread a selection artifact? ==
+A3's 64-puzzle monitor (val_t16_ema) tied at its maximum 96.9 at steps 16000, 20000, 26000, 42000; the chain's later-tie rule selected 42000,
+after the monitor had dipped to 90.6 at 40000 and the segment CE had begun its collapse (.17 at 40k). A7's monitor had a unique maximum (100.0) at 22000.
+A3's banked 16k grid re-evaluated on the strat-512 set (seed 20260821, the vb screens' set), D16, EMA weights, batch 128 (tools/eval_sudoku_extreme.py):
+  A3 @16k  cold 93.95 %  (records: runs/analysis/finalA_A3sel/g016000)
+  A3 @42k  cold 89.45 %  (the selected grid; = the vb screen's cold, runs/sxscreen_pfinalAA3_vb)
+  A7 @22k  cold 94.34 %  (the selected grid; runs/sxscreen_pfinalAA7_vb)
+  paired McNemar on the identical 512: A3@16k vs A3@42k only-16k 36 / only-42k 13, p 1.4e-3; A3@16k vs A7@22k 11 / 13, p .84; A7@22k vs A3@42k 34 / 9, p 1.7e-4.
+READING (labeled; the registered rules read the selected grids as they stand): the 5.08 pp SPREAD-DEC at the selected grids is dominated by the
+selection instrument's resolution (1/64 = 1.6 pp; four-way ties; later-tie rule = the memorization side); at A3's earlier tie the two seeds agree
+within the set's resolution (+-2 pp at n = 512). FLOOR_DEC governed R-A-0's tolerance, R-A-3 and R-A-6; a corrected floor near the .005 clamp
+would leave every wide-arm contrast (A4 - A3, A5 - A3, A8 - A7) inside a few pp of each other at their best grids. The 20k grid was not run (CPU).
+Next registration: a 512-puzzle train-file monitor, earliest-tie (anti-memorization) tie-break, raw-val tie-break as a second key.

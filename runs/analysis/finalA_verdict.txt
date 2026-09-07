@@ -1,0 +1,39 @@
+== FINAL PHASE Night A VERDICT (finalA; rules locked pre-data in this file's header) ==
+INTEGRITY: PASS
+
+ARM TABLE (headline = EMA at D16; cold64 = the D64 depth row; spurious = lens-E5 per-draw rate; X0 refs: cold16 0.8603 cold64 0.9281 t1r 0.9248 v128 0.9970 spurious 0.078 [read]; X1 cold16 0.2120)
+  arm | description                     | cold16 | final16 | cold64 |   b1   |  t1r@k  | v@k    | spur  | census | end-CE | stable | memorized | class (g50 / yield)   [k = 128 on 20k for A0-A2; 32 on 5k for the wide arms; cold64 on 100k for the wide arms]
+  A0  | X0 seed 2 (noise floor pair)    |  87.79 |  88.22 |  94.27 |  58.49 |  53.64 |  99.76 | 0.380 | 0.000 | 0.597 | yes | - | DECIMATING (none / 93.3)
+  A1  | X0 + FPA anchor rows            |  86.46 |  87.45 |  93.94 |  53.31 |  38.22 |  99.87 | 0.524 | 0.000 | 0.589 | yes | - | DECIMATING (none / 92.9)
+  A2  | X0 + RI sigma 1                 |  85.65 |  85.55 |  92.13 |  91.99 |  98.30 |  98.32 | 0.000 | 0.000 | 0.579 | yes | - | DECIMATING (none / 90.8)
+  A3  | DEC-w384, no digit aug          |  90.04 |  86.24 |  94.66 |   -   |   -   |   -   |   -   | 0.000 | 0.075 | yes | - | DECIMATING (none / 93.8)
+  A4  | DEC-w384 + digit aug (control)  |  93.22 |  87.22 |  97.63 |   -   |   -   |   -   |   -   | 0.000 | 0.124 | yes | VSEL-FINAL-DROP | DECIMATING (none / 97.2)
+  A5  | DEC-w384 + FPA + RI             |  95.08 |  84.49 |  98.11 |   -   |   -   |   -   |   -   | 0.000 | 0.162 | yes | VSEL-FINAL-DROP | DECIMATING (none / 97.8)
+  A6  | DEC-w512 (X0's class), remat    |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   | no | - | NO-DATA (none / -)
+  A7  | A3 seed 1 (the DEC floor)       |  95.12 |  80.65 |  98.04 |   -   |   -   |   -   |   -   | 0.000 | 0.070 | yes | VSEL-FINAL-DROP | DECIMATING (none / 97.7)
+  A8  | A6 seed 1 (the parity pair)     |  93.67 |  72.36 |  97.00 |   -   |   -   |   -   |   -   | 0.000 | 0.008 | yes | END-CE+VSEL-FINAL-DROP | DECIMATING (none / 96.5)
+
+STABILITY: ALL-STABLE   MEMORIZATION: MEMORIZED:A4,A5,A7,A8
+
+NOISE FLOOR = 0.0176 (seed pair); contrasts read beyond 2 x FLOOR = 0.0352
+R-A-7 PAIRS: SPREAD-DEC:0.0508|SPREAD-WIDE:-|FLOOR_DEC:0.0508 (DEC seed pair A3/A7); the wide-arm contrasts read beyond 2 x FLOOR_DEC = 0.1016
+R-A-0 ORBIT (A3 - X1 = +0.6884; A4 - A3 = +0.0317): EXACT-S9-REPLACES-AUG+PARITY-AT-D16+PARITY
+R-A-1 SELECTOR (A1 spurious 0.524 vs X0 0.078; t1r  38.22 vs X0 92.48; cold16 delta +0.0043): LIFT-FLAT
+R-A-2 RI (A2 cold16 delta -0.0038; v128 delta -0.0138): RI-HURTS
+R-A-3 OBJECTIVES (A5 - A3 = +0.0503; A5 spurious -): OBJ-FLAT
+R-A-4 DECODER-CLASS: A0:DECIMATING A1:DECIMATING A2:DECIMATING A3:DECIMATING A4:DECIMATING A5:DECIMATING A6:NO-DATA A7:DECIMATING A8:DECIMATING
+R-A-6 WIDTH (A6 - A3 = -; A6 cold64   -  ): NO-DATA (A6 absent: 8-shape or preflight-skipped, labeled)
+R-A-5 CARRY-TO-B: CHAMP:A3|B0:=A3|W:=384|AUG:dropped (champion cold16 90.04; memorized/unstable DEC arms excluded: ['A4', 'A5', 'A6', 'A7', 'A8'])
+
+PREDICTION SCOREBOARD (bands locked pre-data):
+  A0: ABOVE
+  A1: cold HIT spur ABOVE t1r MISS-BELOW
+  A2: HIT
+  A3: ABOVE
+  A4: ABOVE
+  A5: ABOVE
+  A6: cold n/a d_a3 n/a
+  A7: spread ABOVE
+  A8: spread n/a
+
+LETTERS: INTEGRITY PASS · STABILITY ALL-STABLE · MEMORIZATION MEMORIZED:A4,A5,A7,A8 · R-A-0 EXACT-S9-REPLACES-AUG+PARITY-AT-D16+PARITY · R-A-1 LIFT-FLAT · R-A-2 RI-HURTS · R-A-3 OBJ-FLAT · R-A-6 NO-DATA (A6 absent: 8-shape or preflight-skipped, labeled) · R-A-7 SPREAD-DEC:0.0508|SPREAD-WIDE:-|FLOOR_DEC:0.0508 · R-A-5 CHAMP:A3|B0:=A3|W:=384|AUG:dropped
