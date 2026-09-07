@@ -57,6 +57,13 @@ from qhrrn2.config import Config
 
 N = SX.N
 K_CURVE = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024)
+# HOST SYNC POLICY (2026-09-07, measured on the frontier pod: the multi-draw loop ran at 0.42x the US pace with the shard's
+# main thread idle in the per-step device readback): the batch loop now keeps its per-step exact / valid bits and the
+# residual on the DEVICE and reads them back ONCE per rollout (bit-identical records; tests/test_eval_sync_identity.py).
+# --sync-per-step restores the pre-2026-09-07 three-readbacks-per-step loop for A/B pace tests.
+SYNC_PER_STEP = False
+SYNC_EVERY = 8      # a transfer-free wait on the carry every SYNC_EVERY outer steps bounds the in-flight device buffers (a wide
+                    # cell at 512 rows holds ~1.2 GB per carried step; unbounded async dispatch could hold the whole rollout)
 # 512/1024 added 2026-08-24 (Phase B registration): the wave-3a k=1024 scan's
 # summary silently capped at 256; vote_curve already breaks at k > k_init, so
 # this only adds entries when the run actually drew that many inits.
@@ -149,6 +156,7 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
     trm = getattr(cfg, "cell_kind", "rg") in ("trm", "dec")
     ex_rows, ok_rows = [], []
     res_tail = []                 # per-step (B,) mean |dy|, last 3 kept
+    H = np.asarray if SYNC_PER_STEP else (lambda a_: a_)   # per-step host readback (old) vs device-resident (default)
     pred9 = None
     sol9 = jnp.asarray(sol9, jnp.int32); puz9 = jnp.asarray(puz9, jnp.int32)
     mask = puz9 != 0
@@ -169,7 +177,7 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
             z_prev = z_c
             z_c = zf if first else z_c + eta_z * (zf - z_c)
         if q_fn is not None:
-            q_out.append(np.asarray(q_fn(z_c)))
+            q_out.append(H(q_fn(z_c)))
         p = jax.nn.softmax(logits, axis=-1).transpose(0, 3, 1, 2)
         if hard:
             p = jax.nn.one_hot(jnp.argmax(logits, axis=-1), M.VOCAB).transpose(0, 3, 1, 2)
@@ -177,9 +185,9 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
         y_new = (ab[0] * y + ab[1] * p) if ab is not None else (y + eta_t * (p - y))
         if trm:
             zr = z_c - z_prev if z_prev is not None else z_c - z_c
-            res_tail.append(np.asarray(jnp.mean(jnp.abs(zr), axis=tuple(range(1, zr.ndim)))))
+            res_tail.append(H(jnp.mean(jnp.abs(zr), axis=tuple(range(1, zr.ndim)))))
         else:
-            res_tail.append(np.asarray(jnp.mean(jnp.abs(y_new - y), axis=(1, 2, 3))))
+            res_tail.append(H(jnp.mean(jnp.abs(y_new - y), axis=(1, 2, 3))))
         if len(res_tail) > 3:
             res_tail.pop(0)
         y = y_new
@@ -189,9 +197,15 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
         viol = violations_dev(pred9)
         giv_ok = jnp.all(((pred9 == puz9) | ~mask).reshape(B, -1), axis=1)
         ok = (viol == 0) & giv_ok
-        ex_rows.append(np.asarray(exact)); ok_rows.append(np.asarray(ok))
-    return (np.stack(ex_rows), np.stack(ok_rows), np.asarray(pred9),
-            np.mean(np.stack(res_tail), axis=0))
+        ex_rows.append(H(exact)); ok_rows.append(H(ok))
+        if not SYNC_PER_STEP and (t + 1) % SYNC_EVERY == 0:
+            jax.block_until_ready(z_c if z_c is not None else y)
+    if SYNC_PER_STEP:
+        return (np.stack(ex_rows), np.stack(ok_rows), np.asarray(pred9), np.mean(np.stack(res_tail), axis=0))
+    ex_np, ok_np, res_np = (np.asarray(jnp.stack(ex_rows)), np.asarray(jnp.stack(ok_rows)), np.asarray(jnp.stack(res_tail)))
+    if q_out is not None:
+        q_out[:] = [np.asarray(q_) for q_ in q_out]
+    return (ex_np, ok_np, np.asarray(pred9), np.mean(res_np, axis=0))
 
 
 def first_true(rows):             # (T,B) bool -> (B,) first index or -1
@@ -379,11 +393,14 @@ def main():
                     help="field-class cells: per-pass Langevin noise of this scale at eval (EqR's released protocol .5; their training .01); "
                          "keys per (puzzle, draw, step); the cold start stays the cell's buffers (RI sigma pinned 0)")
     ap.add_argument("--zero-prefix", action="store_true", help="trm cell: the puzzle-prefix embedding rows zeroed (C9 prefix inertness)")
+    ap.add_argument("--sync-per-step", action="store_true", help="A/B pace test: the pre-2026-09-07 loop with three host readbacks per outer step (records identical)")
     ap.add_argument("--merge", default=None, help="merge shard files in DIR and exit")
     a = ap.parse_args()
 
     if a.merge:
         return merge(Path(a.merge))
+    global SYNC_PER_STEP
+    SYNC_PER_STEP = bool(a.sync_per_step)
     assert a.ckpt and a.npz and a.out
     assert not (a.stratified and a.subsample), "--stratified and --subsample are exclusive"
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
@@ -593,7 +610,7 @@ def main():
         cell_kind=getattr(cfg, "cell_kind", "rg"), ema=bool(a.ema), z0_sigma=(a.z0_sigma if trm else None),
         inner_k=int(getattr(cfg, "inner_k", 1)), hard_feedback=bool(a.hard_feedback),
         z0_mode=(a.z0_mode if trm else None), z0_eps=(a.z0_eps if (trm and a.z0_mode == "perturb") else None),
-        z0_device=bool(a.z0_device), seg_noise_beta=a.seg_noise_beta, zero_prefix=bool(a.zero_prefix),
+        z0_device=bool(a.z0_device), seg_noise_beta=a.seg_noise_beta, zero_prefix=bool(a.zero_prefix), sync_per_step=bool(a.sync_per_step),
         record_by_step=bool(a.record_by_step), record_q=bool(a.record_q), port=saved.get("port"),
         wall_s=round(time.time() - t0, 1)))
     (out / f"summary_{tag}.json").write_text(json.dumps(summ, indent=1))
