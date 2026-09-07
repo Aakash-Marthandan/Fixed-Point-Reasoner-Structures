@@ -90,21 +90,26 @@ def init_params(key, cfg: Config, hw: int = 81):
             "blocks": blocks}
 
 
-def init_states(cfg: Config):
+def init_states(cfg: Config, p=None):
     """H_init / L_init: fixed trunc-normal(std 1) vectors (TRM nn.Buffer,
     persistent, never trained) — regenerated deterministically so they are
-    neither optimized nor weight-decayed."""
+    neither optimized nor weight-decayed. FRONTIER PORT (Plan_2026-09-07_Instrument_Suite
+    §4.1 / build B2, 2026-09-07): a ported public checkpoint carries ITS OWN buffers as
+    params["H_init"] / params["L_init"] (never created by init_params, never trained here);
+    when present they are the cell's start."""
+    if p is not None and "H_init" in p:
+        return jnp.asarray(p["H_init"]), jnp.asarray(p["L_init"])
     kH, kL = jax.random.split(jax.random.PRNGKey(INIT_SEED))
     return _trunc_normal(kH, (cfg.trm_hidden,), 1.0), _trunc_normal(kL, (cfg.trm_hidden,), 1.0)
 
 
-def z0(cfg: Config, hw: int, rng=None):
+def z0(cfg: Config, hw: int, rng=None, p=None):
     """(2, S, hid) initial carry: the fixed buffers, or EqR's RI draw
     z ~ N(0, sigma I) when cfg.trm_ri_sigma > 0 and an rng is threaded."""
     S, hid = seq_len(cfg, hw), cfg.trm_hidden
     if cfg.trm_ri_sigma > 0 and rng is not None:
         return cfg.trm_ri_sigma * jax.random.normal(rng, (2, S, hid))
-    H0, L0 = init_states(cfg)
+    H0, L0 = init_states(cfg, p)
     return jnp.stack([jnp.broadcast_to(H0, (S, hid)), jnp.broadcast_to(L0, (S, hid))])
 
 
@@ -150,7 +155,7 @@ def embed_answer(p, cfg: Config, y_grid):
     """FINAL PHASE (Plan_2026-09-05_FinalPhase §2/§6.1; arm A1): the FPA anchor state for the
     field loop — z_H := the embedded (corrupted) solution: sqrt(hid)-scaled tok_emb rows for the
     81 cells, the fixed H0 buffer on the prefix rows. (S, hid)."""
-    H0, _ = init_states(cfg)
+    H0, _ = init_states(cfg, p)
     cells = math.sqrt(cfg.trm_hidden) * p["tok_emb"][y_grid.reshape(-1)]
     prefix = jnp.broadcast_to(H0, (cfg.trm_puzzle_emb_len, cfg.trm_hidden))
     return jnp.concatenate([prefix, cells], axis=0)
@@ -203,7 +208,7 @@ def forward_core(p, cfg: Config, fields, *, z_in=None, rng=None):
     x_tokens = jnp.argmax(fields[..., 0], axis=0)            # exact on one-hot input
     emb = embed(p, cfg, x_tokens)
     k_ri, k_seg = (None, None) if rng is None else tuple(jax.random.split(rng))
-    z = z0(cfg, H * W, rng=k_ri) if z_in is None else z_in
+    z = z0(cfg, H * W, rng=k_ri, p=p) if z_in is None else z_in
     zH, zL = segment(p, cfg, emb, z[0], z[1], rng=k_seg)
     logits, q = readout(p, cfg, zH, (H, W))
     return logits, q, jnp.stack([zH, zL])

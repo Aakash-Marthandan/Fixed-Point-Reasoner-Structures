@@ -48,6 +48,12 @@ from qhrrn2 import model as M
 from qhrrn2 import sudoku as SU
 from qhrrn2 import sudoku_extreme as SX
 from qhrrn2.config import Config
+# FRONTIER SUITE FLAGS (Plan_2026-09-07_Instrument_Suite §6 build B1; 2026-09-07): --record-by-step (R4: the exact bit at
+# every outer step, packed), --record-q (R10: the halting logits per step on the cold pass), --z0-mode gauss|trunc|perturb
+# with --z0-eps (EqR's truncated-normal reset; the init-basin radius C7), --z0-device (draws generated on the device from
+# per-(puzzle, draw) keys: no host transfer — the DEC scan-deadlock probe), --seg-noise-beta (EqR's per-pass Langevin
+# noise at eval, their released protocol; keys per (puzzle, draw, step)), --zero-prefix (C9: the puzzle prefix zeroed).
+# Every flag is recorded in the fingerprint and the summary; a ported public checkpoint's `port` block travels into the summary.
 
 N = SX.N
 K_CURVE = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024)
@@ -89,21 +95,25 @@ def place_batch(grids9, layout: str):
     return jnp.asarray(np.stack([SU.place_layout(g.astype(np.int8), layout) for g in grids9]), jnp.int32)
 
 
-def make_step(cfg: Config, tau: float, t_norm: float, first: bool):
-    """Batched one-step map: (params, x_can[B], y[B], task_vec, z_c[B]) ->
-    (logits9[B,9,9,VOCAB], z_new[B,...]). `first` = no carried z yet."""
-    def fwd1(params, x_can, y, task_vec, z_c):
+def make_step(cfg: Config, tau: float, t_norm: float, first: bool, noise: bool = False):
+    """Batched one-step map: (params, x_can[B], y[B], task_vec, z_c[B][, key[B]]) ->
+    (logits9[B,9,9,VOCAB], z_new[B,...]). `first` = no carried z yet. noise=True
+    (--seg-noise-beta) threads a per-row PRNG key into the cell (the field cells'
+    per-pass beta noise); the default path is byte-identical to before."""
+    def fwd1(params, x_can, y, task_vec, z_c, key=None):
         out = M.forward_fields(params, cfg, M.build_fields_soft(x_can, y),
-                               t_norm=t_norm, tau=tau, rng=None,
+                               t_norm=t_norm, tau=tau, rng=key,
                                task_vec=task_vec, z_in=None if first else z_c)
         return out.logits, out.z_fine
+    if noise:
+        return jax.jit(jax.vmap(fwd1, in_axes=(None, 0, 0, None, None if first else 0, 0)))
     in_axes = (None, 0, 0, None, None if first else 0)
-    return jax.jit(jax.vmap(fwd1, in_axes=in_axes))
+    return jax.jit(jax.vmap(lambda p_, x_, y_, tv_, z_: fwd1(p_, x_, y_, tv_, z_), in_axes=in_axes))
 
 
 @functools.lru_cache(maxsize=None)
-def _step(cfg, tau, t_norm, first):
-    return make_step(cfg, tau, t_norm, first)
+def _step(cfg, tau, t_norm, first, noise=False):
+    return make_step(cfg, tau, t_norm, first, noise)
 
 
 def coupled_ab(params, cfg):
@@ -114,7 +124,8 @@ def coupled_ab(params, cfg):
 
 
 def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
-              eta, eta_z, layout="origin", t_norm_fixed=None, ab=None, z0=None, hard=False):
+              eta, eta_z, layout="origin", t_norm_fixed=None, ab=None, z0=None, hard=False,
+              noise_keys=None, q_fn=None, q_out=None):
     """Returns per-puzzle numpy: exact_t (T,B), valid_ok_t (T,B) [valid & givens-
     consistent], final pred9 (B,9,9), resid3 (B,) — the mean per-step |Delta y|
     over the FINAL 3 steps (EqR's Top-1-Converged selection signal, L=3;
@@ -128,7 +139,10 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
     L = 3 outer steps) instead of on y.
     sportC2: cfg.inner_k latent passes per outer step (mirrors model.iterate_eq;
     1 = the pre-existing loop); hard=True feeds back the argmax one-hot readout
-    at every step (R3's labeled inference mode)."""
+    at every step (R3's labeled inference mode).
+    FRONTIER (2026-09-07): noise_keys (B,) PRNG keys -> the cell's per-pass beta noise
+    (--seg-noise-beta), folded with the pass index so every (row, step) draws its own
+    noise; q_fn (z -> (B, 2) halting logits) appends the per-step q to q_out (--record-q)."""
     B = x_can.shape[0]
     y = y0
     z_c = None if z0 is None else z0
@@ -145,10 +159,17 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
             t_norm = 0.0   # the field cell ignores t_norm: one compiled step instead of T (sportC1 pre-mortem)
         for _k in range(K):
             first = z_c is None
-            logits, zf = _step(cfg, float(tau), float(t_norm), first)(
-                params, x_can, y, tvj, jnp.zeros(1) if first else z_c)
+            if noise_keys is not None:
+                k_t = jax.vmap(lambda k_, i_=t * K + _k: jax.random.fold_in(k_, i_))(noise_keys)
+                logits, zf = _step(cfg, float(tau), float(t_norm), first, True)(
+                    params, x_can, y, tvj, jnp.zeros(1) if first else z_c, k_t)
+            else:
+                logits, zf = _step(cfg, float(tau), float(t_norm), first)(
+                    params, x_can, y, tvj, jnp.zeros(1) if first else z_c)
             z_prev = z_c
             z_c = zf if first else z_c + eta_z * (zf - z_c)
+        if q_fn is not None:
+            q_out.append(np.asarray(q_fn(z_c)))
         p = jax.nn.softmax(logits, axis=-1).transpose(0, 3, 1, 2)
         if hard:
             p = jax.nn.one_hot(jnp.argmax(logits, axis=-1), M.VOCAB).transpose(0, 3, 1, 2)
@@ -187,12 +208,85 @@ def mi_canvas(mi_seed: int, idx: int, j: int, layout: str) -> np.ndarray:
     return SU.place_layout(rng.integers(0, 10, size=(N, N)).astype(np.int8), layout)
 
 
-def mi_z0(mi_seed: int, idx: int, j: int, shape, sigma: float) -> np.ndarray:
+def trunc_normal_comp(std: float = 1.0) -> float:
+    """HRM/EqR trunc_normal_init_(std): the scale that makes a normal truncated at
+    +-2 have standard deviation `std` (their comp_std; the +-2 cut is in comp units)."""
+    import math
+    a_, b_ = math.erf(-2 / math.sqrt(2)), math.erf(2 / math.sqrt(2)); z_ = (b_ - a_) / 2
+    pdf = (2 * math.pi) ** -0.5 * math.exp(-2.0)
+    return std / math.sqrt(1 - (2 * pdf + 2 * pdf) / z_)
+
+
+def trunc_normal_np(rng, shape, std: float = 1.0) -> np.ndarray:
+    """EqR's reset distribution on the host (inverse-erf sampling on (erf(-2/sqrt2), erf(2/sqrt2)), scaled by comp_std, clipped)."""
+    import math
+    from scipy.special import erfinv
+    a_, b_ = math.erf(-2 / math.sqrt(2)), math.erf(2 / math.sqrt(2)); comp = trunc_normal_comp(std)
+    u = rng.uniform(a_, b_, size=shape)
+    return np.clip(erfinv(u) * math.sqrt(2) * comp, -2 * comp, 2 * comp).astype(np.float32)
+
+
+def mi_z0(mi_seed: int, idx: int, j: int, shape, sigma: float, mode: str = "gauss", z_init=None, eps: float = 1.0) -> np.ndarray:
     """sportC1 X0: EqR's RI restart for draw j of puzzle idx — z0 ~ N(0, sigma I)
     of the given carry shape, seeded per (puzzle, draw) like mi_canvas (nested
-    k-curves, shard/batch invariant)."""
+    k-curves, shard/batch invariant). FRONTIER modes: "trunc" = EqR's own
+    truncated-normal reset (std sigma); "perturb" = the cell's own start z_init + eps N(0, 1)
+    (the init-basin radius C7). The "gauss" bitstream is unchanged."""
     rng = np.random.default_rng([int(mi_seed), int(idx), int(j), 7])
-    return (sigma * rng.standard_normal(shape)).astype(np.float32)
+    if mode == "gauss":
+        return (sigma * rng.standard_normal(shape)).astype(np.float32)
+    if mode == "trunc":
+        return trunc_normal_np(rng, shape, sigma)
+    if mode == "perturb":
+        return (np.asarray(z_init, np.float32) + eps * rng.standard_normal(shape)).astype(np.float32)
+    raise ValueError(mode)
+
+
+def mi_z0_device(mi_seed: int, ids, j: int, shape, sigma: float, mode: str = "gauss", z_init=None, eps: float = 1.0):
+    """--z0-device: the same draw families generated ON the device from per-(puzzle, draw) keys
+    (fold_in(fold_in(PRNGKey(mi_seed), idx), j)); a different bitstream from mi_z0 (labeled in the
+    summary), shard/batch invariant, and no host->device transfer of a B x carry array — the probe
+    for the DEC multi-draw scan deadlock (Report_2026-09-07_NightA_Verdict §6.8)."""
+    base = jax.random.PRNGKey(int(mi_seed))
+    keys = jax.vmap(lambda i_: jax.random.fold_in(jax.random.fold_in(base, i_), int(j)))(jnp.asarray(np.asarray(ids), jnp.int32))
+    if mode == "gauss":
+        return jax.vmap(lambda k_: sigma * jax.random.normal(k_, shape))(keys)
+    if mode == "trunc":
+        comp = trunc_normal_comp(sigma)
+        return jax.vmap(lambda k_: comp * jax.random.truncated_normal(k_, -2.0, 2.0, shape))(keys)
+    if mode == "perturb":
+        zi = jnp.asarray(z_init)
+        return jax.vmap(lambda k_: zi + eps * jax.random.normal(k_, shape))(keys)
+    raise ValueError(mode)
+
+
+def cell_start(params, cfg):
+    """The field-class cell's own initial carry (2, ...) — trm: its (ported or seeded) H_init / L_init buffers; dec: the DEC's."""
+    from qhrrn2 import trm_cell as TC, dec_cell as DC
+    hw = cfg.canvas * cfg.canvas
+    if cfg.cell_kind == "trm":
+        return np.asarray(TC.z0(cfg, hw, p=params["trm"]))
+    return np.asarray(DC.z0(cfg, hw))
+
+
+def q_readout_fn(params, cfg):
+    """--record-q: z_c (B, 2, ...) -> (B, 2) halting logits (q_halt, q_continue) through the cell's own readout."""
+    from qhrrn2 import trm_cell as TC, dec_cell as DC
+    cv = cfg.canvas
+    cell = TC if cfg.cell_kind == "trm" else DC
+    p = params[cfg.cell_kind]
+    return jax.jit(jax.vmap(lambda z: cell.readout(p, cfg, z[0], (cv, cv))[1]))
+
+
+def rank_auc(score, label) -> float | None:
+    """AUC = P(score of a positive > score of a negative) by ranks (ties averaged); None without both classes."""
+    score = np.asarray(score, np.float64); label = np.asarray(label, bool)
+    n1, n0 = int(label.sum()), int((~label).sum())
+    if n1 == 0 or n0 == 0:
+        return None
+    from scipy.stats import rankdata
+    r = rankdata(score)
+    return float((r[label].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
 
 
 def vote_curve(cold, first_hit, k_init):
@@ -270,6 +364,21 @@ def main():
                          "(per-(puzzle,draw) seeding makes resumed == uninterrupted, bit-identical "
                          "— named test). 0 = off, existing behavior byte-for-byte.")
     ap.add_argument("--out", help="output dir")
+    # FRONTIER SUITE FLAGS (build B1, 2026-09-07)
+    ap.add_argument("--record-by-step", action="store_true",
+                    help="record the exact bit at EVERY outer step of the cold pass (packed, little-endian bit t = step t) -> R4 depth ladder")
+    ap.add_argument("--record-q", action="store_true",
+                    help="record the halting logits (q_halt, q_continue) at every outer step of the cold pass (field-class cells) -> R10")
+    ap.add_argument("--z0-mode", default="gauss", choices=["gauss", "trunc", "perturb"],
+                    help="multi-init draw family for field-class cells: gauss N(0, sigma) (the standing column); trunc = EqR's "
+                         "truncated-normal reset (std sigma); perturb = the cell's own start + eps N(0, 1) (C7 init-basin radius)")
+    ap.add_argument("--z0-eps", type=float, default=1.0, help="--z0-mode perturb: the perturbation scale eps")
+    ap.add_argument("--z0-device", action="store_true",
+                    help="generate the draws on the device from per-(puzzle, draw) keys (no host transfer; a different bitstream, labeled)")
+    ap.add_argument("--seg-noise-beta", type=float, default=None,
+                    help="field-class cells: per-pass Langevin noise of this scale at eval (EqR's released protocol .5; their training .01); "
+                         "keys per (puzzle, draw, step); the cold start stays the cell's buffers (RI sigma pinned 0)")
+    ap.add_argument("--zero-prefix", action="store_true", help="trm cell: the puzzle-prefix embedding rows zeroed (C9 prefix inertness)")
     ap.add_argument("--merge", default=None, help="merge shard files in DIR and exit")
     a = ap.parse_args()
 
@@ -294,6 +403,39 @@ def main():
     eta_learned = eta
     trm = getattr(cfg, "cell_kind", "rg") in ("trm", "dec")
     z_shape = tuple(M.carry_shape(cfg)) if trm else None      # final phase: the cell owns its carry shape
+    # ---- FRONTIER SUITE FLAGS (build B1) ----
+    if a.zero_prefix:
+        assert cfg.cell_kind == "trm", "--zero-prefix: trm cell only"
+        params = {**params, "trm": {**params["trm"], "puzzle_emb": jnp.zeros_like(jnp.asarray(params["trm"]["puzzle_emb"]))}}
+    if a.seg_noise_beta is not None:
+        assert trm, "--seg-noise-beta: field-class cells only"
+        import dataclasses
+        cfg = dataclasses.replace(cfg, trm_beta=float(a.seg_noise_beta), trm_ri_sigma=0.0)
+    if a.z0_mode != "gauss" or a.z0_device:
+        assert trm, "--z0-mode / --z0-device: field-class cells only"
+    if a.record_q:
+        assert trm, "--record-q: field-class cells only (the halting head)"
+    z_init = cell_start(params, cfg) if (trm and a.z0_mode == "perturb") else None
+    q_fn = q_readout_fn(params, cfg) if a.record_q else None
+    noise_base = jax.random.PRNGKey(int(a.mi_seed) + 101) if a.seg_noise_beta is not None else None
+
+    def noise_keys_for(ids_, j_):   # (B,) keys per (puzzle, draw index; -1 = the cold pass) — or None
+        if noise_base is None:
+            return None
+        return jax.vmap(lambda i_: jax.random.fold_in(jax.random.fold_in(noise_base, i_), int(j_) + 1))(jnp.asarray(np.asarray(ids_), jnp.int32))
+
+    def draw_z0(ids_, j_):          # the multi-init carry for draw j of these puzzles (host or device family)
+        if a.z0_device:
+            return mi_z0_device(a.mi_seed, ids_, j_, z_shape, a.z0_sigma, a.z0_mode, z_init, a.z0_eps)
+        return jnp.asarray(np.stack([mi_z0(a.mi_seed, int(i_), j_, z_shape, a.z0_sigma, a.z0_mode, z_init, a.z0_eps) for i_ in ids_]))
+    extra_fp = {}
+    if a.record_by_step: extra_fp["rbs"] = True
+    if a.record_q: extra_fp["rq"] = True
+    if a.z0_mode != "gauss": extra_fp["z0_mode"] = a.z0_mode
+    if a.z0_mode == "perturb": extra_fp["z0_eps"] = a.z0_eps
+    if a.z0_device: extra_fp["z0_device"] = True
+    if a.seg_noise_beta is not None: extra_fp["seg_noise_beta"] = a.seg_noise_beta
+    if a.zero_prefix: extra_fp["zero_prefix"] = True
     if a.eta_override is not None:
         eta = float(a.eta_override)
         print(f"DIAGNOSTIC eta override: learned {eta_learned:.3f} -> {eta:.3f}", flush=True)
@@ -328,6 +470,10 @@ def main():
         # come from every scan for free. (B, k) columns; merge concatenates.
         rec["mi_exact_k"] = []
         rec["mi_resid_k"] = []
+    if a.record_by_step:
+        rec["exact_by_step"] = []
+    if a.record_q:
+        rec["q_by_step"] = []
     uv_ks = []
     if a.vote_unverified:
         if len(sel) > 5000:
@@ -342,7 +488,7 @@ def main():
                                   mi_seed=a.mi_seed, fmo=bool(a.final_map_only),
                                   uv=bool(a.vote_unverified), ver=2,
                                   **({"ema": True} if a.ema else {}), **({"z0": a.z0_sigma} if trm else {}),
-                                  **({"hard": True} if a.hard_feedback else {})),
+                                  **({"hard": True} if a.hard_feedback else {}), **extra_fp),
                      sort_keys=True)
     partial_p = out / f"partial_{tag}.npz"
     start = 0
@@ -370,10 +516,16 @@ def main():
         else:
             void = jax.nn.one_hot(jnp.full((cv, cv), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
             y0 = jnp.broadcast_to(void, (B,) + void.shape)
+        q_rows = [] if a.record_q else None
         ex, ok, pred9, _ = run_batch(params, cfg, tvj, x_can, y0, t_total=t_total, tau=a.tau,
                                      gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                     layout=layout, t_norm_fixed=tnf, ab=ab, hard=a.hard_feedback)
+                                     layout=layout, t_norm_fixed=tnf, ab=ab, hard=a.hard_feedback,
+                                     noise_keys=noise_keys_for(ids, -1), q_fn=q_fn, q_out=q_rows)
         cold = ex[-1]
+        if a.record_by_step:
+            rec["exact_by_step"].extend(np.packbits(ex.T.astype(np.uint8), axis=1, bitorder="little").tolist())
+        if a.record_q:
+            rec["q_by_step"].extend(np.stack(q_rows, axis=1).astype(np.float16).tolist())   # (B, T, 2)
         fe, fv = first_true(ex), first_true(ok)
         viol = np.asarray(violations_dev(jnp.asarray(pred9)))
         cells = (pred9 == sol9).reshape(B, -1).sum(1)
@@ -386,11 +538,11 @@ def main():
         for j in range(a.k_init):
             y0r = np.stack([mi_canvas(a.mi_seed, int(ids[b]), j, layout) for b in range(B)])
             y0r = jax.nn.one_hot(jnp.asarray(y0r, jnp.int32), M.VOCAB).transpose(0, 3, 1, 2)
-            z0r = (jnp.asarray(np.stack([mi_z0(a.mi_seed, int(ids[b]), j, z_shape, a.z0_sigma) for b in range(B)]))
-                   if trm else None)
+            z0r = draw_z0(ids, j) if trm else None
             exr, okr, predr, resr = run_batch(params, cfg, tvj, x_can, y0r, t_total=t_total, tau=a.tau,
                                               gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
-                                              layout=layout, t_norm_fixed=tnf, ab=ab, z0=z0r, hard=a.hard_feedback)
+                                              layout=layout, t_norm_fixed=tnf, ab=ab, z0=z0r, hard=a.hard_feedback,
+                                              noise_keys=noise_keys_for(ids, j))
             hit = okr[-1]
             mi_first = np.where((mi_first < 0) & hit, j, mi_first)
             mi_v += hit.astype(int); mi_t += exr[-1].astype(int)
@@ -427,6 +579,8 @@ def main():
             sys.exit(3)   # named-test hook only: simulates a preemption mid-shard
 
     arr = {k: np.asarray(v) for k, v in rec.items()}
+    if "exact_by_step" in arr: arr["exact_by_step"] = arr["exact_by_step"].astype(np.uint8)    # packed bits (B, ceil(T/8))
+    if "q_by_step" in arr: arr["q_by_step"] = arr["q_by_step"].astype(np.float16)               # (B, T, 2)
     np.savez_compressed(out / f"records_{tag}.npz", **arr)
     partial_p.unlink(missing_ok=True)
     summ = summarize(arr, Q, sel, qs, dict(
@@ -438,6 +592,9 @@ def main():
         final_map_only=bool(a.final_map_only), eq_coupled_ab=ab,
         cell_kind=getattr(cfg, "cell_kind", "rg"), ema=bool(a.ema), z0_sigma=(a.z0_sigma if trm else None),
         inner_k=int(getattr(cfg, "inner_k", 1)), hard_feedback=bool(a.hard_feedback),
+        z0_mode=(a.z0_mode if trm else None), z0_eps=(a.z0_eps if (trm and a.z0_mode == "perturb") else None),
+        z0_device=bool(a.z0_device), seg_noise_beta=a.seg_noise_beta, zero_prefix=bool(a.zero_prefix),
+        record_by_step=bool(a.record_by_step), record_q=bool(a.record_q), port=saved.get("port"),
         wall_s=round(time.time() - t0, 1)))
     (out / f"summary_{tag}.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps({k: summ[k] for k in ("n", "t_total", "k_init", "init", "exact_acc", "exact_acc_vote", "wall_s")}))
@@ -483,6 +640,26 @@ def summarize(arr, Q, sel, qs, base):
             pick = np.argmin(re_k[:, :k], axis=1)
             t1r[str(k)] = float(ex_k[np.arange(n), pick].mean())
         summ["t1r_at_k"] = t1r
+    # FRONTIER (build B1): the depth ladder from the packed per-step bits (R4) and the halting head as a verifier (R10)
+    if n and "exact_by_step" in arr and arr["exact_by_step"].ndim == 2:
+        T = int(base.get("t_total", 0)) or 8 * arr["exact_by_step"].shape[1]
+        bits = np.unpackbits(arr["exact_by_step"].astype(np.uint8), axis=1, bitorder="little")[:, :T].astype(bool)
+        summ["exact_by_step_curve"] = [float(bits[:, t].mean()) for t in range(T)]
+        summ["depth_regressions"] = int(np.sum(bits.any(axis=1) & ~bits[:, -1]))   # solved at some step, unsolved at the last
+    if n and "q_by_step" in arr and arr["q_by_step"].ndim == 3:
+        q = arr["q_by_step"].astype(np.float32); ql = q[:, -1, 0]; qc = q[:, -1, 1]
+        summ["q_halt_auc_last"] = rank_auc(ql, arr["cold_exact"])
+        summ["q_halt_margin_auc_last"] = rank_auc(ql - qc, arr["cold_exact"])
+        halt = ql > qc
+        summ["q_halt_frac_last"] = float(halt.mean())
+        summ["q_halt_precision_last"] = float(arr["cold_exact"][halt].mean()) if halt.any() else None
+        summ["q_halt_recall_last"] = float(halt[arr["cold_exact"]].mean()) if arr["cold_exact"].any() else None
+        first_halt = np.array([int(np.argmax(q[i, :, 0] > q[i, :, 1])) if np.any(q[i, :, 0] > q[i, :, 1]) else q.shape[1] - 1 for i in range(n)])
+        summ["q_first_halt_step_mean"] = float(first_halt.mean() + 1)
+        if "exact_by_step" in arr and arr["exact_by_step"].ndim == 2:
+            T = q.shape[1]
+            bits = np.unpackbits(arr["exact_by_step"].astype(np.uint8), axis=1, bitorder="little")[:, :T].astype(bool)
+            summ["exact_at_first_halt"] = float(bits[np.arange(n), first_halt].mean())   # the emulated ACT-halting protocol row
     return summ
 
 
