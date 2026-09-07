@@ -45,11 +45,11 @@ FINAL PHASE Night A — PHYSICS PASS (2026-09-07; analysis-time, descriptive, no
   A0: vsel evals on 1 path(s) ['runs/pretrainfinalA_A0/ckpt_040000.pkl'] | final path runs/pretrainfinalA_A0/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 40000 -> AGREES
   A1: vsel evals on 1 path(s) ['runs/pretrainfinalA_A1/ckpt_042000.pkl'] | final path runs/pretrainfinalA_A1/ckpt_latest.pkl | chain val_best '042000 0.9062 42000' | offline argmax(val_t16_ema over banked) = 42000 -> AGREES
   A2: vsel evals on 1 path(s) ['runs/pretrainfinalA_A2/ckpt_048000.pkl'] | final path runs/pretrainfinalA_A2/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 48000 -> AGREES
-  A3: vsel evals on 1 path(s) ['runs/pretrainfinalA_A3/ckpt_042000.pkl'] | final path runs/pretrainfinalA_A3/ckpt_latest.pkl | chain val_best '042000 0.9688 42000' | offline argmax(val_t16_ema over banked) = 42000 -> AGREES
-  A4: vsel evals on 1 path(s) ['runs/pretrainfinalA_A4/ckpt_010000.pkl'] | final path runs/pretrainfinalA_A4/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 10000 -> AGREES
-  A5: vsel evals on 1 path(s) ['runs/pretrainfinalA_A5/ckpt_028000.pkl'] | final path runs/pretrainfinalA_A5/ckpt_latest.pkl | chain val_best '028000 0.9688 28000' | offline argmax(val_t16_ema over banked) = 28000 -> AGREES
-  A7: vsel evals on 1 path(s) ['runs/pretrainfinalA_A7/ckpt_022000.pkl'] | final path runs/pretrainfinalA_A7/ckpt_latest.pkl | chain val_best '022000 1.0000 22000' | offline argmax(val_t16_ema over banked) = 22000 -> AGREES
-  A8: vsel evals on 1 path(s) ['runs/pretrainfinalA_A8/ckpt_012000.pkl'] | final path runs/pretrainfinalA_A8/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 12000 -> AGREES
+  A3: vsel evals on 2 path(s) ['runs/frontier_ckpts/A3.pkl', 'runs/pretrainfinalA_A3/ckpt_042000.pkl'] | final path runs/pretrainfinalA_A3/ckpt_latest.pkl | chain val_best '042000 0.9688 42000' | offline argmax(val_t16_ema over banked) = 42000 -> DIFFERS/NA
+  A4: vsel evals on 2 path(s) ['runs/frontier_ckpts/A4.pkl', 'runs/pretrainfinalA_A4/ckpt_010000.pkl'] | final path runs/pretrainfinalA_A4/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 10000 -> DIFFERS/NA
+  A5: vsel evals on 2 path(s) ['runs/frontier_ckpts/A5.pkl', 'runs/pretrainfinalA_A5/ckpt_028000.pkl'] | final path runs/pretrainfinalA_A5/ckpt_latest.pkl | chain val_best '028000 0.9688 28000' | offline argmax(val_t16_ema over banked) = 28000 -> DIFFERS/NA
+  A7: vsel evals on 2 path(s) ['runs/frontier_ckpts/A7.pkl', 'runs/pretrainfinalA_A7/ckpt_022000.pkl'] | final path runs/pretrainfinalA_A7/ckpt_latest.pkl | chain val_best '022000 1.0000 22000' | offline argmax(val_t16_ema over banked) = 22000 -> DIFFERS/NA
+  A8: vsel evals on 2 path(s) ['runs/frontier_ckpts/A8.pkl', 'runs/pretrainfinalA_A8/ckpt_012000.pkl'] | final path runs/pretrainfinalA_A8/ckpt_latest.pkl | chain val_best None | offline argmax(val_t16_ema over banked) = 12000 -> DIFFERS/NA
 
 == B. TRAJECTORIES (train rows every 50 steps; monitors every 2k on the 64 train-file puzzles; pace measured from timestamps) ==
   arm | rows | last | CE 5k/10k/20k/30k/40k/50k | CE end / min (step) | train_exact end | halt_frac end | mean_steps end | q_loss end | wall h | pace ts it/s (printed) | val_t16_ema peak (step) / end | val_t16 raw at peak | extra keys
@@ -115,6 +115,11 @@ FINAL PHASE Night A — PHYSICS PASS (2026-09-07; analysis-time, descriptive, no
   A0 |  94.47 |  58.49 |  53.64 |  99.76 | |  99.76 | 0.601 |  38.01 | 0.538  [n=20000]
   A1 |  94.03 |  53.31 |  38.22 |  99.87 | |  99.87 | 0.497 |  52.42 | 0.383  [n=20000]
   A2 |  92.07 |  91.99 |  98.30 |  98.32 | |  98.32 | 0.999 |   0.00 | 1.000  [n=20000]
+  A3 |  94.92 |  95.10 |    -   |    -   | |  99.74 | 0.956 |   4.94 | 0.939  [n=5000]
+  A4 |  97.78 |  97.62 |    -   |    -   | |  99.82 | 0.951 |   5.11 | 0.988  [n=5000]
+  A5 |  98.22 |  98.14 |    -   |    -   | |  99.46 | 0.999 |   0.04 | 1.000  [n=5000]
+  A7 |  98.18 |  94.70 |    -   |    -   | |  99.92 | 0.375 |  68.56 | 0.529  [n=5000]
+  A8 |  97.24 |  97.40 |    -   |    -   | |  99.70 | 0.996 |   0.39 | 0.999  [n=5000]
   X0 |  92.86 |  92.12 |  92.48 |  99.70 | |  99.70 | 0.925 |   7.80 | 0.928  [n=20000]
   X1 |  24.57 |  26.55 |  62.76 |  69.53 | |  69.53 | 0.979 |   1.55 | 0.903  [n=20000]
   R3 |  43.36 |  43.11 |  50.97 |  51.66 | |  51.66 | 0.986 |   0.00 | 0.987  [n=20000]
@@ -237,14 +242,3 @@ FINAL PHASE Night A — PHYSICS PASS (2026-09-07; analysis-time, descriptive, no
     A5: CE end 0.162 min 0.119 @ 49800 | train_exact end 0.703 | cold16 vsel  95.08 final  84.49 (drop 0.1059; wide arms' final on 50k, labeled)
     A7: CE end 0.070 min 0.022 @ 47700 | train_exact end 0.905 | cold16 vsel  95.12 final  80.65 (drop 0.1447; wide arms' final on 50k, labeled)
     A8: CE end 0.008 min 0.002 @ 40650 | train_exact end 0.964 | cold16 vsel  93.67 final  72.36 (drop 0.2132; wide arms' final on 50k, labeled)
-
-== J. CURVATURE CONCENTRATION from Adam-v (ckpt_latest opt_state; PR/n = participation ratio per parameter; k90 = fraction of parameters carrying 90 % of the curvature mass) ==
-  A0: n 5037061 | PR/n 3.91e-04 | k90 5.83 % | top blocks trm 100.0%, eq 0.0%
-  A1: n 5037061 | PR/n 8.57e-03 | k90 7.22 % | top blocks trm 100.0%, eq 0.0%
-  A2: n 5037061 | PR/n 8.63e-03 | k90 6.14 % | top blocks trm 100.0%, eq 0.0%
-  A3: n 2780933 | PR/n 4.47e-04 | k90 8.59 % | top blocks dec 100.0%, eq 0.0%
-  A4: n 2780933 | PR/n 4.37e-03 | k90 12.79 % | top blocks dec 100.0%, eq 0.0%
-  A5: n 2780933 | PR/n 8.96e-04 | k90 6.69 % | top blocks dec 100.0%, eq 0.0%
-  A7: n 2780933 | PR/n 7.38e-03 | k90 7.21 % | top blocks dec 100.0%, eq 0.0%
-  A8: n 5370373 | PR/n 6.36e-03 | k90 4.04 % | top blocks dec 100.0%, eq 0.0%
-  X0: n 5037061 | PR/n 1.29e-02 | k90 9.75 % | top blocks trm 100.0%, eq 0.0%

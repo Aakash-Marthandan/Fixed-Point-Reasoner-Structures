@@ -32,6 +32,8 @@ def load_records(date):
     by = {}
     for r in rows:
         key = (r["campaign"] or r["kind"], r["arm"])
+        if not r["campaign"] and r["arm"].startswith("frontier"):   # the pod's ported-checkpoint evals parse as arm 'frontier<tag>'
+            key = ("frontier", r["arm"][len("frontier"):])
         by.setdefault(key, []).append(r)
     return by
 
