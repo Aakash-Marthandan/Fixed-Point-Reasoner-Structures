@@ -1,0 +1,23 @@
+finalA/A1@vsel runs/pretrainfinalA_A1/ckpt_042000.pkl --ema
+finalA/A2@vsel runs/pretrainfinalA_A2/ckpt_048000.pkl --ema
+finalA/A4@vsel runs/pretrainfinalA_A4/ckpt_010000.pkl --ema
+sportC2/X1@vsel runs/pretrainsportC2_X1/ckpt_020000.pkl --ema
+sportC2/X2@vsel runs/pretrainsportC2_X2/ckpt_050000.pkl --ema
+sportC1/R0@vsel runs/pretrainsportC1_R0/ckpt_050000.pkl --ema
+sportC1/B0@A20k runs/pretrainsportC1_B0a/ckpt_020000.pkl 
+sportC2/W0@vsel runs/pretrainsportC2_W0a/ckpt_050000.pkl 
+sportC2/R1@vsel runs/pretrainsportC2_R1/ckpt_010000.pkl 
+sportC2/R2@vsel runs/pretrainsportC2_R2a/ckpt_040000.pkl 
+sportC2/R3@vsel runs/pretrainsportC2_R3a/ckpt_040000.pkl 
+sportC2/R4@vsel runs/pretrainsportC2_R4/ckpt_020000.pkl --ema
+sportC0/P3s1@final runs/pretrainsportC0_P3s1/ckpt_latest.pkl 
+sportC0/P1@final runs/pretrainsportC0_P1/ckpt_latest.pkl 
+sportBr2b/D4@final runs/pretrainsportBr2b_D4/ckpt_latest.pkl 
+sportBr2b/C3X@final runs/pretrainsportBr2b_C3X/ckpt_latest.pkl 
+sportBr2/C3@final runs/pretrainsportBr2_C3/ckpt_latest.pkl 
+sportB/B2@final runs/pretrainsportB_B2/ckpt_latest.pkl 
+sport2/S5@final runs/pretrainsport2_S5/ckpt_latest.pkl 
+sport3a/A2@final runs/pretrainsport3a_A2/ckpt_latest.pkl 
+sport3a/A3@final runs/pretrainsport3a_A3/ckpt_latest.pkl 
+sport3a/A7@final runs/pretrainsport3a_A7/ckpt_latest.pkl 
+sportBr2b/D3@vb runs/pretrainsportBr2b_D3/ckpt_040000.pkl 

@@ -1,0 +1,950 @@
+== EVAL ARTIFACTS on disk: 694 ==
+kind | arm | sub | n | t | k | subset | cell | ema | init | recs | ckpt
+calib | pfinalAA0_vsel |  | 35 | - | - | - | - | True | - | True | runs/pretrainfinalA_A0/ckpt_040000.pkl
+calib | pfinalAA1_vsel |  | 26 | - | - | - | - | True | - | True | runs/pretrainfinalA_A1/ckpt_042000.pkl
+calib | pfinalAA2_vsel |  | 41 | - | - | - | - | True | - | True | runs/pretrainfinalA_A2/ckpt_048000.pkl
+calib | pfinalAA3_vsel |  | 27 | - | - | - | - | True | - | True | runs/pretrainfinalA_A3/ckpt_042000.pkl
+calib | pfinalAA4_vsel |  | 12 | - | - | - | - | True | - | True | runs/pretrainfinalA_A4/ckpt_010000.pkl
+calib | pfinalAA5_vsel |  | 10 | - | - | - | - | True | - | True | runs/pretrainfinalA_A5/ckpt_028000.pkl
+calib | pfinalAA7_vsel |  | 14 | - | - | - | - | True | - | True | runs/pretrainfinalA_A7/ckpt_022000.pkl
+calib | pfinalAA8_vsel |  | 11 | - | - | - | - | True | - | True | runs/pretrainfinalA_A8/ckpt_012000.pkl
+calib | psportC2R1_vsel |  | 310 | - | - | - | - | False | - | True | runs/pretrainsportC2_R1/ckpt_010000.pkl
+calib | psportC2R2_vsel |  | 329 | - | - | - | - | False | - | True | runs/pretrainsportC2_R2a/ckpt_040000.pkl
+calib | psportC2R3_vsel |  | 283 | - | - | - | - | False | - | True | runs/pretrainsportC2_R3a/ckpt_040000.pkl
+calib | psportC2R3_vsel_hard |  | 291 | - | - | - | - | False | - | True | runs/pretrainsportC2_R3a/ckpt_040000.pkl
+calib | psportC2R4_vsel |  | 335 | - | - | - | - | True | - | True | runs/pretrainsportC2_R4/ckpt_020000.pkl
+calib | psportC2W0_vsel |  | 320 | - | - | - | - | False | - | True | runs/pretrainsportC2_W0a/ckpt_050000.pkl
+calib | psportC2X1_vsel |  | 403 | - | - | - | - | True | - | True | runs/pretrainsportC2_X1/ckpt_020000.pkl
+calib | psportC2X2_vsel |  | 276 | - | - | - | - | True | - | True | runs/pretrainsportC2_X2/ckpt_050000.pkl
+census | pfinalAA0_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A0/ckpt_latest.pkl
+census | pfinalAA0_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A0/ckpt_040000.pkl
+census | pfinalAA1_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A1/ckpt_latest.pkl
+census | pfinalAA1_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A1/ckpt_042000.pkl
+census | pfinalAA2_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A2/ckpt_latest.pkl
+census | pfinalAA2_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A2/ckpt_048000.pkl
+census | pfinalAA3_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A3/ckpt_latest.pkl
+census | pfinalAA3_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A3/ckpt_042000.pkl
+census | pfinalAA4_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A4/ckpt_latest.pkl
+census | pfinalAA4_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A4/ckpt_010000.pkl
+census | pfinalAA5_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A5/ckpt_latest.pkl
+census | pfinalAA5_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A5/ckpt_028000.pkl
+census | pfinalAA7_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A7/ckpt_latest.pkl
+census | pfinalAA7_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A7/ckpt_022000.pkl
+census | pfinalAA8_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A8/ckpt_latest.pkl
+census | pfinalAA8_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainfinalA_A8/ckpt_012000.pkl
+census | psportC1A0_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_A0/ckpt_latest.pkl
+census | psportC1A0_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_A0/ckpt_030000.pkl
+census | psportC1A1_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_A1/ckpt_latest.pkl
+census | psportC1A1_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_A1/ckpt_latest.pkl
+census | psportC1B0_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_B0/ckpt_latest.pkl
+census | psportC1B0_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_B0/ckpt_020000.pkl
+census | psportC1B0_vselA20k |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_B0a/ckpt_020000.pkl
+census | psportC1B1_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_B1/ckpt_latest.pkl
+census | psportC1B1_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_B1/ckpt_030000.pkl
+census | psportC1B1_vselA20k |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_B1a/ckpt_020000.pkl
+census | psportC1R0_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_R0/ckpt_latest.pkl
+census | psportC1R0_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_R0/ckpt_050000.pkl
+census | psportC1X0_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_X0/ckpt_latest.pkl
+census | psportC1X0_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_X0/ckpt_050000.pkl
+census | psportC1X0n_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_X0n/ckpt_latest.pkl
+census | psportC1X0n_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC1_X0n/ckpt_030000.pkl
+census | psportC2R1_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_R1/ckpt_latest.pkl
+census | psportC2R1_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_R1/ckpt_010000.pkl
+census | psportC2R2_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_R2/ckpt_latest.pkl
+census | psportC2R2_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_R2a/ckpt_040000.pkl
+census | psportC2R3_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_R3/ckpt_latest.pkl
+census | psportC2R3_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_R3a/ckpt_040000.pkl
+census | psportC2R4_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_R4/ckpt_latest.pkl
+census | psportC2R4_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_R4/ckpt_020000.pkl
+census | psportC2W0_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_W0/ckpt_latest.pkl
+census | psportC2W0_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_W0a/ckpt_050000.pkl
+census | psportC2X1_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_X1/ckpt_latest.pkl
+census | psportC2X1_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_X1/ckpt_020000.pkl
+census | psportC2X2_final |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_X2/ckpt_latest.pkl
+census | psportC2X2_vsel |  | 2 | - | - | - | - | - | - | True | runs/pretrainsportC2_X2/ckpt_050000.pkl
+d3demo | b2d64 |  | 512 | 64 | 128 | 512 | rg | - | void | True | runs/_d3demo_b2d64.pkl
+d3demo | s5d16 |  | 512 | 64 | 128 | 512 | rg | - | void | True | runs/_d3demo_s5d16.pkl
+full | pfinalAA0 | full_final_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainfinalA_A0/ckpt_latest.pkl
+full | pfinalAA0 | full_vsel_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainfinalA_A0/ckpt_040000.pkl
+full | pfinalAA0 | full_vsel_t16_alt | 422786 | 16 | 0 | - | trm | False | void | True | runs/pretrainfinalA_A0/ckpt_040000.pkl
+full | pfinalAA0 | full_vsel_t64 | 422786 | 64 | 0 | - | trm | True | void | True | runs/pretrainfinalA_A0/ckpt_040000.pkl
+full | pfinalAA1 | full_final_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainfinalA_A1/ckpt_latest.pkl
+full | pfinalAA1 | full_vsel_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainfinalA_A1/ckpt_042000.pkl
+full | pfinalAA1 | full_vsel_t16_alt | 422786 | 16 | 0 | - | trm | False | void | True | runs/pretrainfinalA_A1/ckpt_042000.pkl
+full | pfinalAA1 | full_vsel_t64 | 422786 | 64 | 0 | - | trm | True | void | True | runs/pretrainfinalA_A1/ckpt_042000.pkl
+full | pfinalAA2 | full_final_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainfinalA_A2/ckpt_latest.pkl
+full | pfinalAA2 | full_vsel_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainfinalA_A2/ckpt_048000.pkl
+full | pfinalAA2 | full_vsel_t16_alt | 422786 | 16 | 0 | - | trm | False | void | True | runs/pretrainfinalA_A2/ckpt_048000.pkl
+full | pfinalAA2 | full_vsel_t64 | 422786 | 64 | 0 | - | trm | True | void | True | runs/pretrainfinalA_A2/ckpt_048000.pkl
+full | pfinalAA3 | full_final_t16 | 50000 | 16 | 0 | 50000 | dec | True | void | True | runs/pretrainfinalA_A3/ckpt_latest.pkl
+full | pfinalAA3 | full_vsel_t16 | 422786 | 16 | 0 | - | dec | True | void | True | runs/pretrainfinalA_A3/ckpt_042000.pkl
+full | pfinalAA3 | full_vsel_t16_alt | 50000 | 16 | 0 | 50000 | dec | False | void | True | runs/pretrainfinalA_A3/ckpt_042000.pkl
+full | pfinalAA3 | full_vsel_t64 | 100000 | 64 | 0 | 100000 | dec | True | void | True | runs/pretrainfinalA_A3/ckpt_042000.pkl
+full | pfinalAA4 | full_final_t16 | 50000 | 16 | 0 | 50000 | dec | True | void | True | runs/pretrainfinalA_A4/ckpt_latest.pkl
+full | pfinalAA4 | full_vsel_t16 | 422786 | 16 | 0 | - | dec | True | void | True | runs/pretrainfinalA_A4/ckpt_010000.pkl
+full | pfinalAA4 | full_vsel_t16_alt | 50000 | 16 | 0 | 50000 | dec | False | void | True | runs/pretrainfinalA_A4/ckpt_010000.pkl
+full | pfinalAA4 | full_vsel_t64 | 100000 | 64 | 0 | 100000 | dec | True | void | True | runs/pretrainfinalA_A4/ckpt_010000.pkl
+full | pfinalAA5 | full_final_t16 | 50000 | 16 | 0 | 50000 | dec | True | void | True | runs/pretrainfinalA_A5/ckpt_latest.pkl
+full | pfinalAA5 | full_vsel_t16 | 422786 | 16 | 0 | - | dec | True | void | True | runs/pretrainfinalA_A5/ckpt_028000.pkl
+full | pfinalAA5 | full_vsel_t16_alt | 50000 | 16 | 0 | 50000 | dec | False | void | True | runs/pretrainfinalA_A5/ckpt_028000.pkl
+full | pfinalAA5 | full_vsel_t64 | 100000 | 64 | 0 | 100000 | dec | True | void | True | runs/pretrainfinalA_A5/ckpt_028000.pkl
+full | pfinalAA7 | full_final_t16 | 50000 | 16 | 0 | 50000 | dec | True | void | True | runs/pretrainfinalA_A7/ckpt_latest.pkl
+full | pfinalAA7 | full_vsel_t16 | 422786 | 16 | 0 | - | dec | True | void | True | runs/pretrainfinalA_A7/ckpt_022000.pkl
+full | pfinalAA7 | full_vsel_t16_alt | 50000 | 16 | 0 | 50000 | dec | False | void | True | runs/pretrainfinalA_A7/ckpt_022000.pkl
+full | pfinalAA7 | full_vsel_t64 | 100000 | 64 | 0 | 100000 | dec | True | void | True | runs/pretrainfinalA_A7/ckpt_022000.pkl
+full | pfinalAA8 | full_final_t16 | 50000 | 16 | 0 | 50000 | dec | True | void | True | runs/pretrainfinalA_A8/ckpt_latest.pkl
+full | pfinalAA8 | full_vsel_t16 | 422786 | 16 | 0 | - | dec | True | void | True | runs/pretrainfinalA_A8/ckpt_012000.pkl
+full | pfinalAA8 | full_vsel_t16_alt | 50000 | 16 | 0 | 50000 | dec | False | void | True | runs/pretrainfinalA_A8/ckpt_012000.pkl
+full | pfinalAA8 | full_vsel_t64 | 100000 | 64 | 0 | 100000 | dec | True | void | True | runs/pretrainfinalA_A8/ckpt_012000.pkl
+full | psport2S0 | full_t6 | 422786 | 6 | 0 | - | rg | - | - | True | runs/pretrainsport2_S0/ckpt_latest.pkl
+full | psport2S0 | full_t64 | 422786 | 64 | 0 | - | rg | - | - | True | runs/pretrainsport2_S0/ckpt_latest.pkl
+full | psport2S0 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S0/ckpt_latest.pkl
+full | psport2S0 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S0/ckpt_latest.pkl
+full | psport2S0 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S0/ckpt_latest.pkl
+full | psport2S1 | full_t6 | 422786 | 6 | 0 | - | rg | - | - | True | runs/pretrainsport2_S1/ckpt_latest.pkl
+full | psport2S1 | full_t64 | 422786 | 64 | 0 | - | rg | - | - | True | runs/pretrainsport2_S1/ckpt_latest.pkl
+full | psport2S1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S1/ckpt_latest.pkl
+full | psport2S1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S1/ckpt_latest.pkl
+full | psport2S1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S1/ckpt_latest.pkl
+full | psport2S2 | full_t6 | 422786 | 6 | 0 | - | rg | - | - | True | runs/pretrainsport2_S2/ckpt_latest.pkl
+full | psport2S2 | full_t64 | 422786 | 64 | 0 | - | rg | - | - | True | runs/pretrainsport2_S2/ckpt_latest.pkl
+full | psport2S2 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S2/ckpt_latest.pkl
+full | psport2S2 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S2/ckpt_latest.pkl
+full | psport2S2 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S2/ckpt_latest.pkl
+full | psport2S3 | full_t6 | 422786 | 6 | 0 | - | rg | - | - | True | runs/pretrainsport2_S3/ckpt_latest.pkl
+full | psport2S3 | full_t64 | 422786 | 64 | 0 | - | rg | - | - | True | runs/pretrainsport2_S3/ckpt_latest.pkl
+full | psport2S3 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S3/ckpt_latest.pkl
+full | psport2S3 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S3/ckpt_latest.pkl
+full | psport2S3 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S3/ckpt_latest.pkl
+full | psport2S4 | full_t6 | 422786 | 6 | 0 | - | rg | - | - | True | runs/pretrainsport2_S4/ckpt_latest.pkl
+full | psport2S4 | full_t64 | 422786 | 64 | 0 | - | rg | - | - | True | runs/pretrainsport2_S4/ckpt_latest.pkl
+full | psport2S4 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S4/ckpt_latest.pkl
+full | psport2S4 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S4/ckpt_latest.pkl
+full | psport2S4 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S4/ckpt_latest.pkl
+full | psport2S5 | full_t6 | 422786 | 6 | 0 | - | rg | - | - | True | runs/pretrainsport2_S5/ckpt_latest.pkl
+full | psport2S5 | full_t64 | 422786 | 64 | 0 | - | rg | - | - | True | runs/pretrainsport2_S5/ckpt_latest.pkl
+full | psport2S5 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S5/ckpt_latest.pkl
+full | psport2S5 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S5/ckpt_latest.pkl
+full | psport2S5 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S5/ckpt_latest.pkl
+full | psport2S6 | full_t6 | 422786 | 6 | 0 | - | rg | - | - | True | runs/pretrainsport2_S6/ckpt_latest.pkl
+full | psport2S6 | full_t64 | 422786 | 64 | 0 | - | rg | - | - | True | runs/pretrainsport2_S6/ckpt_latest.pkl
+full | psport2S6 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S6/ckpt_latest.pkl
+full | psport2S6 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S6/ckpt_latest.pkl
+full | psport2S6 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S6/ckpt_latest.pkl
+full | psport2S7 | full_t6 | 422786 | 6 | 0 | - | rg | - | - | True | runs/pretrainsport2_S7/ckpt_latest.pkl
+full | psport2S7 | full_t64 | 422786 | 64 | 0 | - | rg | - | - | True | runs/pretrainsport2_S7/ckpt_latest.pkl
+full | psport2S7 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S7/ckpt_latest.pkl
+full | psport2S7 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S7/ckpt_latest.pkl
+full | psport2S7 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | - | True | runs/pretrainsport2_S7/ckpt_latest.pkl
+full | psport2w2W1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W1/ckpt_latest.pkl
+full | psport2w2W1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W1/ckpt_latest.pkl
+full | psport2w2W1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W1/ckpt_latest.pkl
+full | psport2w2W1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W1/ckpt_latest.pkl
+full | psport2w2W1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W1/ckpt_latest.pkl
+full | psport2w2W1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W1/ckpt_latest.pkl
+full | psport2w2W1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W1/ckpt_latest.pkl
+full | psport2w2W13 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W13/ckpt_latest.pkl
+full | psport2w2W13 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W13/ckpt_latest.pkl
+full | psport2w2W13 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W13/ckpt_latest.pkl
+full | psport2w2W13 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W13/ckpt_latest.pkl
+full | psport2w2W13 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W13/ckpt_latest.pkl
+full | psport2w2W13 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W13/ckpt_latest.pkl
+full | psport2w2W13 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W13/ckpt_latest.pkl
+full | psport2w2W1s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W1s1/ckpt_latest.pkl
+full | psport2w2W1s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W1s1/ckpt_latest.pkl
+full | psport2w2W1s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W1s1/ckpt_latest.pkl
+full | psport2w2W1s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W1s1/ckpt_latest.pkl
+full | psport2w2W1s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W1s1/ckpt_latest.pkl
+full | psport2w2W1s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W1s1/ckpt_latest.pkl
+full | psport2w2W1s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W1s1/ckpt_latest.pkl
+full | psport2w2W2 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W2/ckpt_latest.pkl
+full | psport2w2W2 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W2/ckpt_latest.pkl
+full | psport2w2W2 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W2/ckpt_latest.pkl
+full | psport2w2W2 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W2/ckpt_latest.pkl
+full | psport2w2W2 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W2/ckpt_latest.pkl
+full | psport2w2W2 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W2/ckpt_latest.pkl
+full | psport2w2W2 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W2/ckpt_latest.pkl
+full | psport2w2W3 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W3/ckpt_latest.pkl
+full | psport2w2W3 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W3/ckpt_latest.pkl
+full | psport2w2W3 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W3/ckpt_latest.pkl
+full | psport2w2W3 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W3/ckpt_latest.pkl
+full | psport2w2W3 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W3/ckpt_latest.pkl
+full | psport2w2W3 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W3/ckpt_latest.pkl
+full | psport2w2W3 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W3/ckpt_latest.pkl
+full | psport2w2W4 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W4/ckpt_latest.pkl
+full | psport2w2W4 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W4/ckpt_latest.pkl
+full | psport2w2W4 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W4/ckpt_latest.pkl
+full | psport2w2W4 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W4/ckpt_latest.pkl
+full | psport2w2W4 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W4/ckpt_latest.pkl
+full | psport2w2W4 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W4/ckpt_latest.pkl
+full | psport2w2W4 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W4/ckpt_latest.pkl
+full | psport2w2W4s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W4s1/ckpt_latest.pkl
+full | psport2w2W4s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W4s1/ckpt_latest.pkl
+full | psport2w2W4s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W4s1/ckpt_latest.pkl
+full | psport2w2W4s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W4s1/ckpt_latest.pkl
+full | psport2w2W4s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W4s1/ckpt_latest.pkl
+full | psport2w2W4s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W4s1/ckpt_latest.pkl
+full | psport2w2W4s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W4s1/ckpt_latest.pkl
+full | psport2w2W5 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W5/ckpt_latest.pkl
+full | psport2w2W5 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W5/ckpt_latest.pkl
+full | psport2w2W5 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W5/ckpt_latest.pkl
+full | psport2w2W5 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W5/ckpt_latest.pkl
+full | psport2w2W5 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W5/ckpt_latest.pkl
+full | psport2w2W5 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W5/ckpt_latest.pkl
+full | psport2w2W5 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W5/ckpt_latest.pkl
+full | psport2w2W6 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W6/ckpt_latest.pkl
+full | psport2w2W6 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W6/ckpt_latest.pkl
+full | psport2w2W6 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W6/ckpt_latest.pkl
+full | psport2w2W6 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W6/ckpt_latest.pkl
+full | psport2w2W6 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W6/ckpt_latest.pkl
+full | psport2w2W6 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W6/ckpt_latest.pkl
+full | psport2w2W6 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W6/ckpt_latest.pkl
+full | psport2w2W7 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W7/ckpt_latest.pkl
+full | psport2w2W7 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W7/ckpt_latest.pkl
+full | psport2w2W7 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W7/ckpt_latest.pkl
+full | psport2w2W7 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W7/ckpt_latest.pkl
+full | psport2w2W7 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W7/ckpt_latest.pkl
+full | psport2w2W7 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W7/ckpt_latest.pkl
+full | psport2w2W7 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W7/ckpt_latest.pkl
+full | psport2w2W8 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W8/ckpt_latest.pkl
+full | psport2w2W8 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W8/ckpt_latest.pkl
+full | psport2w2W8 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W8/ckpt_latest.pkl
+full | psport2w2W8 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W8/ckpt_latest.pkl
+full | psport2w2W8 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W8/ckpt_latest.pkl
+full | psport2w2W8 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W8/ckpt_latest.pkl
+full | psport2w2W8 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W8/ckpt_latest.pkl
+full | psport2w2W9 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W9/ckpt_latest.pkl
+full | psport2w2W9 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W9/ckpt_latest.pkl
+full | psport2w2W9 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport2w2_W9/ckpt_latest.pkl
+full | psport2w2W9 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W9/ckpt_latest.pkl
+full | psport2w2W9 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W9/ckpt_latest.pkl
+full | psport2w2W9 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport2w2_W9/ckpt_latest.pkl
+full | psport2w2W9 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport2w2_W9/ckpt_latest.pkl
+full | psport3aA10 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A10/ckpt_latest.pkl
+full | psport3aA10 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A10/ckpt_latest.pkl
+full | psport3aA10 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A10/ckpt_040000.pkl
+full | psport3aA10 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A10/ckpt_latest.pkl
+full | psport3aA10 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A10/ckpt_latest.pkl
+full | psport3aA10 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A10/ckpt_latest.pkl
+full | psport3aA10 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A10/ckpt_latest.pkl
+full | psport3aA10 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A10/ckpt_latest.pkl
+full | psport3aA10 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A10/ckpt_latest.pkl
+full | psport3aA2 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A2/ckpt_latest.pkl
+full | psport3aA2 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A2/ckpt_latest.pkl
+full | psport3aA2 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A2/ckpt_latest.pkl
+full | psport3aA2 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A2/ckpt_latest.pkl
+full | psport3aA2 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A2/ckpt_latest.pkl
+full | psport3aA2 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A2/ckpt_latest.pkl
+full | psport3aA2 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A2/ckpt_latest.pkl
+full | psport3aA2 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A2/ckpt_latest.pkl
+full | psport3aA2s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A2s1/ckpt_latest.pkl
+full | psport3aA2s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A2s1/ckpt_latest.pkl
+full | psport3aA2s1 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A2s1/ckpt_010000.pkl
+full | psport3aA2s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A2s1/ckpt_latest.pkl
+full | psport3aA2s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A2s1/ckpt_latest.pkl
+full | psport3aA2s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A2s1/ckpt_latest.pkl
+full | psport3aA2s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A2s1/ckpt_latest.pkl
+full | psport3aA2s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A2s1/ckpt_latest.pkl
+full | psport3aA2s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A2s1/ckpt_latest.pkl
+full | psport3aA3 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A3/ckpt_latest.pkl
+full | psport3aA3 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A3/ckpt_latest.pkl
+full | psport3aA3 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A3/ckpt_045000.pkl
+full | psport3aA3 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A3/ckpt_latest.pkl
+full | psport3aA3 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A3/ckpt_latest.pkl
+full | psport3aA3 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A3/ckpt_latest.pkl
+full | psport3aA3 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A3/ckpt_latest.pkl
+full | psport3aA3 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A3/ckpt_latest.pkl
+full | psport3aA3 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A3/ckpt_latest.pkl
+full | psport3aA3s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A3s1/ckpt_latest.pkl
+full | psport3aA3s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A3s1/ckpt_latest.pkl
+full | psport3aA3s1 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A3s1/ckpt_030000.pkl
+full | psport3aA3s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A3s1/ckpt_latest.pkl
+full | psport3aA3s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A3s1/ckpt_latest.pkl
+full | psport3aA3s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A3s1/ckpt_latest.pkl
+full | psport3aA3s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A3s1/ckpt_latest.pkl
+full | psport3aA3s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A3s1/ckpt_latest.pkl
+full | psport3aA3s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A3s1/ckpt_latest.pkl
+full | psport3aA4 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A4/ckpt_latest.pkl
+full | psport3aA4 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A4/ckpt_latest.pkl
+full | psport3aA4 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A4/ckpt_010000.pkl
+full | psport3aA4 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A4/ckpt_latest.pkl
+full | psport3aA4 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A4/ckpt_latest.pkl
+full | psport3aA4 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A4/ckpt_latest.pkl
+full | psport3aA4 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A4/ckpt_latest.pkl
+full | psport3aA4 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A4/ckpt_latest.pkl
+full | psport3aA4 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A4/ckpt_latest.pkl
+full | psport3aA4s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A4s1/ckpt_latest.pkl
+full | psport3aA4s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A4s1/ckpt_latest.pkl
+full | psport3aA4s1 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A4s1/ckpt_015000.pkl
+full | psport3aA4s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A4s1/ckpt_latest.pkl
+full | psport3aA4s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A4s1/ckpt_latest.pkl
+full | psport3aA4s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A4s1/ckpt_latest.pkl
+full | psport3aA4s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A4s1/ckpt_latest.pkl
+full | psport3aA4s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A4s1/ckpt_latest.pkl
+full | psport3aA4s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A4s1/ckpt_latest.pkl
+full | psport3aA5 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A5/ckpt_latest.pkl
+full | psport3aA5 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A5/ckpt_latest.pkl
+full | psport3aA5 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A5/ckpt_latest.pkl
+full | psport3aA5 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A5/ckpt_latest.pkl
+full | psport3aA5 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A5/ckpt_latest.pkl
+full | psport3aA5 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A5/ckpt_latest.pkl
+full | psport3aA5 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A5/ckpt_latest.pkl
+full | psport3aA5 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A5/ckpt_latest.pkl
+full | psport3aA5s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A5s1/ckpt_latest.pkl
+full | psport3aA5s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A5s1/ckpt_latest.pkl
+full | psport3aA5s1 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A5s1/ckpt_040000.pkl
+full | psport3aA5s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A5s1/ckpt_latest.pkl
+full | psport3aA5s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A5s1/ckpt_latest.pkl
+full | psport3aA5s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A5s1/ckpt_latest.pkl
+full | psport3aA5s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A5s1/ckpt_latest.pkl
+full | psport3aA5s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A5s1/ckpt_latest.pkl
+full | psport3aA5s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A5s1/ckpt_latest.pkl
+full | psport3aA6 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A6/ckpt_latest.pkl
+full | psport3aA6 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A6/ckpt_latest.pkl
+full | psport3aA6 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A6/ckpt_035000.pkl
+full | psport3aA6 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A6/ckpt_latest.pkl
+full | psport3aA6 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A6/ckpt_latest.pkl
+full | psport3aA6 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A6/ckpt_latest.pkl
+full | psport3aA6 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A6/ckpt_latest.pkl
+full | psport3aA6 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A6/ckpt_latest.pkl
+full | psport3aA6 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A6/ckpt_latest.pkl
+full | psport3aA6s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A6s1/ckpt_latest.pkl
+full | psport3aA6s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A6s1/ckpt_latest.pkl
+full | psport3aA6s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A6s1/ckpt_latest.pkl
+full | psport3aA6s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A6s1/ckpt_latest.pkl
+full | psport3aA6s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A6s1/ckpt_latest.pkl
+full | psport3aA6s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A6s1/ckpt_latest.pkl
+full | psport3aA6s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A6s1/ckpt_latest.pkl
+full | psport3aA6s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A6s1/ckpt_latest.pkl
+full | psport3aA7 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A7/ckpt_latest.pkl
+full | psport3aA7 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A7/ckpt_latest.pkl
+full | psport3aA7 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A7/ckpt_035000.pkl
+full | psport3aA7 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A7/ckpt_latest.pkl
+full | psport3aA7 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A7/ckpt_latest.pkl
+full | psport3aA7 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A7/ckpt_latest.pkl
+full | psport3aA7 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A7/ckpt_latest.pkl
+full | psport3aA7 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A7/ckpt_latest.pkl
+full | psport3aA7 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A7/ckpt_latest.pkl
+full | psport3aA7s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A7s1/ckpt_latest.pkl
+full | psport3aA7s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A7s1/ckpt_latest.pkl
+full | psport3aA7s1 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A7s1/ckpt_035000.pkl
+full | psport3aA7s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A7s1/ckpt_latest.pkl
+full | psport3aA7s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A7s1/ckpt_latest.pkl
+full | psport3aA7s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A7s1/ckpt_latest.pkl
+full | psport3aA7s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A7s1/ckpt_latest.pkl
+full | psport3aA7s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A7s1/ckpt_latest.pkl
+full | psport3aA7s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A7s1/ckpt_latest.pkl
+full | psport3aA8 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A8/ckpt_latest.pkl
+full | psport3aA8 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A8/ckpt_latest.pkl
+full | psport3aA8 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A8/ckpt_020000.pkl
+full | psport3aA8 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A8/ckpt_latest.pkl
+full | psport3aA8 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A8/ckpt_latest.pkl
+full | psport3aA8 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A8/ckpt_latest.pkl
+full | psport3aA8 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A8/ckpt_latest.pkl
+full | psport3aA8 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A8/ckpt_latest.pkl
+full | psport3aA8 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A8/ckpt_latest.pkl
+full | psport3aA9 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A9/ckpt_latest.pkl
+full | psport3aA9 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A9/ckpt_latest.pkl
+full | psport3aA9 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A9/ckpt_015000.pkl
+full | psport3aA9 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A9/ckpt_latest.pkl
+full | psport3aA9 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A9/ckpt_latest.pkl
+full | psport3aA9 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A9/ckpt_latest.pkl
+full | psport3aA9 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A9/ckpt_latest.pkl
+full | psport3aA9 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A9/ckpt_latest.pkl
+full | psport3aA9 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A9/ckpt_latest.pkl
+full | psport3aA9s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A9s1/ckpt_latest.pkl
+full | psport3aA9s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A9s1/ckpt_latest.pkl
+full | psport3aA9s1 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A9s1/ckpt_030000.pkl
+full | psport3aA9s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A9s1/ckpt_latest.pkl
+full | psport3aA9s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsport3a_A9s1/ckpt_latest.pkl
+full | psport3aA9s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A9s1/ckpt_latest.pkl
+full | psport3aA9s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A9s1/ckpt_latest.pkl
+full | psport3aA9s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsport3a_A9s1/ckpt_latest.pkl
+full | psport3aA9s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsport3a_A9s1/ckpt_latest.pkl
+full | psportBB1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsportB_B1/ckpt_latest.pkl
+full | psportBB1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B1/ckpt_latest.pkl
+full | psportBB1 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B1/ckpt_045000.pkl
+full | psportBB1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B1/ckpt_latest.pkl
+full | psportBB1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B1/ckpt_latest.pkl
+full | psportBB1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B1/ckpt_latest.pkl
+full | psportBB1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B1/ckpt_latest.pkl
+full | psportBB1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B1/ckpt_latest.pkl
+full | psportBB1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B1/ckpt_latest.pkl
+full | psportBB2 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsportB_B2/ckpt_latest.pkl
+full | psportBB2 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B2/ckpt_latest.pkl
+full | psportBB2 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B2/ckpt_latest.pkl
+full | psportBB2 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B2/ckpt_latest.pkl
+full | psportBB2 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B2/ckpt_latest.pkl
+full | psportBB2 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B2/ckpt_latest.pkl
+full | psportBB2 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B2/ckpt_latest.pkl
+full | psportBB2 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B2/ckpt_latest.pkl
+full | psportBB3 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsportB_B3/ckpt_latest.pkl
+full | psportBB3 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B3/ckpt_latest.pkl
+full | psportBB3 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B3/ckpt_latest.pkl
+full | psportBB3 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B3/ckpt_latest.pkl
+full | psportBB3 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B3/ckpt_latest.pkl
+full | psportBB3 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B3/ckpt_latest.pkl
+full | psportBB3 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B3/ckpt_latest.pkl
+full | psportBB3 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B3/ckpt_latest.pkl
+full | psportBB4 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsportB_B4/ckpt_latest.pkl
+full | psportBB4 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B4/ckpt_latest.pkl
+full | psportBB4 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B4/ckpt_005000.pkl
+full | psportBB4 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B4/ckpt_latest.pkl
+full | psportBB4 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B4/ckpt_latest.pkl
+full | psportBB4 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B4/ckpt_latest.pkl
+full | psportBB4 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B4/ckpt_latest.pkl
+full | psportBB4 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B4/ckpt_latest.pkl
+full | psportBB4 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B4/ckpt_latest.pkl
+full | psportBB4s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B4s1/ckpt_latest.pkl
+full | psportBB4s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B4s1/ckpt_latest.pkl
+full | psportBB4s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B4s1/ckpt_latest.pkl
+full | psportBB4s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B4s1/ckpt_latest.pkl
+full | psportBB4s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B4s1/ckpt_latest.pkl
+full | psportBB4s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B4s1/ckpt_latest.pkl
+full | psportBB4s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B4s1/ckpt_latest.pkl
+full | psportBB5 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B5/ckpt_latest.pkl
+full | psportBB5 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B5/ckpt_latest.pkl
+full | psportBB5 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportB_B5/ckpt_latest.pkl
+full | psportBB5 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B5/ckpt_latest.pkl
+full | psportBB5 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B5/ckpt_latest.pkl
+full | psportBB5 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportB_B5/ckpt_latest.pkl
+full | psportBB5 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportB_B5/ckpt_latest.pkl
+full | psportBr2C1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C1/ckpt_latest.pkl
+full | psportBr2C1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C1/ckpt_latest.pkl
+full | psportBr2C1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C1/ckpt_latest.pkl
+full | psportBr2C1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C1/ckpt_latest.pkl
+full | psportBr2C1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1/ckpt_latest.pkl
+full | psportBr2C1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1/ckpt_latest.pkl
+full | psportBr2C1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1/ckpt_latest.pkl
+full | psportBr2C1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C1/ckpt_latest.pkl
+full | psportBr2C1s1 | full_t6 | 422786 | 6 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C1s1/ckpt_latest.pkl
+full | psportBr2C1s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C1s1/ckpt_latest.pkl
+full | psportBr2C1s1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C1s1/ckpt_latest.pkl
+full | psportBr2C1s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C1s1/ckpt_latest.pkl
+full | psportBr2C1s1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1s1/ckpt_latest.pkl
+full | psportBr2C1s1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1s1/ckpt_latest.pkl
+full | psportBr2C1s1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1s1/ckpt_latest.pkl
+full | psportBr2C1s1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C1s1/ckpt_latest.pkl
+full | psportBr2C2 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C2/ckpt_latest.pkl
+full | psportBr2C2 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C2/ckpt_latest.pkl
+full | psportBr2C2 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C2/ckpt_latest.pkl
+full | psportBr2C2 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C2/ckpt_latest.pkl
+full | psportBr2C2 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C2/ckpt_latest.pkl
+full | psportBr2C2 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C2/ckpt_latest.pkl
+full | psportBr2C2 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C2/ckpt_latest.pkl
+full | psportBr2C3 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C3/ckpt_latest.pkl
+full | psportBr2C3 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C3/ckpt_latest.pkl
+full | psportBr2C3 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C3/ckpt_latest.pkl
+full | psportBr2C3 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C3/ckpt_latest.pkl
+full | psportBr2C3 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C3/ckpt_latest.pkl
+full | psportBr2C3 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C3/ckpt_latest.pkl
+full | psportBr2C3 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C3/ckpt_latest.pkl
+full | psportBr2C4 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C4/ckpt_latest.pkl
+full | psportBr2C4 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C4/ckpt_latest.pkl
+full | psportBr2C4 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2_C4/ckpt_latest.pkl
+full | psportBr2C4 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C4/ckpt_latest.pkl
+full | psportBr2C4 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C4/ckpt_latest.pkl
+full | psportBr2C4 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2_C4/ckpt_latest.pkl
+full | psportBr2C4 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2_C4/ckpt_latest.pkl
+full | psportBr2bC3X | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+full | psportBr2bC3X | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+full | psportBr2bC3X | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+full | psportBr2bC3X | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+full | psportBr2bC3X | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+full | psportBr2bC3X | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+full | psportBr2bC3X | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+full | psportBr2bD1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_D1/ckpt_latest.pkl
+full | psportBr2bD1 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_D1/ckpt_latest.pkl
+full | psportBr2bD1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_D1/ckpt_latest.pkl
+full | psportBr2bD1 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D1/ckpt_latest.pkl
+full | psportBr2bD1 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D1/ckpt_latest.pkl
+full | psportBr2bD1 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D1/ckpt_latest.pkl
+full | psportBr2bD1 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_D1/ckpt_latest.pkl
+full | psportBr2bD2 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_D2/ckpt_latest.pkl
+full | psportBr2bD2 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_D2/ckpt_latest.pkl
+full | psportBr2bD2 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_D2/ckpt_latest.pkl
+full | psportBr2bD2 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D2/ckpt_latest.pkl
+full | psportBr2bD2 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D2/ckpt_latest.pkl
+full | psportBr2bD2 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D2/ckpt_latest.pkl
+full | psportBr2bD2 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_D2/ckpt_latest.pkl
+full | psportBr2bD3 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_D3/ckpt_latest.pkl
+full | psportBr2bD3 | full_t64_valbest | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_D3/ckpt_040000.pkl
+full | psportBr2bD3 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_D3/ckpt_latest.pkl
+full | psportBr2bD3 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_D3/ckpt_latest.pkl
+full | psportBr2bD3 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D3/ckpt_latest.pkl
+full | psportBr2bD3 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D3/ckpt_latest.pkl
+full | psportBr2bD3 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D3/ckpt_latest.pkl
+full | psportBr2bD3 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_D3/ckpt_latest.pkl
+full | psportBr2bD4 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+full | psportBr2bD4 | ret_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+full | psportBr2bD4 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+full | psportBr2bD4 | strat_t256 | 512 | 256 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+full | psportBr2bD4 | strat_t6 | 512 | 6 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+full | psportBr2bD4 | strat_t64 | 512 | 64 | 16 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+full | psportBr2bD4 | val_t64 | 64 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+full | psportC0P1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportC0_P1/ckpt_latest.pkl
+full | psportC0P1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportC0_P1/ckpt_020000.pkl
+full | psportC0P2 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportC0_P2/ckpt_latest.pkl
+full | psportC0P2 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportC0_P2/ckpt_030000.pkl
+full | psportC0P2s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportC0_P2s1/ckpt_latest.pkl
+full | psportC0P2s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportC0_P2s1/ckpt_020000.pkl
+full | psportC0P3 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportC0_P3/ckpt_latest.pkl
+full | psportC0P3 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportC0_P3/ckpt_010000.pkl
+full | psportC0P3s1 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportC0_P3s1/ckpt_latest.pkl
+full | psportC0P3s1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportC0_P3s1/ckpt_010000.pkl
+full | psportC0P5 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportC0_P5/ckpt_latest.pkl
+full | psportC0P5 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportC0_P5/ckpt_020000.pkl
+full | psportC0P6 | full_t64 | 422786 | 64 | 0 | - | rg | - | void | True | runs/pretrainsportC0_P6/ckpt_latest.pkl
+full | psportC0P6 | retfm_t8 | 512 | 8 | 0 | 512 | rg | - | solution | True | runs/pretrainsportC0_P6/ckpt_010000.pkl
+full | psportC1A0 | full_final_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC1_A0/ckpt_latest.pkl
+full | psportC1A0 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC1_A0/ckpt_030000.pkl
+full | psportC1A0 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC1_A0/ckpt_030000.pkl
+full | psportC1A0 | retfm_t8 | 512 | 8 | 0 | 512 | rg | False | solution | True | runs/pretrainsportC1_A0/ckpt_030000.pkl
+full | psportC1A1 | full_final_t64 | 422786 | 64 | 0 | - | rg | False | void | False | runs/pretrainsportC1_A1/ckpt_latest.pkl
+full | psportC1A1 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC1_A1/ckpt_latest.pkl
+full | psportC1A1 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC1_A1/ckpt_latest.pkl
+full | psportC1A1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | False | solution | True | runs/pretrainsportC1_A1/ckpt_latest.pkl
+full | psportC1B0 | full_final_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC1_B0/ckpt_latest.pkl
+full | psportC1B0 | full_vselA20k_t64_ema | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC1_B0a/ckpt_020000.pkl
+full | psportC1B0 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC1_B0a/ckpt_020000.pkl
+full | psportC1B0 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC1_B0/ckpt_020000.pkl
+full | psportC1B0 | retfm_t8 | 512 | 8 | 0 | 512 | rg | False | solution | True | runs/pretrainsportC1_B0a/ckpt_020000.pkl
+full | psportC1B1 | full_final_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC1_B1/ckpt_latest.pkl
+full | psportC1B1 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC1_B1a/ckpt_020000.pkl
+full | psportC1B1 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC1_B1a/ckpt_020000.pkl
+full | psportC1B1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | False | solution | True | runs/pretrainsportC1_B1a/ckpt_020000.pkl
+full | psportC1R0 | full_final_t64 | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC1_R0/ckpt_latest.pkl
+full | psportC1R0 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC1_R0/ckpt_050000.pkl
+full | psportC1R0 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC1_R0/ckpt_050000.pkl
+full | psportC1R0 | retfm_t8 | 512 | 8 | 0 | 512 | rg | True | solution | True | runs/pretrainsportC1_R0/ckpt_050000.pkl
+full | psportC1X0 | full_final_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainsportC1_X0/ckpt_latest.pkl
+full | psportC1X0 | full_vsel_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainsportC1_X0/ckpt_050000.pkl
+full | psportC1X0 | full_vsel_t16_alt | 422786 | 16 | 0 | - | trm | False | void | True | runs/pretrainsportC1_X0/ckpt_050000.pkl
+full | psportC1X0 | full_vsel_t64 | 422786 | 64 | 0 | - | trm | True | void | True | runs/pretrainsportC1_X0/ckpt_050000.pkl
+full | psportC1X0n | full_final_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainsportC1_X0n/ckpt_latest.pkl
+full | psportC1X0n | full_vsel_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainsportC1_X0n/ckpt_030000.pkl
+full | psportC1X0n | full_vsel_t16_alt | 422786 | 16 | 0 | - | trm | False | void | True | runs/pretrainsportC1_X0n/ckpt_030000.pkl
+full | psportC1X0n | full_vsel_t64 | 422786 | 64 | 0 | - | trm | True | void | True | runs/pretrainsportC1_X0n/ckpt_030000.pkl
+full | psportC2R1 | full_final_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC2_R1/ckpt_latest.pkl
+full | psportC2R1 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC2_R1/ckpt_010000.pkl
+full | psportC2R1 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC2_R1/ckpt_010000.pkl
+full | psportC2R1 | retfm_t8 | 512 | 8 | 0 | 512 | rg | False | solution | True | runs/pretrainsportC2_R1/ckpt_010000.pkl
+full | psportC2R2 | full_final_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC2_R2/ckpt_latest.pkl
+full | psportC2R2 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC2_R2a/ckpt_040000.pkl
+full | psportC2R2 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC2_R2a/ckpt_040000.pkl
+full | psportC2R2 | retfm_t8 | 512 | 8 | 0 | 512 | rg | False | solution | True | runs/pretrainsportC2_R2a/ckpt_040000.pkl
+full | psportC2R3 | full_final_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC2_R3/ckpt_latest.pkl
+full | psportC2R3 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC2_R3a/ckpt_040000.pkl
+full | psportC2R3 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC2_R3a/ckpt_040000.pkl
+full | psportC2R3 | retfm_t8 | 512 | 8 | 0 | 512 | rg | False | solution | True | runs/pretrainsportC2_R3a/ckpt_040000.pkl
+full | psportC2R4 | full_final_t64 | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC2_R4/ckpt_latest.pkl
+full | psportC2R4 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC2_R4/ckpt_020000.pkl
+full | psportC2R4 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC2_R4/ckpt_020000.pkl
+full | psportC2R4 | retfm_t8 | 512 | 8 | 0 | 512 | rg | True | solution | True | runs/pretrainsportC2_R4/ckpt_020000.pkl
+full | psportC2W0 | full_final_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC2_W0/ckpt_latest.pkl
+full | psportC2W0 | full_vsel_t64 | 422786 | 64 | 0 | - | rg | False | void | True | runs/pretrainsportC2_W0a/ckpt_050000.pkl
+full | psportC2W0 | full_vsel_t64_alt | 422786 | 64 | 0 | - | rg | True | void | True | runs/pretrainsportC2_W0a/ckpt_050000.pkl
+full | psportC2W0 | retfm_t8 | 512 | 8 | 0 | 512 | rg | False | solution | True | runs/pretrainsportC2_W0a/ckpt_050000.pkl
+full | psportC2X1 | full_final_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainsportC2_X1/ckpt_latest.pkl
+full | psportC2X1 | full_vsel_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainsportC2_X1/ckpt_020000.pkl
+full | psportC2X1 | full_vsel_t16_alt | 422786 | 16 | 0 | - | trm | False | void | True | runs/pretrainsportC2_X1/ckpt_020000.pkl
+full | psportC2X1 | full_vsel_t64 | 422786 | 64 | 0 | - | trm | True | void | True | runs/pretrainsportC2_X1/ckpt_020000.pkl
+full | psportC2X2 | full_final_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainsportC2_X2/ckpt_latest.pkl
+full | psportC2X2 | full_vsel_t16 | 422786 | 16 | 0 | - | trm | True | void | True | runs/pretrainsportC2_X2/ckpt_050000.pkl
+full | psportC2X2 | full_vsel_t16_alt | 422786 | 16 | 0 | - | trm | False | void | True | runs/pretrainsportC2_X2/ckpt_050000.pkl
+full | psportC2X2 | full_vsel_t64 | 422786 | 64 | 0 | - | trm | True | void | True | runs/pretrainsportC2_X2/ckpt_050000.pkl
+rider | C3X_sel5k |  | 5000 | 64 | 128 | 5000 | rg | False | void | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+rider | D4_sel5k |  | 5000 | 64 | 128 | 5000 | rg | False | void | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+scan | pfinalAA0 |  | 20000 | 64 | 128 | 20000 | trm | True | void | True | runs/pretrainfinalA_A0/ckpt_040000.pkl
+scan | pfinalAA1 |  | 20000 | 64 | 128 | 20000 | trm | True | void | True | runs/pretrainfinalA_A1/ckpt_042000.pkl
+scan | pfinalAA2 |  | 20000 | 64 | 128 | 20000 | trm | True | void | True | runs/pretrainfinalA_A2/ckpt_048000.pkl
+scan | psportBr2bC3X |  | 20000 | 64 | 128 | 20000 | rg | - | void | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+scan | psportBr2bD4 |  | 20000 | 64 | 128 | 20000 | rg | - | void | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+scan | psportC0P1 |  | 20000 | 64 | 128 | 20000 | rg | - | void | True | runs/pretrainsportC0_P1/ckpt_latest.pkl
+scan | psportC0P2 |  | 20000 | 64 | 128 | 20000 | rg | - | void | True | runs/pretrainsportC0_P2/ckpt_030000.pkl
+scan | psportC0P2s1 |  | 20000 | 64 | 128 | 20000 | rg | - | void | True | runs/pretrainsportC0_P2s1/ckpt_020000.pkl
+scan | psportC0P3 |  | 20000 | 64 | 128 | 20000 | rg | - | void | True | runs/pretrainsportC0_P3/ckpt_010000.pkl
+scan | psportC0P3s1 |  | 20000 | 64 | 128 | 20000 | rg | - | void | True | runs/pretrainsportC0_P3s1/ckpt_010000.pkl
+scan | psportC0P5 |  | 20000 | 64 | 128 | 20000 | rg | - | void | True | runs/pretrainsportC0_P5/ckpt_020000.pkl
+scan | psportC1A0 |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC1_A0/ckpt_030000.pkl
+scan | psportC1A1 |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC1_A1/ckpt_latest.pkl
+scan | psportC1B0 |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC1_B0/ckpt_020000.pkl
+scan | psportC1B0_vselA20k |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC1_B0a/ckpt_020000.pkl
+scan | psportC1B1 |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC1_B1/ckpt_030000.pkl
+scan | psportC1B1_vselA20k |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC1_B1a/ckpt_020000.pkl
+scan | psportC1R0 |  | 20000 | 64 | 128 | 20000 | rg | True | void | True | runs/pretrainsportC1_R0/ckpt_050000.pkl
+scan | psportC1X0 |  | 20000 | 64 | 128 | 20000 | trm | True | void | True | runs/pretrainsportC1_X0/ckpt_050000.pkl
+scan | psportC2R1 |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC2_R1/ckpt_010000.pkl
+scan | psportC2R2 |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC2_R2a/ckpt_040000.pkl
+scan | psportC2R3 |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC2_R3a/ckpt_040000.pkl
+scan | psportC2R4 |  | 20000 | 64 | 128 | 20000 | rg | True | void | True | runs/pretrainsportC2_R4/ckpt_020000.pkl
+scan | psportC2W0 |  | 20000 | 64 | 128 | 20000 | rg | False | void | True | runs/pretrainsportC2_W0a/ckpt_050000.pkl
+scan | psportC2X1 |  | 20000 | 64 | 128 | 20000 | trm | True | void | True | runs/pretrainsportC2_X1/ckpt_020000.pkl
+scan | psportC2X2 |  | 20000 | 64 | 128 | 20000 | trm | True | void | True | runs/pretrainsportC2_X2/ckpt_050000.pkl
+screen | pfinalAA0_vb |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainfinalA_A0/ckpt_040000.pkl
+screen | pfinalAA1_vb |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainfinalA_A1/ckpt_042000.pkl
+screen | pfinalAA2_vb |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainfinalA_A2/ckpt_048000.pkl
+screen | pfinalAA3_vb |  | 512 | 16 | 256 | 512 | dec | True | void | True | runs/pretrainfinalA_A3/ckpt_042000.pkl
+screen | pfinalAA4_vb |  | 512 | 16 | 256 | 512 | dec | True | void | True | runs/pretrainfinalA_A4/ckpt_010000.pkl
+screen | pfinalAA5_vb |  | 512 | 16 | 256 | 512 | dec | True | void | True | runs/pretrainfinalA_A5/ckpt_028000.pkl
+screen | pfinalAA7_vb |  | 512 | 16 | 256 | 512 | dec | True | void | True | runs/pretrainfinalA_A7/ckpt_022000.pkl
+screen | pfinalAA8_vb |  | 512 | 16 | 256 | 512 | dec | True | void | True | runs/pretrainfinalA_A8/ckpt_012000.pkl
+screen | psportBB1_mid |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B1/ckpt_020000.pkl
+screen | psportBB1_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B1/ckpt_045000.pkl
+screen | psportBB2_mid |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B2/ckpt_025000.pkl
+screen | psportBB2_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B2/ckpt_latest.pkl
+screen | psportBB3_mid |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B3/ckpt_025000.pkl
+screen | psportBB3_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B3/ckpt_latest.pkl
+screen | psportBB4_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B4/ckpt_005000.pkl
+screen | psportBB4s1_mid |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B4s1/ckpt_010000.pkl
+screen | psportBB4s1_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B4s1/ckpt_latest.pkl
+screen | psportBB5_mid |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B5/ckpt_010000.pkl
+screen | psportBB5_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportB_B5/ckpt_latest.pkl
+screen | psportBr2C1_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1/ckpt_latest.pkl
+screen | psportBr2C1s1_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1s1/ckpt_latest.pkl
+screen | psportBr2C2_m1 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C2/ckpt_025000.pkl
+screen | psportBr2C2_m2 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C2/ckpt_040000.pkl
+screen | psportBr2C2_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C2/ckpt_latest.pkl
+screen | psportBr2C3_m1 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C3/ckpt_010000.pkl
+screen | psportBr2C3_m2 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C3/ckpt_015000.pkl
+screen | psportBr2C3_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C3/ckpt_latest.pkl
+screen | psportBr2C4_m1 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C4/ckpt_025000.pkl
+screen | psportBr2C4_m2 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C4/ckpt_040000.pkl
+screen | psportBr2C4_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C4/ckpt_latest.pkl
+screen | psportBr2bC3X_s010000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_C3X/ckpt_010000.pkl
+screen | psportBr2bC3X_s020000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_C3X/ckpt_020000.pkl
+screen | psportBr2bC3X_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_C3X/ckpt_latest.pkl
+screen | psportBr2bD1_s010000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D1/ckpt_latest.pkl
+screen | psportBr2bD1_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D1/ckpt_latest.pkl
+screen | psportBr2bD2_s010000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D2/ckpt_010000.pkl
+screen | psportBr2bD2_s015000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D2/ckpt_015000.pkl
+screen | psportBr2bD2_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D2/ckpt_latest.pkl
+screen | psportBr2bD3_s025000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D3/ckpt_025000.pkl
+screen | psportBr2bD3_s040000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D3/ckpt_040000.pkl
+screen | psportBr2bD3_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D3/ckpt_040000.pkl
+screen | psportBr2bD4_s025000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D4/ckpt_025000.pkl
+screen | psportBr2bD4_s040000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D4/ckpt_040000.pkl
+screen | psportBr2bD4_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2b_D4/ckpt_latest.pkl
+screen | psportC0P1_s015000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P1/ckpt_015000.pkl
+screen | psportC0P1_s035000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P1/ckpt_035000.pkl
+screen | psportC0P1_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P1/ckpt_020000.pkl
+screen | psportC0P2_s015000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P2/ckpt_015000.pkl
+screen | psportC0P2_s035000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P2/ckpt_035000.pkl
+screen | psportC0P2_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P2/ckpt_030000.pkl
+screen | psportC0P2s1_s015000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P2s1/ckpt_015000.pkl
+screen | psportC0P2s1_s035000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P2s1/ckpt_035000.pkl
+screen | psportC0P2s1_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P2s1/ckpt_020000.pkl
+screen | psportC0P3_s015000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P3/ckpt_015000.pkl
+screen | psportC0P3_s035000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P3/ckpt_035000.pkl
+screen | psportC0P3_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P3/ckpt_010000.pkl
+screen | psportC0P3s1_sAend |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P3s1a/ckpt_latest.pkl
+screen | psportC0P3s1_sB05 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P3s1/ckpt_005000.pkl
+screen | psportC0P3s1_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P3s1/ckpt_010000.pkl
+screen | psportC0P5_s015000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P5/ckpt_015000.pkl
+screen | psportC0P5_s035000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P5/ckpt_035000.pkl
+screen | psportC0P5_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P5/ckpt_020000.pkl
+screen | psportC0P6_s015000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P6/ckpt_015000.pkl
+screen | psportC0P6_s035000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P6/ckpt_035000.pkl
+screen | psportC0P6_vb |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportC0_P6/ckpt_010000.pkl
+screen | psportC1A0_vb |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_A0/ckpt_030000.pkl
+screen | psportC1A1_vb |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_A1/ckpt_latest.pkl
+screen | psportC1B0_sAend |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_B0a/ckpt_latest.pkl
+screen | psportC1B0_sB005000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_B0/ckpt_005000.pkl
+screen | psportC1B0_sB015000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_B0/ckpt_015000.pkl
+screen | psportC1B0_vb |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_B0a/ckpt_020000.pkl
+screen | psportC1B1_sAend |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_B1a/ckpt_latest.pkl
+screen | psportC1B1_sB005000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_B1/ckpt_005000.pkl
+screen | psportC1B1_sB015000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_B1/ckpt_015000.pkl
+screen | psportC1B1_vb |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC1_B1a/ckpt_020000.pkl
+screen | psportC1R0_s015000 |  | 512 | 64 | 256 | 512 | rg | True | void | True | runs/pretrainsportC1_R0/ckpt_015000.pkl
+screen | psportC1R0_s035000 |  | 512 | 64 | 256 | 512 | rg | True | void | True | runs/pretrainsportC1_R0/ckpt_035000.pkl
+screen | psportC1R0_vb |  | 512 | 64 | 256 | 512 | rg | True | void | True | runs/pretrainsportC1_R0/ckpt_050000.pkl
+screen | psportC1X0_s015000 |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC1_X0/ckpt_015000.pkl
+screen | psportC1X0_s035000 |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC1_X0/ckpt_035000.pkl
+screen | psportC1X0_vb |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC1_X0/ckpt_050000.pkl
+screen | psportC1X0n_s015000 |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC1_X0n/ckpt_015000.pkl
+screen | psportC1X0n_s035000 |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC1_X0n/ckpt_035000.pkl
+screen | psportC1X0n_vb |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC1_X0n/ckpt_030000.pkl
+screen | psportC2R1_sAend |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R1a/ckpt_latest.pkl
+screen | psportC2R1_sB005000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R1/ckpt_005000.pkl
+screen | psportC2R1_sB015000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R1/ckpt_015000.pkl
+screen | psportC2R1_vb |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R1/ckpt_010000.pkl
+screen | psportC2R2_sAend |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R2a/ckpt_latest.pkl
+screen | psportC2R2_sB005000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R2/ckpt_005000.pkl
+screen | psportC2R2_sB015000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R2/ckpt_015000.pkl
+screen | psportC2R2_vb |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R2a/ckpt_040000.pkl
+screen | psportC2R3_sAend |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R3a/ckpt_latest.pkl
+screen | psportC2R3_sB005000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R3/ckpt_005000.pkl
+screen | psportC2R3_sB015000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R3/ckpt_015000.pkl
+screen | psportC2R3_vb |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_R3a/ckpt_040000.pkl
+screen | psportC2R3_vb_hard |  | 512 | 64 | 0 | 512 | rg | False | void | True | runs/pretrainsportC2_R3a/ckpt_040000.pkl
+screen | psportC2R4_s015000 |  | 512 | 64 | 256 | 512 | rg | True | void | True | runs/pretrainsportC2_R4/ckpt_015000.pkl
+screen | psportC2R4_s035000 |  | 512 | 64 | 256 | 512 | rg | True | void | True | runs/pretrainsportC2_R4/ckpt_035000.pkl
+screen | psportC2R4_vb |  | 512 | 64 | 256 | 512 | rg | True | void | True | runs/pretrainsportC2_R4/ckpt_020000.pkl
+screen | psportC2W0_sAend |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_W0a/ckpt_latest.pkl
+screen | psportC2W0_sB005000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_W0/ckpt_005000.pkl
+screen | psportC2W0_sB015000 |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_W0/ckpt_015000.pkl
+screen | psportC2W0_vb |  | 512 | 64 | 256 | 512 | rg | False | void | True | runs/pretrainsportC2_W0a/ckpt_050000.pkl
+screen | psportC2X1_s015000 |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC2_X1/ckpt_015000.pkl
+screen | psportC2X1_s035000 |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC2_X1/ckpt_035000.pkl
+screen | psportC2X1_vb |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC2_X1/ckpt_020000.pkl
+screen | psportC2X2_s015000 |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC2_X2/ckpt_015000.pkl
+screen | psportC2X2_s035000 |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC2_X2/ckpt_035000.pkl
+screen | psportC2X2_vb |  | 512 | 16 | 256 | 512 | trm | True | void | True | runs/pretrainsportC2_X2/ckpt_050000.pkl
+screen | x_psportBr2C1_s010000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1/ckpt_010000.pkl
+screen | x_psportBr2C1_s015000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1/ckpt_015000.pkl
+screen | x_psportBr2C1s1_s005000 |  | 512 | 64 | 256 | 512 | rg | - | void | True | runs/pretrainsportBr2_C1s1/ckpt_005000.pkl
+
+== PRETRAIN DIRS (ckpt_latest present) ==
+dir | step | params | cell | d/width | T | grids | ema | opt | monitors | STOPPED
+pretrain1 | 20000 | 76937 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain10_a | 20000 | 77980 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain10_b | 20000 | 77980 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain10_c | 20000 | 77980 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain10_d | 20000 | 77980 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain11_24c | 20000 | 138460 | rg | 24/ | 4 | 0 | False | True | 0 | False
+pretrain11_24c_s1 | 20000 | 138460 | rg | 24/ | 4 | 0 | False | True | 0 | False
+pretrain11_24c_s2 | 20000 | 138460 | rg | 24/ | 4 | 0 | False | True | 0 | False
+pretrain11_24p | 20000 | 138460 | rg | 24/ | 4 | 0 | False | True | 0 | False
+pretrain11_32c | 20000 | 220444 | rg | 32/ | 4 | 0 | False | True | 0 | False
+pretrain11_32cT6 | 20000 | 220444 | rg | 32/ | 6 | 0 | False | True | 0 | False
+pretrain11_32cT6_s1 | 20000 | 220444 | rg | 32/ | 6 | 0 | False | True | 0 | False
+pretrain11_32c_s1 | 20000 | 220444 | rg | 32/ | 4 | 0 | False | True | 0 | False
+pretrain11_32p | 20000 | 220444 | rg | 32/ | 4 | 0 | False | True | 0 | False
+pretrain11_48c_s1 | 20000 | 448924 | rg | 48/ | 4 | 0 | False | True | 0 | False
+pretrain12_48c_40k | 40000 | 448924 | rg | 48/ | 4 | 0 | False | True | 0 | False
+pretrain13_B | 53333 | 763422 | rg | 64/ | 6 | 1 | False | True | 0 | False
+pretrain13_C53 | 53333 | 763420 | rg | 64/ | 6 | 1 | False | True | 0 | False
+pretrain13_C80 | 80000 | 763420 | rg | 64/ | 6 | 1 | False | True | 0 | False
+pretrain13_Dcoup | 53333 | 763422 | rg | 64/ | 6 | 1 | False | True | 0 | False
+pretrain13_Dfloor | 53333 | 763420 | rg | 64/ | 6 | 1 | False | True | 0 | False
+pretrain13_Dri | 53333 | 763420 | rg | 64/ | 6 | 1 | False | True | 0 | False
+pretrain13f_A1s0 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A1s1 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A1s2 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A2s0 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A2s1 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A2s2 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A3s0 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A3s1 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A3s2 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A4s0 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A4s1 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain13f_A4s2 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrain2 | 20000 | 77977 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain3_d24 | 20000 | 138457 | rg | 24/ | 4 | 0 | False | True | 0 | False
+pretrain3_d24obj | 20000 | 142092 | rg | 24/ | 4 | 0 | False | True | 0 | False
+pretrain6_d16 | 20000 | 77977 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain6_d24 | 20000 | 138457 | rg | 24/ | 4 | 0 | False | True | 0 | False
+pretrain6_d24obj | 12000 | 142092 | rg | 24/ | 4 | 0 | False | True | 0 | False
+pretrain6_d24t64 | 20000 | 147929 | rg | 24/ | 4 | 0 | False | True | 0 | False
+pretrain8_d16 | 20000 | 77980 | rg | 16/ | 4 | 4 | False | True | 0 | False
+pretrain9_a | 20000 | 77980 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain9_b | 20000 | 77980 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain9_c | 20000 | 77980 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrain9_d | 20000 | 77980 | rg | 16/ | 4 | 0 | False | True | 0 | False
+pretrainfinalA_A0 | 50000 | 5037061 | trm | 16/512 | 16 | 25 | True | True | 25 | False
+pretrainfinalA_A1 | 50000 | 5037061 | trm | 16/512 | 16 | 25 | True | True | 25 | False
+pretrainfinalA_A2 | 50000 | 5037061 | trm | 16/512 | 16 | 25 | True | True | 25 | False
+pretrainfinalA_A3 | 50000 | 2780933 | dec | 16/384 | 16 | 25 | True | True | 25 | False
+pretrainfinalA_A4 | 50000 | 2780933 | dec | 16/384 | 16 | 25 | True | True | 25 | False
+pretrainfinalA_A5 | 50000 | 2780933 | dec | 16/384 | 16 | 25 | True | True | 25 | False
+pretrainfinalA_A7 | 50000 | 2780933 | dec | 16/384 | 16 | 25 | True | True | 25 | False
+pretrainfinalA_A8 | 50000 | 5370373 | dec | 16/512 | 16 | 25 | True | True | 25 | False
+pretrainr1_A3s0 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1_A3s1 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1_A4s0 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1_A4s1 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1_A4s2 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1_A5s0 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A3s1 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A4s1 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A4s2 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A5s1 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A5s2 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A6s0 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A6s1 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A7s0 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A7s1 | 53333 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A8s0 | 53333 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A9s1 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrainr1b_A9s2 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A10s0 | 40000 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A10s1 | 40000 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A11s0 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A11s1 | 40000 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A12s0 | 40000 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A12s1 | 40000 | 763420 | rg | 64/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A13s0 | 53333 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A13s1 | 53333 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A8s1 | 53333 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrainr1c_A8s2 | 53333 | 448924 | rg | 48/ | 6 | 0 | False | True | 0 | False
+pretrainsport2_S0 | 20000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2_S1 | 20000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2_S2 | 20000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2_S3 | 20000 | 77980 | rg | 16/ | 12 | 0 | False | True | 0 | False
+pretrainsport2_S4 | 20000 | 77980 | rg | 16/ | 24 | 0 | False | True | 0 | False
+pretrainsport2_S5 | 20000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2_S6 | 20000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2_S7 | 20000 | 77980 | rg | 16/ | 12 | 0 | False | True | 0 | False
+pretrainsport2w2_W1 | 50000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W13 | 100000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W1s1 | 50000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W2 | 30000 | 77980 | rg | 16/ | 12 | 0 | False | True | 0 | False
+pretrainsport2w2_W3 | 30000 | 77980 | rg | 16/ | 12 | 0 | False | True | 0 | False
+pretrainsport2w2_W4 | 20000 | 220444 | rg | 32/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W4s1 | 20000 | 220444 | rg | 32/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W5 | 20000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W5gen | 20000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W6 | 20000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W7 | 20000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W8 | 20000 | 220444 | rg | 32/ | 6 | 0 | False | True | 0 | False
+pretrainsport2w2_W9 | 50000 | 77980 | rg | 16/ | 6 | 0 | False | True | 0 | False
+pretrainsport3a_A10 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A2 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A2s1 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A3 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A3s1 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A4 | 50000 | 77982 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A4s1 | 50000 | 77982 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A5 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A5s1 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A6 | 50000 | 220444 | rg | 32/ | 6 | 10 | False | True | 10 | False
+pretrainsport3a_A6s1 | 50000 | 220444 | rg | 32/ | 6 | 10 | False | True | 10 | False
+pretrainsport3a_A7 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A7s1 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A8 | 50000 | 77980 | rg | 16/ | 6 | 10 | False | True | 10 | False
+pretrainsport3a_A9 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsport3a_A9s1 | 50000 | 77980 | rg | 16/ | 12 | 10 | False | True | 10 | False
+pretrainsportB_B1 | 50000 | 959482 | rg | 64/ | 12 | 10 | False | True | 10 | False
+pretrainsportB_B2 | 50000 | 959482 | rg | 64/ | 12 | 10 | False | True | 10 | False
+pretrainsportB_B3 | 50000 | 959482 | rg | 64/ | 12 | 10 | False | True | 10 | False
+pretrainsportB_B4 | 20000 | 959482 | rg | 64/ | 6 | 4 | False | True | 4 | False
+pretrainsportB_B4s1 | 20000 | 959482 | rg | 64/ | 6 | 4 | False | True | 4 | False
+pretrainsportB_B5 | 20000 | 959482 | rg | 64/ | 6 | 4 | False | True | 4 | False
+pretrainsportBr2_C1 | 20000 | 2109390 | rg | 96/ | 12 | 4 | False | True | 5 | False
+pretrainsportBr2_C1s1 | 10000 | 2109390 | rg | 96/ | 12 | 2 | False | True | 3 | False
+pretrainsportBr2_C2 | 50000 | 2109390 | rg | 96/ | 12 | 10 | False | True | 25 | False
+pretrainsportBr2_C3 | 20000 | 2109390 | rg | 96/ | 6 | 4 | False | True | 10 | False
+pretrainsportBr2_C4 | 50000 | 2109390 | rg | 96/ | 12 | 10 | False | True | 25 | False
+pretrainsportBr2b_C3X | 30000 | 2109390 | rg | 96/ | 6 | 6 | False | True | 15 | False
+pretrainsportBr2b_D1 | 10000 | 2109390 | rg | 96/ | 6 | 2 | False | True | 5 | True
+pretrainsportBr2b_D2 | 20000 | 2109390 | rg | 96/ | 6 | 4 | False | True | 10 | False
+pretrainsportBr2b_D3 | 50000 | 2109390 | rg | 96/ | 12 | 10 | False | True | 25 | False
+pretrainsportBr2b_D4 | 50000 | 2109390 | rg | 96/ | 12 | 10 | False | True | 25 | False
+pretrainsportC0_P1 | 50000 | 1713822 | rg | 96/ | 12 | 10 | False | True | 25 | False
+pretrainsportC0_P2 | 50000 | 1713822 | rg | 96/ | 12 | 10 | False | True | 25 | False
+pretrainsportC0_P2s1 | 20000 | 1713822 | rg | 96/ | 12 | 10 | False | True | 10 | True
+pretrainsportC0_P3 | 10000 | 1713822 | rg | 96/ | 16 | 7 | False | True | 5 | True
+pretrainsportC0_P3s1 | 15000 | 1713822 | rg | 96/ | 16 | 3 | False | True | 8 | False
+pretrainsportC0_P3s1a | 35000 | 1713822 | rg | 96/ | 16 | 0 | False | True | 0 | False
+pretrainsportC0_P5 | 40000 | 1713822 | rg | 96/ | 12 | 10 | False | True | 20 | True
+pretrainsportC0_P6 | 10000 | 1713822 | rg | 96/ | 16 | 7 | False | True | 5 | True
+pretrainsportC1_A0 | 30000 | 3004530 | rg | 128/ | 16 | 6 | True | True | 15 | True
+pretrainsportC1_A0a | 30000 | 3004530 | rg | 128/ | 16 | 6 | True | True | 15 | True
+pretrainsportC1_A1 | 5000 | 3004530 | rg | 128/ | 16 | 1 | True | True | 2 | True
+pretrainsportC1_A1a | 5000 | 3004530 | rg | 128/ | 16 | 1 | True | True | 2 | True
+pretrainsportC1_B0 | 30000 | 3004658 | rg | 128/ | 16 | 6 | True | True | 15 | False
+pretrainsportC1_B0a | 50000 | 3004658 | rg | 128/ | 16 | 10 | True | True | 25 | False
+pretrainsportC1_B1 | 30000 | 3004658 | rg | 128/ | 16 | 6 | True | True | 15 | False
+pretrainsportC1_B1a | 50000 | 3004658 | rg | 128/ | 16 | 10 | True | True | 25 | False
+pretrainsportC1_R0 | 50000 | 3004658 | rg | 128/ | 16 | 10 | True | True | 25 | False
+pretrainsportC1_X0 | 50000 | 5037061 | trm | 16/512 | 16 | 10 | True | True | 25 | False
+pretrainsportC1_X0n | 50000 | 5037061 | trm | 16/512 | 16 | 10 | True | True | 25 | False
+pretrainsportC2_R1 | 30000 | 3004658 | rg | 128/ | 16 | 6 | True | True | 15 | False
+pretrainsportC2_R1a | 50000 | 3004658 | rg | 128/ | 16 | 10 | True | True | 25 | False
+pretrainsportC2_R2 | 30000 | 3004658 | rg | 128/ | 16 | 6 | True | True | 15 | False
+pretrainsportC2_R2a | 50000 | 3004658 | rg | 128/ | 16 | 5 | True | True | 25 | False
+pretrainsportC2_R3 | 30000 | 3004658 | rg | 128/ | 16 | 6 | True | True | 15 | False
+pretrainsportC2_R3a | 50000 | 3004658 | rg | 128/ | 16 | 10 | True | True | 25 | False
+pretrainsportC2_R4 | 50000 | 3004658 | rg | 128/ | 16 | 8 | True | True | 25 | False
+pretrainsportC2_W0 | 30000 | 3004658 | rg | 128/ | 16 | 6 | True | True | 15 | False
+pretrainsportC2_W0a | 50000 | 3004658 | rg | 128/ | 16 | 10 | True | True | 25 | False
+pretrainsportC2_X1 | 50000 | 5037061 | trm | 16/512 | 16 | 10 | True | True | 25 | False
+pretrainsportC2_X2 | 50000 | 5839877 | trm | 16/512 | 16 | 10 | True | True | 25 | False
+
+== FIELD CKPT STUDY outputs ==
+
+== analysis artifacts ==
+barrier_spectroscopy_20260812.txt 2000
+eos_stage1_20260810.txt 3119
+eos_stage2_20260810.txt 1794
+family_vacancy_20260813.txt 2327
+finalA_A3_selection_check_20260907.txt 1685
+finalA_A3sel 192
+finalA_counts_20260907.txt 17571
+finalA_ecc_20260907.json 37943
+finalA_ecc_20260907.txt 18936
+finalA_ecc_dyn_run.log 19024
+finalA_ecc_nodyn_run.log 15007
+finalA_physics_20260907.json 67647
+finalA_physics_20260907.txt 34837
+finalA_physics_run.log 34930
+finalA_verdict.txt 3559
+flux_totals_20260810.txt 1048
+freethink_ground1_reachability_20260903.txt 4440
+freethink_ground2_trajectories_20260903.json 2931
+freethink_ground2_trajectories_20260903.log 1379
+freethink_ground2b_flips_20260903.json 2650
+freethink_ground2b_flips_20260903.log 1439
+freethink_ground3_fisher_20260903.txt 950
+freethink_ground4_levers_20260903.json 1527
+freethink_ground4_levers_20260903.log 2013
+freethink_ground5_6_20260903.txt 2083
+freethink_ground7_decimation_20260903.json 342
+freethink_ground7_decimation_20260903.log 2044
+funnel_model_20260829.txt 6417
+funnel_model_20260830.txt 10333
+graded_ladder_20260829.txt 6688
+graded_ladder_20260830.txt 7216
+grid_final_20260812.txt 1268
+ignition_dynamics_20260829.txt 7423
+ignition_dynamics_20260830.txt 11687
+inventory_20260907.txt 0
+nan_forensics_20260829.txt 2755
+p10_battery_20260811.txt 1187
+p13w2_physics_20260814.txt 7474
+p13w2_verdict_20260814.txt 3270
+packing_frontier_20260812.txt 2644
+poolmi_20260810.txt 1884
+puzzle_panel_20260829.txt 5558
+puzzle_panel_20260830.txt 7286
+r0_verdict.txt 4507
+r1_physics_20260819.txt 15693
+r1_verdict.txt 4845
+r1b_physics_20260820.txt 3283
+r1b_verdict.txt 4877
+r1c_physics_20260821.txt 10552
+r1c_verdict.txt 4234
+reference_decoders.json 650
+reference_decoders.npz 15962
+reference_decoders.txt 565
+sampmi_ri_20260814.txt 874
+scale_sweep_20260811.txt 4069
+spectral_collapse_20260812.txt 3165
+sport2_verdict.txt 2518
+sport2w2_verdict.txt 5701
+sport3a_physics_20260824.txt 15661
+sport3a_verdict.txt 6886
+sportB_r1_physics_20260827.txt 7356
+sportB_r1_verdict.txt 2389
+sportBr2_physics_20260829.txt 16127
+sportBr2_verdict.txt 2325
+sportBr2b_physics_20260830.txt 3461
+sportBr2b_scan_verdict.txt 2129
+sportBr2b_verdict.txt 2449
+sportC0_explosion_census_20260902.json 3203
+sportC0_physics_20260902.txt 27490
+sportC0_verdict.txt 2271
+sportC0_vsel20k_paired_20260902.json 1341
+sportC0_z_explosion_trace_20260902.txt 2232
+sportC1_census_B0_vselA20k_20260903.json 796
+sportC1_census_B1_vselA20k_20260903.json 798
+sportC1_lensG_dynamics_20260903.json 31194
+sportC1_lensG_dynamics_20260903.log 1383
+sportC1_lensG_dynamics_X0fd_20260903.json 10297
+sportC1_lensG_dynamics_X0fd_20260903.log 323
+sportC1_lensG_records_20260903.txt 8448
+sportC1_physics_20260903.txt 48269
+sportC1_verdict.txt 3805
+sportC2_
