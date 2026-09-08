@@ -5,16 +5,29 @@
 # monitor puzzles are the 64 train-file rows disjoint from train AND test
 # (never the test set). Ties -> the LATER step. Prints "NNNNNN val step" so
 # the chain can name the ckpt; exit 1 when no banked ckpt has a monitor row.
+# CHAMPION NIGHT (2026-09-08; the Night A selection-instrument lesson: a 64-puzzle
+# monitor ties at its maximum and the later-tie rule picked the memorization side):
+#   --tie earliest       ties on the key -> the EARLIEST step (the trajectory law: the
+#                        peak precedes memorization; default "later" = the pre-existing rule)
+#   --second-key KEY     a second monitor field breaks ties on the first (the chain passes the
+#                        RAW-weights monitor val_t16 under the EMA key val_t16_ema)
+# The default call is byte-identical to the pre-existing behaviour.
 """  .venv/bin/python tools/select_ckpt.py runs/pretrainsport3a_A3  """
 from __future__ import annotations
 import json, re, sys
 from pathlib import Path
 
+def _opt(name, default=None):
+    return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
+
 def main():
     d = Path(sys.argv[1])
     # sportC1: --key names the monitor field to select on (val_t64 = the native
     # arms' raw weights; val_t64_ema / val_t16_ema = the EMA rows of R0 / X0)
-    key = sys.argv[sys.argv.index("--key") + 1] if "--key" in sys.argv else "val_t64"
+    key = _opt("--key", "val_t64")
+    key2 = _opt("--second-key", None)
+    tie = _opt("--tie", "later")
+    assert tie in ("later", "earliest"), tie
     banked = {int(re.search(r"ckpt_(\d+)\.pkl$", p.name).group(1)) for p in d.glob("ckpt_[0-9]*.pkl")}
     rows = []
     for l in (d / "metrics.jsonl").read_text().splitlines():
@@ -23,11 +36,13 @@ def main():
         except Exception:
             continue
         if "monitor" in r and key in r["monitor"]:
-            rows.append((int(r["monitor"]["step"]), float(r["monitor"][key])))
-    cand = [(v, s) for s, v in rows if s in banked]
+            v2 = float(r["monitor"][key2]) if (key2 and key2 in r["monitor"]) else 0.0
+            rows.append((int(r["monitor"]["step"]), float(r["monitor"][key]), v2))
+    cand = [(v, v2, s) for s, v, v2 in rows if s in banked]
     if not cand:
         print("NONE", file=sys.stderr); sys.exit(1)
-    v, s = max(cand, key=lambda x: (x[0], x[1]))   # best val; ties -> later step
+    sgn = -1 if tie == "earliest" else 1
+    v, v2, s = max(cand, key=lambda x: (x[0], x[1], sgn * x[2]))   # best val; second key; ties -> earliest/later step
     print(f"{s:06d} {v:.4f} {s}")
 
 if __name__ == "__main__":

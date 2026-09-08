@@ -51,11 +51,19 @@ def init_params(key, cfg: Config, hw: int = 81):
              "mlp": TC._swiglu_init(ks[5 + 3 * i], w, cfg.trm_expansion)}      # channel SwiGLU
         if cfg.dec_coupling:
             b["fc"] = TC._linear_init(ks[6 + 3 * i], w, w)                       # the field coupling (w, w)
+            if cfg.dec_coupling_kind == "attn":                                   # C4: set attention over the fields
+                assert w % cfg.dec_attn_heads == 0, "dec_width must divide by dec_attn_heads"
+                ka, kb = jax.random.split(jax.random.fold_in(ks[6 + 3 * i], 1))
+                hd = cfg.dec_attn_heads * cfg.dec_attn_dk
+                b["attn_q"] = TC._linear_init(ka, w, hd); b["attn_k"] = TC._linear_init(kb, w, hd)
         blocks.append(b)
-    return {"role_emb": TC._trunc_normal(ks[0], (3, w), 1.0 / math.sqrt(w)),   # empty / mine / other
-            "lm_head": TC._trunc_normal(ks[2], (w,), 1.0 / math.sqrt(w)),      # shared readout vector
-            "q_head": {"w": jnp.zeros((w, 2)), "b": jnp.full((2,), -5.0)},     # TRM's Q init
-            "blocks": blocks}
+    out = {"role_emb": TC._trunc_normal(ks[0], (3, w), 1.0 / math.sqrt(w)),   # empty / mine / other
+           "lm_head": TC._trunc_normal(ks[2], (w,), 1.0 / math.sqrt(w)),      # shared readout vector
+           "q_head": {"w": jnp.zeros((w, 2)), "b": jnp.full((2,), -5.0)},     # TRM's Q init
+           "blocks": blocks}
+    if cfg.dec_commit:                                                          # C6: the calibrated commit head
+        out["commit_head"] = {"w": TC._trunc_normal(ks[3], (w,), 1.0 / math.sqrt(w)), "b": jnp.full((), -2.0)}
+    return out
 
 
 def init_states(cfg: Config):
@@ -76,24 +84,66 @@ def z0(cfg: Config, hw: int, rng=None):
     return jnp.stack([jnp.broadcast_to(H0, (F, hw, w)), jnp.broadcast_to(L0, (F, hw, w))])
 
 
-def _block(p, h):
+def _block(p, h, cfg: Config | None = None):
     """h (F, S, w) -> (F, S, w). POST-norm as TRM: per-field token mixing over the S cells (the
-    same weights for every field), the equivariant field coupling, the channel SwiGLU."""
+    same weights for every field), the equivariant field coupling, the channel SwiGLU.
+    Coupling "mean": each field reads the mean of the OTHER eight fields' cell tokens through fc.
+    Coupling "attn" (C4, SE-RRM's operator in this form): each field's cell token attends over the
+    other eight fields' tokens at that cell (heads x dk queries/keys, the self field masked, values =
+    the fc map split over the heads) — uniform attention weights reproduce "mean" exactly."""
     def tok(hf):                                   # (S, w): TRM's token-mixing sub-layer
         ht = hf.T
         ht = TC._rms_norm(ht + TC._swiglu(p["mlp_t"], ht))
         return ht.T
     h = jax.vmap(tok)(h)
     if "fc" in p:
-        others = (jnp.sum(h, axis=0, keepdims=True) - h) / (F - 1)   # the mean of the OTHER fields, per cell
-        h = TC._rms_norm(h + others @ p["fc"])
+        if "attn_q" in p:
+            nh = cfg.dec_attn_heads; dk = cfg.dec_attn_dk; w = h.shape[-1]
+            q = (h @ p["attn_q"]).reshape(F, -1, nh, dk); k = (h @ p["attn_k"]).reshape(F, -1, nh, dk)
+            v = (h @ p["fc"]).reshape(F, -1, nh, w // nh)
+            e = jnp.einsum("fshd,gshd->fgsh", q, k) / math.sqrt(dk)                 # (F, F, S, heads)
+            e = jnp.where(jnp.eye(F, dtype=bool)[:, :, None, None], -1e9, e)          # the OTHER fields only
+            att = jax.nn.softmax(e, axis=1)
+            msg = jnp.einsum("fgsh,gshe->fshe", att, v).reshape(h.shape)
+            h = TC._rms_norm(h + msg)
+        else:
+            others = (jnp.sum(h, axis=0, keepdims=True) - h) / (F - 1)   # the mean of the OTHER fields, per cell
+            h = TC._rms_norm(h + others @ p["fc"])
     return TC._rms_norm(h + TC._swiglu(p["mlp"], h))
 
 
-def _stack(p, h):
+def _stack(p, h, cfg: Config | None = None):
     for b in p["blocks"]:
-        h = _block(b, h)
+        h = _block(b, h, cfg)
     return h
+
+
+def commit_logits(p, zH):
+    """C6: the commit head's logit per cell (S,) = the field-and-cell-shared readout of z_H (F, S, w):
+    mean over the fields of z_H[f, s] . w, plus b — S9-INVARIANT (the head reads 'is this cell decided',
+    not 'which digit')."""
+    return jnp.mean(jnp.einsum("fsw,w->sf", zH, p["commit_head"]["w"]), axis=-1) + p["commit_head"]["b"]
+
+
+def embed_effective(p, cfg: Config, x_tokens, zH_in=None, active=True):
+    """The segment's input embedding under the COMMIT HEAD's selective hardening (C6). Plain embed(x) when
+    the head is absent, cfg.dec_commit_tau >= 1, no carried state, or active is False (a fresh row: the
+    start buffers carry no decision). Otherwise a non-given cell whose commit probability c = sigmoid(
+    commit_logits(zH_in)) exceeds tau enters this segment as a GIVEN of its current argmax digit (the
+    readout of zH_in); straight-through on c: the forward uses the hard gate, the backward passes dc.
+    Returns (emb (F, S, w), gate (S,) bool or None)."""
+    emb_x = embed(p, cfg, x_tokens)
+    if zH_in is None or not cfg.dec_commit or cfg.dec_commit_tau >= 1.0 or "commit_head" not in p:
+        return emb_x, None
+    x = x_tokens.reshape(-1)
+    d_star = jnp.argmax(jnp.einsum("fsw,w->sf", zH_in, p["lm_head"]), axis=-1) + 1      # (S,) digit 1..9
+    c = jax.nn.sigmoid(commit_logits(p, zH_in))
+    free = x == 0
+    gate = (c > cfg.dec_commit_tau) & free & jnp.asarray(active, bool)
+    x_eff = jnp.where(gate, d_star, x).reshape(x_tokens.shape)
+    emb_c = embed(p, cfg, x_eff)
+    g_st = gate.astype(emb_x.dtype) + (c - jax.lax.stop_gradient(c)) * free.astype(emb_x.dtype) * jnp.asarray(active, emb_x.dtype)
+    return emb_x + g_st[None, :, None] * (emb_c - emb_x), gate
 
 
 def embed(p, cfg: Config, x_tokens):
@@ -125,7 +175,8 @@ def segment(p, cfg: Config, emb, zH, zL, rng=None):
     n_keys = cfg.trm_h_cycles * (cfg.trm_l_cycles + 1)
     keys = (list(jax.random.split(rng, n_keys)) if (rng is not None and beta > 0)
             else [None] * n_keys)
-    stack = jax.checkpoint(_stack) if cfg.remat else _stack
+    stack_c = (lambda p_, h_: _stack(p_, h_, cfg))
+    stack = jax.checkpoint(stack_c) if cfg.remat else stack_c
 
     def step(z, inj, key):
         Fz = stack(p, z + inj)
@@ -162,7 +213,7 @@ def forward_core(p, cfg: Config, fields, *, z_in=None, rng=None):
     is NOT read], carried z_in (2, F, S, w) or None -> (logits (H, W, VOCAB), q (2,), z_fine)."""
     H, W = fields.shape[1], fields.shape[2]
     x_tokens = jnp.argmax(fields[..., 0], axis=0)            # exact on one-hot input
-    emb = embed(p, cfg, x_tokens)
+    emb, _gate = embed_effective(p, cfg, x_tokens, None if z_in is None else z_in[0])   # C6 hardening from the carry
     k_ri, k_seg = (None, None) if rng is None else tuple(jax.random.split(rng))
     z = z0(cfg, H * W, rng=k_ri) if z_in is None else z_in
     zH, zL = segment(p, cfg, emb, z[0], z[1], rng=k_seg)

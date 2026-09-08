@@ -132,7 +132,7 @@ def coupled_ab(params, cfg):
 
 def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
               eta, eta_z, layout="origin", t_norm_fixed=None, ab=None, z0=None, hard=False,
-              noise_keys=None, q_fn=None, q_out=None):
+              noise_keys=None, q_fn=None, q_out=None, commit_fn=None, commit_out=None, cellok_out=None):
     """Returns per-puzzle numpy: exact_t (T,B), valid_ok_t (T,B) [valid & givens-
     consistent], final pred9 (B,9,9), resid3 (B,) — the mean per-step |Delta y|
     over the FINAL 3 steps (EqR's Top-1-Converged selection signal, L=3;
@@ -178,6 +178,8 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
             z_c = zf if first else z_c + eta_z * (zf - z_c)
         if q_fn is not None:
             q_out.append(H(q_fn(z_c)))
+        if commit_fn is not None:   # CHAMPION NIGHT C6 (--record-commit): the commit head's probability per cell per step
+            commit_out.append(H(commit_fn(z_c)))
         p = jax.nn.softmax(logits, axis=-1).transpose(0, 3, 1, 2)
         if hard:
             p = jax.nn.one_hot(jnp.argmax(logits, axis=-1), M.VOCAB).transpose(0, 3, 1, 2)
@@ -193,7 +195,10 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
         y = y_new
         pred9 = layout_gather(jnp.argmax(logits, axis=-1), layout).astype(jnp.int32)
         pred9 = jnp.where(pred9 == G.VOID, 0, pred9)
-        exact = jnp.all((pred9 == sol9).reshape(B, -1), axis=1)
+        cellok = (pred9 == sol9).reshape(B, -1)
+        if cellok_out is not None:
+            cellok_out.append(H(cellok))
+        exact = jnp.all(cellok, axis=1)
         viol = violations_dev(pred9)
         giv_ok = jnp.all(((pred9 == puz9) | ~mask).reshape(B, -1), axis=1)
         ok = (viol == 0) & giv_ok
@@ -205,6 +210,10 @@ def run_batch(params, cfg, tvj, x_can, y0, *, t_total, tau, gamma, sol9, puz9,
     ex_np, ok_np, res_np = (np.asarray(jnp.stack(ex_rows)), np.asarray(jnp.stack(ok_rows)), np.asarray(jnp.stack(res_tail)))
     if q_out is not None:
         q_out[:] = [np.asarray(q_) for q_ in q_out]
+    if commit_out is not None:
+        commit_out[:] = [np.asarray(c_) for c_ in commit_out]
+    if cellok_out is not None:
+        cellok_out[:] = [np.asarray(c_) for c_ in cellok_out]
     return (ex_np, ok_np, np.asarray(pred9), np.mean(res_np, axis=0))
 
 
@@ -290,6 +299,13 @@ def q_readout_fn(params, cfg):
     cell = TC if cfg.cell_kind == "trm" else DC
     p = params[cfg.cell_kind]
     return jax.jit(jax.vmap(lambda z: cell.readout(p, cfg, z[0], (cv, cv))[1]))
+
+
+def commit_readout_fn(params, cfg):
+    """--record-commit (C6): z_c (B, 2, F, S, w) -> (B, S) the commit head's probability per cell."""
+    from qhrrn2 import dec_cell as DC
+    p = params["dec"]
+    return jax.jit(jax.vmap(lambda z: jax.nn.sigmoid(DC.commit_logits(p, z[0]))))
 
 
 def rank_auc(score, label) -> float | None:
@@ -393,6 +409,8 @@ def main():
                     help="field-class cells: per-pass Langevin noise of this scale at eval (EqR's released protocol .5; their training .01); "
                          "keys per (puzzle, draw, step); the cold start stays the cell's buffers (RI sigma pinned 0)")
     ap.add_argument("--zero-prefix", action="store_true", help="trm cell: the puzzle-prefix embedding rows zeroed (C9 prefix inertness)")
+    ap.add_argument("--record-commit", action="store_true",
+                    help="CHAMPION NIGHT C6: record the commit head's per-cell probability per step (float16) + per-cell correctness bits per step; summary rows on the last step")
     ap.add_argument("--sync-per-step", action="store_true", help="A/B pace test: the pre-2026-09-07 loop with three host readbacks per outer step (records identical)")
     ap.add_argument("--merge", default=None, help="merge shard files in DIR and exit")
     a = ap.parse_args()
@@ -432,8 +450,11 @@ def main():
         assert trm, "--z0-mode / --z0-device: field-class cells only"
     if a.record_q:
         assert trm, "--record-q: field-class cells only (the halting head)"
+    if a.record_commit:
+        assert getattr(cfg, "cell_kind", "rg") == "dec" and "commit_head" in params["dec"], "--record-commit: a DEC checkpoint trained with --dec-commit"
     z_init = cell_start(params, cfg) if (trm and a.z0_mode == "perturb") else None
     q_fn = q_readout_fn(params, cfg) if a.record_q else None
+    commit_fn = commit_readout_fn(params, cfg) if a.record_commit else None
     noise_base = jax.random.PRNGKey(int(a.mi_seed) + 101) if a.seg_noise_beta is not None else None
 
     def noise_keys_for(ids_, j_):   # (B,) keys per (puzzle, draw index; -1 = the cold pass) — or None
@@ -448,6 +469,7 @@ def main():
     extra_fp = {}
     if a.record_by_step: extra_fp["rbs"] = True
     if a.record_q: extra_fp["rq"] = True
+    if a.record_commit: extra_fp["rcommit"] = True
     if a.z0_mode != "gauss": extra_fp["z0_mode"] = a.z0_mode
     if a.z0_mode == "perturb": extra_fp["z0_eps"] = a.z0_eps
     if a.z0_device: extra_fp["z0_device"] = True
@@ -491,6 +513,8 @@ def main():
         rec["exact_by_step"] = []
     if a.record_q:
         rec["q_by_step"] = []
+    if a.record_commit:
+        rec["commit_by_step"] = []; rec["cellok_by_step"] = []; rec["free_cells"] = []
     uv_ks = []
     if a.vote_unverified:
         if len(sel) > 5000:
@@ -534,15 +558,21 @@ def main():
             void = jax.nn.one_hot(jnp.full((cv, cv), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
             y0 = jnp.broadcast_to(void, (B,) + void.shape)
         q_rows = [] if a.record_q else None
+        c_rows = [] if a.record_commit else None; ok_rows = [] if a.record_commit else None
         ex, ok, pred9, _ = run_batch(params, cfg, tvj, x_can, y0, t_total=t_total, tau=a.tau,
                                      gamma=a.fpopt_gamma, sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z,
                                      layout=layout, t_norm_fixed=tnf, ab=ab, hard=a.hard_feedback,
-                                     noise_keys=noise_keys_for(ids, -1), q_fn=q_fn, q_out=q_rows)
+                                     noise_keys=noise_keys_for(ids, -1), q_fn=q_fn, q_out=q_rows,
+                                     commit_fn=commit_fn, commit_out=c_rows, cellok_out=ok_rows)
         cold = ex[-1]
         if a.record_by_step:
             rec["exact_by_step"].extend(np.packbits(ex.T.astype(np.uint8), axis=1, bitorder="little").tolist())
         if a.record_q:
             rec["q_by_step"].extend(np.stack(q_rows, axis=1).astype(np.float16).tolist())   # (B, T, 2)
+        if a.record_commit:
+            rec["commit_by_step"].extend(np.stack(c_rows, axis=1).astype(np.float16).tolist())                        # (B, T, 81)
+            rec["cellok_by_step"].extend(np.packbits(np.stack(ok_rows, axis=1).astype(np.uint8), axis=2, bitorder="little").tolist())   # (B, T, 11)
+            rec["free_cells"].extend(np.packbits((puz9.reshape(B, -1) == 0).astype(np.uint8), axis=1, bitorder="little").tolist())   # (B, 11)
         fe, fv = first_true(ex), first_true(ok)
         viol = np.asarray(violations_dev(jnp.asarray(pred9)))
         cells = (pred9 == sol9).reshape(B, -1).sum(1)
@@ -598,6 +628,9 @@ def main():
     arr = {k: np.asarray(v) for k, v in rec.items()}
     if "exact_by_step" in arr: arr["exact_by_step"] = arr["exact_by_step"].astype(np.uint8)    # packed bits (B, ceil(T/8))
     if "q_by_step" in arr: arr["q_by_step"] = arr["q_by_step"].astype(np.float16)               # (B, T, 2)
+    if "commit_by_step" in arr:
+        arr["commit_by_step"] = arr["commit_by_step"].astype(np.float16)                          # (B, T, 81)
+        arr["cellok_by_step"] = arr["cellok_by_step"].astype(np.uint8); arr["free_cells"] = arr["free_cells"].astype(np.uint8)
     np.savez_compressed(out / f"records_{tag}.npz", **arr)
     partial_p.unlink(missing_ok=True)
     summ = summarize(arr, Q, sel, qs, dict(
@@ -612,6 +645,7 @@ def main():
         z0_mode=(a.z0_mode if trm else None), z0_eps=(a.z0_eps if (trm and a.z0_mode == "perturb") else None),
         z0_device=bool(a.z0_device), seg_noise_beta=a.seg_noise_beta, zero_prefix=bool(a.zero_prefix), sync_per_step=bool(a.sync_per_step),
         record_by_step=bool(a.record_by_step), record_q=bool(a.record_q), port=saved.get("port"),
+        record_commit=bool(a.record_commit), commit_tau=(float(getattr(cfg, "dec_commit_tau", 1.0)) if a.record_commit else None),
         wall_s=round(time.time() - t0, 1)))
     (out / f"summary_{tag}.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps({k: summ[k] for k in ("n", "t_total", "k_init", "init", "exact_acc", "exact_acc_vote", "wall_s")}))
@@ -677,6 +711,24 @@ def summarize(arr, Q, sel, qs, base):
             T = q.shape[1]
             bits = np.unpackbits(arr["exact_by_step"].astype(np.uint8), axis=1, bitorder="little")[:, :T].astype(bool)
             summ["exact_at_first_halt"] = float(bits[np.arange(n), first_halt].mean())   # the emulated ACT-halting protocol row
+    if n and "commit_by_step" in arr and arr["commit_by_step"].ndim == 3:
+        # CHAMPION NIGHT C6: the commit head at the LAST step over the free (non-given) cells — E3 in the head's own measure
+        c = arr["commit_by_step"][:, -1, :].astype(np.float32)                                              # (n, 81)
+        okc = np.unpackbits(arr["cellok_by_step"][:, -1, :].astype(np.uint8), axis=1, bitorder="little")[:, :81].astype(bool)
+        free = np.unpackbits(arr["free_cells"].astype(np.uint8), axis=1, bitorder="little")[:, :81].astype(bool)
+        tau = float(base.get("commit_tau") or 0.9)
+        com = (c > tau) & free
+        summ["commit_frac_last"] = float(com.sum() / max(free.sum(), 1))
+        summ["commit_wrong_among_committed_last"] = float((com & ~okc).sum() / max(com.sum(), 1)) if com.any() else None
+        uns = ~arr["cold_exact"].astype(bool)
+        cu = com[uns]; oku = okc[uns]
+        summ["commit_frac_unsolved_last"] = float(cu.sum() / max(free[uns].sum(), 1)) if uns.any() else None
+        summ["commit_wrong_among_committed_unsolved_last"] = float((cu & ~oku).sum() / max(cu.sum(), 1)) if cu.any() else None
+        sc, lb = c[free], okc[free]
+        if sc.size > 200000:
+            pick = np.random.default_rng(0).choice(sc.size, 200000, replace=False); sc, lb = sc[pick], lb[pick]
+        summ["commit_auc_last"] = rank_auc(sc, lb)
+        summ["commit_mean_free_last"] = float(c[free].mean()) if free.any() else None
     return summ
 
 

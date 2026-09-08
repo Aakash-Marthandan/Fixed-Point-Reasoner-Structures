@@ -193,6 +193,17 @@ def parse_args():
     # FINAL PHASE (2026-09-05; Plan_2026-09-05_FinalPhase §2/§6): the DEC cell + the field-loop FPA rows
     p.add_argument("--dec-width", type=int, default=256,
                    help="DEC: per-field width w (256 = the A-night arm; 512 = X0's parameter count)")
+    p.add_argument("--dec-coupling", default="mean", choices=["mean", "attn"],
+                   help="CHAMPION NIGHT C4: the DEC's field coupling — 'mean' (DeepSets, the pre-existing cell) or 'attn' (set attention over the other eight fields per cell, SE-RRM's operator in this form)")
+    p.add_argument("--dec-attn-heads", type=int, default=4)
+    p.add_argument("--dec-attn-dk", type=int, default=32)
+    p.add_argument("--dec-commit", action="store_true",
+                   help="CHAMPION NIGHT C6: the calibrated commit head (BCE on 'this cell's argmax is correct' per segment) + selective hardening at --dec-commit-tau")
+    p.add_argument("--dec-commit-tau", type=float, default=1.0, help="hardening threshold on the commit probability (>= 1 = the head trains, no hardening)")
+    p.add_argument("--dec-commit-w", type=float, default=0.1, help="the commit BCE's loss weight")
+    p.add_argument("--sudoku-orbit-online", action="store_true",
+                   help="CHAMPION NIGHT C3: a fresh position-group element per row per step on the device (sudoku_extreme.orbit_batch; the n_aug -> infinity limit; pair with --sudoku-aug 0)")
+    p.add_argument("--monitor-chunk", type=int, default=128, help="the trajectory monitor's rows per evaluator batch (a 512-puzzle monitor runs in 4 chunks)")
     p.add_argument("--no-dec-coupling", action="store_true",
                    help="DEC ablation: drop the equivariant field-coupling sub-layer")
     p.add_argument("--fpa-frac", type=float, default=0.25,
@@ -243,6 +254,9 @@ def val20_eval(state, cfg, val, tau):
             "obj_consistency_n": c_tot}
 
 
+MON_CHUNK = 128   # --monitor-chunk (set in main)
+
+
 def sudoku_monitor(state, cfg, val_pairs, *, t_cold=64, t_ret=8, n_lam=16, lam_iters=12):
     """Wave 3a TRAJECTORY MONITOR (H-45): on the held-out monitor puzzles —
     val@t_cold cold exact; retention from the solution under the trained
@@ -270,9 +284,14 @@ def sudoku_monitor(state, cfg, val_pairs, *, t_cold=64, t_ret=8, n_lam=16, lam_i
     cv = SUD.layout_canvas(layout)
     void = jax.nn.one_hot(jnp.full((cv, cv), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
     y0v = jnp.broadcast_to(void, (B,) + void.shape)
-    ex, _, _, _ = EV.run_batch(params, cfg, tvj, x_can, y0v, t_total=t_cold, tau=1.0, gamma=1.0,
-                               sol9=sol9, puz9=puz9, eta=eta, eta_z=eta_z, layout=layout, ab=ab)
-    val_cold = float(ex[-1].mean())
+    # CHAMPION NIGHT (2026-09-08): a 512-puzzle monitor runs in MON_CHUNK-row chunks (identical to the single
+    # call for <= MON_CHUNK rows: every row's trajectory is independent of its batch-mates)
+    ex_last = []
+    for i0 in range(0, B, MON_CHUNK):
+        ex, _, _, _ = EV.run_batch(params, cfg, tvj, x_can[i0:i0 + MON_CHUNK], y0v[i0:i0 + MON_CHUNK], t_total=t_cold, tau=1.0, gamma=1.0,
+                                   sol9=sol9[i0:i0 + MON_CHUNK], puz9=puz9[i0:i0 + MON_CHUNK], eta=eta, eta_z=eta_z, layout=layout, ab=ab)
+        ex_last.append(np.asarray(ex[-1]))
+    val_cold = float(np.concatenate(ex_last).mean())
     if cfg.cell_kind in ("trm", "dec"):
         return {f"val_t{t_cold}": val_cold, "eta": eta, "eta_z": eta_z, "n_val": int(B)}
     y0s = jax.nn.one_hot(EV.place_batch(sol9, layout), M.VOCAB).transpose(0, 3, 1, 2)
@@ -373,6 +392,8 @@ def main():
            if a.sudoku_layout == "native9" else {})
     trm = (dict(cell_kind=a.cell, trm_hidden=a.trm_hidden, trm_layers=a.trm_layers,
                 dec_width=a.dec_width, dec_coupling=not a.no_dec_coupling,
+                dec_coupling_kind=a.dec_coupling, dec_attn_heads=a.dec_attn_heads, dec_attn_dk=a.dec_attn_dk,
+                dec_commit=a.dec_commit, dec_commit_tau=a.dec_commit_tau, dec_commit_w=a.dec_commit_w,
                 trm_h_cycles=a.trm_h_cycles, trm_l_cycles=a.trm_l_cycles,
                 trm_lambda=a.trm_lambda, trm_beta=a.trm_beta, trm_ri_sigma=a.trm_ri_sigma, trm_token_mixer=a.trm_token_mixer, trm_gm_dim=a.trm_gm_dim,
                 eta_fixed=1.0, eta_z_fixed=1.0)     # y = readout; the latent carries undamped
@@ -385,6 +406,11 @@ def main():
             f"--cell {a.cell}: RI rows / anchors / NI / eq_coupled are y-register mechanisms (use --trm-* dials)"
         assert a.fpa_k == 0 or a.sot, "--fpa-k on the field loop needs --sot (the anchor rows live in the segment loop)"
     assert not a.act or a.sot, "--act needs --sot"
+    assert not a.sudoku_orbit_online or (a.sudoku_extreme and a.sudoku_layout == "native9" and a.cell in ("trm", "dec") and a.sot), \
+        "--sudoku-orbit-online: the Sudoku-Extreme native9 field loop under --sot (the orbit acts on the segment loop's rows)"
+    assert not a.dec_commit or a.cell == "dec", "--dec-commit: the DEC cell only"
+    global MON_CHUNK
+    MON_CHUNK = max(1, int(a.monitor_chunk))
     # --sot on the trm cell = the field's online segment loop (X0); on our cell = the sportC2
     # persistent (y, z) carry with verifier-replaced rows (R1; run_sot_rg)
     cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat, **side, **geo, **trm,
@@ -876,9 +902,14 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
                     z=jnp.zeros((B,) + zshape, jnp.float32), steps=jnp.zeros((B,), jnp.int32),
                     halted=jnp.ones((B,), bool))
 
+    commit_on = cfg.cell_kind == "dec" and bool(getattr(cfg, "dec_commit", False))   # C6: the commit head (BCE + hardening)
+    orbit_on = bool(getattr(a, "sudoku_orbit_online", False))                          # C3: the online position orbit
+
     def sot_step(state, opt_state, carry, rng, ema_tree):
         rng, k_s, k_r, k_n, k_e1, k_e2 = jax.random.split(rng, 6)
         x_f, y_f, _, _ = E.sample_batch(k_s, dev, n_tasks, B)
+        if orbit_on:   # a fresh group element per fresh row (a fold-in of the sample key: the plain stream is bit-exact)
+            x_f, y_f = SX.orbit_batch(jax.random.fold_in(k_s, 1), x_f, y_f)
         h = carry["halted"]
         x = jnp.where(h[:, None, None], x_f, carry["x"])
         y = jnp.where(h[:, None, None], y_f, carry["y"])
@@ -891,20 +922,36 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             p = st["model"][cfg.cell_kind]
 
             def one(xx, yy, zz, kk):
-                emb = TCm.embed(p, cfg, xx)
+                if commit_on:
+                    # C6: the head reads the CARRIED state (the segment's input: a fresh row's start buffers / RI draw
+                    # included, exactly as the evaluator's cold pass and its multi-init draws do) — hardening from it,
+                    # and the BCE on it: target = 'this cell's current argmax is correct' over the free cells. The
+                    # carried state is detached, so the BCE and the straight-through path train the head alone.
+                    emb, _g = TCm.embed_effective(p, cfg, xx, zz[0])
+                    lg_in, _ = TCm.readout(p, cfg, zz[0], xx.shape)
+                    cl = TCm.commit_logits(p, zz[0])
+                    tgt = (jnp.argmax(lg_in, axis=-1) == yy).reshape(-1).astype(jnp.float32)
+                    fm = (xx.reshape(-1) == 0).astype(jnp.float32)
+                    bce = jnp.sum(optax.sigmoid_binary_cross_entropy(cl, tgt) * fm) / jnp.maximum(jnp.sum(fm), 1.0)
+                else:
+                    emb = TCm.embed(p, cfg, xx); bce = jnp.zeros(())
                 zH, zL = TCm.segment(p, cfg, emb, zz[0], zz[1], rng=kk if cfg.trm_beta > 0 else None)
                 logits, q = TCm.readout(p, cfg, zH, xx.shape)
                 logp = log_stablemax(logits) if cfg.loss_kind == "stablemax" else jax.nn.log_softmax(logits, axis=-1)
                 ce = -jnp.mean(jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0])
                 correct = jnp.all(jnp.argmax(logits, axis=-1) == yy)
-                return ce, q, correct, jnp.stack([zH, zL])
-            ce, q, corr, z_new = jax.vmap(one)(x, y, z, keys)
+                return ce, q, correct, jnp.stack([zH, zL]), bce
+            ce, q, corr, z_new, bce = jax.vmap(one)(x, y, z, keys)
             lm = jnp.mean(ce)
             q_halt = q[:, 0]
             q_loss = jnp.mean(optax.sigmoid_binary_cross_entropy(q_halt, corr.astype(jnp.float32)))
             total = lm + (0.5 * q_loss if a.act else 0.0)
             aux = dict(ce=lm, q_loss=q_loss, train_exact=jnp.mean(corr.astype(jnp.float32)),
                        q_halt=q_halt, z_new=z_new)
+            if commit_on:
+                cb = jnp.mean(bce)
+                total = total + cfg.dec_commit_w * cb
+                aux["commit_bce"] = cb
             if cfg.fpa_k > 0:
                 # final phase: the FPA anchor rows on the field loop (a fold-in of the row key:
                 # fpa_k = 0 leaves the registered rng stream bit-exact — X0's path untouched)
@@ -914,7 +961,8 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             return total, aux
         (loss, aux), grads = jax.value_and_grad(loss_fn, has_aux=True)(state)
         scal = dict(ce=aux["ce"], q_loss=aux["q_loss"], train_exact=aux["train_exact"],
-                    **({"fpa_ce": aux["fpa_ce"]} if "fpa_ce" in aux else {}))
+                    **({"fpa_ce": aux["fpa_ce"]} if "fpa_ce" in aux else {}),
+                    **({"commit_bce": aux["commit_bce"]} if "commit_bce" in aux else {}))
         if n_dev > 1:
             grads = jax.lax.pmean(grads, "dp"); loss = jax.lax.pmean(loss, "dp"); scal = jax.lax.pmean(scal, "dp")
         updates, opt_state = opt.update(grads, opt_state, state)
@@ -941,7 +989,8 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
         ema = rep(ema) if use_ema else None
         carry = rep(init_carry()); rng = jax.random.split(rng, n_dev)
         first = lambda tree: jax.tree.map(lambda v: v[0], tree)
-        print(f"SOT DP: {n_dev} devices, {B} rows/device; carry {'reset (resume)' if start_step else 'fresh'}", flush=True)
+        print(f"SOT DP: {n_dev} devices, {B} rows/device; carry {'reset (resume)' if start_step else 'fresh'}"
+              f"{'; ONLINE ORBIT' if orbit_on else ''}{'; COMMIT HEAD tau %.2f w %.2f' % (cfg.dec_commit_tau, cfg.dec_commit_w) if commit_on else ''}", flush=True)
     else:
         step = jax.jit(sot_step)
         carry = init_carry(); first = lambda tree: tree
@@ -955,6 +1004,7 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             sc = first(scal); lv = float(first(loss))
             rec = {"step": i + 1, "loss": lv, "ce_in": float(sc["ce"]), "q_loss": float(sc["q_loss"]),
                    **({"fpa_ce": float(sc["fpa_ce"])} if "fpa_ce" in sc else {}),
+                   **({"commit_bce": float(sc["commit_bce"])} if "commit_bce" in sc else {}),
                    "train_exact": float(sc["train_exact"]), "halt_frac": float(sc["halt_frac"]),
                    "mean_steps": float(sc["mean_steps"]), "I_total": 0.0, "A_total": 0.0, "rule_H": 0.0,
                    "lr": float(sched(i + 1)), "steps_per_sec": round(sps, 3), "t": time.strftime("%Y-%m-%dT%H:%M:%S")}

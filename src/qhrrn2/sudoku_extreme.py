@@ -107,6 +107,33 @@ def augment(puz: np.ndarray, sol: np.ndarray, rng: np.random.Generator, *,
     return np.ascontiguousarray(p), np.ascontiguousarray(s)
 
 
+def orbit_batch(key, x, y):
+    """CHAMPION NIGHT arm C3 (2026-09-08): the ONLINE position orbit — one fresh element of the
+    HRM/TRM position group per row per call, on the device: transpose (p = .5), a band permutation
+    with a row permutation inside each band, a stack permutation with a column permutation inside
+    each stack (augment()'s group without the digit map: the DEC is exactly S9-equivariant). The
+    limit n_aug -> infinity of the field's fixed 1000 copies: every optimizer step sees new group
+    elements, so no (puzzle, element) pair recurs. x, y (B, 9, 9) int -> (B, 9, 9) int, identical
+    maps applied to puzzle and solution (validity + uniqueness are symmetry-invariant)."""
+    import jax
+    import jax.numpy as jnp
+    B = x.shape[0]
+    k_t, k_b, k_r, k_s, k_c = jax.random.split(key, 5)
+    tr = jax.random.bernoulli(k_t, 0.5, (B,))
+    bands = jnp.argsort(jax.random.uniform(k_b, (B, BOX)), axis=-1)
+    rows_in = jnp.argsort(jax.random.uniform(k_r, (B, BOX, BOX)), axis=-1)
+    stacks = jnp.argsort(jax.random.uniform(k_s, (B, BOX)), axis=-1)
+    cols_in = jnp.argsort(jax.random.uniform(k_c, (B, BOX, BOX)), axis=-1)
+    rows = (bands[:, :, None] * BOX + rows_in).reshape(B, N)
+    cols = (stacks[:, :, None] * BOX + cols_in).reshape(B, N)
+
+    def one(g, t, r, c):
+        g = jnp.where(t, g.T, g)
+        return g[r][:, c]
+    act = jax.vmap(one)
+    return act(x, tr, rows, cols), act(y, tr, rows, cols)
+
+
 # ── prepared benchmark file (ships to the pod as ONE small npz) ───────────
 
 def prepare(train_csv, test_csv, out_npz, *, k: int = 1000, n_val: int = 64,

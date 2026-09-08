@@ -139,6 +139,24 @@ class Config:
     # dec_width = the per-field width w (256 = the A-night arm; 512 = X0's parameter count).
     dec_width: int = 256
     dec_coupling: bool = True
+    # CHAMPION NIGHT (Plan_2026-09-08_Champion_Night §5; 2026-09-08). dec_coupling_kind "attn" (arm C4) =
+    # SE-RRM's operator in the DEC's DeepSets form: per cell, dec_attn_heads-head attention over the OTHER
+    # eight fields' tokens (queries/keys from (w, heads*dk) projections shared over the fields — equivariant
+    # by construction; values = the existing coupling map fc, split over the heads) replaces the uniform mean;
+    # "mean" = the pre-existing coupling, bit-exact. dec_commit (arm C6) = the CALIBRATED COMMIT HEAD: per
+    # cell c = sigmoid(mean_f z_H[f, s] . w + b) (S9-invariant) read on the CARRIED state at every segment's
+    # input (a fresh row's start buffers / RI draw included: train == eval, multi-init draws included), trained
+    # with BCE against "this cell's current argmax is correct" over the free cells (weight dec_commit_w; the
+    # carried state is detached, so the head alone trains); SELECTIVE HARDENING: a non-given cell with
+    # c > dec_commit_tau enters that segment as a GIVEN of its argmax digit (straight-through on c).
+    # dec_commit_tau >= 1 = the head trains, no hardening (the forward is the plain DEC's, bit-exact);
+    # dec_commit False = the head absent, bit-exact pre-existing graph.
+    dec_coupling_kind: str = "mean"
+    dec_attn_heads: int = 4
+    dec_attn_dk: int = 32
+    dec_commit: bool = False
+    dec_commit_tau: float = 1.0
+    dec_commit_w: float = 0.1
     # FINAL PHASE FPA on the FIELD LOOP (cell_kind trm / dec under --sot; pretrain.field_fpa_loss):
     # per optimizer step the first round(B * fpa_frac) rows are re-run for fpa_k SEGMENTS from
     # z_H := the embedded corrupted solution (eps ~ U[0, fpa_eps] of the NON-GIVEN cells resampled

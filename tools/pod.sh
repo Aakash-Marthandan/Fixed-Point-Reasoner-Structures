@@ -176,7 +176,14 @@ v_bring_up () { # ZONE (node exists) -> 0 = chain launched on every worker
   $PY tools/dispatcher.py canary --name "$POD" --zone "$1" --workers "$nw" >> "$LOG" 2>&1 \
       || { say "  canary FAILED"; return 1; }
   still_ready "$1" || return 1
-  v_launch "$1"
+  v_launch "$1" || return 1
+  # 2026-09-04/09-07 rule automated: the guest DMS must sit PAST the deadline (a guest poweroff before it kills the
+  # node-side guard's sleep without stopping billing) — re-plant the node guard with DMS = deadline + 60 min
+  if [ -f runs/tpu_deadline.txt ]; then
+    local dl now dms; dl=$(cat runs/tpu_deadline.txt); now=$(date +%s); dms=$(( (dl - now) / 60 + 60 )); [ "$dms" -ge 600 ] || dms=600
+    DMS_MIN=$dms bash tools/plant_guard.sh 6 >> "$LOG" 2>&1 && say "  guard re-planted (DMS +$dms min, past the deadline)" || say "  WARNING: plant_guard failed — plant by hand"
+  fi
+  return 0
 }
 accel_allowed_in () {  # ACC ZONE -> 0 iff the accelerator may be created in that zone (ACCEL_ZONE_RESTRICT="v6e-32:us-east1-d ..." from campaign.env;
   # FINAL PHASE 2026-09-05, PI: the 32-chip quota exists in us-east1-d ONLY — every other zone is 16 or 8). Unlisted accelerators are unrestricted.
@@ -187,15 +194,34 @@ accel_allowed_in () {  # ACC ZONE -> 0 iff the accelerator may be created in tha
   done
   return 0
 }
+v_clear_leftover () {  # ZONE -> 0 nothing left / 2 a READY node of our name exists (adopt it, never create a second pod)
+  # 2026-09-07 incident: a create that hit the 10-min alarm was read as "no capacity" while the server-side operation
+  # went on and left a CREATING record (the PI saw two pods). After ANY failed create: read the zone; delete a
+  # CREATING/other record of our name before hunting on; a READY one is adopted.
+  local st i
+  for i in 1 2 3 4 5 6; do
+    st=$(bounded 90 gcloud compute tpus tpu-vm describe "$POD" --zone="$1" --project=$PROJECT \
+         --format="value(state)" 2>/dev/null | grep -oE '^[A-Z]+$' | head -1)
+    [ -n "$st" ] || return 0
+    if [ "$st" = READY ]; then say "  LEFTOVER READY node of our name in $1 after the failed create — adopting it (no second pod)"; return 2; fi
+    say "  leftover $st record of our name in $1 after the failed create — deleting before hunting on ($i/6)"
+    bounded 300 gcloud compute tpus tpu-vm delete "$POD" --zone="$1" --project=$PROJECT --quiet >> "$LOG" 2>&1
+    sleep 20
+  done
+  say "  WARNING: a record of our name persists in $1 after 6 delete attempts"; notify "leftover record" "$POD in $1 — check by hand"
+  return 0
+}
 v_hunt () {   # try every (accelerator, zone) once in ladder order; 0 = chain launched somewhere
-  local z acc
+  local z acc lrc
   for acc in $(hunt_accels); do
     for z in $ZONES; do
       accel_allowed_in "$acc" "$z" || { say "  skip $acc in $z (ACCEL_ZONE_RESTRICT)"; continue; }
       say "CREATE $POD ($acc spot) in $z"
       if ! bounded 600 gcloud compute tpus tpu-vm create "$POD" --zone="$z" --project=$PROJECT \
            --accelerator-type="$acc" --version=v6e-ubuntu-2404 --spot >> "$LOG" 2>&1; then
-        say "  no capacity in $z ($acc)"; continue
+        say "  no capacity in $z ($acc)"
+        v_clear_leftover "$z"; lrc=$?
+        [ "$lrc" -eq 2 ] || continue
       fi
       echo "$acc" > "$AFILE"; echo "$(accel_workers "$acc")" > "$WFILE"
       say "  CREATED in $z ($acc, $(accel_workers "$acc") worker(s))"; notify "created" "$POD ($acc) landed in $z"
