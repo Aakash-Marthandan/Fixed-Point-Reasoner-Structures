@@ -1,0 +1,65 @@
+% =====================================================================
+%  Fixed-Point Reasoner Structures — paper 1 (ICLR 2027 target; AAMAS fallback)
+%  Overleaf-compatible: pdfLaTeX (Overleaf's default) or XeLaTeX/tectonic (local build).
+%  Every package below ships with TeX Live; no shell-escape, no local fonts, no custom .sty.
+%  Local build: `bash paper/build.sh` (or `make -C paper`) -> paper/paper.pdf
+%  Overleaf:    upload the contents of paper/draft/ (main.tex is the root document).
+% =====================================================================
+\documentclass[11pt,letterpaper]{article}
+
+% --- venue switch: drop iclr2027_conference.sty + .bst next to main.tex and set \venuetrue ---
+\newif\ifvenue \venuefalse
+\ifvenue
+  \usepackage{iclr2027_conference}          % the venue style (natbib is loaded by it)
+\else
+  \usepackage[margin=1in]{geometry}
+  \usepackage[numbers,sort&compress]{natbib}
+\fi
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{times}                          % Times text (the ICLR/NeurIPS look; pdfLaTeX + XeLaTeX safe)
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=blue!60!black,urlcolor=blue!60!black]{hyperref}
+\usepackage{cleveref}
+
+\input{macros}
+
+\title{Fixed Points, Basins, and the Price of Information:\\ Measured Laws of Recursive Reasoning Models}
+\author{Aakash Marthandan\\ \texttt{aakashmarthandan@gmail.com}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Recursive reasoning models solve \sudext{} by applying a small network to a carried state, step after step, until the grid stops changing. They reach high accuracy, but why the loop works has not been measured, and their reported numbers depend on conventions that no paper states (how many steps are run, whether the weights are averaged, how much noise is injected, which checkpoint is selected) by more than the differences between the models. We treat the loop as a flow toward a fixed point and build a set of instruments that measure it directly: whether a trained model commits to cells and propagates from them or averages over possibilities, from which starting states it reaches the solution, which wrong grids it converges to, and what its confident commitments cost. Applied to the publicly released models and to forty grids trained one design choice at a time and evaluated on identical puzzles, the instruments give seven laws. The loop, not the parameter count or the operator, decides whether a model commits or averages. Every model that commits reports full confidence on the puzzles it fails, where half of its committed cells are wrong. Selecting an answer by its convergence residual works without a verifier exactly when training has removed the wrong fixed points. Every training recipe eventually memorizes the thousand training puzzles, so the choice of checkpoint is part of the result. Doubling the number of steps raises accuracy every time and never unsolves a solved puzzle. Exact symmetry of the state does the work that relabeled training data does for other models, and insensitivity to the starting state can be trained in. The laws say what to build. The Decimating Equilibrium Cell keeps the block and two-timescale loop that the laws identify as the source of commitment and places it on a nine-field state with every parameter shared across the digits, so that relabeling the digits relabels the output exactly. Under the thousand-puzzle training convention and with no digit augmentation, on one training seed with a three-seed replication in progress, it reaches 95.1\,\% single-pass exact accuracy at 16 steps on the full 422,786-puzzle test set and 98.1\,\% at 64 steps on a 100,000-puzzle subsample, against 86.5\,\% and 93.2\,\% for the best released checkpoint of the same convention evaluated with the same code. It does so with 55\,\% of that model's parameters and 4.6 times its arithmetic per step, so that at matched inference compute the lead is about two points. With 32 random restarts and no verifier it reaches 99.4\,\% on a 5,000-puzzle subsample, which is neither above nor cheaper than the 99.8\,\% that model reports with 128 restarts, and solvers trained on the full split of millions of puzzles rather than a thousand report up to 99.9\,\%. Every number in this paper is placed in a table whose columns are the training set, the number of steps, the number of restarts, the selection rule and the arithmetic per puzzle. Every result was predicted in writing before its data and scored afterward, misses included. The same instruments read the Abstraction and Reasoning Corpus, which these models already solve in substantial part, as a different regime: there the answer cannot be verified, what limits a model is which rules it holds a basin for rather than how far it can search, and a failure is a confident wrong fixed point rather than an unfinished propagation. The two benchmarks that the literature treats as one family are therefore a verification game and a generalization task, and we state which instruments and mechanisms carry over between them and what the generalization task asks of the next model. Together, the results say what a recursive reasoner commits to, from which starting states it can be reached, and what its accuracy costs.
+\end{abstract}
+
+\input{sections/introduction}
+\input{sections/setup}
+\input{sections/instruments}
+\input{sections/results}
+\input{sections/field}
+\input{sections/sudoku_vs_arc}
+\input{sections/related}
+\input{sections/limitations}
+\input{sections/conclusion}
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\appendix
+\input{sections/appendix}
+
+\end{document}

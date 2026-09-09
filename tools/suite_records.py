@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "src")); sys.path.insert(0, str(ROOT / "tools"))
 NPZ = ROOT / "data/sudoku_extreme/sudoku_extreme_seed0.npz"
 DATE = time.strftime("%Y%m%d")
 OUT = RUNS / "analysis" / f"suite_records_{DATE}"
-TAGS = ["finalA", "sportC2", "sportC1", "sportC0", "sportBr2b", "sportBr2", "sportB", "sport3a", "sport2w2", "sport2"]
+TAGS = ["champ", "finalA", "sportC2", "sportC1", "sportC0", "sportBr2b", "sportBr2", "sportB", "sport3a", "sport2w2", "sport2"]
 GBINS = [(17, 21), (21, 23), (23, 25), (25, 27), (27, 29), (29, 36)]; RBANDS = [(0, 1), (1, 10), (10, 30), (30, 60), (60, 10**6)]
 
 def jload(p):

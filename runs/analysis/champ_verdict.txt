@@ -1,0 +1,73 @@
+== CHAMPION NIGHT VERDICT (champ; rules locked pre-data in this file's header) ==
+INTEGRITY: PASS
+
+ARM TABLE (headline = EMA single pass, cold16 on all 422,786; cold64 on 100k, D128 on 20k, D256 on 5k, labeled; scan 5k x k32 t64; spurious = lens-E5 per-draw rate; onset = first step with ce_in < 0.05; refs: parity D64 0.920, TRM-MLP 0.874)
+  arm | description                                  | cold16 | final16 | cold64 |  D128  |  D256  |   b1   | t1r@32 |  v@32  | spur  | census | end-CE | onset  | stable  | memorized      | vb-scr
+  C0  | champion recipe seed 0 (DEC-w384 FPA k1 RI s1) |  95.09 |  94.76  |  98.42 |  98.95 |  99.14 |  98.66 |  99.58 |  99.58 | 0.000 | 0.000  | 0.428  | never  | yes     | -              |  94.92
+  C1  | champion recipe seed 1                       |  94.34 |  81.26  |  97.46 |  98.14 |  98.42 |  97.62 |  99.28 |  99.30 | 0.001 | 0.000  | 0.123  | never  | yes     | VSEL-FINAL-DROP |  95.12
+  C2  | champion recipe seed 2                       |  95.63 |  95.17  |  98.67 |  99.00 |  99.34 |  98.76 |  99.70 |  99.70 | 0.000 | 0.000  | 0.464  | never  | yes     | -              |  94.14
+  C3  | C0 + online position orbit (50k)             |  94.78 |  84.63  |  98.01 |  98.61 |  98.94 |  98.30 |  99.48 |  99.50 | 0.001 | 0.000  | 0.191  | never  | yes     | VSEL-FINAL-DROP |  94.14
+  C4  | C0 + attn coupling (4h x dk32)               |  96.70 |  96.41  |  98.90 |  99.15 |  99.32 |  99.00 |  99.64 |  99.64 | 0.000 | 0.000  | 0.440  | never  | yes     | -              |  96.48
+  C5  | C0 at w192 (1.34x TRM-MLP MACs)              |  95.91 |  96.03  |  99.10 |  99.42 |  99.60 |  99.16 |  99.82 |  99.82 | 0.002 | 0.000  | 0.532  | never  | yes     | -              |  96.88
+  C6  | C0 + calibrated commit head tau .9 (50k)     |  95.62 |  90.05  |  98.50 |  98.98 |  99.34 |  98.66 |  99.66 |  99.74 | 0.000 | 0.000  | 0.287  | never  | yes     | VSEL-FINAL-DROP |  95.51
+
+STABILITY: ALL-STABLE   MEMORIZATION: MEMORIZED:C1,C3,C6
+
+NOISE FLOOR_C = 0.0129 (seed triple ['C0', 'C1', 'C2']); contrasts read beyond 2 x FLOOR_C = 0.0258; FLOOR_SCREEN (vb strat-512, descriptive) = 0.0098
+R-CH-0 SEEDS (SPREAD-C 0.0129 over ['C0', 'C1', 'C2']; seed mean M = 0.9502): TIGHT
+R-CH-1 ORBIT (C3 - M = -0.0024; onset C3 never vs seed mean - over []): ORBIT-FLAT+SAME-ONSET
+R-CH-2 OPERATOR (C4 - M = +0.0168): MEAN-SUFFICES
+R-CH-3 WIDTH-DOWN (C5 cold16  95.91 cold64  99.10 vs parity 92.0 / TRM-MLP 87.4): PARITY-AT-1.3x
+R-CH-4 COMMIT (C6 sub20k_t16_commit n 20000, tau 0.9: wrong-among-committed at unsolved w = 0.2157, over all committed 0.0002, committed fraction 0.9553, commit AUC 0.9869; C6 - M = +0.0060): CALIBRATED-INERT
+
+SELECTOR TABLE (5k x k32 scan at t64; spurious = lens-E5 per-draw rate, clean <= .010; verified@32 = vote_at_k[32]; t1r@32 = residual-selected top-1)
+  arm | spurious | t1r@32 | verified@32 | t1r/verified
+  C0  | 0.000    |  99.58 |  99.58      | 1.0000
+  C1  | 0.001    |  99.28 |  99.30      | 0.9998
+  C2  | 0.000    |  99.70 |  99.70      | 1.0000
+  C3  | 0.001    |  99.48 |  99.50      | 0.9998
+  C4  | 0.000    |  99.64 |  99.64      | 1.0000
+  C5  | 0.002    |  99.82 |  99.82      | 1.0000
+  C6  | 0.000    |  99.66 |  99.74      | 0.9992
+R-CH-5 SELECTOR (present ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6']): SELECTOR-CLEAN
+
+DEPTH TABLE (ladder cold16 / cold64 / D128 / D256; regressions = depth_regressions/n per row [D16 full, D64 100k, D128 20k, D256 5k]; bound .0005 x n)
+  arm | cold16 | cold64 |  D128  |  D256  | gain 64->128 | gain 128->256 | regressions D16 / D64 / D128 / D256 | flag
+  C0  |  95.09 |  98.42 |  98.95 |  99.14 |      +0.0053 |       +0.0019 | 0/422786 / 0/100000 / 0/20000 / 0/5000 | ok
+  C1  |  94.34 |  97.46 |  98.14 |  98.42 |      +0.0068 |       +0.0028 | 1/422786 / 0/100000 / 0/20000 / 0/5000 | ok
+  C2  |  95.63 |  98.67 |  99.00 |  99.34 |      +0.0032 |       +0.0034 | 0/422786 / 0/100000 / 0/20000 / 0/5000 | ok
+  C3  |  94.78 |  98.01 |  98.61 |  98.94 |      +0.0061 |       +0.0032 | 0/422786 / 0/100000 / 0/20000 / 0/5000 | ok
+  C4  |  96.70 |  98.90 |  99.15 |  99.32 |      +0.0025 |       +0.0017 | 0/422786 / 0/100000 / 0/20000 / 0/5000 | ok
+  C5  |  95.91 |  99.10 |  99.42 |  99.60 |      +0.0032 |       +0.0018 | 0/422786 / 0/100000 / 0/20000 / 0/5000 | ok
+  C6  |  95.62 |  98.50 |  98.98 |  99.34 |      +0.0048 |       +0.0036 | 0/422786 / 0/100000 / 0/20000 / 0/5000 | ok
+R-CH-6 DEPTH: DEPTH-MONOTONE
+R-CH-7 PARITY (cold64 >= 0.920 on ['C0', 'C1', 'C2'] of the stable seed arms ['C0', 'C1', 'C2']): PARITY-x3
+HEADLINE (stable seed arms, single pass EMA): cold64 mean  98.18 spread 0.0121 (n 3); D128 mean  98.70 spread 0.0085 (n 3)
+
+EXTENSION AUDIT (R-CH-EXT; END-PEAK = the selected step inside the last 4000 steps of the FINAL budget = a peak still rising at the end)
+  arm | EXTENDED | from -> to (peak)     | selected        | budget(argv) | final budget | END-PEAK
+  C0  | no       | -                     | -               | 30000        | 30000        | -
+  C1  | yes      | 30000 -> 50000 (peak 28000) | 28000           | 50000        | 50000        | no
+  C2  | no       | -                     | 24000           | 30000        | 30000        | no
+  C3  | no       | -                     | -               | 50000        | 50000        | -
+  C4  | no       | -                     | -               | 30000        | 30000        | -
+  C5  | yes      | 30000 -> 50000 (peak 28000) | -               | 50000        | 50000        | -
+  C6  | no       | -                     | -               | 50000        | 50000        | -
+R-CH-EXT: EXTENDED:C1,C5|END-PEAK:none (2 extended arm(s))
+R-CH-CHAMP: C2 cold64 0.9868 (labeled best: C5 0.9910)
+SYNC A/B (descriptive; 256 rows x k8 in asia-south1-c): default 342.2 s, per-step 324.1 s, ratio per-step/default = 0.95 (predicted >= 1.5)
+
+PREDICTION SCOREBOARD (bands locked pre-data):
+  C0: cold16 HIT cold64 HIT D128 HIT D256 HIT spurious HIT verified@32 HIT
+  C1: cold16 HIT cold64 HIT D128 HIT D256 HIT spurious HIT verified@32 MISS-BELOW
+  C2: cold16 HIT cold64 MISS-ABOVE D128 HIT D256 MISS-ABOVE spurious HIT verified@32 HIT
+  SPREAD-C: HIT
+  C3: cold16 MISS-BELOW
+  C4: d MISS-ABOVE
+  C5: cold16 MISS-ABOVE cold64 MISS-ABOVE
+  C6: w HIT d HIT
+  DEPTH-GAIN 64->128: C0:HIT C1:HIT C2:HIT C3:HIT C4:MISS-BELOW C5:HIT C6:HIT
+  SYNC: MISS-BELOW
+  N-EXTENDED: HIT
+
+LETTERS: INTEGRITY PASS · STABILITY ALL-STABLE · MEMORIZATION MEMORIZED:C1,C3,C6 · R-CH-0 TIGHT · R-CH-1 ORBIT-FLAT+SAME-ONSET · R-CH-2 MEAN-SUFFICES · R-CH-3 PARITY-AT-1.3x · R-CH-4 CALIBRATED-INERT · R-CH-5 SELECTOR-CLEAN · R-CH-6 DEPTH-MONOTONE · R-CH-7 PARITY-x3 · R-CH-EXT EXTENDED:C1,C5|END-PEAK:none · R-CH-CHAMP C2|cold64:0.9868|LABELED-BEST:C5|cold64:0.9910 · FLOOR_C 0.0129

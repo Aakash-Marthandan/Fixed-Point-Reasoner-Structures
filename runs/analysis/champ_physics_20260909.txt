@@ -1,0 +1,454 @@
+==================================================================================================================================
+CHAMPION NIGHT — PHYSICS PASS (20260909; analysis-time, descriptive, no rules; verdict authority = tools/analyze_champ.py; tag champ)
+==================================================================================================================================
+
+== A. ADMISSION (ckpt_latest config + parameter count; argv from config.json; markers; grids) ==
+  C0 [champion recipe seed 0 (DEC-w384 + FPA k1 + RI s1, no digit aug, 30k)]: step 30000 | params 2780933 (config.json 2780933) | ema True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, dec_attn_heads=4, dec_attn_dk=32, dec_commit=False, dec_commit_tau=1.0, dec_commit_w=0.1, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=1.0, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=30000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_orbit_online=False, sot=True, act=True, cell=dec, dec_width=384, dec_coupling=mean, dec_commit=False, fpa_k=1, trm_ri_sigma=1.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, sudoku_extreme=data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz
+     grids: 15 banked [2000..30000] | val_best None | EXTENDED None | resumes None | REMAT 'OOM at launch (rc=1) -> retried once with --remat 2026-09-08T07:37:49Z'
+  C1 [champion recipe seed 1 (EXTENDED to 50k)]: step 50000 | params 2780933 (config.json 2780933) | ema True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, dec_attn_heads=4, dec_attn_dk=32, dec_commit=False, dec_commit_tau=1.0, dec_commit_w=0.1, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=1.0, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=1, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_orbit_online=False, sot=True, act=True, cell=dec, dec_width=384, dec_coupling=mean, dec_commit=False, fpa_k=1, trm_ri_sigma=1.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, sudoku_extreme=data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz
+     grids: 25 banked [2000..50000] | val_best '028000 0.9609 28000' | EXTENDED 'EXTENDED from 30000 to 50000 (peak at 28000) 2026-09-08T15:20:26Z' | resumes '30000; 32000' | REMAT 'OOM at launch (rc=1) -> retried once with --remat 2026-09-08T07:37:28Z'
+  C2 [champion recipe seed 2 (30k)]: step 30000 | params 2780933 (config.json 2780933) | ema True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, dec_attn_heads=4, dec_attn_dk=32, dec_commit=False, dec_commit_tau=1.0, dec_commit_w=0.1, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=1.0, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=2, steps=30000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_orbit_online=False, sot=True, act=True, cell=dec, dec_width=384, dec_coupling=mean, dec_commit=False, fpa_k=1, trm_ri_sigma=1.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, sudoku_extreme=data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz
+     grids: 15 banked [2000..30000] | val_best '024000 0.9648 24000' | EXTENDED None | resumes '25500' | REMAT 'OOM at launch (rc=1) -> retried once with --remat 2026-09-09T02:29:52Z'
+  C3 [C0 + the ONLINE position orbit (50k)]: step 50000 | params 2780933 (config.json 2780933) | ema True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, dec_attn_heads=4, dec_attn_dk=32, dec_commit=False, dec_commit_tau=1.0, dec_commit_w=0.1, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=1.0, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=0, sudoku_orbit_online=True, sot=True, act=True, cell=dec, dec_width=384, dec_coupling=mean, dec_commit=False, fpa_k=1, trm_ri_sigma=1.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, sudoku_extreme=data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz
+     grids: 25 banked [2000..50000] | val_best None | EXTENDED None | resumes '31500' | REMAT 'OOM at launch (rc=1) -> retried once with --remat 2026-09-08T07:47:27Z'
+  C4 [C0 + set attention over the fields (4h x dk32)]: step 30000 | params 2977541 (config.json 2977541) | ema True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, dec_attn_heads=4, dec_attn_dk=32, dec_commit=False, dec_commit_tau=1.0, dec_commit_w=0.1, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=1.0, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=30000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_orbit_online=False, sot=True, act=True, cell=dec, dec_width=384, dec_coupling=attn, dec_commit=False, fpa_k=1, trm_ri_sigma=1.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, sudoku_extreme=data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz
+     grids: 15 banked [2000..30000] | val_best None | EXTENDED None | resumes '8000' | REMAT 'OOM at launch (rc=1) -> retried once with --remat 2026-09-08T21:25:22Z'
+  C5 [C0 at w192 (EXTENDED to 50k)]: step 50000 | params 789125 (config.json 789125) | ema True | git 
+     cfg: cell_kind=dec, dec_width=192, dec_coupling=True, dec_attn_heads=4, dec_attn_dk=32, dec_commit=False, dec_commit_tau=1.0, dec_commit_w=0.1, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=1.0, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_orbit_online=False, sot=True, act=True, cell=dec, dec_width=192, dec_coupling=mean, dec_commit=False, fpa_k=1, trm_ri_sigma=1.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, sudoku_extreme=data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz
+     grids: 25 banked [2000..50000] | val_best None | EXTENDED 'EXTENDED from 30000 to 50000 (peak at 28000) 2026-09-09T07:54:52Z' | resumes '30000; 37500' | REMAT 'OOM at launch (rc=1) -> retried once with --remat 2026-09-09T03:24:51Z'
+  C6 [C0 + the calibrated commit head tau .9 (50k)]: step 50000 | params 2781318 (config.json 2781318) | ema True | git 
+     cfg: cell_kind=dec, dec_width=384, dec_coupling=True, dec_attn_heads=4, dec_attn_dk=32, dec_commit=True, dec_commit_tau=0.9, dec_commit_w=0.1, trm_hidden=512, trm_layers=2, trm_h_cycles=3, trm_l_cycles=6, trm_lambda=0.05, trm_beta=0.01, trm_ri_sigma=1.0, fpa_k=1, fpa_eps=0.2, fpa_frac=0.25, remat=True, loss_kind=stablemax, T=16, sudoku_layout=native9
+     argv: seed=0, steps=50000, batch=768, lr=0.0001, lr_end=0.0001, warmup=2000, wd=1.0, beta2=0.95, ema=0.999, sudoku_aug=1000, sudoku_orbit_online=False, sot=True, act=True, cell=dec, dec_width=384, dec_coupling=mean, dec_commit=True, fpa_k=1, trm_ri_sigma=1.0, remat=True, grid_every=2000, monitor_every=2000, ckpt_every=500, sudoku_extreme=data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz
+     grids: 25 banked [2000..50000] | val_best None | EXTENDED None | resumes '31500' | REMAT 'OOM at launch (rc=1) -> retried once with --remat 2026-09-08T07:32:17Z'
+
+  PROVENANCE (one ckpt path per (arm, vsel)) + the registered selection rule re-run offline (argmax val_t16_ema over banked grids; EARLIEST tie; val_t16 second key):
+  C0: vsel evals on 1 path(s) ['runs/pretrainchamp_C0/ckpt_016000.pkl'] | chain val_best None | offline (earliest tie, 2nd key) = 16000 -> AGREES | monitor max  96.68 tied at [16000] | the OLD later-tie rule would pick 16000
+  C1: vsel evals on 1 path(s) ['runs/pretrainchamp_C1/ckpt_028000.pkl'] | chain val_best '028000 0.9609 28000' | offline (earliest tie, 2nd key) = 28000 -> AGREES | monitor max  96.09 tied at [28000] | the OLD later-tie rule would pick 28000
+  C2: vsel evals on 1 path(s) ['runs/pretrainchamp_C2/ckpt_024000.pkl'] | chain val_best '024000 0.9648 24000' | offline (earliest tie, 2nd key) = 24000 -> AGREES | monitor max  96.48 tied at [24000, 30000] | the OLD later-tie rule would pick 30000
+  C3: vsel evals on 1 path(s) ['runs/pretrainchamp_C3/ckpt_018000.pkl'] | chain val_best None | offline (earliest tie, 2nd key) = 18000 -> AGREES | monitor max  96.48 tied at [18000] | the OLD later-tie rule would pick 18000
+  C4: vsel evals on 1 path(s) ['runs/pretrainchamp_C4/ckpt_020000.pkl'] | chain val_best None | offline (earliest tie, 2nd key) = 20000 -> AGREES | monitor max  97.85 tied at [20000] | the OLD later-tie rule would pick 20000
+  C5: vsel evals on 1 path(s) ['runs/pretrainchamp_C5/ckpt_046000.pkl'] | chain val_best None | offline (earliest tie, 2nd key) = 46000 -> AGREES | monitor max  97.66 tied at [46000, 50000] | the OLD later-tie rule would pick 50000
+  C6: vsel evals on 1 path(s) ['runs/pretrainchamp_C6/ckpt_028000.pkl'] | chain val_best None | offline (earliest tie, 2nd key) = 28000 -> AGREES | monitor max  97.07 tied at [28000] | the OLD later-tie rule would pick 28000
+
+== B. TRAJECTORIES (train rows; the 512-puzzle monitor every 2k: EMA / raw; pace from timestamps) ==
+  arm | rows | last | monitor peak (step) | plateau (>= peak-1pp) | selected: step, EMA/raw | end: step, EMA | decline peak->end | CE at vsel / end / min | train_exact at vsel / end | halt_frac end | mean_steps end | pace it/s
+  C0 | 600 | 30000 |  96.68 (16000) | 16000..22000 | 16000:  96.68/ 92.77 | 30000:  94.14 |  0.025 | 0.450 / 0.428 / 0.372 | 0.341 / 0.394 | 0.375 |  3.10 |  1.08
+  C1 | 1000 | 50000 |  96.09 (28000) | 16000..30000 | 28000:  96.09/ 94.34 | 50000:  83.98 |  0.121 | 0.443 / 0.123 / 0.110 | 0.382 / 0.749 | 0.672 |  1.34 |  1.06
+  C2 | 600 | 30000 |  96.48 (24000) | 14000..30000 | 24000:  96.48/ 94.34 | 30000:  96.48 |  0.000 | 0.446 / 0.464 / 0.392 | 0.340 / 0.353 | 0.380 |  3.31 |  1.04
+  C3 | 1000 | 50000 |  96.48 (18000) | 16000..26000 | 18000:  96.48/ 95.12 | 50000:  86.91 |  0.096 | 0.425 / 0.191 / 0.164 | 0.391 / 0.647 | 0.594 |  1.70 |  1.06
+  C4 | 600 | 30000 |  97.85 (20000) | 12000..26000 | 20000:  97.85/ 94.73 | 30000:  96.29 |  0.016 | 0.481 / 0.440 / 0.410 | 0.359 / 0.382 | 0.396 |  3.23 |  0.77
+  C5 | 1000 | 50000 |  97.66 (46000) | 28000..50000 | 46000:  97.66/ 89.26 | 50000:  97.66 |  0.000 | 0.535 / 0.532 / 0.489 | 0.242 / 0.254 | 0.161 |  5.40 |  1.78
+  C6 | 1000 | 50000 |  97.07 (28000) | 26000..28000 | 28000:  97.07/ 91.02 | 50000:  90.04 |  0.070 | 0.425 / 0.287 / 0.252 | 0.395 / 0.551 | 0.490 |  2.51 |  1.02
+  monitor val_t16_ema every 2k (the selection key), '*' = the selected grid:
+    C0: 2k=0.0 4k=24.8 6k=74.4 8k=92.4 10k=95.1 12k=93.9 14k=95.3 16k=96.7* 18k=94.9 20k=95.7 22k=96.3 24k=95.3 26k=94.3 28k=95.1 30k=94.1
+    C1: 2k=0.0 4k=23.6 6k=75.0 8k=91.6 10k=93.8 12k=94.7 14k=94.5 16k=95.9 18k=95.7 20k=95.3 22k=95.5 24k=95.7 26k=94.5 28k=96.1* 30k=95.5 32k=94.3 34k=93.8 36k=93.8 38k=93.8 40k=92.6 42k=92.4 44k=90.2 46k=90.2 48k=86.9 50k=84.0
+    C2: 2k=0.0 4k=21.5 6k=76.2 8k=93.0 10k=94.1 12k=94.7 14k=96.1 16k=95.1 18k=94.3 20k=94.9 22k=95.9 24k=96.5* 26k=96.1 28k=95.5 30k=96.5
+    C3: 2k=0.0 4k=25.0 6k=69.9 8k=92.8 10k=94.7 12k=94.9 14k=95.1 16k=95.7 18k=96.5* 20k=95.5 22k=94.7 24k=96.3 26k=95.9 28k=95.1 30k=94.1 32k=93.2 34k=94.7 36k=94.5 38k=94.3 40k=92.0 42k=94.7 44k=92.8 46k=93.0 48k=90.4 50k=86.9
+    C4: 2k=0.0 4k=37.3 6k=85.5 8k=93.6 10k=96.3 12k=97.5 14k=96.9 16k=97.3 18k=97.5 20k=97.9* 22k=96.5 24k=97.3 26k=97.3 28k=96.7 30k=96.3
+    C5: 2k=0.0 4k=11.1 6k=43.2 8k=69.9 10k=89.5 12k=91.0 14k=92.8 16k=87.9 18k=50.8 20k=21.9 22k=17.2 24k=69.5 26k=95.5 28k=97.1 30k=96.5 32k=95.7 34k=96.7 36k=97.5 38k=94.7 40k=95.1 42k=96.3 44k=95.1 46k=97.7* 48k=96.1 50k=97.7
+    C6: 2k=0.0 4k=24.8 6k=74.4 8k=93.0 10k=94.9 12k=94.9 14k=95.1 16k=95.7 18k=95.7 20k=95.9 22k=95.9 24k=95.9 26k=96.7 28k=97.1* 30k=95.7 32k=94.5 34k=94.5 36k=94.5 38k=94.3 40k=95.5 42k=95.5 44k=94.5 46k=94.3 48k=91.4 50k=90.0
+  monitor val_t16 RAW every 2k (the second key):
+    C0: 2k=2.5 4k=53.3 6k=82.8 8k=85.4 10k=93.9 12k=90.2 14k=94.1 16k=92.8 18k=93.4 20k=93.8 22k=92.0 24k=92.0 26k=93.9 28k=91.0 30k=94.7
+    C1: 2k=15.4 4k=55.1 6k=85.2 8k=88.3 10k=87.5 12k=93.6 14k=94.1 16k=94.3 18k=94.3 20k=91.0 22k=92.2 24k=94.1 26k=93.0 28k=94.3 30k=93.2 32k=92.6 34k=91.4 36k=93.6 38k=91.2 40k=95.1 42k=89.1 44k=90.8 46k=83.8 48k=76.6 50k=81.8
+    C2: 2k=2.5 4k=43.6 6k=80.7 8k=91.4 10k=89.6 12k=89.3 14k=95.3 16k=90.4 18k=94.3 20k=88.7 22k=92.0 24k=94.3 26k=94.7 28k=91.8 30k=94.3
+    C3: 2k=8.0 4k=42.6 6k=84.2 8k=89.6 10k=93.4 12k=86.7 14k=85.0 16k=96.3 18k=95.1 20k=97.1 22k=94.3 24k=95.7 26k=92.8 28k=97.1 30k=95.1 32k=91.8 34k=90.6 36k=92.4 38k=91.2 40k=91.0 42k=94.3 44k=89.1 46k=91.8 48k=88.1 50k=84.2
+    C4: 2k=14.8 4k=77.1 6k=82.8 8k=93.6 10k=91.0 12k=39.3 14k=93.8 16k=96.1 18k=91.6 20k=94.7 22k=91.4 24k=94.5 26k=97.3 28k=93.9 30k=94.5
+    C5: 2k=2.7 4k=32.8 6k=55.9 8k=76.0 10k=83.2 12k=91.8 14k=70.3 16k=13.1 18k=5.7 20k=8.2 22k=3.3 24k=1.2 26k=4.9 28k=37.9 30k=91.0 32k=30.7 34k=76.6 36k=90.2 38k=87.9 40k=94.1 42k=85.7 44k=91.6 46k=89.3 48k=89.6 50k=59.2
+    C6: 2k=2.5 4k=50.6 6k=79.1 8k=89.8 10k=91.6 12k=94.9 14k=93.2 16k=93.9 18k=90.8 20k=92.6 22k=93.8 24k=91.6 26k=90.2 28k=91.0 30k=92.4 32k=94.9 34k=90.2 36k=94.5 38k=88.7 40k=90.2 42k=87.5 44k=82.8 46k=83.8 48k=87.7 50k=88.7
+  segment CE / train_exact every 10k: C0: 10k=0.49/0.30 20k=0.49/0.31 30k=0.42/0.38 | C1: 10k=0.53/0.27 20k=0.44/0.35 30k=0.42/0.39 40k=0.36/0.49 50k=0.11/0.78 | C2: 10k=0.51/0.26 20k=0.49/0.30 30k=0.47/0.36 | C3: 10k=0.53/0.25 20k=0.48/0.33 30k=0.41/0.41 40k=0.35/0.51 50k=0.17/0.65 | C4: 10k=0.56/0.25 20k=0.48/0.36 30k=0.44/0.37 | C5: 10k=0.66/0.13 20k=0.62/0.17 30k=0.52/0.27 40k=0.56/0.24 50k=0.57/0.19 | C6: 10k=0.51/0.28 20k=0.52/0.29 30k=0.47/0.35 40k=0.41/0.43 50k=0.32/0.52
+
+== C. STABILITY (explosion census on the vsel and final grids) and the MID-TRAINING EXCURSIONS (monitor vs the screens' cold and random-init b1) ==
+  C0: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  C1: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  C2: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  C3: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  C4: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  C5: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  C6: vsel: t64   0.00 (n 512), t256   0.00 (n 64) | final: t64   0.00 (n 512), t256   0.00 (n 64)
+  excursions: every grid where the monitor (EMA or raw) sits > 10 pp below the arm's running maximum; the screen at that grid (strat-512 k256) when it exists: cold vs b1 (a cold-start excursion leaves b1 intact)
+  C0: none
+  C1: 46k EMA 90.2 raw 83.8 (run-max 96.1) | 48k EMA 86.9 raw 76.6 (run-max 96.1) | 50k EMA 84.0 raw 81.8 (run-max 96.1)
+  C2: none
+  C3: 14k EMA 95.1 raw 85.0 (run-max 95.1) | 50k EMA 86.9 raw 84.2 (run-max 96.5)
+  C4: 12k EMA 97.5 raw 39.3 (run-max 97.5)
+  C5: 14k EMA 92.8 raw 70.3 (run-max 92.8) | 16k EMA 87.9 raw 13.1 (run-max 92.8) | 18k EMA 50.8 raw 5.7 (run-max 92.8) | 20k EMA 21.9 raw 8.2 (run-max 92.8) screen cold 17.0 b1 92.8 verified@256 99.8 | 22k EMA 17.2 raw 3.3 (run-max 92.8) | 24k EMA 69.5 raw 1.2 (run-max 92.8) | 26k EMA 95.5 raw 4.9 (run-max 95.5) | 28k EMA 97.1 raw 37.9 (run-max 97.1) | 32k EMA 95.7 raw 30.7 (run-max 97.1) | 34k EMA 96.7 raw 76.6 (run-max 97.1) | 42k EMA 96.3 raw 85.7 (run-max 97.5) | 50k EMA 97.7 raw 59.2 (run-max 97.7)
+  C6: 44k EMA 94.5 raw 82.8 (run-max 97.1) | 46k EMA 94.3 raw 83.8 (run-max 97.1)
+
+== D. EVAL TABLE (headline = EMA at D16 on the vsel grid, full test; final / alt on 50k; D64 on 100k; D128 on 20k; D256 on 5k; labeled) ==
+  arm | cold16 (n) | final16 (n) | alt raw (n) | cold64 (n) | D128 (n) | D256 (n) | first_exact D16 med/p90 (step-1 frac) | D64 med/p90 | valid-wrong | mean viol | givens kept
+  C0 |  95.09 (422786) |  94.76 (50000) |  92.73 (50000) |  98.42 (100000) |  98.95 (20000) |  99.14 (5000) |   2/  6 ( 26.48) |   2/  8 | 0.00000 |  1.70 | 1.0000
+  C1 |  94.34 (422786) |  81.26 (50000) |  91.13 (50000) |  97.46 (100000) |  98.14 (20000) |  98.42 (5000) |   2/  6 ( 21.94) |   2/  7 | 0.00005 |  1.84 | 1.0000
+  C2 |  95.63 (422786) |  95.17 (50000) |  93.45 (50000) |  98.67 (100000) |  99.00 (20000) |  99.34 (5000) |   2/  6 ( 26.58) |   2/  7 | 0.00000 |  1.52 | 1.0000
+  C3 |  94.78 (422786) |  84.63 (50000) |  93.54 (50000) |  98.01 (100000) |  98.61 (20000) |  98.94 (5000) |   2/  6 ( 30.03) |   2/  7 | 0.00014 |  1.75 | 1.0000
+  C4 |  96.70 (422786) |  96.41 (50000) |  93.92 (50000) |  98.90 (100000) |  99.15 (20000) |  99.32 (5000) |   2/  5 ( 30.81) |   2/  6 | 0.00000 |  1.20 | 1.0000
+  C5 |  95.91 (422786) |  96.03 (50000) |  88.91 (50000) |  99.10 (100000) |  99.42 (20000) |  99.60 (5000) |   3/  7 ( 17.78) |   3/  9 | 0.00020 |  1.43 | 1.0000
+  C6 |  95.62 (422786) |  90.05 (50000) |  90.36 (50000) |  98.50 (100000) |  98.98 (20000) |  99.34 (5000) |   2/  6 ( 30.71) |   2/  7 | 0.00018 |  1.50 | 1.0000
+  A3     ref |  90.04 (422786) | - | - |  94.66 (100000) |  95.90 (20000) |    -   (None) |   2/  6 ( 37.90) |   2/  9 | | |
+  A5     ref |  95.08 (422786) | - | - |  98.11 (100000) |  98.58 (20000) |    -   (None) |   2/  6 ( 39.45) |   2/  7 | | |
+  A7     ref |  95.12 (422786) | - | - |  98.04 (100000) |  98.66 (20000) |    -   (None) |   2/  6 ( 31.00) |   2/  7 | | |
+  eqr    ref |  86.52 (422786) | - | - |  93.15 (422786) |  95.02 (20000) |  95.88 (5000) |   2/  8 ( 13.92) |   3/ 12 | | |
+  cgar   ref |  86.10 (422786) | - | - |  91.71 (422786) |  93.17 (20000) |  94.10 (5000) |   2/  6 ( 23.07) |   2/ 10 | | |
+  trmpub ref |  79.32 (422786) | - | - |  83.45 (422786) |  84.97 (20000) |  86.26 (5000) |   2/  5 ( 37.48) |   2/  7 | | |
+  X0     ref |  86.03 (422786) | - | - |  92.81 (422786) |    -   (None) |    -   (None) |   2/  7 ( 24.55) |   2/ 12 | | |
+
+  SCREENS (strat-512, k256, D16, EMA; every banked screen grid): arm@grid | cold | b1 | t1r@256 | verified@256 | majority@256 | AUC | spurious | rho
+  C0@s010000 (ckpt_010000.pkl ) |  94.53 |  94.14 |  99.80 |  99.80 |  95.70 | 0.992 |   0.00 |  99.80
+  C0@s020000 (ckpt_020000.pkl ) |  95.12 |  96.29 |  99.80 |  99.80 |  96.68 | 0.992 |   0.00 |  99.80
+  C0@vb      (ckpt_016000.pkl ) |  94.92 |  94.73 |  99.61 |  99.61 |  96.68 | 0.993 |   0.00 |  99.61
+  C1@s010000 (ckpt_010000.pkl ) |  94.53 |  93.75 |  99.61 |  99.61 |  95.31 | 0.990 |   0.00 |  99.61
+  C1@s020000 (ckpt_020000.pkl ) |  95.51 |  94.53 |  99.41 |  99.41 |  95.51 | 0.992 |   0.00 |  99.41
+  C1@vb      (ckpt_028000.pkl ) |  95.12 |  93.55 |  99.61 |  99.80 |  94.73 | 0.993 |   0.01 |  99.80
+  C2@s010000 (ckpt_010000.pkl ) |  92.97 |  93.75 |  98.83 |  99.61 |  95.12 | 0.991 |   0.03 |  99.61
+  C2@s020000 (ckpt_020000.pkl ) |  94.92 |  94.53 |  99.80 |  99.80 |  96.29 | 0.994 |   0.00 |  99.80
+  C2@vb      (ckpt_024000.pkl ) |  94.14 |  96.09 |  99.80 |  99.80 |  96.68 | 0.992 |   0.00 |  99.80
+  C3@s010000 (ckpt_010000.pkl ) |  92.97 |  93.16 |  99.80 |  99.80 |  94.73 | 0.991 |   0.01 |  99.80
+  C3@s020000 (ckpt_020000.pkl ) |  96.29 |  95.90 |  99.61 |  99.61 |  96.68 | 0.992 |   0.00 |  99.61
+  C3@s030000 (ckpt_030000.pkl ) |  94.92 |  93.55 |  99.61 |  99.61 |  94.73 | 0.993 |   0.00 |  99.61
+  C3@s040000 (ckpt_040000.pkl ) |  93.75 |  94.14 |  99.22 |  99.22 |  93.75 | 0.994 |   0.00 |  99.22
+  C3@vb      (ckpt_018000.pkl ) |  94.14 |  93.95 |  99.80 |  99.80 |  96.68 | 0.992 |   0.00 |  99.80
+  C4@s010000 (ckpt_010000.pkl ) |  95.12 |  96.09 | 100.00 | 100.00 |  97.27 | 0.993 |   0.00 | 100.00
+  C4@s020000 (ckpt_020000.pkl ) |  96.48 |  96.88 |  99.61 |  99.80 |  98.05 | 0.995 |   0.00 |  99.80
+  C4@vb      (ckpt_020000.pkl ) |  96.48 |  96.88 |  99.61 |  99.80 |  98.05 | 0.995 |   0.00 |  99.80
+  C5@s010000 (ckpt_010000.pkl ) |  85.35 |  83.98 |  99.80 |  99.80 |  85.55 | 0.982 |   0.03 |  99.80
+  C5@s020000 (ckpt_020000.pkl ) |  16.99 |  92.77 |  99.61 |  99.80 |  95.12 | 0.985 |   0.13 |  99.80
+  C5@vb      (ckpt_046000.pkl ) |  96.88 |  94.73 |  99.80 | 100.00 |  97.85 | 0.989 |   0.05 | 100.00
+  C6@s010000 (ckpt_010000.pkl ) |  94.14 |  94.73 |  99.80 |  99.80 |  95.70 | 0.989 |   0.01 |  99.80
+  C6@s020000 (ckpt_020000.pkl ) |  95.51 |  95.90 |  99.61 |  99.61 |  96.88 | 0.990 |   0.02 |  99.61
+  C6@s030000 (ckpt_030000.pkl ) |  94.92 |  96.29 |  99.80 | 100.00 |  96.88 | 0.992 |   0.00 | 100.00
+  C6@s040000 (ckpt_040000.pkl ) |  93.95 |  95.12 |  99.80 |  99.80 |  93.75 | 0.993 |   0.00 |  99.80
+  C6@vb      (ckpt_028000.pkl ) |  95.51 |  96.29 |  99.61 |  99.80 |  97.07 | 0.991 |   0.00 |  99.80
+
+  SCANS on the identical 5k subsample (t64, EMA): the registered k32 scan and the filler's k128 scan; the frontier's k128 scans are on the 20k (labeled): arm | k | cold | b1 | t1r@k | verified@k | ratio | AUC | spurious (n wrong draws / n spurious) | rho | median r_i | r_i>.5
+  C0@k32  |  32 |  98.48 |  98.66 |  99.58 |  99.58 | 1.0000 | 0.999 |   0.04 (2289/1) |  99.58 | 1.000 |  98.88
+  C0@k128 | 128 |  98.54 |  98.66 |  99.76 |  99.76 | 1.0000 | 0.999 |   0.04 (9231/4) |  99.76 | 1.000 |  98.82
+  C1@k32  |  32 |  97.56 |  97.62 |  99.28 |  99.30 | 0.9998 | 0.999 |   0.05 (3951/2) |  99.30 | 1.000 |  97.72
+  C2@k32  |  32 |  98.72 |  98.76 |  99.70 |  99.70 | 1.0000 | 1.000 |   0.00 (2005/0) |  99.70 | 1.000 |  98.92
+  C3@k32  |  32 |  98.12 |  98.30 |  99.48 |  99.50 | 0.9998 | 0.999 |   0.07 (2782/2) |  99.50 | 1.000 |  98.50
+  C4@k32  |  32 |  98.78 |  99.00 |  99.64 |  99.64 | 1.0000 | 1.000 |   0.00 (1698/0) |  99.64 | 1.000 |  99.10
+  C5@k32  |  32 |  99.22 |  99.16 |  99.82 |  99.82 | 1.0000 | 0.998 |   0.20 (1522/3) |  99.82 | 1.000 |  99.24
+  C5@k128 | 128 |  99.20 |  99.16 |  99.88 |  99.88 | 1.0000 | 0.998 |   0.20 (6021/12) |  99.88 | 1.000 |  99.22
+  C6@k32  |  32 |  98.74 |  98.66 |  99.66 |  99.74 | 0.9992 | 0.999 |   0.05 (2175/1) |  99.74 | 1.000 |  98.86
+  C6@k128 | 128 |  98.72 |  98.66 |  99.74 |  99.78 | 0.9996 | 0.998 |   0.15 (8795/13) |  99.78 | 1.000 |  98.92
+  A3@k32  ref |  32 |  94.92 |  95.10 |  93.62 |  99.74 | 0.9386 | 0.956 |   4.94 (8325/411) |  99.74 | 1.000 |  95.32
+  A5@k32  ref |  32 |  98.22 |  98.14 |  99.44 |  99.46 | 0.9998 | 0.999 |   0.04 (2660/1) |  99.46 | 1.000 |  98.54
+  A7@k32  ref |  32 |  98.18 |  94.70 |  52.84 |  99.92 | 0.5288 | 0.375 |  68.56 (8706/5969) |  99.92 | 0.969 |  98.54
+  eqr   @k128 20k ref | 128 |  93.39 |  93.05 |  98.85 |  98.89 | 0.9995 | 0.999 |   0.00 (174006/1) |  98.89 | 1.000 |  93.66
+  cgar  @k128 20k ref | 128 |  91.62 |  70.07 |  71.34 |  99.31 | 0.7183 | 0.688 |  30.86 (760638/234766) |  99.31 | 0.758 |  89.55
+  trmpub@k128 20k ref | 128 |  83.36 |  82.02 |  93.84 |  97.50 | 0.9625 | 0.970 |   2.60 (460185/11961) |  97.50 | 0.977 |  83.20
+  k-curves (5k): verified@k and t1r@k at k = 1..128 where recorded:
+    C0@k32    verified: 1:99.08 2:99.16 4:99.30 8:99.44 16:99.48 32:99.58  | t1r: 1:98.66 2:99.00 4:99.24 8:99.44 16:99.48 32:99.58
+    C0@k128   verified: 1:99.02 2:99.10 4:99.20 8:99.38 16:99.48 32:99.56 64:99.64 128:99.76  | t1r: 1:98.66 2:98.92 4:99.14 8:99.36 16:99.48 32:99.56 64:99.64 128:99.76
+    C1@k32    verified: 1:98.20 2:98.50 4:98.76 8:98.98 16:99.18 32:99.30  | t1r: 1:97.62 2:98.18 4:98.58 8:98.92 16:99.14 32:99.28
+    C2@k32    verified: 1:99.14 2:99.30 4:99.48 8:99.56 16:99.66 32:99.70  | t1r: 1:98.76 2:99.12 4:99.44 8:99.54 16:99.66 32:99.70
+    C3@k32    verified: 1:98.82 2:99.00 4:99.14 8:99.30 16:99.44 32:99.50  | t1r: 1:98.30 2:98.76 4:99.04 8:99.26 16:99.42 32:99.48
+    C4@k32    verified: 1:99.22 2:99.32 4:99.36 8:99.40 16:99.56 32:99.64  | t1r: 1:99.00 2:99.18 4:99.34 8:99.40 16:99.56 32:99.64
+    C5@k32    verified: 1:99.54 2:99.66 4:99.76 8:99.78 16:99.80 32:99.82  | t1r: 1:99.16 2:99.38 4:99.64 8:99.70 16:99.76 32:99.82
+    C5@k128   verified: 1:99.56 2:99.66 4:99.72 8:99.74 16:99.80 32:99.82 64:99.84 128:99.88  | t1r: 1:99.16 2:99.48 4:99.66 8:99.70 16:99.78 32:99.80 64:99.80 128:99.88
+    C6@k32    verified: 1:99.14 2:99.36 4:99.44 8:99.58 16:99.62 32:99.74  | t1r: 1:98.66 2:99.12 4:99.32 8:99.52 16:99.56 32:99.66
+    C6@k128   verified: 1:99.18 2:99.42 4:99.52 8:99.54 16:99.66 32:99.68 64:99.74 128:99.78  | t1r: 1:98.66 2:99.22 4:99.36 8:99.44 16:99.64 32:99.64 64:99.74 128:99.74
+
+  CALIBRATION AT STALLS (strat-512 t64 on the vsel grid; softmax confidence): arm | cold | n stalled | top-5 correct | mean conf | gap | entropy step1 | entropy stalled | conf-wrong frac stalled
+  C0 |  99.02 |   5 |  48.00 | 1.000 |  0.520 | 0.015 | 0.048 |  46.08
+  C1 |  98.05 |  10 |  62.00 | 1.000 |  0.380 | 0.018 | 0.032 |  49.49
+  C2 |  98.63 |   7 |  60.00 | 1.000 |  0.400 | 0.017 | 0.031 |  46.69
+  C3 |  99.02 |   5 |  68.00 | 1.000 |  0.320 | 0.014 | 0.033 |  43.24
+  C4 |  99.41 |   3 |  53.33 | 1.000 |  0.467 | 0.016 | 0.043 |  46.23
+  C5 |  99.22 |   4 |  50.00 | 1.000 |  0.500 | 0.026 | 0.040 |  46.34
+  C6 |  99.80 |   1 | 100.00 | 1.000 |  0.000 | 0.015 | 0.052 |  25.93
+
+== E. PAIRED McNemar on identical puzzles (cold, EMA; A vs B; exact two-sided binomial) ==
+  D16 (the headline column; the full 422,786):
+  C1 vs C0 (seeds)                            :  94.34 vs  95.09 (delta  -0.76 pp) | only-A   10356 / only-B   13558 | p 1.8e-95 | n 422786 identical idx 
+  C2 vs C0 (seeds)                            :  95.63 vs  95.09 (delta  +0.54 pp) | only-A   11985 / only-B    9723 | p 3.0e-53 | n 422786 identical idx 
+  C2 vs C1 (seeds)                            :  95.63 vs  94.34 (delta  +1.29 pp) | only-A   14189 / only-B    8725 | p 6.0e-288 | n 422786 identical idx 
+  C3 vs C0 (online orbit, matched seed 0)     :  94.78 vs  95.09 (delta  -0.32 pp) | only-A   10179 / only-B   11528 | p 5.6e-20 | n 422786 identical idx 
+  C4 vs C0 (set attention, matched seed 0)    :  96.70 vs  95.09 (delta  +1.61 pp) | only-A   13502 / only-B    6694 | p 0.0e+00 | n 422786 identical idx 
+  C5 vs C0 (w192, matched seed 0)             :  95.91 vs  95.09 (delta  +0.81 pp) | only-A   13762 / only-B   10331 | p 1.4e-108 | n 422786 identical idx 
+  C6 vs C0 (commit head, matched seed 0)      :  95.62 vs  95.09 (delta  +0.53 pp) | only-A   11967 / only-B    9727 | p 2.8e-52 | n 422786 identical idx 
+  C5 vs C4 (the two lifts)                    :  95.91 vs  96.70 (delta  -0.80 pp) | only-A    8237 / only-B   11614 | p 1.7e-127 | n 422786 identical idx 
+  C5 vs C2 (labeled best vs champion by rule) :  95.91 vs  95.63 (delta  +0.28 pp) | only-A   12111 / only-B   10942 | p 1.4e-14 | n 422786 identical idx 
+  C4 vs C2                                    :  96.70 vs  95.63 (delta  +1.08 pp) | only-A   11957 / only-B    7411 | p 4.1e-236 | n 422786 identical idx 
+  C0 vs A5 (same recipe + seed; the 512-monitor/earliest-tie/30k vs the 64-monitor/50k):  95.09 vs  95.08 (delta  +0.02 pp) | only-A   10877 / only-B   10803 | p 6.2e-01 | n 422786 identical idx 
+  C2 vs A7 (best plain vs best seeded, labeled):  95.63 vs  95.12 (delta  +0.51 pp) | only-A   11901 / only-B    9764 | p 8.6e-48 | n 422786 identical idx 
+  C0 vs A3 (objectives at seed 0, labeled)    :  95.09 vs  90.04 (delta  +5.05 pp) | only-A   29789 / only-B    8440 | p 0.0e+00 | n 422786 identical idx 
+  C1 vs A7 (seed 1: recipe vs plain)          :  94.34 vs  95.12 (delta  -0.79 pp) | only-A    9823 / only-B   13150 | p 4.2e-107 | n 422786 identical idx 
+  C0 vs EqR                                   :  95.09 vs  86.52 (delta  +8.58 pp) | only-A   44758 / only-B    8498 | p 0.0e+00 | n 422786 identical idx 
+  C1 vs EqR                                   :  94.34 vs  86.52 (delta  +7.82 pp) | only-A   42967 / only-B    9909 | p 0.0e+00 | n 422786 identical idx 
+  C2 vs EqR                                   :  95.63 vs  86.52 (delta  +9.11 pp) | only-A   45954 / only-B    7432 | p 0.0e+00 | n 422786 identical idx 
+  C4 vs EqR                                   :  96.70 vs  86.52 (delta +10.19 pp) | only-A   47609 / only-B    4541 | p 0.0e+00 | n 422786 identical idx 
+  C5 vs EqR                                   :  95.91 vs  86.52 (delta  +9.39 pp) | only-A   47109 / only-B    7418 | p 0.0e+00 | n 422786 identical idx 
+  C5 vs CGAR                                  :  95.91 vs  86.10 (delta  +9.80 pp) | only-A   48749 / only-B    7308 | p 0.0e+00 | n 422786 identical idx 
+  C5 vs alphaXiv TRM-MLP                      :  95.91 vs  79.32 (delta +16.59 pp) | only-A   75812 / only-B    5688 | p 0.0e+00 | n 422786 identical idx 
+  C2 vs CGAR                                  :  95.63 vs  86.10 (delta  +9.53 pp) | only-A   47509 / only-B    7237 | p 0.0e+00 | n 422786 identical idx 
+  C2 vs alphaXiv TRM-MLP                      :  95.63 vs  79.32 (delta +16.31 pp) | only-A   74468 / only-B    5513 | p 0.0e+00 | n 422786 identical idx 
+  C5 vs X0                                    :  95.91 vs  86.03 (delta  +9.88 pp) | only-A   48871 / only-B    7107 | p 0.0e+00 | n 422786 identical idx 
+  C2 vs X0                                    :  95.63 vs  86.03 (delta  +9.60 pp) | only-A   47426 / only-B    6831 | p 0.0e+00 | n 422786 identical idx 
+  C0 vs X0                                    :  95.09 vs  86.03 (delta  +9.07 pp) | only-A   46329 / only-B    7996 | p 0.0e+00 | n 422786 identical idx 
+  D64 (the 100k subsample; the field's fulls and X0 by intersection, labeled):
+  C1 vs C0 (seeds)                            :  97.46 vs  98.42 (delta  -0.96 pp) | only-A     656 / only-B    1611 | p 4.4e-92 | n 100000 identical idx 
+  C2 vs C0 (seeds)                            :  98.67 vs  98.42 (delta  +0.26 pp) | only-A     919 / only-B     660 | p 7.7e-11 | n 100000 identical idx 
+  C2 vs C1 (seeds)                            :  98.67 vs  97.46 (delta  +1.21 pp) | only-A    1700 / only-B     486 | p 5.2e-157 | n 100000 identical idx 
+  C3 vs C0 (online orbit, matched seed 0)     :  98.01 vs  98.42 (delta  -0.41 pp) | only-A     680 / only-B    1090 | p 1.6e-22 | n 100000 identical idx 
+  C4 vs C0 (set attention, matched seed 0)    :  98.90 vs  98.42 (delta  +0.48 pp) | only-A     951 / only-B     470 | p 7.7e-38 | n 100000 identical idx 
+  C5 vs C0 (w192, matched seed 0)             :  99.10 vs  98.42 (delta  +0.69 pp) | only-A    1133 / only-B     445 | p 3.1e-69 | n 100000 identical idx 
+  C6 vs C0 (commit head, matched seed 0)      :  98.50 vs  98.42 (delta  +0.08 pp) | only-A     835 / only-B     754 | p 4.5e-02 | n 100000 identical idx 
+  C5 vs C4 (the two lifts)                    :  99.10 vs  98.90 (delta  +0.21 pp) | only-A     691 / only-B     484 | p 1.7e-09 | n 100000 identical idx 
+  C5 vs C2 (labeled best vs champion by rule) :  99.10 vs  98.67 (delta  +0.43 pp) | only-A     948 / only-B     519 | p 2.2e-29 | n 100000 identical idx 
+  C4 vs C2                                    :  98.90 vs  98.67 (delta  +0.22 pp) | only-A     798 / only-B     576 | p 2.3e-09 | n 100000 identical idx 
+  C0 vs A5 (same recipe + seed; the 512-monitor/earliest-tie/30k vs the 64-monitor/50k):  98.42 vs  98.11 (delta  +0.30 pp) | only-A    1045 / only-B     740 | p 5.5e-13 | n 100000 identical idx 
+  C2 vs A7 (best plain vs best seeded, labeled):  98.67 vs  98.04 (delta  +0.64 pp) | only-A    1238 / only-B     601 | p 9.2e-51 | n 100000 identical idx 
+  C0 vs A3 (objectives at seed 0, labeled)    :  98.42 vs  94.66 (delta  +3.76 pp) | only-A    4348 / only-B     587 | p 0.0e+00 | n 100000 identical idx 
+  C1 vs A7 (seed 1: recipe vs plain)          :  97.46 vs  98.04 (delta  -0.58 pp) | only-A     858 / only-B    1435 | p 1.1e-33 | n 100000 identical idx 
+  C0 vs EqR                                   :  98.42 vs  93.08 (delta  +5.34 pp) | only-A    5995 / only-B     658 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C1 vs EqR                                   :  97.46 vs  93.08 (delta  +4.38 pp) | only-A    5536 / only-B    1154 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C2 vs EqR                                   :  98.67 vs  93.08 (delta  +5.60 pp) | only-A    6139 / only-B     543 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C4 vs EqR                                   :  98.90 vs  93.08 (delta  +5.82 pp) | only-A    6156 / only-B     338 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C5 vs EqR                                   :  99.10 vs  93.08 (delta  +6.03 pp) | only-A    6349 / only-B     324 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C5 vs CGAR                                  :  99.10 vs  91.54 (delta  +7.57 pp) | only-A    7869 / only-B     302 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C5 vs alphaXiv TRM-MLP                      :  99.10 vs  83.32 (delta +15.78 pp) | only-A   16010 / only-B     226 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C2 vs CGAR                                  :  98.67 vs  91.54 (delta  +7.14 pp) | only-A    7635 / only-B     497 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C2 vs alphaXiv TRM-MLP                      :  98.67 vs  83.32 (delta +15.35 pp) | only-A   15711 / only-B     356 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C5 vs X0                                    :  99.10 vs  92.75 (delta  +6.35 pp) | only-A    6662 / only-B     308 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C2 vs X0                                    :  98.67 vs  92.75 (delta  +5.93 pp) | only-A    6430 / only-B     505 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C0 vs X0                                    :  98.42 vs  92.75 (delta  +5.67 pp) | only-A    6266 / only-B     600 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  D128 (the 20k scan set, identical across the three campaigns):
+  C1 vs C0 (seeds)                            :  98.14 vs  98.95 (delta  -0.81 pp) | only-A      75 / only-B     237 | p 9.9e-21 | n 20000 identical idx 
+  C2 vs C0 (seeds)                            :  99.00 vs  98.95 (delta  +0.04 pp) | only-A     101 / only-B      92 | p 5.6e-01 | n 20000 identical idx 
+  C2 vs C1 (seeds)                            :  99.00 vs  98.14 (delta  +0.85 pp) | only-A     242 / only-B      71 | p 5.5e-23 | n 20000 identical idx 
+  C3 vs C0 (online orbit, matched seed 0)     :  98.61 vs  98.95 (delta  -0.34 pp) | only-A      79 / only-B     146 | p 9.4e-06 | n 20000 identical idx 
+  C4 vs C0 (set attention, matched seed 0)    :  99.15 vs  98.95 (delta  +0.20 pp) | only-A     102 / only-B      62 | p 2.2e-03 | n 20000 identical idx 
+  C5 vs C0 (w192, matched seed 0)             :  99.42 vs  98.95 (delta  +0.47 pp) | only-A     135 / only-B      40 | p 3.0e-13 | n 20000 identical idx 
+  C6 vs C0 (commit head, matched seed 0)      :  98.98 vs  98.95 (delta  +0.03 pp) | only-A      89 / only-B      83 | p 7.0e-01 | n 20000 identical idx 
+  C5 vs C4 (the two lifts)                    :  99.42 vs  99.15 (delta  +0.27 pp) | only-A     102 / only-B      47 | p 7.7e-06 | n 20000 identical idx 
+  C5 vs C2 (labeled best vs champion by rule) :  99.42 vs  99.00 (delta  +0.43 pp) | only-A     132 / only-B      46 | p 8.0e-11 | n 20000 identical idx 
+  C4 vs C2                                    :  99.15 vs  99.00 (delta  +0.16 pp) | only-A      99 / only-B      68 | p 2.0e-02 | n 20000 identical idx 
+  C0 vs A5 (same recipe + seed; the 512-monitor/earliest-tie/30k vs the 64-monitor/50k):  98.95 vs  98.58 (delta  +0.37 pp) | only-A     158 / only-B      84 | p 2.3e-06 | n 20000 identical idx 
+  C2 vs A7 (best plain vs best seeded, labeled):  99.00 vs  98.66 (delta  +0.34 pp) | only-A     150 / only-B      82 | p 9.5e-06 | n 20000 identical idx 
+  C0 vs A3 (objectives at seed 0, labeled)    :  98.95 vs  95.90 (delta  +3.05 pp) | only-A     685 / only-B      75 | p 3.9e-124 | n 20000 identical idx 
+  C1 vs A7 (seed 1: recipe vs plain)          :  98.14 vs  98.66 (delta  -0.51 pp) | only-A     109 / only-B     212 | p 9.4e-09 | n 20000 identical idx 
+  C0 vs EqR                                   :  98.95 vs  95.02 (delta  +3.93 pp) | only-A     875 / only-B      88 | p 9.2e-164 | n 20000 identical idx 
+  C1 vs EqR                                   :  98.14 vs  95.02 (delta  +3.12 pp) | only-A     803 / only-B     178 | p 2.4e-95 | n 20000 identical idx 
+  C2 vs EqR                                   :  99.00 vs  95.02 (delta  +3.98 pp) | only-A     889 / only-B      93 | p 9.7e-164 | n 20000 identical idx 
+  C4 vs EqR                                   :  99.15 vs  95.02 (delta  +4.13 pp) | only-A     888 / only-B      61 | p 5.1e-189 | n 20000 identical idx 
+  C5 vs EqR                                   :  99.42 vs  95.02 (delta  +4.41 pp) | only-A     924 / only-B      42 | p 2.3e-217 | n 20000 identical idx 
+  C5 vs CGAR                                  :  99.42 vs  93.17 (delta  +6.25 pp) | only-A    1286 / only-B      36 | p 0.0e+00 | n 20000 identical idx 
+  C5 vs alphaXiv TRM-MLP                      :  99.42 vs  84.97 (delta +14.46 pp) | only-A    2928 / only-B      36 | p 0.0e+00 | n 20000 identical idx 
+  C2 vs CGAR                                  :  99.00 vs  93.17 (delta  +5.82 pp) | only-A    1234 / only-B      70 | p 9.0e-276 | n 20000 identical idx 
+  C2 vs alphaXiv TRM-MLP                      :  99.00 vs  84.97 (delta +14.03 pp) | only-A    2867 / only-B      61 | p 0.0e+00 | n 20000 identical idx 
+  D256 (the 5k set, identical to the frontier's):
+  C1 vs C0 (seeds)                            :  98.42 vs  99.14 (delta  -0.72 pp) | only-A      13 / only-B      49 | p 4.8e-06 | n 5000 identical idx 
+  C2 vs C0 (seeds)                            :  99.34 vs  99.14 (delta  +0.20 pp) | only-A      22 / only-B      12 | p 1.2e-01 | n 5000 identical idx 
+  C2 vs C1 (seeds)                            :  99.34 vs  98.42 (delta  +0.92 pp) | only-A      56 / only-B      10 | p 6.9e-09 | n 5000 identical idx 
+  C3 vs C0 (online orbit, matched seed 0)     :  98.94 vs  99.14 (delta  -0.20 pp) | only-A      11 / only-B      21 | p 1.1e-01 | n 5000 identical idx 
+  C4 vs C0 (set attention, matched seed 0)    :  99.32 vs  99.14 (delta  +0.18 pp) | only-A      23 / only-B      14 | p 1.9e-01 | n 5000 identical idx 
+  C5 vs C0 (w192, matched seed 0)             :  99.60 vs  99.14 (delta  +0.46 pp) | only-A      31 / only-B       8 | p 2.9e-04 | n 5000 identical idx 
+  C6 vs C0 (commit head, matched seed 0)      :  99.34 vs  99.14 (delta  +0.20 pp) | only-A      22 / only-B      12 | p 1.2e-01 | n 5000 identical idx 
+  C5 vs C4 (the two lifts)                    :  99.60 vs  99.32 (delta  +0.28 pp) | only-A      23 / only-B       9 | p 2.0e-02 | n 5000 identical idx 
+  C5 vs C2 (labeled best vs champion by rule) :  99.60 vs  99.34 (delta  +0.26 pp) | only-A      25 / only-B      12 | p 4.7e-02 | n 5000 identical idx 
+  C4 vs C2                                    :  99.32 vs  99.34 (delta  -0.02 pp) | only-A      19 / only-B      20 | p 1.0e+00 | n 5000 identical idx 
+  C0 vs EqR                                   :  99.14 vs  95.88 (delta  +3.26 pp) | only-A     177 / only-B      14 | p 4.2e-37 | n 5000 identical idx 
+  C1 vs EqR                                   :  98.42 vs  95.88 (delta  +2.54 pp) | only-A     166 / only-B      39 | p 7.5e-20 | n 5000 identical idx 
+  C2 vs EqR                                   :  99.34 vs  95.88 (delta  +3.46 pp) | only-A     188 / only-B      15 | p 3.1e-39 | n 5000 identical idx 
+  C4 vs EqR                                   :  99.32 vs  95.88 (delta  +3.44 pp) | only-A     181 / only-B       9 | p 9.8e-43 | n 5000 identical idx 
+  C5 vs EqR                                   :  99.60 vs  95.88 (delta  +3.72 pp) | only-A     193 / only-B       7 | p 2.9e-48 | n 5000 identical idx 
+  C5 vs CGAR                                  :  99.60 vs  94.10 (delta  +5.50 pp) | only-A     280 / only-B       5 | p 5.0e-76 | n 5000 identical idx 
+  C5 vs alphaXiv TRM-MLP                      :  99.60 vs  86.26 (delta +13.34 pp) | only-A     674 / only-B       7 | p 2.6e-189 | n 5000 identical idx 
+  C2 vs CGAR                                  :  99.34 vs  94.10 (delta  +5.24 pp) | only-A     274 / only-B      12 | p 8.3e-66 | n 5000 identical idx 
+  C2 vs alphaXiv TRM-MLP                      :  99.34 vs  86.26 (delta +13.08 pp) | only-A     664 / only-B      10 | p 1.3e-181 | n 5000 identical idx 
+  depth per arm (regressions = solved at the shallower depth and not at the deeper one): D64 vs D16 on the 100k; D128 vs D64 on the 20k; D256 vs D128 on the 5k ∩ 20k (256 puzzles, labeled)
+  C0 D64 vs D16                               :  98.42 vs  95.06 (delta  +3.36 pp) | only-A    3359 / only-B       3 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C0 D128 vs D64                              :  98.95 vs  98.48 (delta  +0.47 pp) | only-A      94 / only-B       1 | p 4.8e-27 | n 20000 INTERSECTION n=20000 (labeled) 
+  C0 D256 vs D128                             :  98.83 vs  98.44 (delta  +0.39 pp) | only-A       1 / only-B       0 | p 1.0e+00 | n 256 INTERSECTION n=256 (labeled) 
+  C1 D64 vs D16                               :  97.46 vs  94.20 (delta  +3.26 pp) | only-A    3261 / only-B       4 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C1 D128 vs D64                              :  98.14 vs  97.56 (delta  +0.58 pp) | only-A     120 / only-B       4 | p 9.1e-31 | n 20000 INTERSECTION n=20000 (labeled) 
+  C1 D256 vs D128                             :  97.66 vs  96.48 (delta  +1.17 pp) | only-A       3 / only-B       0 | p 2.5e-01 | n 256 INTERSECTION n=256 (labeled) 
+  C2 D64 vs D16                               :  98.67 vs  95.61 (delta  +3.07 pp) | only-A    3071 / only-B       2 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C2 D128 vs D64                              :  99.00 vs  98.58 (delta  +0.42 pp) | only-A      86 / only-B       2 | p 2.5e-23 | n 20000 INTERSECTION n=20000 (labeled) 
+  C2 D256 vs D128                             :  98.44 vs  97.27 (delta  +1.17 pp) | only-A       3 / only-B       0 | p 2.5e-01 | n 256 INTERSECTION n=256 (labeled) 
+  C3 D64 vs D16                               :  98.01 vs  94.60 (delta  +3.40 pp) | only-A    3408 / only-B       7 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C3 D128 vs D64                              :  98.61 vs  98.04 (delta  +0.57 pp) | only-A     116 / only-B       1 | p 1.4e-33 | n 20000 INTERSECTION n=20000 (labeled) 
+  C3 D256 vs D128                             :  98.44 vs  98.44 (delta  +0.00 pp) | only-A       0 / only-B       0 | p 1.0e+00 | n 256 INTERSECTION n=256 (labeled) 
+  C4 D64 vs D16                               :  98.90 vs  96.59 (delta  +2.30 pp) | only-A    2304 / only-B       0 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C4 D128 vs D64                              :  99.15 vs  98.86 (delta  +0.29 pp) | only-A      59 / only-B       1 | p 1.1e-16 | n 20000 INTERSECTION n=20000 (labeled) 
+  C4 D256 vs D128                             :  98.83 vs  98.44 (delta  +0.39 pp) | only-A       1 / only-B       0 | p 1.0e+00 | n 256 INTERSECTION n=256 (labeled) 
+  C5 D64 vs D16                               :  99.10 vs  95.84 (delta  +3.26 pp) | only-A    3265 / only-B       1 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C5 D128 vs D64                              :  99.42 vs  99.10 (delta  +0.32 pp) | only-A      69 / only-B       4 | p 2.4e-16 | n 20000 INTERSECTION n=20000 (labeled) 
+  C5 D256 vs D128                             :  99.61 vs  99.22 (delta  +0.39 pp) | only-A       1 / only-B       0 | p 1.0e+00 | n 256 INTERSECTION n=256 (labeled) 
+  C6 D64 vs D16                               :  98.50 vs  95.53 (delta  +2.97 pp) | only-A    2969 / only-B       2 | p 0.0e+00 | n 100000 INTERSECTION n=100000 (labeled) 
+  C6 D128 vs D64                              :  98.98 vs  98.47 (delta  +0.51 pp) | only-A     105 / only-B       2 | p 7.1e-29 | n 20000 INTERSECTION n=20000 (labeled) 
+  C6 D256 vs D128                             :  98.44 vs  98.44 (delta  +0.00 pp) | only-A       0 / only-B       0 | p 1.0e+00 | n 256 INTERSECTION n=256 (labeled) 
+  eqr D64 vs D16                              :  93.15 vs  86.52 (delta  +6.63 pp) | only-A   28049 / only-B       0 | p 0.0e+00 | n 422786 identical idx 
+  eqr D128 vs D64                             :  95.02 vs  93.37 (delta  +1.65 pp) | only-A     351 / only-B      22 | p 2.0e-77 | n 20000 INTERSECTION n=20000 (labeled) 
+  eqr D256 vs D128                            :  96.88 vs  96.48 (delta  +0.39 pp) | only-A       1 / only-B       0 | p 1.0e+00 | n 256 INTERSECTION n=256 (labeled) 
+  cgar D64 vs D16                             :  91.71 vs  86.10 (delta  +5.60 pp) | only-A   23682 / only-B       0 | p 0.0e+00 | n 422786 identical idx 
+  cgar D128 vs D64                            :  93.17 vs  91.67 (delta  +1.50 pp) | only-A     331 / only-B      31 | p 1.6e-64 | n 20000 INTERSECTION n=20000 (labeled) 
+  cgar D256 vs D128                           :  93.75 vs  91.02 (delta  +2.73 pp) | only-A       8 / only-B       1 | p 3.9e-02 | n 256 INTERSECTION n=256 (labeled) 
+  trmpub D64 vs D16                           :  83.45 vs  79.32 (delta  +4.13 pp) | only-A   17456 / only-B       0 | p 0.0e+00 | n 422786 identical idx 
+  trmpub D128 vs D64                          :  84.97 vs  83.32 (delta  +1.64 pp) | only-A     356 / only-B      27 | p 2.2e-74 | n 20000 INTERSECTION n=20000 (labeled) 
+  trmpub D256 vs D128                         :  87.50 vs  87.11 (delta  +0.39 pp) | only-A       1 / only-B       0 | p 1.0e+00 | n 256 INTERSECTION n=256 (labeled) 
+  vsel vs final (the final grid's 50k ⊂ the full) and EMA (headline) vs raw (alt, 50k):
+  C0 vsel vs final                            :  95.06 vs  94.76 (delta  +0.30 pp) | only-A    1420 / only-B    1270 | p 4.1e-03 | n 50000 INTERSECTION n=50000 (labeled) 
+  C0 EMA vs raw                               :  95.06 vs  92.73 (delta  +2.34 pp) | only-A    2431 / only-B    1263 | p 1.5e-83 | n 50000 INTERSECTION n=50000 (labeled) 
+  C1 vsel vs final                            :  94.23 vs  81.26 (delta +12.97 pp) | only-A    7150 / only-B     665 | p 0.0e+00 | n 50000 INTERSECTION n=50000 (labeled) 
+  C1 EMA vs raw                               :  94.23 vs  91.13 (delta  +3.10 pp) | only-A    2776 / only-B    1226 | p 7.2e-136 | n 50000 INTERSECTION n=50000 (labeled) 
+  C2 vsel vs final                            :  95.63 vs  95.17 (delta  +0.46 pp) | only-A    1278 / only-B    1048 | p 2.0e-06 | n 50000 INTERSECTION n=50000 (labeled) 
+  C2 EMA vs raw                               :  95.63 vs  93.45 (delta  +2.18 pp) | only-A    2149 / only-B    1060 | p 8.0e-84 | n 50000 INTERSECTION n=50000 (labeled) 
+  C3 vsel vs final                            :  94.67 vs  84.63 (delta +10.04 pp) | only-A    5841 / only-B     821 | p 0.0e+00 | n 50000 INTERSECTION n=50000 (labeled) 
+  C3 EMA vs raw                               :  94.67 vs  93.54 (delta  +1.12 pp) | only-A    1957 / only-B    1396 | p 3.2e-22 | n 50000 INTERSECTION n=50000 (labeled) 
+  C4 vsel vs final                            :  96.60 vs  96.41 (delta  +0.19 pp) | only-A     905 / only-B     808 | p 2.0e-02 | n 50000 INTERSECTION n=50000 (labeled) 
+  C4 EMA vs raw                               :  96.60 vs  93.92 (delta  +2.68 pp) | only-A    2130 / only-B     789 | p 6.2e-141 | n 50000 INTERSECTION n=50000 (labeled) 
+  C5 vsel vs final                            :  95.85 vs  96.03 (delta  -0.18 pp) | only-A    1196 / only-B    1285 | p 7.7e-02 | n 50000 INTERSECTION n=50000 (labeled) 
+  C5 EMA vs raw                               :  95.85 vs  88.91 (delta  +6.95 pp) | only-A    4456 / only-B     983 | p 0.0e+00 | n 50000 INTERSECTION n=50000 (labeled) 
+  C6 vsel vs final                            :  95.54 vs  90.05 (delta  +5.48 pp) | only-A    3573 / only-B     831 | p 0.0e+00 | n 50000 INTERSECTION n=50000 (labeled) 
+  C6 EMA vs raw                               :  95.54 vs  90.36 (delta  +5.18 pp) | only-A    3445 / only-B     857 | p 0.0e+00 | n 50000 INTERSECTION n=50000 (labeled) 
+  unions (cold16 on the full; portfolio facts, labeled):
+    C0 u C1 u C2:  98.55
+    C0 u C1 u C2 u C3 u C4 u C5 u C6:  99.54
+    C4 u C5:  98.65
+    C5 u eqr:  97.66
+  overlaps at D16 (Jaccard of the failure sets; identical fulls):
+    failures C0 | C1: Jaccard 0.303
+    failures C0 | C2: Jaccard 0.287
+    failures C1 | C2: Jaccard 0.299
+    failures C5 | C4: Jaccard 0.223
+    failures C5 | C2: Jaccard 0.216
+    failures C2 | eqr: Jaccard 0.171
+    failures C5 | eqr: Jaccard 0.154
+    failures C0 | A5: Jaccard 0.314
+
+== F. FUNNEL (rho, r) per rating quartile — the k128 scans (5k) and the vb screens (strat-512, k256); fit on draws <= 64 ==
+  k128   C0: [0,3) n1210 cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,17) n1259 cold 98.01 b1 97.93 hit 99.84 rho 0.98 r 0.900 | [17,34) n1261 cold 98.65 b1 98.89 hit 99.52 rho 0.98 r 0.900 | [34,176) n1270 cold 97.56 b1 97.87 hit 99.69 rho 0.98 r 0.802
+  screen C0: [0,3) n124 cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) n132 cold 93.94 b1 96.21 hit 99.24 rho 0.98 r 0.900 | [16,34) n125 cold 90.40 b1 89.60 hit 99.20 rho 0.98 r 0.900 | [34,133) n131 cold 95.42 b1 93.13 hit 100.00 rho 1.00 r 0.900
+  screen C1: [0,3) n124 cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) n132 cold 94.70 b1 93.18 hit 99.24 rho 0.98 r 0.900 | [16,34) n125 cold 91.20 b1 90.40 hit 100.00 rho 0.98 r 0.715 | [34,133) n131 cold 94.66 b1 90.84 hit 100.00 rho 1.00 r 0.637
+  screen C2: [0,3) n124 cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) n132 cold 94.70 b1 95.45 hit 99.24 rho 0.98 r 0.900 | [16,34) n125 cold 90.40 b1 93.60 hit 100.00 rho 1.00 r 0.802 | [34,133) n131 cold 91.60 b1 95.42 hit 100.00 rho 1.00 r 0.802
+  screen C3: [0,3) n124 cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) n132 cold 93.94 b1 92.42 hit 99.24 rho 0.98 r 0.900 | [16,34) n125 cold 88.00 b1 89.60 hit 100.00 rho 1.00 r 0.637 | [34,133) n131 cold 94.66 b1 93.89 hit 100.00 rho 1.00 r 0.900
+  screen C4: [0,3) n124 cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) n132 cold 97.73 b1 98.48 hit 99.24 rho 0.98 r 0.900 | [16,34) n125 cold 93.60 b1 94.40 hit 100.00 rho 0.98 r 0.802 | [34,133) n131 cold 94.66 b1 94.66 hit 100.00 rho 1.00 r 0.802
+  k128   C5: [0,3) n1210 cold 99.83 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,17) n1259 cold 98.97 b1 98.81 hit 99.84 rho 0.98 r 0.900 | [17,34) n1261 cold 99.21 b1 99.21 hit 100.00 rho 0.98 r 0.900 | [34,176) n1270 cold 98.82 b1 98.66 hit 99.69 rho 0.98 r 0.900
+  screen C5: [0,3) n124 cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) n132 cold 96.97 b1 94.70 hit 99.24 rho 0.98 r 0.900 | [16,34) n125 cold 93.60 b1 91.20 hit 100.00 rho 1.00 r 0.900 | [34,133) n131 cold 96.95 b1 93.13 hit 100.00 rho 1.00 r 0.715
+  k128   C6: [0,3) n1210 cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,17) n1259 cold 98.73 b1 98.41 hit 99.68 rho 0.98 r 0.900 | [17,34) n1261 cold 98.41 b1 98.10 hit 99.76 rho 0.98 r 0.900 | [34,176) n1270 cold 97.80 b1 98.19 hit 99.69 rho 0.98 r 0.900
+  screen C6: [0,3) n124 cold 100.00 b1 100.00 hit 100.00 rho 1.00 r 0.900 | [3,16) n132 cold 95.45 b1 96.97 hit 99.24 rho 0.98 r 0.900 | [16,34) n125 cold 92.00 b1 92.80 hit 99.20 rho 0.98 r 0.900 | [34,133) n131 cold 94.66 b1 95.42 hit 100.00 rho 1.00 r 0.715
+
+== G. THE DEPTH LADDER (exact_by_step_curve per row; each row on its own set, labeled: D16 full / D64 100k / D128 20k / D256 5k; regressions per row) ==
+  arm | row | exact at step 1 / 2 / 4 / 8 / 16 / 32 / 64 / 128 / 256 | regressions
+  C0     | D16 full  | 25.18 / 60.83 / 79.42 / 89.85 / 95.09 | 0
+  C0     | D64       | 25.07 / 60.56 / 79.16 / 89.71 / 95.06 / 97.43 / 98.42 | 0
+  C0     | D128 20k  | 24.90 / 60.34 / 78.97 / 89.66 / 95.06 / 97.61 / 98.52 / 98.95 | 0
+  C0     | D256 5k   | 23.72 / 60.86 / 79.74 / 90.36 / 95.00 / 97.52 / 98.46 / 98.80 / 99.14 | 0
+  C1     | D16 full  | 20.70 / 63.84 / 80.88 / 89.94 / 94.34 | 1
+  C1     | D64       | 20.63 / 63.68 / 80.66 / 89.76 / 94.22 / 96.28 / 97.46 | 0
+  C1     | D128 20k  | 20.66 / 63.64 / 80.36 / 89.94 / 94.34 / 96.45 / 97.56 / 98.14 | 0
+  C1     | D256 5k   | 19.78 / 64.00 / 80.68 / 90.48 / 94.26 / 96.28 / 97.38 / 98.06 / 98.42 | 0
+  C2     | D16 full  | 25.41 / 61.76 / 80.89 / 90.87 / 95.63 | 0
+  C2     | D64       | 25.47 / 61.59 / 80.81 / 90.83 / 95.60 / 97.70 / 98.67 | 0
+  C2     | D128 20k  | 25.55 / 61.82 / 80.75 / 90.87 / 95.67 / 97.76 / 98.62 / 99.00 | 0
+  C2     | D256 5k   | 25.30 / 62.46 / 81.04 / 90.96 / 95.68 / 97.70 / 98.70 / 99.10 / 99.34 | 0
+  C3     | D16 full  | 28.46 / 62.40 / 79.90 / 89.92 / 94.78 | 0
+  C3     | D64       | 28.46 / 62.40 / 79.82 / 89.71 / 94.61 / 96.91 / 98.01 | 0
+  C3     | D128 20k  | 28.37 / 62.43 / 79.75 / 89.87 / 94.80 / 97.04 / 98.05 / 98.61 | 0
+  C3     | D256 5k   | 27.90 / 62.10 / 79.62 / 89.74 / 94.74 / 97.28 / 98.28 / 98.74 / 98.94 | 0
+  C4     | D16 full  | 29.79 / 69.01 / 84.93 / 93.05 / 96.70 | 0
+  C4     | D64       | 29.84 / 69.03 / 84.90 / 93.03 / 96.59 / 98.21 / 98.90 | 0
+  C4     | D128 20k  | 29.76 / 69.29 / 85.14 / 93.44 / 96.83 / 98.30 / 98.87 / 99.15 | 0
+  C4     | D256 5k   | 28.74 / 69.08 / 84.80 / 93.30 / 96.88 / 98.52 / 99.06 / 99.26 / 99.32 | 0
+  C5     | D16 full  | 17.05 / 45.71 / 72.65 / 89.31 / 95.91 | 0
+  C5     | D64       | 17.12 / 45.65 / 72.39 / 89.10 / 95.84 / 98.24 / 99.10 | 0
+  C5     | D128 20k  | 17.28 / 45.48 / 72.67 / 89.13 / 95.99 / 98.27 / 99.09 / 99.42 | 0
+  C5     | D256 5k   | 15.96 / 44.80 / 71.32 / 89.22 / 95.84 / 98.46 / 99.18 / 99.38 / 99.60 | 0
+  C6     | D16 full  | 29.36 / 59.18 / 79.46 / 90.75 / 95.62 | 0
+  C6     | D64       | 29.47 / 59.02 / 79.48 / 90.63 / 95.54 / 97.58 / 98.50 | 0
+  C6     | D128 20k  | 29.34 / 58.95 / 79.44 / 90.61 / 95.61 / 97.61 / 98.49 / 98.98 | 0
+  C6     | D256 5k   | 28.88 / 59.52 / 79.70 / 91.08 / 95.64 / 97.80 / 98.70 / 99.12 / 99.34 | 0
+  eqr    | D16 full  | 12.05 / 44.98 / 67.10 / 79.58 / 86.52 | 0
+  eqr    | D64       | 12.05 / 44.98 / 67.10 / 79.58 / 86.52 / 90.60 / 93.15 | 0
+  eqr    | D128 20k  | 12.02 / 44.77 / 67.25 / 79.97 / 86.80 / 90.86 / 93.39 / 95.02 | 0
+  eqr    | D256 5k   | 12.40 / 44.74 / 66.94 / 79.28 / 86.08 / 90.58 / 93.50 / 94.92 / 95.88 | 0
+  cgar   | D16 full  | 19.87 / 55.58 / 72.22 / 80.87 / 86.10 | 0
+  cgar   | D64       | 19.87 / 55.58 / 72.22 / 80.87 / 86.10 / 89.42 / 91.71 | 0
+  cgar   | D128 20k  | 19.42 / 55.62 / 72.50 / 81.19 / 86.19 / 89.34 / 91.62 / 93.17 | 0
+  cgar   | D256 5k   | 19.30 / 54.26 / 71.90 / 80.14 / 85.46 / 88.86 / 91.34 / 92.82 / 94.10 | 0
+  trmpub | D16 full  | 29.73 / 58.60 / 70.82 / 76.15 / 79.32 | 0
+  trmpub | D64       | 29.73 / 58.60 / 70.82 / 76.15 / 79.32 / 81.60 / 83.45 | 1
+  trmpub | D128 20k  | 29.49 / 58.16 / 70.21 / 75.67 / 78.87 / 81.27 / 83.36 / 84.97 | 0
+  trmpub | D256 5k   | 30.08 / 59.14 / 70.96 / 76.10 / 79.30 / 81.78 / 83.86 / 85.06 / 86.26 | 0
+  A3     | D128 20k  | 34.04 / 61.20 / 75.26 / 84.73 / 90.12 / 93.16 / 94.80 / 95.90 | 0
+  A5     | D128 20k  | 37.40 / 65.66 / 81.24 / 90.44 / 95.09 / 97.11 / 98.11 / 98.58 | 0
+  A7     | D128 20k  | 29.62 / 66.66 / 82.36 / 91.02 / 95.30 / 97.26 / 98.15 / 98.66 | 0
+
+== H. THE HALTING HEAD (R10) on the D16 fulls: AUC(q_halt at step 16, exact); halt = q_halt > q_continue; the emulated ACT row = exact at the first halting step ==
+  arm | n | cold | AUC(q_halt) | AUC(margin) | halt frac | precision | recall | mean first-halt step | exact at first halt | delta vs cold
+  C0     | 422786 |  95.09 | 1.0000 | 1.0000 |  95.10 |  99.99 | 100.00 |  3.58 |  92.00 |  -3.10 pp
+  C1     | 422786 |  94.34 | 0.9997 | 0.9997 |  94.34 |  99.99 | 100.00 |  3.60 |  92.90 |  -1.44 pp
+  C2     | 422786 |  95.63 | 0.9999 | 0.9999 |  95.63 | 100.00 | 100.00 |  3.45 |  93.20 |  -2.43 pp
+  C3     | 422786 |  94.78 | 0.9989 | 0.9989 |  94.79 |  99.98 | 100.00 |  3.52 |  91.66 |  -3.12 pp
+  C4     | 422786 |  96.70 | 1.0000 | 1.0000 |  96.71 | 100.00 | 100.00 |  3.05 |  95.67 |  -1.03 pp
+  C5     | 422786 |  95.91 | 0.9974 | 0.9974 |  95.93 |  99.97 | 100.00 |  4.07 |  95.01 |  -0.89 pp
+  C6     | 422786 |  95.62 | 0.9982 | 0.9982 |  95.64 |  99.98 | 100.00 |  3.51 |  94.40 |  -1.22 pp
+  eqr    | 422786 |  86.52 | 0.9999 | 0.9999 |  86.52 |  99.99 | 100.00 |  5.26 |  85.73 |  -0.78 pp
+  cgar   | 422786 |  86.10 | 0.9991 | 0.9991 |  86.13 |  99.97 | 100.00 |  4.82 |  84.38 |  -1.72 pp
+  trmpub | 422786 |  79.32 | 0.9990 | 0.9990 |  79.38 |  99.92 | 100.00 |  5.21 |  77.08 |  -2.24 pp
+
+== I. RATING BANDS (tdoku rating; cold) — D64 on the identical 100k (C arms, A3/A5/A7; the field's fulls and X0 by intersection) and D16 on the full ==
+  D64: band | n | C0 | C1 | C2 | C3 | C4 | C5 | C6 | A3 | A5 | A7 | eqr | cgar | trmpub | X0
+    [0,1) |  14398 |  99.97 |  99.98 |  99.99 |  99.94 | 100.00 |  99.86 |  99.97 |  99.89 |  99.97 |  99.99 |  99.76 |  99.90 |  99.87 |  99.95
+    [1,10) |  23185 |  98.82 |  98.18 |  98.93 |  98.61 |  99.19 |  99.35 |  98.91 |  95.98 |  98.58 |  98.56 |  94.93 |  93.71 |  87.24 |  94.79
+    [10,30) |  32148 |  97.95 |  96.43 |  98.33 |  97.28 |  98.60 |  98.84 |  98.07 |  92.33 |  97.51 |  97.40 |  89.87 |  87.51 |  75.49 |  89.64
+    [30,60) |  23997 |  97.92 |  96.82 |  98.29 |  97.44 |  98.47 |  98.87 |  97.93 |  93.56 |  97.57 |  97.38 |  91.84 |  89.95 |  80.29 |  90.86
+    [60,inf) |   6272 |  97.62 |  96.78 |  97.99 |  97.24 |  98.44 |  98.71 |  97.96 |  93.83 |  97.27 |  97.40 |  92.12 |  91.02 |  82.61 |  91.87
+  D16: band | n | C0 | C1 | C2 | C3 | C4 | C5 | C6 | A3 | A5 | A7 | eqr | cgar | trmpub | X0
+    [0,1) |  61127 |  99.98 |  99.96 |  99.98 |  99.96 |  99.99 |  99.82 |  99.93 |  99.88 |  99.95 |  99.97 |  99.54 |  99.84 |  99.79 |  99.89
+    [1,10) |  97721 |  96.38 |  95.73 |  96.67 |  96.11 |  97.46 |  96.80 |  96.76 |  92.34 |  96.24 |  96.32 |  89.75 |  89.29 |  83.67 |  89.54
+    [10,30) | 135955 |  92.71 |  91.67 |  93.60 |  92.17 |  95.24 |  93.98 |  93.42 |  85.46 |  92.77 |  92.86 |  80.43 |  79.60 |  70.11 |  79.56
+    [30,60) | 101017 |  94.14 |  93.22 |  94.74 |  93.90 |  95.97 |  95.28 |  94.97 |  88.22 |  94.20 |  94.15 |  83.95 |  83.60 |  75.47 |  83.17
+    [60,inf) |  26966 |  94.97 |  94.21 |  95.56 |  94.58 |  96.65 |  95.89 |  95.35 |  89.34 |  94.76 |  94.85 |  85.59 |  85.62 |  78.01 |  85.21
+
+== J. THE COMMIT HEAD (C6; sub20k_t16_commit: the head's probability per free cell per step + correctness bits; tau .9) ==
+  step | solved: mean c / committed(c>.9) / wrong-among-committed / cells correct || unsolved: mean c / committed / wrong-among-committed / cells correct
+     1 | 0.747 / 33.8 % / 1.5 % / 70.2 % || 0.624 / 5.6 % / 30.3 % / 38.9 %
+     2 | 0.780 / 59.4 % / 0.1 % / 81.7 % || 0.504 / 1.6 % / 19.1 % / 42.5 %
+     4 | 0.868 / 81.9 % / 0.0 % / 91.7 % || 0.486 / 2.1 % / 25.8 % / 43.9 %
+     8 | 0.923 / 94.5 % / 0.0 % / 97.4 % || 0.482 / 2.2 % / 21.9 % / 44.8 %
+    16 | 0.949 / 99.9 % / 0.0 % / 100.0 % || 0.484 / 2.1 % / 21.6 % / 45.7 %
+  per-puzzle correctness signal at step 16: AUC(mean c over free cells, exact) = 0.9948; AUC(min c) = 0.9978; accept-if-mean-c >= .9: precision 99.97 % recall 99.93 % (n unsolved 878)
+  reliability (step 16, free cells): bin | n | mean c | P(correct) || unsolved puzzles only: n | mean c | P(correct)
+  [0.00,0.10) |        0 |     - |    -   ||       0 |     - |    -  
+  [0.10,0.30) |     1983 | 0.274 |  31.62 ||    1983 | 0.274 |  31.62
+  [0.30,0.50) |    29938 | 0.408 |  40.38 ||   29938 | 0.408 |  40.38
+  [0.50,0.70) |    13476 | 0.573 |  50.99 ||   13476 | 0.573 |  50.99
+  [0.70,0.90) |     4457 | 0.817 |  78.82 ||    3209 | 0.797 |  70.58
+  [0.90,0.99) |  1065772 | 0.949 |  99.98 ||    1029 | 0.929 |  78.43
+  [0.99,1.00) |        0 |     - |    -   ||       0 |     - |    -  
+  ECE (free cells, step 16) = 0.0498; the softmax at stalls (E6, C0-C5): top-5 correct 48-68 % at confidence 1.000
+
+== K. MEMORIZATION / TRAJECTORY signatures (descriptive; the analyzer's CLEAN split reads these) ==
+  arm | budget | selected | monitor peak (step) | plateau | end EMA | decline | CE at vsel / end | train_exact at vsel / end | halt end | cold16 vsel / final (50k) | drop
+  C0 | 30000 | 16000 |  96.68 (16000) | 16000..22000 |  94.14 |  0.025 | 0.450 / 0.428 | 0.341 / 0.394 | 0.375 |  95.09 /  94.76 | 0.0033
+  C1 | 50000 | 28000 |  96.09 (28000) | 16000..30000 |  83.98 |  0.121 | 0.443 / 0.123 | 0.382 / 0.749 | 0.672 |  94.34 /  81.26 | 0.1307
+  C2 | 30000 | 24000 |  96.48 (24000) | 14000..30000 |  96.48 |  0.000 | 0.446 / 0.464 | 0.340 / 0.353 | 0.380 |  95.63 /  95.17 | 0.0046
+  C3 | 50000 | 18000 |  96.48 (18000) | 16000..26000 |  86.91 |  0.096 | 0.425 / 0.191 | 0.391 / 0.647 | 0.594 |  94.78 /  84.63 | 0.1015
+  C4 | 30000 | 20000 |  97.85 (20000) | 12000..26000 |  96.29 |  0.016 | 0.481 / 0.440 | 0.359 / 0.382 | 0.396 |  96.70 /  96.41 | 0.0030
+  C5 | 50000 | 46000 |  97.66 (46000) | 28000..50000 |  97.66 |  0.000 | 0.535 / 0.532 | 0.242 / 0.254 | 0.161 |  95.91 /  96.03 | -0.0012
+  C6 | 50000 | 28000 |  97.07 (28000) | 26000..28000 |  90.04 |  0.070 | 0.425 / 0.287 | 0.395 / 0.551 | 0.490 |  95.62 /  90.05 | 0.0557
+
+== L. COMPUTE (analytic MACs per outer step per puzzle from the frontier report: DEC-w384 70.0 GMAC = 4.6x the TRM-MLP's 15.2; w192 20.4 = 1.34x; C4's attention adds its q/k projections, not counted; labeled inferred) ==
+  arm | params | GMAC/step | D16 TMAC (cold16) | D64 TMAC (cold64) | D128 TMAC (D128) | D256 TMAC (D256)
+  C0     | 2780933 |  70.0 |  1.12 (95.09) |  4.48 (98.42) |  8.96 (98.95) | 17.92 (99.14)
+  C1     | 2780933 |  70.0 |  1.12 (94.34) |  4.48 (97.46) |  8.96 (98.14) | 17.92 (98.42)
+  C2     | 2780933 |  70.0 |  1.12 (95.63) |  4.48 (98.67) |  8.96 (99.00) | 17.92 (99.34)
+  C3     | 2780933 |  70.0 |  1.12 (94.78) |  4.48 (98.01) |  8.96 (98.61) | 17.92 (98.94)
+  C4     | 2977541 |  70.0 (+attn) |  1.12 (96.70) |  4.48 (98.90) |  8.96 (99.15) | 17.92 (99.32)
+  C5     | 789125 |  20.4 |  0.33 (95.91) |  1.31 (99.10) |  2.61 (99.42) |  5.22 (99.60)
+  C6     | 2781318 |  70.0 |  1.12 (95.62) |  4.48 (98.50) |  8.96 (98.98) | 17.92 (99.34)
+  eqr    | 5037058 |  15.2 |  0.24 (86.52) |  0.97 (93.15) |  1.95 (95.02) |  3.89 (95.88)
+  cgar   | 5037058 |  15.2 |  0.24 (86.10) |  0.97 (91.71) |  1.95 (93.17) |  3.89 (94.10)
+  trmpub | 5037058 |  15.2 |  0.24 (79.32) |  0.97 (83.45) |  1.95 (84.97) |  3.89 (86.26)

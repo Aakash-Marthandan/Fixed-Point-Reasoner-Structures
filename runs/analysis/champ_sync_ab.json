@@ -1,0 +1,7 @@
+{
+ "rows": 256,
+ "k": 8,
+ "zone": "asia-south1-c",
+ "wall_default_s": 342.2,
+ "wall_per_step_s": 324.1
+}

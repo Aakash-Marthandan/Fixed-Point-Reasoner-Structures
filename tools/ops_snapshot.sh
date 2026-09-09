@@ -23,7 +23,7 @@ if [ -z "$Z" ]; then
     [ "$st" = READY ] && { Z=$z; break; }
   done
 fi
-SP=$(cat runs/pod_supervisor.pid 2>/dev/null); SUP="NOT RUNNING"; [ -n "$SP" ] && kill -0 "$SP" 2>/dev/null && SUP="alive pid $SP"
+SP=$(cat "runs/pod_${POD}_supervisor.pid" 2>/dev/null || cat runs/pod_supervisor.pid 2>/dev/null); SUP="NOT RUNNING"; [ -n "$SP" ] && kill -0 "$SP" 2>/dev/null && SUP="alive pid $SP"
 DL=$(tr -dc '0-9' < runs/tpu_deadline.txt 2>/dev/null); LEFT="?"
 [ -n "$DL" ] && LEFT="$(awk -v d="$DL" -v n="$(date +%s)" 'BEGIN{printf "%.1fh", (d-n)/3600}') to $(date -u -r "$DL" +%FT%TZ)"
 echo "SNAPSHOT $NOW | watchdog: $(cat runs/tpu_status.txt 2>/dev/null || echo none) | supervisor: $SUP | deadline: $LEFT"

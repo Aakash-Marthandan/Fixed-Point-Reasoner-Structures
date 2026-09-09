@@ -12,7 +12,7 @@ import argparse, csv, glob, json, os, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]; RUNS = ROOT / "runs"; AN = RUNS / "analysis"
-LADDER = ["sport2", "sport3a", "sportB", "sportBr2", "sportBr2b", "sportC0", "sportC1", "sportC2", "finalA", "frontier", "field"]
+LADDER = ["sport2", "sport3a", "sportB", "sportBr2", "sportBr2b", "sportC0", "sportC1", "sportC2", "finalA", "frontier", "field", "champ"]
 
 
 def fnum(x):
@@ -52,7 +52,7 @@ def pick_d64(recs):
     return best if best is not None and score(best) >= 1 else None
 
 
-def load_dyn(date):
+def load_dyn(date, ecc_date=None):
     out = {}
     p = AN / f"suite_ckpt_dyn_{date}.jsonl"
     if p.exists():
@@ -61,7 +61,7 @@ def load_dyn(date):
             except Exception: continue
             out[r["name"]] = r
     # the Night A lens rows (A3, A7, A5, A8, A0, X0 at n 128 t 64) carry the same fields
-    q = AN / f"finalA_ecc_{date}.json"
+    q = AN / f"finalA_ecc_{ecc_date or date}.json"
     if q.exists():
         J = json.load(open(q))
         for k, o in J.get("E2", {}).items():
@@ -88,8 +88,10 @@ def calib_for(campaign, arm, grid):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--date", default=time.strftime("%Y%m%d")); a = ap.parse_args()
-    recs = load_records(a.date); dyn = load_dyn(a.date); cal = load_calib()
+    ap = argparse.ArgumentParser(); ap.add_argument("--date", default=time.strftime("%Y%m%d")); ap.add_argument("--ecc-date", default=None, help="the finalA_ecc_<date>.json to join (default: --date)"); ap.add_argument("--dyn-dates", default=None, help="comma list of suite_ckpt_dyn_<date>.jsonl files to union (default: --date)"); a = ap.parse_args()
+    recs = load_records(a.date); dyn = {}
+    for dd in (a.dyn_dates or a.date).split(','): dyn.update({k: v for k, v in load_dyn(dd, a.ecc_date or dd).items() if k not in dyn})
+    cal = load_calib()
     rows = []
     names = sorted(dyn, key=lambda n: (next((i for i, c in enumerate(LADDER) if n.startswith(c)), 99), n))
     for name in names:
