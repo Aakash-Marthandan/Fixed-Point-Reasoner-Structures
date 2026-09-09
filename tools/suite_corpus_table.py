@@ -28,7 +28,10 @@ def class_letter(g50_in_range, yld):
 
 
 def load_records(date):
-    rows = list(csv.DictReader(open(AN / f"suite_records_{date}.csv")))
+    rows = []
+    for dd in str(date).split(','):   # a comma list unions the dates' rows (the first date wins on duplicate (campaign, arm, eval) keys)
+        seen = {(r['campaign'], r['arm'], r['eval'], r['kind']) for r in rows}
+        rows += [r for r in csv.DictReader(open(AN / f"suite_records_{dd}.csv")) if (r['campaign'], r['arm'], r['eval'], r['kind']) not in seen]
     by = {}
     for r in rows:
         key = (r["campaign"] or r["kind"], r["arm"])
@@ -134,7 +137,7 @@ def main():
                              mono=e2.get("mono_solved"), flips_w=e2.get("flips_w_u"), syn_osc=e2.get("syn_osc"), dyn_fe_med=e2.get("fe_med"), dyn_fe_p90=e2.get("fe_p90"),
                              e3_committed=e3.get("committed"), e3_wrong=e3.get("wrong"), e3_contra=e3.get("contra"),
                              cal_cold=None, cal_stalled=e6.get("n"), cal_top5=e6.get("top5"), cal_conf=e6.get("conf"), cal_ent1=e6.get("ent1"), cal_cw=e6.get("cw")))
-    out_csv = AN / f"corpus_lens_{a.date}.csv"
+    out_csv = AN / f"corpus_lens_{a.date.split(',')[0]}.csv"
     with open(out_csv, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
     P = lambda x, p=0: "-" if x is None else f"{100 * x:.{p}f}"
@@ -145,7 +148,7 @@ def main():
         lines.append(f"{r['grid']:26s} {str(r['cell']):4s} {r['cls']:10s} {P(r['cold64'], 1):>6s} {F(r['g50']):>5s} {P(r['yield_']):>5s} {F(r['fe_med'], 0)+'/'+F(r['fe_p90'], 0):>5s} | "
                      f"{P(r['dyn_solved'], 1):>5s} {P(r['commit1_s']):>5s}|{P(r['commit1_u']):<6s} {P(r['cw1_u']):>4s}->{P(r['cw64_u']):<4s} {F(r['ent1_s'], 2):>5s} {P(r['mono']):>4s} {F(r['flips_w'], 2):>5s} {F(r['syn_osc']):>6s} | "
                      f"{P(r['e3_committed']):>5s}/{P(r['e3_wrong']):>5s}/{P(r['e3_contra']):>5s} | {P(r['cal_top5']):>5s}/{P(r['cal_conf']):<6s} {F(r['cal_ent1'], 2):>5s}")
-    txt = "\n".join(lines); (AN / f"corpus_lens_{a.date}.txt").write_text(txt + "\n"); print(txt); print(f"\n-> {out_csv} ({len(rows)} rows)")
+    txt = "\n".join(lines); (AN / f"corpus_lens_{a.date.split(',')[0]}.txt").write_text(txt + "\n"); print(txt); print(f"\n-> {out_csv} ({len(rows)} rows)")
 
 
 if __name__ == "__main__":
