@@ -39,6 +39,7 @@ PY=${CHAIN_PY:-python3}
 NCHIP=$(ls /dev/vfio 2>/dev/null | grep -c '^[0-9]' || true); [ "$NCHIP" -ge 1 ] 2>/dev/null || NCHIP=${NCHIP_OVERRIDE:-4}
 ARM_PREC=default
 EVAL_TIMEOUT=${DA_EVAL_TIMEOUT:-14400}
+EVAL_STALL_SEC=${DA_EVAL_STALL_SEC:-2400}   # the 2026-09-10 pilot thrash: a starved battery wrote nothing for an hour; the watchdog kills + retries once
 pt () { JAX_DEFAULT_MATMUL_PRECISION=$ARM_PREC $PY tools/pretrain.py "$@"; }
 pin () { local c=$1; shift; TPU_CHIPS_PER_PROCESS_BOUNDS=1,1,1 TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=$c JAX_DEFAULT_MATMUL_PRECISION=$ARM_PREC "$@"; }
 
@@ -93,7 +94,7 @@ is_optional () { case " $OPTIONAL_ARMS " in *" $1 "*) return 0;; *) return 1;; e
 worker_arms () {   # the arms THIS worker runs, in order (two rounds on two hosts; the seed pair first)
   if [ "$NW" -ge 4 ]; then case $W in 0) echo "D0";; 1) echo "D1";; 2) echo "D2";; 3) echo "N0";; *) echo "";; esac
   elif [ "$NW" -ge 2 ]; then case $W in 0) echo "D0 D2";; 1) echo "D1 N0";; *) echo "";; esac
-  else echo "${DA_ARMS_1X:-D0 D1 D2 N0}"; fi
+  else echo "${DA_ARMS_1X:-D0 D1 D2 N0}" | tr "," " "; fi   # DA_ARMS_1X accepts commas (a remote-shell-safe list)
 }
 
 nan_check () {  # DIR -> 0 clean / 1 non-finite tail or missing metrics (the trainer's NAN-ABORT rc=3 lands here too)
@@ -233,6 +234,33 @@ ensure_local_pretrain () {  # ARM — after a node change the banked grids + met
 }
 
 # ---------- the battery (idempotent by GCS marker; sharded over the worker's chips; n-gated; banked) ----------
+watch_shards () {  # NAME OUTDIR PID... -> 0 all exited 0 | 2 a shard exited non-zero | 1 STALLED (no file under OUTDIR changed for EVAL_STALL_SEC; the shards killed)
+  local name=$1 O=$2; shift 2; local pids=("$@") rc=0 alive newest now start; start=$(date +%s)
+  while :; do
+    alive=0; for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive=1; done
+    [ $alive -eq 1 ] || break
+    now=$(date +%s); newest=$(${REAL_PY:-python3} - "$O" <<'PYEOF'
+import os, sys
+from pathlib import Path
+d = Path(sys.argv[1]); m = 0
+for p in d.rglob("*"):
+    try: m = max(m, int(p.stat().st_mtime))
+    except OSError: pass
+print(m)
+PYEOF
+)
+    [ -z "$newest" ] || [ "$newest" -lt "$start" ] && newest=$start     # no stall can be declared before EVAL_STALL_SEC after THIS launch (the rerun race)
+    if [ $((now - newest)) -gt "$EVAL_STALL_SEC" ]; then
+      echo "EVAL-STALLED $name (no file under $O changed for $((now - newest)) s > $EVAL_STALL_SEC; killing the shards)"
+      for p in "${pids[@]}"; do pkill -TERM -P "$p" 2>/dev/null; kill -TERM "$p" 2>/dev/null; done; sleep 5
+      for p in "${pids[@]}"; do pkill -KILL -P "$p" 2>/dev/null; kill -KILL "$p" 2>/dev/null; done
+      return 1
+    fi
+    sleep "${WATCH_EVERY:-60}"
+  done
+  for p in "${pids[@]}"; do wait "$p" 2>/dev/null || rc=2; done
+  return $rc
+}
 set_n () { case $1 in valhard*) echo 48;; dev30) echo 30;; rg96) echo 96;; rt48) echo 48;; arc1eval) echo 400;; *) echo 0;; esac; }
 finish_dec_eval () {  # NAME OUTDIR NGATE — summarize, n-gate on the task count, bank, mark
   local name=$1 O=$2 NGATE=$3
@@ -247,13 +275,18 @@ eval_dec () {  # ARM SETNAME SET CK NSH EXTRA... — the DEC-ARC battery on one 
   local arm=$1 setname=$2 set=$3 CK=$4 NSH=$5; shift 5
   local name="${arm}_${setname}" O="runs/decarceval_${arm}/${setname}"
   gsutil -q stat "$GCS/evals/${name}_OK" 2>/dev/null && { echo "EVAL-SKIP $name"; return 0; }
-  mkdir -p "$O"; local pids=() rc=0
-  for i in $(seq 0 $((NSH - 1))); do
-    pin $((i % NCHIP)) ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/eval_decarc.py --ckpt "$CK" --set "$set" --out "$O" --shard "$i/$NSH" \
-        --steps "$FIT_STEPS" --t-total "$T_TOTAL" "$@" > "$O/shard_$i.log" 2>&1 & pids+=($!)
+  mkdir -p "$O"; local pids=() rc=0 attempt
+  for attempt in 1 2; do
+    pids=()
+    for i in $(seq 0 $((NSH - 1))); do
+      pin $((i % NCHIP)) ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/eval_decarc.py --ckpt "$CK" --set "$set" --out "$O" --shard "$i/$NSH" \
+          --steps "$FIT_STEPS" --t-total "$T_TOTAL" "$@" >> "$O/shard_$i.log" 2>&1 & pids+=($!)
+    done
+    watch_shards "$name" "$O" "${pids[@]}"; rc=$?
+    [ $rc -eq 1 ] && [ $attempt -eq 1 ] && { echo "EVAL-STALL-RETRY $name (the shards are resume-safe: only the missing tasks re-run)"; continue; }
+    break
   done
-  for p in "${pids[@]}"; do wait "$p" || rc=1; done
-  [ $rc -eq 0 ] || { echo "EVAL-SHARD-FAILED $name"; return 1; }
+  [ $rc -eq 0 ] || { echo "EVAL-SHARD-FAILED $name (rc=$rc)"; return 1; }
   finish_dec_eval "$name" "$O" "$(set_n "$setname")"
 }
 eval_nat () {  # SETNAME SET CHIP TASKS_CSV EXTRA... — the native control through tools/arc_suite.py (one chip per set)
@@ -262,8 +295,14 @@ eval_nat () {  # SETNAME SET CHIP TASKS_CSV EXTRA... — the native control thro
   gsutil -q stat "$GCS/evals/${name}_OK" 2>/dev/null && { echo "EVAL-SKIP $name"; return 0; }
   case $setname in rg96|rt48) [ -n "$tasks" ] || { echo "GATE-TASKS-EMPTY $name (the gate set's ids could not be listed)"; return 1; };; esac
   mkdir -p "$O"
-  pin "$chip" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set "$set" ${tasks:+--tasks "$tasks"} --out "$O" --steps "$FIT_STEPS" --t-total "$T_TOTAL" "$@" > "$O/run.log" 2>&1 \
-    || { echo "EVAL-FAILED $name"; return 1; }
+  local rc attempt
+  for attempt in 1 2; do
+    pin "$chip" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set "$set" ${tasks:+--tasks "$tasks"} --out "$O" --steps "$FIT_STEPS" --t-total "$T_TOTAL" "$@" >> "$O/run.log" 2>&1 & local pid=$!
+    watch_shards "$name" "$O" "$pid"; rc=$?
+    [ $rc -eq 1 ] && [ $attempt -eq 1 ] && { echo "EVAL-STALL-RETRY $name"; continue; }
+    break
+  done
+  [ $rc -eq 0 ] || { echo "EVAL-FAILED $name (rc=$rc)"; return 1; }
   ${REAL_PY:-python3} -c "import sys; n=sum(1 for l in open('$O/results.jsonl') if l.strip()); sys.exit(0 if n==$(set_n "$setname") else 1)" \
     || { echo "EVAL-N-BAD $name"; return 1; }
   tar czf "/tmp/${name}.tgz" "$O" && gsutil -q cp "/tmp/${name}.tgz" "$GCS/evals/${name}.tgz"
@@ -322,12 +361,17 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
     for p in "${pids[@]}"; do wait "$p" || r=1; done
     # the native control's PUBLIC row: the 400 ARC-1 evaluation tasks through arc_suite, 4-way sharded by task lists, merged
     if ! gsutil -q stat "$GCS/evals/N0_arc1eval_OK" 2>/dev/null; then
-      local O="runs/decarceval_N0/arc1eval" ps=() rr=0; mkdir -p "$O"
-      for i in $(seq 0 $((NCHIP - 1))); do
-        mkdir -p "$O/s$i"
-        ( pin "$i" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set valhard --tasks "$(gate_tasks arc1eval "$i/$NCHIP")" --out "$O/s$i" --steps "$FIT_STEPS" --t-total "$T_TOTAL" --k "$ARC1_K" > "$O/s$i/run.log" 2>&1 ) & ps+=($!)
+      local O="runs/decarceval_N0/arc1eval" ps=() rr=0 att; mkdir -p "$O"
+      for att in 1 2; do   # the same stall watchdog + one resume-safe retry as every other row
+        ps=()
+        for i in $(seq 0 $((NCHIP - 1))); do
+          mkdir -p "$O/s$i"
+          pin "$i" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set valhard --tasks "$(gate_tasks arc1eval "$i/$NCHIP")" --out "$O/s$i" --steps "$FIT_STEPS" --t-total "$T_TOTAL" --k "$ARC1_K" >> "$O/s$i/run.log" 2>&1 & ps+=($!)
+        done
+        watch_shards "N0_arc1eval" "$O" "${ps[@]}"; rr=$?
+        [ $rr -eq 1 ] && [ $att -eq 1 ] && { echo "EVAL-STALL-RETRY N0_arc1eval"; continue; }
+        break
       done
-      for p in "${ps[@]}"; do wait "$p" || rr=1; done
       if [ $rr -eq 0 ] && merge_nat_shards "$O" "$NCHIP" 400; then
         tar czf /tmp/N0_arc1eval.tgz "$O" && gsutil -q cp /tmp/N0_arc1eval.tgz "$GCS/evals/N0_arc1eval.tgz"
         echo ok | gsutil -q cp - "$GCS/evals/N0_arc1eval_OK"; echo "EVAL-OK N0_arc1eval $(date -u +%H:%M)"

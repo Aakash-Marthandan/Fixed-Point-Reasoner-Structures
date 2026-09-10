@@ -145,6 +145,9 @@ if tool.endswith("eval_decarc.py"):
         i, n = (int(v) for v in sh.split("/")); ids = ids[i::n]; tag = f"_{i}"
     if os.environ.get("STUB_EVAL_FAIL", "") == f"{Path(flag('--ckpt')).parent.name.replace('pretraindecarc_', '')}:{flag('--set')}:{tag.strip('_')}" and not (out / "failed_once").exists():
         (out / "failed_once").write_text("x"); print("staged shard failure", file=sys.stderr); sys.exit(1)
+    key = f"{Path(flag('--ckpt')).parent.name.replace('pretraindecarc_', '')}:{flag('--set')}:{tag.strip('_')}"
+    if os.environ.get("STUB_EVAL_STALL", "") == key and (os.environ.get("STUB_EVAL_STALL_ALWAYS") == "1" or not (out / "stalled_once").exists()):
+        (out / "stalled_once").write_text("x"); time.sleep(int(os.environ.get("STUB_STALL_SLEEP", "12"))); sys.exit(0)   # a starved shard: alive, silent
     (out / f"provenance{tag}.json").write_text(json.dumps({"ckpt": flag("--ckpt"), "ema": "--ema" in argv, "set": flag("--set"), "k": int(flag("--k", "32")), "views": int(flag("--views", "8")), "argv": argv}))
     rf = out / f"results{tag}.jsonl"; done = set()
     if rf.exists():
@@ -155,6 +158,9 @@ if tool.endswith("eval_decarc.py"):
     sys.exit(0)
 if tool.endswith("arc_suite.py"):
     out = Path(flag("--out")); out.mkdir(parents=True, exist_ok=True)
+    key = f"N0:{Path(flag('--out')).name}:"   # keyed by the OUT DIR (rg96 / rt48 / s<i> share --set valhard)
+    if os.environ.get("STUB_EVAL_STALL", "") == key and (os.environ.get("STUB_EVAL_STALL_ALWAYS") == "1" or not (out / "stalled_once").exists()):
+        (out / "stalled_once").write_text("x"); time.sleep(int(os.environ.get("STUB_STALL_SLEEP", "12"))); sys.exit(0)
     ids = flag("--tasks").split(",") if flag("--tasks") else (json.load(open(os.path.join(HERE, "..", "repo", "tools", "valhard.json")))["valhard"] if flag("--set", "valhard") == "valhard" else [f"t{i}" for i in range(30)])
     with open(out / "results.jsonl", "w") as f:
         for t in ids: f.write(json.dumps({"task": t}) + "\n")
@@ -177,7 +183,7 @@ run_chain () {  # W NW [extra VAR=val...]
   local w=$1 nw=$2; shift 2
   ( cd "$SB/repo" && env PATH="$SB/bin:$PATH" CHAIN_PY="$SB/bin/stubpy" CHAIN_WORKER="$w" CHAIN_WORKERS="$nw" NCHIP_OVERRIDE=4 \
       LIVE_EVERY=1 C1_WAIT_PASSES=3 C1_WAIT_SLEEP=0 DA_PF_STEPS=20 DA_STEPS_DEC=8000 DA_STEPS_NAT=6000 DA_EXT_STEPS=4000 DA_EXT_WINDOW=2000 \
-      DA_MON=2000 DA_CKPT_EVERY=1000 "$@" bash tools/chain_decarc.sh > "$SB/w$w.log" 2>&1 )
+      DA_MON=2000 DA_CKPT_EVERY=1000 DA_EVAL_STALL_SEC=3 WATCH_EVERY=1 "$@" bash tools/chain_decarc.sh > "$SB/w$w.log" 2>&1 )
 }
 pargv () { "$REAL_PY" -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['argv']))" "$SB/repo/runs/pretraindecarc_$1/config.json"; }
 eargv () { "$REAL_PY" -c "import json,sys; print(' '.join(json.load(open(sys.argv[1])).get('argv', [])))" "$1"; }
@@ -263,6 +269,15 @@ mk_sandbox; run_chain 0 1 DA_WARMUP=8000
 grep -q "REGISTRY-BAD warmup 8000 >= DEC steps 8000" "$SB/w0.log" && grep -q "DECARC-REGISTRY-ABORT" "$SB/w0.log" && ! grep -q "PREFLIGHT\|PRETRAIN-START" "$SB/w0.log" && ok "S12 registry guard aborts before launch" || bad "S12"
 mk_sandbox; run_chain 0 1 DA_WARMUP=200
 pargv D0 | grep -q -- "--warmup 200" && [ "$(n_ok)" = 4 ] && ok "S12b the warmup knob reaches the trainer" || bad "S12b"
+
+echo "== S13 the eval STALL watchdog: a silent shard is killed after EVAL_STALL_SEC and retried once (resume-safe) =="
+mk_sandbox; run_chain 0 1 STUB_EVAL_STALL="D0:dev30:1"
+grep -q "EVAL-STALLED D0_dev30" "$SB/w0.log" && grep -q "EVAL-STALL-RETRY D0_dev30" "$SB/w0.log" && grep -q "EVAL-OK D0_dev30" "$SB/w0.log" && [ -f "$SB/gcs/decarc/D0_ARM_OK" ] && [ "$(n_ok)" = 4 ] && ok "S13 stall killed, retried, banked; complete" || bad "S13 ($(grep -c 'EVAL-STALLED D0_dev30' "$SB/w0.log") stalled, $(grep -c 'EVAL-OK D0_dev30' "$SB/w0.log") ok)"
+"$REAL_PY" -c "import json; s=json.load(open('$SB/repo/runs/decarceval_D0/dev30/summary.json')); assert s['n_tasks']==30, s" && ok "S13 the retried set has every task exactly once" || bad "S13 n-gate after retry"
+mk_sandbox; run_chain 0 1 STUB_EVAL_STALL="D0:dev30:1" STUB_EVAL_STALL_ALWAYS=1
+[ "$(grep -c 'EVAL-STALLED D0_dev30' "$SB/w0.log")" = 2 ] && grep -q "EVAL-SHARD-FAILED D0_dev30" "$SB/w0.log" && grep -q "ARM-PARTIAL D0" "$SB/w0.log" && [ ! -f "$SB/gcs/decarc/D0_ARM_OK" ] && ok "S13b a persistent stall fails the row after one retry (ARM-PARTIAL, rerunnable)" || bad "S13b"
+mk_sandbox; run_chain 0 1 STUB_EVAL_STALL="N0:valhard:"
+grep -q "EVAL-STALLED N0_valhard" "$SB/w0.log" && grep -q "EVAL-OK N0_valhard" "$SB/w0.log" && [ -f "$SB/gcs/decarc/N0_ARM_OK" ] && ok "S13c the native single-process set is watched too" || bad "S13c"
 
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

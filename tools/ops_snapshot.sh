@@ -28,20 +28,22 @@ DL=$(tr -dc '0-9' < runs/tpu_deadline.txt 2>/dev/null); LEFT="?"
 [ -n "$DL" ] && LEFT="$(awk -v d="$DL" -v n="$(date +%s)" 'BEGIN{printf "%.1fh", (d-n)/3600}') to $(date -u -r "$DL" +%FT%TZ)"
 echo "SNAPSHOT $NOW | watchdog: $(cat runs/tpu_status.txt 2>/dev/null || echo none) | supervisor: $SUP | deadline: $LEFT"
 [ -z "$Z" ] && { echo "NODE none READY (watchdog snapshot + positive describe over campaign zones)"; exit 0; }
+# LOAD (2026-09-10 thrash lesson): a 1-min load above ~1.5 x nproc starves the chain host-side drivers; no apostrophes inside REMOTE
 REMOTE='cd ~/qhrrn2 2>/dev/null || { echo "NOREPO"; exit 0; }
 echo "T $(date -u +%FT%TZ)"
 P=$(cat runs/detached.pid 2>/dev/null); if [ -n "$P" ] && kill -0 "$P" 2>/dev/null; then echo "PID $P alive"; else echo "PID ${P:-none} DEAD exit=$(cat runs/detached.exit 2>/dev/null || echo ?)"; fi
 echo "MARK $(grep -E "ARM-OK|PRETRAIN-(START|OK|SKIP|NAN|RESTORE|OOM)|STAGEA|EVAL-(OK|SKIP|FAILED|N-BAD|SHARD)|CENSUS-(OK|SKIP|FAILED)|CALIB-(OK|SKIP|FAILED)|VALBEST|VB-FALLBACK|AMPUTAT|RIDER|WORKER-DONE|COMPLETE|INCOMPLETE|TEARDOWN|BAD-ARM|MISSING" runs/detached.log 2>/dev/null | tail -1 | cut -c1-120)"
 L=$(ls -t runs/pretrain'"$R_TAG"'_*.log 2>/dev/null | head -1)
 [ -n "$L" ] && echo "PT $(basename "$L" .log) @$(stat -c %y "$L" | cut -c12-19)Z: $(grep -E "^step |RESUMED|INIT-FROM|DP:|NAN|OOM" "$L" | tail -1 | cut -c1-110)"
-E=$(ls -td runs/sx*/ runs/sx*/*/ 2>/dev/null | grep -vE "/(records|partial)" | head -1)   # nested eval dirs (sxeval_p*/full_*) too
+E=$(ls -td runs/sx*/ runs/sx*/*/ runs/decarceval_*/*/ 2>/dev/null | grep -vE "/(records|partial|s[0-9])" | head -1)   # nested eval dirs (sxeval_p*/full_*, decarceval_<arm>/<set>) too
 if [ -n "$E" ]; then
-  if ls "$E"shard_*.log >/dev/null 2>&1; then echo "EV $(basename "$E") @$(stat -c %y "$E" | cut -c12-19)Z shards: $(for f in "$E"shard_*.log; do grep "banked partial" "$f" | tail -1 | sed -E "s/.*@ ([0-9]+\/[0-9]+).*/\1/"; done | tr "\n" " ")"
+  if ls "$E"results_*.jsonl "$E"shard_*.log >/dev/null 2>&1; then N=$(ls -t "$E"results_*.jsonl "$E"shard_*.log 2>/dev/null | head -1); echo "EV $(basename "$(dirname "$E")")/$(basename "$E") newest@$(stat -c %y "$N" | cut -c12-19)Z age=$(( $(date +%s) - $(stat -c %Y "$N") ))s tasks=$(cat "$E"results_*.jsonl 2>/dev/null | wc -l | tr -d " ") shards=$(ls "$E"shard_*.log 2>/dev/null | wc -l | tr -d " ")"
   else L=$(tail -1 "$E"run.log 2>/dev/null); case "$L" in \{*) L="summary written (values not read in the ops phase)";; esac; echo "EV $(basename "$E") @$(stat -c %y "$E" | cut -c12-19)Z: $(echo "$L" | cut -c1-100)"; fi
 fi
 U=$(grep -oE "USEC=[0-9]+" /run/systemd/shutdown/scheduled 2>/dev/null | cut -d= -f2)
 if [ -n "$U" ]; then echo "DMS $(date -u -d @$((U/1000000)) +%FT%TZ) (in $(( (U/1000000 - $(date +%s)) / 60 )) min)"; else echo "DMS none scheduled"; fi
 G=$(pgrep -af "tpu-vm [d]elete" | head -1 | cut -c1-90); echo "GUARD ${G:-NONE PLANTED}"
+echo "LOAD $(cut -d" " -f1-3 /proc/loadavg) nproc=$(nproc)"
 echo "DISK $(df -h / | awk "NR==2{print \$4\" free\"}")"
 echo "LB $(tail -1 runs/live_bank.log 2>/dev/null || echo "no live_bank.log — the 5-min live bank is NOT running on this node")"'
 perl -e 'alarm 120; exec @ARGV' -- gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=quantum-llm --worker=0 \

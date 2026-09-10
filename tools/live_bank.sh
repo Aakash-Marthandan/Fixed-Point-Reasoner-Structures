@@ -26,7 +26,7 @@ cd "$(dirname "$0")/.." || exit 1
 GCS=${GCS:-gs://qhrrn2-rescue/sportC2}; LIVE="$GCS/live"; R_TAG=${R_TAG:-sportC2}
 ARMS=${ARMS:-W0 R1 R2 R3 R4 X1 X2}
 PIDF=runs/live_bank.pid; LOG=runs/live_bank.log
-EXCL='^(pretrainsportC1_|pretrainsportBr2b_|_live_restore|_canary|pretrain6_|cloud/|.*_pull|.*\.tmp\.npz$|.*\.tmp$|live_bank\.(pid|log|out)$)'
+EXCL='^(pretrainsportC1_|pretrainsportBr2b_|_live_restore|_canary|pretrain6_|cloud/|.*_pull|.*\.tmp\.npz$|.*\.tmp$|live_bank\.(pid|log|out)$|orbit_arc_full_|g1_.*\.log$|g1_node.*\.log$|pretrain13_)'   # 2026-09-10: auxiliary rows (G1) never ride the live bank — a relaunch re-pulled 370 MB of a dead run
 PYV=${REAL_PY:-}; [ -n "$PYV" ] || { [ -x .venv/bin/python ] && PYV=.venv/bin/python || PYV=python3; }
 say () { echo "$(date -u +%FT%TZ) $*" | tee -a "$LOG"; }
 
