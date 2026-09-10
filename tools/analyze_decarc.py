@@ -147,6 +147,8 @@ def letters(rec):
         if not s: out.append(f"{arm} NO-DATA"); continue
         v = s.get("vote") or {}
         out.append(f"{arm} pass@1 {100*(s.get('clean_exact_limit') or 0):.2f} | vote pass@2 {100*v.get('pass2', float('nan')):.2f} (n {s.get('n_queries')})")
+    s = ev("N0", "arc1eval")
+    out.append(f"N0 pass@1 {100*(s.get('clean_exact_limit') or 0):.2f} (oracle@{8} {100*(s.get('oracle') or 0):.2f}; n {s.get('n_queries')})" if s else "N0 NO-DATA")
     L["R-DA-8 PUBLIC"] = " | ".join(out)
     # R-DA-9 CONTROL (the d96 rung's registered band on rg-96)
     s = ev("N0", "rg96")

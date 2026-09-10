@@ -89,7 +89,8 @@ def run_task(state, cfg, tid, names, a):
 
 
 def summarize(out: Path, names):
-    R = [json.loads(l) for l in (out / "results.jsonl").read_text().splitlines() if l.strip()]
+    R = [json.loads(l) for rf in sorted(out.glob("results*.jsonl")) for l in rf.read_text().splitlines() if l.strip()]
+    seen = set(); R = [r for r in R if not (r["task"] in seen or seen.add(r["task"]))]
     names = [n for n in names if all(n in r["g"] for r in R)]
     lines = [f"ORBIT INVARIANCE, ARC twin: {out.name}; tasks {len(R)}, queries {sum(r['n_queries'] for r in R)}; transforms {names}"]
     ref = {(r["task"], i): q for r in R for i, q in enumerate(r["g"]["g0"]["q"])} if "g0" in names else {}
@@ -116,6 +117,7 @@ def main():
     ap.add_argument("--steps", type=int, default=600); ap.add_argument("--val-every", type=int, default=50)
     ap.add_argument("--t-total", type=int, default=16); ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--summarize", action="store_true")
+    ap.add_argument("--shard", default=None, help="i/n: this process's task slice (results_i.jsonl; the summary merges every shard)")
     ap.add_argument("--dump-z", action="store_true", help="on g0: save the carried latent + confidence at steps 1 / T / t_total per query (the G2 readout-fit features)")
     a = ap.parse_args(); names = a.transforms.split(","); out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     if a.summarize: return summarize(out, names)
@@ -126,9 +128,12 @@ def main():
     else:
         import dev30; task_ids = sorted(dev30.MANIFEST)
     if a.limit: task_ids = task_ids[:a.limit]
-    results = out / "results.jsonl"; done = set()
-    if results.exists():
-        for line in results.read_text().splitlines():
+    tag = ""
+    if a.shard:
+        i, n = (int(v) for v in a.shard.split("/")); task_ids = task_ids[i::n]; tag = f"_{i}"
+    results = out / f"results{tag}.jsonl"; done = set()
+    for rf in out.glob("results*.jsonl"):        # done = the union over every shard (and the pre-shard file)
+        for line in rf.read_text().splitlines():
             try: done.add(json.loads(line)["task"])
             except Exception: pass
     with open(results, "a") as f:
@@ -137,7 +142,8 @@ def main():
             t0 = time.time(); rec = run_task(state, cfg, tid, names, a)
             f.write(json.dumps(rec) + "\n"); f.flush()
             print(f"{tid} " + " ".join(f"{n}:{sum(q['exact_limit'] for q in rec['g'][n]['q'])}/{rec['n_queries']}" for n in names) + f" {time.time()-t0:.0f}s", flush=True)
-    summarize(out, names)
+    if not a.shard:
+        summarize(out, names)
 
 
 if __name__ == "__main__":

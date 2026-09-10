@@ -27,6 +27,7 @@ STEPS_DEC=${DA_STEPS_DEC:-30000}; STEPS_NAT=${DA_STEPS_NAT:-40000}
 EXT_STEPS=${DA_EXT_STEPS:-10000}; EXT_WINDOW=${DA_EXT_WINDOW:-4000}
 DEC_W=${DA_DEC_W:-160}; HEADS=${DA_HEADS:-4}; BATCH=${DA_BATCH:-64}; NVAL=${DA_NVAL:-96}; W_VOID=${DA_W_VOID:-0.5}
 TABLE_LR=${DA_TABLE_LR:-1e-2}; TABLE_WD=${DA_TABLE_WD:-0.1}   # the task-code table's own optimizer (the audit, plan §10 item 2)
+WD=${DA_WD:-0.1}; LR=${DA_LR:-2e-4}   # the FIELD'S ARC REGIME (TRM ARC-1: lr 2e-4 constant after warmup, weight decay .1; the Sudoku regime was wd 1.0 / lr 1e-4) — plan §11
 MON=${DA_MON:-2000}; CKPT_EVERY=${DA_CKPT_EVERY:-500}; PF_STEPS=${DA_PF_STEPS:-60}
 K_VH=${DA_K_VH:-32}; K_GATE=${DA_K_GATE:-8}; VIEWS_VH=${DA_VIEWS_VH:-8}; ARC1_VIEWS=${DA_ARC1_VIEWS:-8}; ARC1_K=${DA_ARC1_K:-8}
 FIT_STEPS=${DA_FIT_STEPS:-600}; T_TOTAL=${DA_T_TOTAL:-16}
@@ -67,7 +68,7 @@ corpus_common () { echo "--equilibrium --rearc --conceptarc --orbit 4 --n-val $N
 decarc_common () {   # the DEC on the ten-field colour state under the champion loop + regime (plan §1)
   echo "$(corpus_common) --sot --act --cell decarc --dec-width $DEC_W --decarc-heads $HEADS \
         --trm-layers 2 --trm-h-cycles 3 --trm-l-cycles 6 --T 16 --trm-lambda 0.05 --trm-beta 0.01 \
-        --loss stablemax --batch $BATCH --wd 1.0 --warmup 2000 --lr 1e-4 --lr-end 1e-4 --beta2 0.95 --ema 0.999 \
+        --loss stablemax --batch $BATCH --wd $WD --warmup 2000 --lr $LR --lr-end $LR --beta2 0.95 --ema 0.999 \
         --w-void $W_VOID --table-lr $TABLE_LR --table-wd $TABLE_WD --beta-flux-nl 0 --remat --monitor-every $MON --grid-every $MON --ckpt-every $CKPT_EVERY --val-every 100000"
 }
 native_common () {   # the d96 rung's A5-class arm (chain_r0.sh: PRICED + NI, B64/T6, the knee; the back-port: 2k val rows + grids)
@@ -266,14 +267,33 @@ eval_nat () {  # SETNAME SET CHIP TASKS_CSV EXTRA... — the native control thro
   echo ok | gsutil -q cp - "$GCS/evals/${name}_OK"
   echo "EVAL-OK $name $(date -u +%H:%M)"
 }
-gate_tasks () {  # SET -> the comma list of the gate set's task ids from the data dirs (the same rule as eval_decarc.task_ids_of; no heavy import)
-  ${REAL_PY:-python3} - "$1" <<'PYEOF'
+gate_tasks () {  # SET [i/n] -> the comma list of the set's task ids from the data dirs (the same rule as eval_decarc.task_ids_of; no heavy import)
+  ${REAL_PY:-python3} - "$1" "${2:-}" <<'PYEOF'
 import sys
 from pathlib import Path
-name = sys.argv[1]
-dirs = {"rg96": ("re_gate48", "re_gateb48"), "rt48": ("re_train48",)}[name]
+name, shard = sys.argv[1], sys.argv[2]
+dirs = {"rg96": ("re_gate48", "re_gateb48"), "rt48": ("re_train48",), "arc1eval": ("ARC-AGI/data/evaluation",)}[name]
 ids = sorted(p.stem for d in dirs for p in (Path("data") / d).glob("*.json") if not p.name.startswith("."))
+if shard:
+    i, n = (int(v) for v in shard.split("/")); ids = ids[i::n]
 print(",".join(ids))
+PYEOF
+}
+merge_nat_shards () {  # OUTDIR NSH NGATE — the native public row: one summary over the shard dirs (query-weighted means), n-gated on the task count
+  ${REAL_PY:-python3} - "$1" "$2" "$3" <<'PYEOF'
+import json, sys
+from pathlib import Path
+out, nsh, ngate = Path(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
+S = [json.load(open(out / f"s{i}" / "summary.json")) for i in range(nsh)]
+n_tasks = sum(1 for i in range(nsh) for l in open(out / f"s{i}" / "results.jsonl") if l.strip())
+nq = sum(s["n_queries"] for s in S)
+def wmean(k):
+    vals = [(s[k], s["n_queries"]) for s in S if s.get(k) is not None]
+    return sum(v * n for v, n in vals) / max(sum(n for _, n in vals), 1) if vals else None
+M = {"ckpt": S[0].get("ckpt"), "set": "arc1eval", "shards": nsh, "n_tasks": n_tasks, "n_queries": nq,
+     **{k: wmean(k) for k in ("clean_exact_limit", "oracle", "majority", "t1r_y", "t1r_z", "spurious_rate", "retain_gt", "converged_wrong_of_converged", "commit1")}}
+(out / "summary.json").write_text(json.dumps(M, indent=1))
+sys.exit(0 if n_tasks == ngate else 1)
 PYEOF
 }
 
@@ -297,6 +317,23 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
     eval_nat rg96 valhard 2 "$(gate_tasks rg96)" --k "$K_GATE" & pids+=($!)
     eval_nat rt48 valhard 3 "$(gate_tasks rt48)" --k "$K_GATE" & pids+=($!)
     for p in "${pids[@]}"; do wait "$p" || r=1; done
+    # the native control's PUBLIC row: the 400 ARC-1 evaluation tasks through arc_suite, 4-way sharded by task lists, merged
+    if ! gsutil -q stat "$GCS/evals/N0_arc1eval_OK" 2>/dev/null; then
+      local O="runs/decarceval_N0/arc1eval" ps=() rr=0; mkdir -p "$O"
+      for i in $(seq 0 $((NCHIP - 1))); do
+        mkdir -p "$O/s$i"
+        ( pin "$i" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set valhard --tasks "$(gate_tasks arc1eval "$i/$NCHIP")" --out "$O/s$i" --steps "$FIT_STEPS" --t-total "$T_TOTAL" --k "$ARC1_K" > "$O/s$i/run.log" 2>&1 ) & ps+=($!)
+      done
+      for p in "${ps[@]}"; do wait "$p" || rr=1; done
+      if [ $rr -eq 0 ] && merge_nat_shards "$O" "$NCHIP" 400; then
+        tar czf /tmp/N0_arc1eval.tgz "$O" && gsutil -q cp /tmp/N0_arc1eval.tgz "$GCS/evals/N0_arc1eval.tgz"
+        echo ok | gsutil -q cp - "$GCS/evals/N0_arc1eval_OK"; echo "EVAL-OK N0_arc1eval $(date -u +%H:%M)"
+      else
+        echo "EVAL-FAILED N0_arc1eval"; r=1
+      fi
+    else
+      echo "EVAL-SKIP N0_arc1eval"
+    fi
     [ $r -eq 0 ] || rc=1
   fi
   return $rc
