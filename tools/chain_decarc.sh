@@ -271,7 +271,7 @@ set_n () {  # SETNAME -> the registered task count of the set (the pilot's LIMIT
 set_tasks () { [ -n "$LIMIT" ] && gate_tasks "$1" || echo ""; }   # the native sets' --tasks list: empty unless the pilot's LIMIT is set
 finish_dec_eval () {  # NAME OUTDIR NGATE — summarize, n-gate on the task count, bank, mark
   local name=$1 O=$2 NGATE=$3
-  $PY tools/eval_decarc.py --out "$O" --summarize > "$O/summary.log" 2>&1 || { echo "EVAL-SUMMARY-FAILED $name"; return 1; }
+  JAX_PLATFORMS=cpu $PY tools/eval_decarc.py --out "$O" --summarize > "$O/summary.log" 2>&1 || { echo "EVAL-SUMMARY-FAILED $name"; return 1; }
   ${REAL_PY:-python3} -c "import json,sys; s=json.load(open('$O/summary.json')); sys.exit(0 if s['n_tasks']==$NGATE and s.get('xcheck_all', True) else 1)" \
     || { echo "EVAL-N-BAD $name"; return 1; }
   tar czf "/tmp/${name}.tgz" "$O" && gsutil -q cp "/tmp/${name}.tgz" "$GCS/evals/${name}.tgz"
