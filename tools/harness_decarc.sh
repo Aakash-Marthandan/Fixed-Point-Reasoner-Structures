@@ -168,6 +168,10 @@ if tool.endswith("arc_suite.py"):
         for t in ids: f.write(json.dumps({"task": t}) + "\n")
     (out / "summary.json").write_text(json.dumps({"ckpt": flag("--ckpt"), "n_queries": len(ids), "clean_exact_limit": .07, "oracle": .15, "argv": argv}))
     sys.exit(0)
+if tool.endswith("cost_probe.py"):
+    out = Path(flag("--out")); out.parent.mkdir(parents=True, exist_ok=True)
+    s = float(os.environ.get("STUB_COST_S", "0.01")); dec = "decarc_D" in flag("--ckpt")   # 0.01 s/step -> the full registered battery projects ~1.8 h on the sandbox's 4 chips (inside the 8 h budget); S16 sets 100
+    out.write_text(json.dumps({"ckpt": flag("--ckpt"), "set": flag("--set"), "task": "t", "cell_kind": "decarc" if dec else "rg", "B": 6, "n_support": 3, "fit_T": int(flag("--fit-t", "16")), "cfg_T": 16, "t_total": int(flag("--t-total", "16")), "steps": int(flag("--steps", "8")), "compile_s": 1.0, "s_per_step": s, "val_first_s": 1.0, "val_s": 0.1, "trace_first_s": 1.0, "trace_s": 0.2, "device": "stub", "argv": argv})); sys.exit(0)
 if tool.endswith("eval_sudoku_extreme.py"):
     if "--merge" in argv:
         d = Path(flag("--merge")); n = sum(json.load(open(p))["n"] for p in d.glob("shard_*.json"))
@@ -209,7 +213,8 @@ for s in valhard dev30 rg96 rt48 arc1eval; do [ -f "$SB/gcs/decarc/evals/N0_${s}
 EV=$(eargv "$SB/repo/runs/decarceval_N0/rg96/summary.json"); echo "$EV" | grep -q -- "--tasks" && echo "$EV" | grep -q "rg_00d62c1b" && echo "$EV" | grep -q -- "--k 8" && ok "S1 N0 rg-96 through arc_suite --tasks (96 ids), k8" || bad "S1 N0 rg96: ${EV:0:200}"
 "$REAL_PY" -c "import json; v=json.load(open('$SB/repo/runs/pretraindecarc_D0/vsel.json')); assert v['step'] and v['ckpt'].endswith('.pkl'), v; v=json.load(open('$SB/repo/runs/pretraindecarc_N0/vsel.json')); assert v['step'], v" && [ -f "$SB/gcs/decarc/D0_vsel.json" ] && ok "S1 vsel.json written and banked (DEC on the EMA monitor, N0 on its val rows)" || bad "S1 vsel"
 grep -q "RIDER-OFF" "$SB/w0.log" && ok "S1 rider off by default" || bad "S1 rider default"
-EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); EN=$(eargv "$SB/repo/runs/decarceval_N0/valhard/summary.json"); ! echo "$EV" | grep -q -- "--limit" && ! echo "$EN" | grep -q -- "--tasks" && ok "S1 no LIMIT: the eval commands carry no --limit / no --tasks on the native sets (byte-identical night path)" || bad "S1 limit leak: $EV | $EN"
+[ "$(grep -c "COST-OK" "$SB/w0.log")" = 4 ] && [ -f "$SB/gcs/decarc/D0_cost_probe.json" ] && [ -f "$SB/gcs/decarc/D0_COST_OK" ] && grep -q "COST-PROBE D0 projected_h=" "$SB/w0.log" && ok "S1 the cost probe ran before every battery (4 COST-OK; json banked)" || bad "S1 cost probe: $(grep -c COST-OK "$SB/w0.log")"
+EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); EN=$(eargv "$SB/repo/runs/decarceval_N0/valhard/summary.json"); ! echo "$EV" | grep -q -- "--limit" && ! echo "$EV" | grep -q -- "--fit-t" && ! echo "$EN" | grep -q -- "--tasks" && ! echo "$EN" | grep -q -- "--fit-t" && ok "S1 no LIMIT / no FIT_T: the eval commands carry no --limit, no --fit-t, no --tasks on the native sets (byte-identical night path)" || bad "S1 limit/fit-t leak: $EV | $EN"
 
 echo "== S2 idempotent rerun: nothing re-runs, completion again =="
 run_chain 0 1
@@ -289,6 +294,19 @@ grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S14 com
 EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); echo "$EV" | grep -q -- "--limit 8" && ok "S14 eval_decarc carries --limit 8" || bad "S14 --limit: $EV"
 EN=$(eargv "$SB/repo/runs/decarceval_N0/valhard/summary.json"); ED=$(eargv "$SB/repo/runs/decarceval_N0/dev30/summary.json"); [ "$(echo "$EN" | sed -n "s/.*--tasks \([^ ]*\).*/\1/p" | tr "," "\n" | wc -l | tr -d " ")" = 8 ] && [ "$(echo "$ED" | sed -n "s/.*--tasks \([^ ]*\).*/\1/p" | tr "," "\n" | wc -l | tr -d " ")" = 8 ] && echo "$ED" | grep -q "1e0a9b12" && ok "S14 the native val-hard / dev-30 rows carry --tasks with 8 ids (dev-30 from the manifest literal)" || bad "S14 native --tasks: $EN | $ED"
 [ "$(cat "$SB/repo/runs/decarceval_N0/rg96/results.jsonl" | wc -l | tr -d " ")" = 8 ] && ok "S14 rg-96 native row = 8 tasks" || bad "S14 rg96 rows"
+
+echo "== S15 the FIT_T knob: DA_FIT_T=1 -> every fit (DEC shards, the native sets, the native public row) carries --fit-t 1 =="
+mk_sandbox; run_chain 0 1 DA_FIT_T=1
+grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S15 complete under FIT_T 1" || bad "S15 complete ($(n_ok) ok)"
+EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); EG=$(eargv "$SB/repo/runs/decarceval_D0/arc1eval/provenance_0.json"); EN=$(eargv "$SB/repo/runs/decarceval_N0/valhard/summary.json"); EP=$(eargv "$SB/repo/runs/decarceval_N0/arc1eval/s0/summary.json"); echo "$EV" | grep -q -- "--fit-t 1" && echo "$EG" | grep -q -- "--fit-t 1" && echo "$EN" | grep -q -- "--fit-t 1" && echo "$EP" | grep -q -- "--fit-t 1" && echo "$EV" | grep -q -- "--t-total 16" && ok "S15 --fit-t 1 on the DEC sets, the native sets and the native public row; --t-total untouched" || bad "S15 fit-t: $EV | $EG | $EN | $EP"
+
+echo "== S16 the COST PROBE budget: a 100 s/step fit -> COST-ABORT on D0 before its battery, the CHAIN-COST-ABORT marker, nothing else launched; the rerun stands down =="
+mk_sandbox; run_chain 0 1 STUB_COST_S=100
+grep -q "COST-ABORT D0 projected" "$SB/w0.log" && grep -q "DECARC-COST-ABORT worker=0 arm=D0" "$SB/w0.log" && [ -f "$SB/gcs/decarc/CHAIN-COST-ABORT" ] && [ ! -f "$SB/gcs/decarc/D0_COST_OK" ] && [ "$(grep -c "PRETRAIN-START" "$SB/w0.log")" = 1 ] && [ ! -f "$SB/gcs/decarc/evals/D0_valhard_OK" ] && ! grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && ok "S16 COST-ABORT before D0's battery; only D0's pretrain ran; marker set" || bad "S16 abort: $(grep -c PRETRAIN-START "$SB/w0.log") pretrains; $(ls "$SB/gcs/decarc/" | tr "\n" " ")"
+run_chain 0 1 STUB_COST_S=100
+grep -q "COST-ABORT-STANDING" "$SB/w0.log" && [ "$(grep -c "PRETRAIN-START" "$SB/w0.log")" = 0 ] && ok "S16 the rerun stands down on the marker" || bad "S16 rerun"
+rm -f "$SB/gcs/decarc/CHAIN-COST-ABORT"; run_chain 0 1
+grep -q "COST-OK D0" "$SB/w0.log" && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S16 marker removed + a sane cost -> the chain completes (D0's pretrain resumed from its grid)" || bad "S16 recovery ($(n_ok) ok)"
 
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -110,7 +110,7 @@ def ex(p, gt):
 def run_task(state, cfg, tid, a):
     eps = load_task(tid)
     t0 = time.time()
-    model, _snaps, sel, _F = P.fit_arm_a(state, cfg, eps, steps=a.steps, val_every=a.val_every, seed=a.seed)
+    model, _snaps, sel, _F = P.fit_arm_a(state, cfg, eps, steps=a.steps, val_every=a.val_every, seed=a.seed, fit_T=a.fit_t)
     code = jnp.asarray(sel[1]); assert code.shape == (DAC.F, cfg.d_task), code.shape
     rec = {"task": tid, "sel_step": sel[0], "fit_s": round(time.time() - t0, 1), "queries": []}
     for qi, ep in enumerate(eps):
@@ -162,7 +162,7 @@ def run_task(state, cfg, tid, a):
         for k in range(a.views):
             t = G.Transform(k=k)
             teps = [G.transform_episode(e, t) for e in eps]
-            mk, _s, sk, _ = P.fit_arm_a(state, cfg, teps, steps=a.steps, val_every=a.val_every, seed=a.seed) if k > 0 else (model, None, sel, None)
+            mk, _s, sk, _ = P.fit_arm_a(state, cfg, teps, steps=a.steps, val_every=a.val_every, seed=a.seed, fit_T=a.fit_t) if k > 0 else (model, None, sel, None)
             ck = jnp.asarray(sk[1])
             for qi, tep in enumerate(teps):
                 if tep.query_y is None: continue
@@ -185,8 +185,8 @@ def run_task(state, cfg, tid, a):
         rng = np.random.default_rng(int(hashlib.md5(tid.encode()).hexdigest()[:8], 16) + a.seed)
         lut = np.arange(M.VOCAB, dtype=np.int8); lut[:10] = rng.permutation(10).astype(np.int8)
         tp = G.Transform(k=0, lut=lut); teps = [G.transform_episode(e, tp) for e in eps]
-        mp, _s, sp, _ = P.fit_arm_a(state, cfg, teps, steps=a.steps, val_every=a.val_every, seed=a.seed)
-        mf, _s, sf, _ = P.fit_arm_a(state, cfg, eps, steps=a.steps, val_every=a.val_every, seed=a.seed + 1)
+        mp, _s, sp, _ = P.fit_arm_a(state, cfg, teps, steps=a.steps, val_every=a.val_every, seed=a.seed, fit_T=a.fit_t)
+        mf, _s, sf, _ = P.fit_arm_a(state, cfg, eps, steps=a.steps, val_every=a.val_every, seed=a.seed + 1, fit_T=a.fit_t)
         for q in rec["queries"]:
             qi = q["q"]
             sv = trace_dec(mp, cfg, teps[qi].query_x, code=jnp.asarray(sp[1]), t_total=a.t_total)
@@ -277,7 +277,7 @@ def main():
     ap.add_argument("--set", default="valhard", choices=["valhard", "dev30", "rg96", "rt48", "arc1eval"]); ap.add_argument("--tasks", default=None)
     ap.add_argument("--limit", type=int, default=0); ap.add_argument("--shard", default=None, help="i/n: this process's task slice")
     ap.add_argument("--steps", type=int, default=600); ap.add_argument("--val-every", type=int, default=50)
-    ap.add_argument("--t-total", type=int, default=16); ap.add_argument("--k", type=int, default=32); ap.add_argument("--sigma", type=float, default=None)
+    ap.add_argument("--t-total", type=int, default=16); ap.add_argument("--fit-t", type=int, default=None, help="FIT-ONLY outer passes for the arm-A fit step (None = the deployed cfg.T); the predict/trace protocol is untouched"); ap.add_argument("--k", type=int, default=32); ap.add_argument("--sigma", type=float, default=None)
     ap.add_argument("--ladder", default="0,0.2,0.4,0.6,0.8"); ap.add_argument("--ladder-draws", type=int, default=2); ap.add_argument("--ladder-steps", type=int, default=8)
     ap.add_argument("--views", type=int, default=8); ap.add_argument("--flip-test", action="store_true")
     ap.add_argument("--seed", type=int, default=0); ap.add_argument("--summarize", action="store_true")
@@ -304,7 +304,7 @@ def main():
         for line in results.read_text().splitlines():
             try: done.add(json.loads(line)["task"])
             except Exception: pass
-    (out / f"provenance{tag}.json").write_text(json.dumps({"ckpt": a.ckpt, "ema": a.ema, "set": a.set, "k": a.k, "views": a.views, "ladder": a.ladder, "steps": a.steps, "t_total": a.t_total, "seed": a.seed, "sigma": a.sigma}))
+    (out / f"provenance{tag}.json").write_text(json.dumps({"ckpt": a.ckpt, "ema": a.ema, "set": a.set, "k": a.k, "views": a.views, "ladder": a.ladder, "steps": a.steps, "t_total": a.t_total, "seed": a.seed, "sigma": a.sigma, "fit_T": a.fit_t}))
     with open(results, "a") as f:
         for tid in ids:
             if tid in done: print(f"skip {tid}", flush=True); continue

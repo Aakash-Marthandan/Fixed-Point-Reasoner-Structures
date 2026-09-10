@@ -132,14 +132,20 @@ def measure_flux(params, cfg, x_b, y_b, tau, tv):
 
 
 def _fit(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
-         snapshots=None):
+         snapshots=None, fit_T=None):
     """The fitting core: LoO-validated arm fit. Returns a dict with the
     earliest-exact/best/final trainables, curves, and tv accessor.
 
     snapshots: optional list — when given, (step, tv_numpy) is appended at
     every validation point (E1 instrument, ledger 2026-08-08; default None
     leaves the deployed path byte-identical — equivalence test
-    tests/test_probe_e1e3.py::test_snapshot_flag_inert)."""
+    tests/test_probe_e1e3.py::test_snapshot_flag_inert).
+
+    fit_T: optional FIT-ONLY outer-pass count (2026-09-10, the DEC-ARC pilot's cost
+    finding): the fit STEP runs the cell through iterate at cfg.T := fit_T (1 = one
+    map application per step, the training form of the SoT-trained cells); the
+    validation predict and everything downstream keep the deployed cfg.T. None =
+    byte-identical to before (tests/test_fit_t.py)."""
     support = list(episodes[0].support)
     train_pairs, (val_x, val_y) = support[:-1], support[-1]
     x_b, y_b = T.pairs_to_batch(train_pairs, transforms=None, seed=seed)
@@ -152,7 +158,8 @@ def _fit(arm, cfg, ckpt_state, episodes, *, steps, val_every, wd, tau, seed,
         tv0 = jnp.asarray(np.asarray(ckpt_state["table"]).mean(0))
         trainable, has_tv = {"model": model, "tv": tv0}, True
 
-    step, make_opt = _arm_step(cfg, arm, ARM_LR[arm], wd, tau, has_tv)
+    cfg_fit = cfg if fit_T is None else dataclasses.replace(cfg, T=int(fit_T))
+    step, make_opt = _arm_step(cfg_fit, arm, ARM_LR[arm], wd, tau, has_tv)
     opt_state = make_opt(trainable).init(trainable)
 
     def tv_of(tr):

@@ -120,7 +120,7 @@ def _traced_fwd(cfg: Config, tau: float, t_norm: float):
 
 
 def fit_arm_a(state, cfg: Config, episodes, *, steps: int, val_every: int,
-              wd: float = 1e-4, tau: float = 1.0, seed: int = 0):
+              wd: float = 1e-4, tau: float = 1.0, seed: int = 0, fit_T=None):
     """THE deployed arm-A fit (eval_dev30._fit imported, not reimplemented —
     the 2026-08-08 cross-check showed a local replication silently diverged;
     the instrument now shares the measured system's code object). Returns
@@ -128,7 +128,7 @@ def fit_arm_a(state, cfg: Config, episodes, *, steps: int, val_every: int,
     import eval_dev30 as ED
     snaps = []
     F = ED._fit("A", cfg, state, episodes, steps=steps, val_every=val_every,
-                wd=wd, tau=tau, seed=seed, snapshots=snaps)
+                wd=wd, tau=tau, seed=seed, snapshots=snaps, fit_T=fit_T)
     # deployed attempt-1 semantics: earliest val-exact, else MDL-best
     if F["first_exact"] is not None:
         sel_tr, sel_step = F["first_exact"]

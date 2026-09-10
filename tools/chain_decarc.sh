@@ -32,6 +32,8 @@ WD=${DA_WD:-0.1}; LR=${DA_LR:-2e-4}   # the FIELD'S ARC REGIME (TRM ARC-1: lr 2e
 MON=${DA_MON:-2000}; CKPT_EVERY=${DA_CKPT_EVERY:-500}; PF_STEPS=${DA_PF_STEPS:-60}
 K_VH=${DA_K_VH:-32}; K_GATE=${DA_K_GATE:-8}; VIEWS_VH=${DA_VIEWS_VH:-8}; ARC1_VIEWS=${DA_ARC1_VIEWS:-8}; ARC1_K=${DA_ARC1_K:-8}
 FIT_STEPS=${DA_FIT_STEPS:-600}; T_TOTAL=${DA_T_TOTAL:-16}
+COST_STEPS=${DA_COST_STEPS:-8}; COST_BUDGET_H=${DA_COST_BUDGET_H:-8}   # rule 13a: the cost probe's fit steps; the per-arm battery budget (hours on this host; 0 = probe only)
+FIT_T=${DA_FIT_T:-}   # the FIT-ONLY outer-pass count for EVERY cell's arm-A fit step (1 = one map application per step, the training form; unset = the deployed cfg.T); the predict/trace protocol (T_TOTAL) is untouched
 LIMIT=${DA_LIMIT:-}   # PILOT ONLY (2026-09-10): the first LIMIT tasks of every eval set (eval_decarc --limit; arc_suite --tasks); the n-gates honor it; the night leaves it unset -> byte-identical commands
 RIDER=${RIDER:-0}
 NPZ=${SX_NPZ_PATH:-data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz}
@@ -60,6 +62,7 @@ ensure_data () {
   echo "DATA-OK"
 }
 ensure_data || { echo "$SENT-DATA-ABORT worker=$W $(date -u +%FT%TZ)"; exit 2; }
+gsutil -q stat "$GCS/CHAIN-COST-ABORT" 2>/dev/null && { echo "COST-ABORT-STANDING (marker $GCS/CHAIN-COST-ABORT present: remove it after the protocol decision; nothing runs)"; exit 3; }
 export JAX_COMPILATION_CACHE_DIR="$PWD/jax_cache"; mkdir -p "$PWD/jax_cache"
 gsutil -q cp "$GCS/jax_cache.tgz" /tmp/jc.tgz 2>/dev/null && tar xzf /tmp/jc.tgz 2>/dev/null && echo "COMPILE-CACHE restored"
 
@@ -284,7 +287,7 @@ eval_dec () {  # ARM SETNAME SET CK NSH EXTRA... — the DEC-ARC battery on one 
     pids=()
     for i in $(seq 0 $((NSH - 1))); do
       pin $((i % NCHIP)) ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/eval_decarc.py --ckpt "$CK" --set "$set" --out "$O" --shard "$i/$NSH" \
-          --steps "$FIT_STEPS" --t-total "$T_TOTAL" ${LIMIT:+--limit $LIMIT} "$@" >> "$O/shard_$i.log" 2>&1 & pids+=($!)
+          --steps "$FIT_STEPS" --t-total "$T_TOTAL"${FIT_T:+ --fit-t $FIT_T} ${LIMIT:+--limit $LIMIT} "$@" >> "$O/shard_$i.log" 2>&1 & pids+=($!)
     done
     watch_shards "$name" "$O" "${pids[@]}"; rc=$?
     [ $rc -eq 1 ] && [ $attempt -eq 1 ] && { echo "EVAL-STALL-RETRY $name (the shards are resume-safe: only the missing tasks re-run)"; continue; }
@@ -301,7 +304,7 @@ eval_nat () {  # SETNAME SET CHIP TASKS_CSV EXTRA... — the native control thro
   mkdir -p "$O"
   local rc attempt
   for attempt in 1 2; do
-    pin "$chip" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set "$set" ${tasks:+--tasks "$tasks"} --out "$O" --steps "$FIT_STEPS" --t-total "$T_TOTAL" "$@" >> "$O/run.log" 2>&1 & local pid=$!
+    pin "$chip" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set "$set" ${tasks:+--tasks "$tasks"} --out "$O" --steps "$FIT_STEPS" --t-total "$T_TOTAL"${FIT_T:+ --fit-t $FIT_T} "$@" >> "$O/run.log" 2>&1 & local pid=$!
     watch_shards "$name" "$O" "$pid"; rc=$?
     [ $rc -eq 1 ] && [ $attempt -eq 1 ] && { echo "EVAL-STALL-RETRY $name"; continue; }
     break
@@ -378,7 +381,7 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
         ps=()
         for i in $(seq 0 $((NCHIP - 1))); do
           mkdir -p "$O/s$i"
-          pin "$i" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set valhard --tasks "$(gate_tasks arc1eval "$i/$NCHIP")" --out "$O/s$i" --steps "$FIT_STEPS" --t-total "$T_TOTAL" --k "$ARC1_K" >> "$O/s$i/run.log" 2>&1 & ps+=($!)
+          pin "$i" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set valhard --tasks "$(gate_tasks arc1eval "$i/$NCHIP")" --out "$O/s$i" --steps "$FIT_STEPS" --t-total "$T_TOTAL"${FIT_T:+ --fit-t $FIT_T} --k "$ARC1_K" >> "$O/s$i/run.log" 2>&1 & ps+=($!)
         done
         watch_shards "N0_arc1eval" "$O" "${ps[@]}"; rr=$?
         [ $rr -eq 1 ] && [ $att -eq 1 ] && { echo "EVAL-STALL-RETRY N0_arc1eval"; continue; }
@@ -398,6 +401,33 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
   return $rc
 }
 
+cost_probe () {  # ARM CK — rule 13a (2026-09-10): time ONE task's rows on ONE chip (tools/cost_probe.py), project the arm's battery wall
+  # from the MEASURED cost, bank the json, and refuse to start the battery when the projection exceeds COST_BUDGET_H (0 = never abort).
+  local arm=$1 CK=$2 J="runs/cost_probe_${arm}.json" ema=""
+  gsutil -q stat "$GCS/${arm}_COST_OK" 2>/dev/null && { echo "COST-SKIP $arm (done)"; return 0; }
+  is_dec "$arm" && ema="--ema"
+  pin 0 ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/cost_probe.py --ckpt "$CK" --set valhard --out "$J" --steps "$COST_STEPS" --t-total "$T_TOTAL" ${FIT_T:+--fit-t $FIT_T} $ema > "runs/cost_probe_${arm}.log" 2>&1 \
+    || { echo "COST-PROBE-FAILED $arm (the battery runs unprojected; see runs/cost_probe_${arm}.log)"; return 0; }
+  local proj
+  proj=$(${REAL_PY:-python3} - "$J" "$FIT_STEPS" "$K_VH" "$K_GATE" "$VIEWS_VH" "$ARC1_VIEWS" "$ARC1_K" "$NCHIP" "$(set_n valhard) $(set_n dev30) $(set_n rg96) $(set_n rt48) $(set_n arc1eval)" <<'PYEOF2'
+import json, sys
+j = json.load(open(sys.argv[1])); steps = int(sys.argv[2]); k_vh, k_gate, views_vh, arc1_views, arc1_k, nchip = (int(v) for v in sys.argv[3:9])
+n_vh, n_dev, n_rg, n_rt, n_arc1 = (int(v) for v in sys.argv[9].split())
+dec = j["cell_kind"] == "decarc"
+fits = (n_vh + n_dev) * (1 + (views_vh - 1) + 2) + n_rg + n_rt + n_arc1 * arc1_views + (n_vh if dec else 0)     # the final grid row (DEC arms)
+traces = (n_vh + n_dev) * (1 + k_vh + 5 + views_vh + 2) + (n_rg + n_rt) * (1 + k_gate) + n_arc1 * (1 + arc1_k + arc1_views)  # ~per query; the ladder ~5 t16-equivalents
+fit_h = fits * steps * j["s_per_step"] / 3600; trace_h = traces * 1.5 * j["trace_s"] / 3600; compile_h = 5 * (j["compile_s"] + j["val_first_s"] + j["trace_first_s"]) / 3600
+total = (fit_h + trace_h) / nchip + compile_h
+print(f"{total:.2f} fit_h={fit_h:.1f} trace_h={trace_h:.1f} compile_h={compile_h:.2f} nchip={nchip} s_per_step={j['s_per_step']} trace_s={j['trace_s']} B={j['B']} fit_T={j['fit_T']} steps={steps} fits={fits} traces={traces}")
+PYEOF2
+) || { echo "COST-PROJECT-FAILED $arm (the battery runs unprojected)"; return 0; }
+  echo "COST-PROBE $arm projected_h=$proj"; gsutil -q cp "$J" "$GCS/${arm}_cost_probe.json"
+  local h; h=$(echo "$proj" | awk '{print $1}')
+  if [ "$COST_BUDGET_H" != 0 ] && awk -v h="$h" -v b="$COST_BUDGET_H" 'BEGIN{exit !(h > b)}'; then
+    echo "COST-ABORT $arm projected ${h} h > budget ${COST_BUDGET_H} h (the battery is NOT started)"; return 1
+  fi
+  echo ok | gsutil -q cp - "$GCS/${arm}_COST_OK"; echo "COST-OK $arm projected ${h} h <= budget ${COST_BUDGET_H} h"
+}
 run_arm () {  # ARM — pretrain (+ the extension rule), the selection, the battery
   local arm=$1 D=runs/pretrain${R_TAG}_$1
   gsutil -q stat "$GCS/${arm}_SKIPPED" 2>/dev/null && { echo "ARM-SKIPPED $arm (labeled)"; return 0; }
@@ -415,6 +445,7 @@ run_arm () {  # ARM — pretrain (+ the extension rule), the selection, the batt
     ${REAL_PY:-python3} -c "import json; s='$sel'.split(); json.dump({'step': int(s[2]), 'val': float(s[1]), 'ckpt': '$VBCK'}, open('$D/vsel.json', 'w'))"
   fi
   gsutil -q cp "$D/vsel.json" "$GCS/${arm}_vsel.json"
+  cost_probe "$arm" "$VBCK" || { echo "$SENT-COST-ABORT worker=$W arm=$arm $(date -u +%FT%TZ)"; echo "$arm $(date -u +%FT%TZ)" | gsutil -q cp - "$GCS/CHAIN-COST-ABORT"; exit 3; }
   battery "$arm" "$VBCK" "$D" || { echo "ARM-PARTIAL $arm (an eval failed; a rerun redoes only the missing rows)"; return 1; }
   echo ok | gsutil -q cp - "$GCS/${arm}_ARM_OK"
   echo "ARM-OK $arm $(date -u +%H:%M)"

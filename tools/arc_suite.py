@@ -122,6 +122,7 @@ def main():
     ap.add_argument("--steps", type=int, default=600); ap.add_argument("--val-every", type=int, default=50)
     ap.add_argument("--t-total", type=int, default=16); ap.add_argument("--stab-steps", type=int, default=8)
     ap.add_argument("--k", type=int, default=32); ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--fit-t", type=int, default=None, help="FIT-ONLY outer passes for the arm-A fit step (None = the deployed cfg.T)")
     a = ap.parse_args()
     saved = E.load_ckpt(a.ckpt); defaults = Config()
     cfg = Config(**{k: type(getattr(defaults, k))(v) for k, v in saved["config"].items()}); state = saved["state"]
@@ -139,7 +140,7 @@ def main():
         for ti, tid in enumerate(task_ids):
             if tid in done: print(f"skip {tid}", flush=True); continue
             t0 = time.time(); eps = G.load_task(tid)
-            model, snaps, sel, F = P.fit_arm_a(state, cfg, eps, steps=a.steps, val_every=a.val_every, seed=a.seed)
+            model, snaps, sel, F = P.fit_arm_a(state, cfg, eps, steps=a.steps, val_every=a.val_every, seed=a.seed, fit_T=a.fit_t)
             tv = jnp.asarray(sel[1]); qrecs = []; xcheck = None
             for qi, ep in enumerate(eps):
                 gt = ep.query_y
