@@ -52,6 +52,8 @@ Purpose: orient the paper honestly. Every number below carries the protocol unde
 
 ## 3b. The exact comparison on the single-pass frontier we set (the champion night, 2026-09-09; identical puzzles through our evaluator; sets named)
 
+**Correction 2026-09-11 (the measured compute column; `runs/analysis/mac_count_20260910.json`, XLA's cost analysis of the evaluator's own one-step map):** the per-step arithmetic below was analytic; measured, the DEC-w384 is 49.95 GMAC per outer step = **3.9×** the TRM-MLP-class cell's 12.87 (not 4.6×), the DEC-w192 14.82 = **1.15×** (not 1.34×), C4 53.09 = 4.1×. The per-puzzle TMAC figures in this table scale accordingly (w192 at D64 ≈ 0.95 TMAC vs EqR's ≈ 0.82; w384 at D16 ≈ 0.80 vs 0.21). The abstract (v8) and the claims ledger carry the measured numbers; this table's analytic figures stand as written until the results table is built from the measured column. Also from the filler's rows (the verdict's §8): the FULL-set D64 rows C5 99.16, C0 98.47, C1 97.55, C6 98.58, C3 98.13 (paired vs EqR's 93.15: +6.00 / +5.32 / +4.39 / +5.43 / +4.98), and k = 128 on all seven arms (residual = verified to ≤ 0.06 pp; C5 99.88).
+
 Compute is the analytic multiply-accumulate count per outer step per puzzle (the DEC-w384's nine-field state costs 4.6× the TRM-MLP block's arithmetic at 55 % of its parameters; the w192 DEC 1.34× at 16 %); per-puzzle compute = steps × per-step; two FLOPs per MAC where a paper quotes FLOPs. D16 on the full 422,786; D64 on the 100k subsample (the field's fulls intersected); D128 on the 20k scan set; D256 on the 5k set; every row EMA weights, bf16, no draws, all D steps.
 
 | model | params | per step | D16 | D64 | D128 | D256 | restarts column |
