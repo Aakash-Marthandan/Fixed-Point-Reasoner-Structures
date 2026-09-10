@@ -1,0 +1,13 @@
+COLD (fixed init, D16, fp32; n 419, 400 tasks): exact 30.55 % (128/419); exact by step 29.6 31.5 30.8 30.8 30.8 30.8 30.5 30.5 30.5 30.5 30.5 30.5 30.5 30.5 30.5 30.5
+  first-exact of the solved: step 1 116, step 2 11, later 1; ever-exact 32.94 %; solved at step 1 and lost by 16: 8; lost at any point 10; gained after step 1: 12; exact_stable 30.07 %
+  token accuracy 0.875 (solved 1.000 / unsolved 0.820); the HALTING HEAD: AUC(q_final, exact) 0.9174; q >= 0 on 56.8 %; precision 52.5 % recall 97.7 %; agreement (q>=0 <=> exact) 72.3 %
+  carried-state residual |dz_H| at step 16: solved 0.0083 vs unsolved 0.0168; AUC(-resid, exact) 0.6813; relative 0.0203 vs 0.0348
+ID-ZERO CONTROL (the puzzle identifier replaced by the blank row 0): exact 4.77 % (20/419); token accuracy 0.664; q >= 0 on 20.3 %; the identity-conditioned 30.55 -> 4.77
+RETENTION / the training pairs (n tasks 419, demo pairs 1456): demo pairs reproduced 94.99 % (first-exact step 1 on 98.0 % of them); all demos of a task exact 87.6 %; test cold 30.55 % vs carried-from-the-last-demo 30.55 % (only-cold 3 / only-carried 3)
+  P(test exact | all demos reproduced) 33.0 % (n 367) vs P(test exact | some demo failed) 13.5 % (n 52)
+  draw keys: ['draw', 'exact', 'token_exact', 'token_acc', 'resid_final', 'resid_rel_final', 'q_final']
+DRAWS (k = 8 random inits N(0,1), D16; n 419): fixed-init exact 30.55 %; a random-init draw b1 31.98 %; per-draw 31.62 %; oracle@8 32.46 % (only-oracle 8, fixed-only 0); draws exact per input: all 8 on 29.8 %, none on 67.5 %, 1-7 on 2.6 %
+  residual selector on the draws (resid_final): AUC(-resid, exact) 0.6619; E5 spurious (wrong draws below the correct-draw median) 29.1 %
+  residual-selected top-1 @8: 31.26 % vs the fixed init 30.55 % vs oracle@8 32.46 %
+  the halting head on the draws (q_final): AUC(q, exact) 0.9187
+THE AUGMENTATION VOTE (40 tasks, 41 test inputs, ~1000 views each, bf16): pass@1 29.3 %, pass@2 36.6 % (the card: 43.00 % pass@2 on all 400); identity-view exact 31.7 %; any view correct 48.8 %; correct-view fraction on solved-by-vote 0.76 vs on failed 0.001; distinct answers per input median 132 (solved 5 / failed 444)

@@ -1,0 +1,56 @@
+
+===== valhard: 144 paired queries (48 tasks) =====
+row                                          |  RI (Dri) | plain (C53) | only-RI / only-plain (binary rows)
+clean exact (limit)                          |      4.86 |        7.64 | 2 / 6
+clean exact at T                             |      4.86 |        6.94 | 2 / 5
+oracle@32 (any random-init draw exact)       |      4.86 |       15.28 | 0 / 15
+per-draw exact rate                          |      4.86 |        7.92
+residual-selected (y) exact                  |      4.86 |        7.64 | 2 / 6
+residual-selected (z) exact                  |      4.86 |       10.42 | 2 / 10
+majority exact                               |      4.86 |        9.03 | 2 / 8
+draws converged                              |     87.89 |       85.50
+spurious (converged & wrong) per draw        |     83.03 |       78.02
+n distinct endpoints / 32                    |      4.67 |       13.46
+retention of the handed truth                |     18.75 |       27.78 | 10 / 23
+retention of its own limit                   |     67.36 |       73.61 | 18 / 27
+clean run converged                          |     93.75 |       97.22 | 3 / 8
+size right at step 1                         |     72.22 |       74.31 | 0 / 3
+size right at the end                        |     72.92 |       74.31 | 0 / 2
+commit@1 (conf>.9)                           |     78.75 |       77.87
+commit@16                                    |     96.29 |       97.66
+flips per cell                               |      1.00 |        0.97
+H_q first / last                             |      0.15 |        0.09
+  [RI] basin conditioning: P(oracle@32 | retains truth) 25.9 % (n 27) vs P(oracle | does not) 0.0 % (n 117) -> enrichment xinf; clean exact | retains 25.9 vs 0.0
+  [RI] failures (n 137): cell acc at end 85.0 %; conf on WRONG cells at end 0.975; of committed cells wrong 14.6 %; conf on right cells 0.991; converged-wrong of converged 100.0 %
+  [RI] draws n 4608: exact 4.86 %; converged 87.9 %; converged & wrong 83.0 %; residual(y) AUC for exact 0.851; E5 spurious (wrong draws below the correct median residual) 8.5 %
+  [plain] basin conditioning: P(oracle@32 | retains truth) 52.5 % (n 40) vs P(oracle | does not) 1.0 % (n 104) -> enrichment x54.6; clean exact | retains 27.5 vs 0.0
+  [plain] failures (n 133): cell acc at end 83.7 %; conf on WRONG cells at end 0.974; of committed cells wrong 16.0 %; conf on right cells 0.996; converged-wrong of converged 100.0 %
+  [plain] draws n 4608: exact 7.92 %; converged 85.5 %; converged & wrong 78.0 %; residual(y) AUC for exact 0.566; E5 spurious (wrong draws below the correct median residual) 59.0 %
+
+===== dev30: 31 paired queries (30 tasks) =====
+row                                          |  RI (Dri) | plain (C53) | only-RI / only-plain (binary rows)
+clean exact (limit)                          |      3.23 |        6.45 | 1 / 2
+clean exact at T                             |      6.45 |        6.45 | 1 / 1
+oracle@32 (any random-init draw exact)       |      6.45 |       12.90 | 1 / 3
+per-draw exact rate                          |      1.51 |        4.74
+residual-selected (y) exact                  |      3.23 |        6.45 | 1 / 2
+residual-selected (z) exact                  |      3.23 |        6.45 | 1 / 2
+majority exact                               |      3.23 |        6.45 | 1 / 2
+draws converged                              |     80.44 |       73.08
+spurious (converged & wrong) per draw        |     79.03 |       68.45
+n distinct endpoints / 32                    |      6.90 |       20.94
+retention of the handed truth                |      9.68 |       29.03 | 1 / 7
+retention of its own limit                   |     64.52 |       77.42 | 4 / 8
+clean run converged                          |     87.10 |       90.32 | 3 / 4
+size right at step 1                         |     83.87 |       87.10 | 1 / 2
+size right at the end                        |     83.87 |       93.55 | 0 / 3
+commit@1 (conf>.9)                           |     59.99 |       62.27
+commit@16                                    |     87.57 |       95.24
+flips per cell                               |      1.58 |        1.53
+H_q first / last                             |     14.00 |        0.15
+  [RI] basin conditioning: P(oracle@32 | retains truth) 33.3 % (n 3) vs P(oracle | does not) 3.6 % (n 28) -> enrichment x9.3; clean exact | retains 33.3 vs 0.0
+  [RI] failures (n 30): cell acc at end 77.0 %; conf on WRONG cells at end 0.915; of committed cells wrong 23.1 %; conf on right cells 0.964; converged-wrong of converged 100.0 %
+  [RI] draws n 992: exact 1.51 %; converged 80.4 %; converged & wrong 79.0 %; residual(y) AUC for exact 0.783; E5 spurious (wrong draws below the correct median residual) 16.2 %
+  [plain] basin conditioning: P(oracle@32 | retains truth) 22.2 % (n 9) vs P(oracle | does not) 9.1 % (n 22) -> enrichment x2.4; clean exact | retains 0.0 vs 9.1
+  [plain] failures (n 29): cell acc at end 74.0 %; conf on WRONG cells at end 0.960; of committed cells wrong 25.4 %; conf on right cells 0.982; converged-wrong of converged 100.0 %
+  [plain] draws n 992: exact 4.74 %; converged 73.1 %; converged & wrong 68.4 %; residual(y) AUC for exact 0.86; E5 spurious (wrong draws below the correct median residual) 2.3 %
