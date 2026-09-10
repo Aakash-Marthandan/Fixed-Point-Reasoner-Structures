@@ -33,3 +33,6 @@ Documentation/private/
 Documentation/Review logs/
 data/re_arc
 data/sudoku_extreme/
+
+# the paper (PI 2026-09-11): local only, never tracked
+paper/
