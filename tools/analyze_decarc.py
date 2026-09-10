@@ -72,7 +72,7 @@ def letters(rec):
     for arm in ARMS:
         r = rec[arm]
         if not r["present"]: probs.append(f"{arm}: missing")
-        ck = {s.get("ckpt") for s in r["evals"].values() if "ckpt" in s}
+        ck = {s.get("ckpt") for name, s in r["evals"].items() if "ckpt" in s and name != "valhard_final"}   # the final grid row evaluates ckpt_latest by design (the memorization row; the 2026-09-10 pilot read)
         if len(ck) > 1: probs.append(f"{arm}: {len(ck)} checkpoints across its evals")
         if any(s.get("xcheck_all") is False for s in r["evals"].values()): probs.append(f"{arm}: trace cross-check failed")
         if "valhard" not in r["evals"]: probs.append(f"{arm}: no val-hard eval")
@@ -130,7 +130,8 @@ def letters(rec):
     for arm in SEED_PAIR:
         s = ev(arm)
         if s.get("converged_wrong_of_converged") is None: out.append(f"{arm} NO-DATA"); continue
-        frozen = s["converged_wrong_of_converged"] >= R["frozen_cw"] and (s.get("flips_per_cell") or 9) <= R["frozen_flips"]
+        fl = s.get("flips_per_cell"); fl = 9.0 if fl is None else fl   # 0.0 flips = frozen, not missing (the pilot's real rows read CHURN at flips 0.0 before this line)
+        frozen = s["converged_wrong_of_converged"] >= R["frozen_cw"] and fl <= R["frozen_flips"]
         out.append(f"{arm} " + ("FROZEN" if frozen else "CHURN") + f" (cw {s['converged_wrong_of_converged']:.2f}, flips {s.get('flips_per_cell')})")
     L["R-DA-6 FAILURE"] = " | ".join(out)
     # R-DA-7 VOTE (descriptive numbers under one letter: does the vote collect anything)
@@ -146,7 +147,8 @@ def letters(rec):
         s = ev(arm, "arc1eval")
         if not s: out.append(f"{arm} NO-DATA"); continue
         v = s.get("vote") or {}
-        out.append(f"{arm} pass@1 {100*(s.get('clean_exact_limit') or 0):.2f} | vote pass@2 {100*v.get('pass2', float('nan')):.2f} (n {s.get('n_queries')})")
+        p2 = f"vote pass@2 {100*v['pass2']:.2f}" if v.get("pass2") is not None else "no vote (views 1)"
+        out.append(f"{arm} pass@1 {100*(s.get('clean_exact_limit') or 0):.2f} | {p2} (n {s.get('n_queries')})")
     s = ev("N0", "arc1eval")
     out.append(f"N0 pass@1 {100*(s.get('clean_exact_limit') or 0):.2f} (oracle@{8} {100*(s.get('oracle') or 0):.2f}; n {s.get('n_queries')})" if s else "N0 NO-DATA")
     L["R-DA-8 PUBLIC"] = " | ".join(out)
@@ -230,6 +232,21 @@ def selftest():
     r["D0"]["evals"]["arc1eval"]["ckpt"] = "b"; r["N0"]["present"] = False
     L = letters(r)
     assert L["INTEGRITY"].startswith("FAIL") and "D0: 2 checkpoints" in L["INTEGRITY"] and "N0: missing" in L["INTEGRITY"]; ok += 1
+    # 3b. the FINAL grid row's own checkpoint (ckpt_latest) is not a second checkpoint (the 2026-09-10 pilot read)
+    r = rec_of(_fake(.09, .9, .15, .4, .95, .95, 1.0, [.05, .07, .07, .10], .02, .02),
+               _fake(.08, .88, .13, .38, .92, .93, 1.1, [.04, .06, .06, .09], .03, .02), _fake(.07, .6, .16, .3, .8, .9, 1.0, [.04, .07, .07, .07], .03, .02), 0.25)
+    r["D0"]["evals"]["valhard_final"] = dict(r["D0"]["evals"]["valhard"], ckpt="latest")   # every other row on the one checkpoint "c"
+    L = letters(r)
+    assert "checkpoints" not in L["INTEGRITY"], L["INTEGRITY"]; ok += 1
+    # 3c. zero flips per cell is the most frozen reading, not a missing one (the pilot's real rows: cw 1.00, flips 0.0 read CHURN)
+    r = rec_of(_fake(.09, .9, .15, .4, .95, .95, 0.0, [.05, .07, .07, .10], .02, .02),
+               _fake(.08, .88, .13, .38, .92, .93, 0.0, [.04, .06, .06, .09], .03, .02), _fake(.07, .6, .16, .3, .8, .9, 1.0, [.04, .07, .07, .07], .03, .02), 0.25)
+    L = letters(r)
+    assert L["R-DA-6 FAILURE"].startswith("D0 FROZEN") and "D1 FROZEN" in L["R-DA-6 FAILURE"], L["R-DA-6 FAILURE"]; ok += 1
+    # 3d. the public row without a vote (views 1) prints no nan
+    r["D0"]["evals"]["arc1eval"].pop("vote", None)
+    L = letters(r)
+    assert "nan" not in L["R-DA-8 PUBLIC"] and "no vote" in L["R-DA-8 PUBLIC"], L["R-DA-8 PUBLIC"]; ok += 1
     # 4. no data anywhere -> NO-DATA letters, no exception
     r = {a: {"present": False, "stopped": False, "monitor": [], "vsel": None, "evals": {}} for a in ARMS}
     L = letters(r)
