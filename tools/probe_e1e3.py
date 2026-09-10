@@ -54,8 +54,7 @@ def trace(params, cfg: Config, x_grid, *, tau: float, task_vec, t_total: int,
              if yprev_init is None else
              jax.nn.one_hot(jnp.asarray(yprev_init, dtype=jnp.int32),
                             M.VOCAB).transpose(2, 0, 1))
-        eta = jax.nn.sigmoid(params["eq"]["eta"])
-        eta_z = jax.nn.sigmoid(params["eq"]["eta_z"])
+        eta, eta_z = M.eq_etas(params, cfg)   # ONE definition (model.eq_etas): the rg cells' learned dampings (bit-exact at eta_floor 0) and the field cells' PINNED etas (cfg.eta_fixed / eta_z_fixed; the DEC-ARC build, 2026-09-10)
         z_c = None
         steps = []
         for t in range(t_total):
@@ -70,9 +69,7 @@ def trace(params, cfg: Config, x_grid, *, tau: float, task_vec, t_total: int,
             pcan = jax.nn.softmax(out.logits, axis=-1).transpose(2, 0, 1)
             y = y + eta * (pcan - y)
             canvas = np.asarray(jnp.argmax(out.logits, axis=-1))
-            cands = M.size_candidates(x_can)
-            p_h = M.size_mixture_probs(out.size_sel_h, out.size_h, cands[0])
-            p_w = M.size_mixture_probs(out.size_sel_w, out.size_w, cands[1])
+            p_h, p_w = M.decode_size(cfg, out, x_can)
             h = int(jnp.argmax(p_h)) + 1
             w = int(jnp.argmax(p_w)) + 1
             pred = np.where(canvas[:h, :w] == G.VOID, 0,
@@ -91,9 +88,7 @@ def trace(params, cfg: Config, x_grid, *, tau: float, task_vec, t_total: int,
         out = _traced_fwd(cfg, tau, float(t_norm))(
             params, M.build_fields(x_can, yprev), task_vec)
         canvas = jnp.argmax(out.logits, axis=-1)
-        cands = M.size_candidates(x_can)
-        p_h = M.size_mixture_probs(out.size_sel_h, out.size_h, cands[0])
-        p_w = M.size_mixture_probs(out.size_sel_w, out.size_w, cands[1])
+        p_h, p_w = M.decode_size(cfg, out, x_can)
         h = int(jnp.argmax(p_h)) + 1
         w = int(jnp.argmax(p_w)) + 1
         can_np = np.asarray(canvas)

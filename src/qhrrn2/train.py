@@ -155,9 +155,7 @@ def _predict_core(cfg: Config, tau: float):
         outs = iterate(params, cfg, x_can, tau=tau, rng=None, task_vec=task_vec)
         last = outs[-1]
         # C1 v3 decode happens here so callers get final size distributions.
-        cands = M.size_candidates(x_can)
-        p_h = M.size_mixture_probs(last.size_sel_h, last.size_h, cands[0])
-        p_w = M.size_mixture_probs(last.size_sel_w, last.size_w, cands[1])
+        p_h, p_w = M.decode_size(cfg, last, x_can)   # the rg mixture (bit-exact) or the DEC-ARC's void crop
         return last.logits, p_h, p_w
     return core
 

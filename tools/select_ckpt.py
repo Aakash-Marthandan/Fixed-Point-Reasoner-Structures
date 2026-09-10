@@ -27,6 +27,10 @@ def main():
     key = _opt("--key", "val_t64")
     key2 = _opt("--second-key", None)
     tie = _opt("--tie", "later")
+    # DEC-ARC BUILD (2026-09-10): --row val reads the native ARC loop's {"val": ...} rows (val20_eval: val_exact / val_total /
+    # val_pix_mean) instead of the {"monitor": ...} rows; --key val_frac = val_exact / val_total. The default is byte-identical.
+    row = _opt("--row", "monitor")
+    assert row in ("monitor", "val"), row
     assert tie in ("later", "earliest"), tie
     banked = {int(re.search(r"ckpt_(\d+)\.pkl$", p.name).group(1)) for p in d.glob("ckpt_[0-9]*.pkl")}
     rows = []
@@ -35,9 +39,13 @@ def main():
             r = json.loads(l)
         except Exception:
             continue
-        if "monitor" in r and key in r["monitor"]:
-            v2 = float(r["monitor"][key2]) if (key2 and key2 in r["monitor"]) else 0.0
-            rows.append((int(r["monitor"]["step"]), float(r["monitor"][key]), v2))
+        if row in r:
+            m = dict(r[row])
+            if row == "val" and "val_total" in m:
+                m["val_frac"] = float(m["val_exact"]) / max(int(m["val_total"]), 1)
+            if key in m:
+                v2 = float(m[key2]) if (key2 and key2 in m) else 0.0
+                rows.append((int(m["step"]), float(m[key]), v2))
     cand = [(v, v2, s) for s, v, v2 in rows if s in banked]
     if not cand:
         print("NONE", file=sys.stderr); sys.exit(1)

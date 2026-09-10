@@ -157,6 +157,11 @@ class Config:
     dec_commit: bool = False
     dec_commit_tau: float = 1.0
     dec_commit_w: float = 0.1
+    # DEC-ARC BUILD (Plan_2026-09-10_DEC-ARC_Build §1; 2026-09-10): cell_kind "decarc" = the DEC on a ten-field
+    # colour state over the ARC canvas (qhrrn2.decarc_cell): attention over the cells per field with decarc_heads
+    # heads (dk = dec_width / decarc_heads), the DEC's coupling and channel SwiGLU, the per-colour task code
+    # (F, d_task) through a shared projection, a VOID readout from the invariant cell mean for the size.
+    decarc_heads: int = 4
     # FINAL PHASE FPA on the FIELD LOOP (cell_kind trm / dec under --sot; pretrain.field_fpa_loss):
     # per optimizer step the first round(B * fpa_frac) rows are re-run for fpa_k SEGMENTS from
     # z_H := the embedded corrupted solution (eps ~ U[0, fpa_eps] of the NON-GIVEN cells resampled

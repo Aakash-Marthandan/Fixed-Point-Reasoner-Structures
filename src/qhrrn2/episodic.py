@@ -212,6 +212,11 @@ def init_table(key, n_tasks: int, d_task: int):
     return jax.random.normal(key, (n_tasks, d_task)) * 0.1
 
 
+def init_table_fields(key, n_tasks: int, n_fields: int, d_task: int):
+    """DEC-ARC BUILD: per-task PER-COLOUR codes (n_tasks, F, d_task), the same near-neutral init."""
+    return jax.random.normal(key, (n_tasks, n_fields, d_task)) * 0.1
+
+
 def precompute_labels(corpus: Corpus) -> jnp.ndarray:
     """(P, 3, 32, 32) input segmentations in OBJ_ENC_MODES order, computed
     once at startup (speed pipeline 2026-08-02: labels depend only on the

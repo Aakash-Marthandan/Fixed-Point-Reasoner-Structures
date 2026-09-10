@@ -29,7 +29,7 @@ def trace_z(params, cfg, x_grid, *, task_vec, t_total: int, tau: float = 1.0):
     assert cfg.equilibrium and not cfg.use_obj
     x_can = jnp.asarray(G.place(np.asarray(x_grid)), dtype=jnp.int32)
     y = jax.nn.one_hot(jnp.full((G.CANVAS, G.CANVAS), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
-    eta = jax.nn.sigmoid(params["eq"]["eta"]); eta_z = jax.nn.sigmoid(params["eq"]["eta_z"])
+    eta, eta_z = M.eq_etas(params, cfg)   # ONE definition (model.eq_etas): the rg cells' learned dampings (bit-exact at eta_floor 0) and the field cells' PINNED etas (cfg.eta_fixed / eta_z_fixed; the DEC-ARC build, 2026-09-10)
     z_c = None; steps = []
     for t in range(t_total):
         t_norm = min(t, cfg.T - 1) / max(cfg.T - 1, 1)
@@ -37,9 +37,9 @@ def trace_z(params, cfg, x_grid, *, task_vec, t_total: int, tau: float = 1.0):
         z_c = out.z_fine if z_c is None else z_c + eta_z * (out.z_fine - z_c)
         probs = jax.nn.softmax(out.logits, axis=-1); y = y + eta * (probs.transpose(2, 0, 1) - y)
         canvas = np.asarray(jnp.argmax(out.logits, axis=-1)); conf = np.asarray(jnp.max(probs, axis=-1))
-        cands = M.size_candidates(x_can)
-        h = int(jnp.argmax(M.size_mixture_probs(out.size_sel_h, out.size_h, cands[0]))) + 1
-        w = int(jnp.argmax(M.size_mixture_probs(out.size_sel_w, out.size_w, cands[1]))) + 1
+        p_h, p_w = M.decode_size(cfg, out, x_can)
+        h = int(jnp.argmax(p_h)) + 1
+        w = int(jnp.argmax(p_w)) + 1
         pred = np.where(canvas[:h, :w] == G.VOID, 0, canvas[:h, :w]).astype(np.int8)
         steps.append({"pred": pred, "hw": (h, w), "canvas": canvas.astype(np.int8), "conf": conf.astype(np.float32), "z": np.asarray(z_c)})
     return steps

@@ -40,6 +40,7 @@ from qhrrn2 import sudoku_extreme as SX
 from qhrrn2 import train as T
 from qhrrn2 import trm_cell as TC
 from qhrrn2 import dec_cell as DC   # FINAL PHASE: the DEC cell shares the field loop
+from qhrrn2 import decarc_cell as DAC   # DEC-ARC BUILD: the ten-field colour DEC on the ARC canvas
 from qhrrn2.config import Config
 from qhrrn2.model import count_params, init_params
 from qhrrn2.objective import batch_loss, log_stablemax
@@ -84,6 +85,9 @@ def parse_args():
     p.add_argument("--lr-end", type=float, default=3e-5)
     p.add_argument("--warmup", type=int, default=500)
     p.add_argument("--wd", type=float, default=1e-4)
+    p.add_argument("--table-lr", type=float, default=None,
+                   help="DEC-ARC BUILD: the task-code table's own peak lr (None = the model's; the field's ARC recipe trains its puzzle embeddings at 1e-2 because each row is updated rarely)")
+    p.add_argument("--table-wd", type=float, default=None, help="the task-code table's own weight decay (None = --wd)")
     p.add_argument("--tau", type=float, default=1.0)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--n-val", type=int, default=20)
@@ -155,7 +159,7 @@ def parse_args():
     # sportC1 (2026-09-02; Plan_2026-09-02_Champion_sportC1 §11–§12)
     p.add_argument("--z-norm", default="", choices=["", "rms"],
                    help="H-50 stabilizer of record: RMSNorm the carried latent at its entry (arms B0/B1/R0)")
-    p.add_argument("--cell", default="rg", choices=["rg", "trm", "dec"],
+    p.add_argument("--cell", default="rg", choices=["rg", "trm", "dec", "decarc"],
                    help="X0: 'trm' = the TRM/EqR field-recipe cell (qhrrn2.trm_cell); 'rg' = ours")
     p.add_argument("--trm-hidden", type=int, default=512)
     p.add_argument("--trm-layers", type=int, default=2)
@@ -201,6 +205,8 @@ def parse_args():
                    help="CHAMPION NIGHT C6: the calibrated commit head (BCE on 'this cell's argmax is correct' per segment) + selective hardening at --dec-commit-tau")
     p.add_argument("--dec-commit-tau", type=float, default=1.0, help="hardening threshold on the commit probability (>= 1 = the head trains, no hardening)")
     p.add_argument("--dec-commit-w", type=float, default=0.1, help="the commit BCE's loss weight")
+    p.add_argument("--decarc-heads", type=int, default=4, help="DEC-ARC BUILD: attention heads over the cells per field (dk = dec_width / heads)")
+    p.add_argument("--w-void", type=float, default=None, help="cfg.w_void: the VOID-region CE weight relative to the output region (None = the Config default; the DEC-ARC registry sets it)")
     p.add_argument("--sudoku-orbit-online", action="store_true",
                    help="CHAMPION NIGHT C3: a fresh position-group element per row per step on the device (sudoku_extreme.orbit_batch; the n_aug -> infinity limit; pair with --sudoku-aug 0)")
     p.add_argument("--monitor-chunk", type=int, default=128, help="the trajectory monitor's rows per evaluator batch (a 512-puzzle monitor runs in 4 chunks)")
@@ -393,28 +399,32 @@ def main():
     trm = (dict(cell_kind=a.cell, trm_hidden=a.trm_hidden, trm_layers=a.trm_layers,
                 dec_width=a.dec_width, dec_coupling=not a.no_dec_coupling,
                 dec_coupling_kind=a.dec_coupling, dec_attn_heads=a.dec_attn_heads, dec_attn_dk=a.dec_attn_dk,
-                dec_commit=a.dec_commit, dec_commit_tau=a.dec_commit_tau, dec_commit_w=a.dec_commit_w,
+                dec_commit=a.dec_commit, dec_commit_tau=a.dec_commit_tau, dec_commit_w=a.dec_commit_w, decarc_heads=a.decarc_heads,
                 trm_h_cycles=a.trm_h_cycles, trm_l_cycles=a.trm_l_cycles,
                 trm_lambda=a.trm_lambda, trm_beta=a.trm_beta, trm_ri_sigma=a.trm_ri_sigma, trm_token_mixer=a.trm_token_mixer, trm_gm_dim=a.trm_gm_dim,
                 eta_fixed=1.0, eta_z_fixed=1.0)     # y = readout; the latent carries undamped
-           if a.cell in ("trm", "dec") else {})
-    if a.cell in ("trm", "dec"):
+           if a.cell in ("trm", "dec", "decarc") else {})
+    if a.cell in ("trm", "dec", "decarc"):
         # the field-recipe cells have no answer register: our y-side mechanisms do not apply. FPA on
         # the field loop (final phase A1/A5) = the anchor SEGMENTS in run_sot, so it needs --sot.
-        assert a.equilibrium and a.sudoku_layout == "native9", f"--cell {a.cell} needs --equilibrium + native9"
+        if a.cell == "decarc":   # DEC-ARC BUILD: the ARC corpus on the field loop
+            assert a.equilibrium and a.sot and not a.sudoku_extreme and not a.sudoku, "--cell decarc: the ARC corpus under --sot + --equilibrium (Plan_2026-09-10_DEC-ARC_Build)"
+        else:
+            assert a.equilibrium and a.sudoku_layout == "native9", f"--cell {a.cell} needs --equilibrium + native9"
         assert a.ri_p == 0 and a.anchor_p == 0 and a.ni_sigma == 0 and not a.eq_coupled, \
             f"--cell {a.cell}: RI rows / anchors / NI / eq_coupled are y-register mechanisms (use --trm-* dials)"
         assert a.fpa_k == 0 or a.sot, "--fpa-k on the field loop needs --sot (the anchor rows live in the segment loop)"
     assert not a.act or a.sot, "--act needs --sot"
     assert not a.sudoku_orbit_online or (a.sudoku_extreme and a.sudoku_layout == "native9" and a.cell in ("trm", "dec") and a.sot), \
         "--sudoku-orbit-online: the Sudoku-Extreme native9 field loop under --sot (the orbit acts on the segment loop's rows)"
-    assert not a.dec_commit or a.cell == "dec", "--dec-commit: the DEC cell only"
+    assert not a.dec_commit or a.cell in ("dec", "decarc"), "--dec-commit: the DEC cells only"
     global MON_CHUNK
     MON_CHUNK = max(1, int(a.monitor_chunk))
     # --sot on the trm cell = the field's online segment loop (X0); on our cell = the sportC2
     # persistent (y, z) carry with verifier-replaced rows (R1; run_sot_rg)
     cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat, **side, **geo, **trm,
                  d_task=a.d_task, equilibrium=a.equilibrium,
+                 **({"w_void": a.w_void} if a.w_void is not None else {}),
                  beta_flux=a.beta_flux, beta_flux_nl=a.beta_flux_nl,
                  eta_floor=a.eta_floor, z_gate_init=a.z_gate_init,
                  eq_coupled=a.eq_coupled, ni_sigma=a.ni_sigma,
@@ -495,15 +505,30 @@ def main():
     key = jax.random.PRNGKey(a.seed)
     k_model, k_table, k_run = jax.random.split(key, 3)
     state = {"model": init_params(k_model, cfg),
-             "table": E.init_table(k_table, n_tasks, cfg.d_task)}
+             "table": (E.init_table_fields(k_table, n_tasks, DAC.F, cfg.d_task) if cfg.cell_kind == "decarc"
+                       else E.init_table(k_table, n_tasks, cfg.d_task))}   # DEC-ARC: per-colour codes
     n_bulk = count_params(state["model"])
     n_table = count_params(state["table"])
 
     sched = optax.warmup_cosine_decay_schedule(
         init_value=0.0, peak_value=a.lr, warmup_steps=a.warmup,
         decay_steps=a.steps, end_value=a.lr_end)
-    opt = optax.chain(optax.clip_by_global_norm(1.0),
-                      optax.adamw(sched, b2=a.beta2, weight_decay=a.wd))
+    if a.table_lr is None and a.table_wd is None:
+        opt = optax.chain(optax.clip_by_global_norm(1.0),
+                          optax.adamw(sched, b2=a.beta2, weight_decay=a.wd))
+    else:
+        # DEC-ARC BUILD (2026-09-10; the audit): the task-code table under its OWN lr / decay (TRM's puzzle_emb_lr 1e-2,
+        # puzzle_emb_weight_decay .1 on ARC): a code row is touched ~ B x steps / n_tasks times, so the model's 1e-4 with
+        # wd 1.0 would neither train it nor keep it. optax.multi_transform over the two top-level keys; the default path
+        # above is byte-identical.
+        sched_t = optax.warmup_cosine_decay_schedule(
+            init_value=0.0, peak_value=(a.table_lr if a.table_lr is not None else a.lr), warmup_steps=a.warmup,
+            decay_steps=a.steps, end_value=(a.table_lr if a.table_lr is not None else a.lr) * (a.lr_end / a.lr if a.lr > 0 else 1.0))
+        opt = optax.chain(optax.clip_by_global_norm(1.0),
+                          optax.multi_transform({"model": optax.adamw(sched, b2=a.beta2, weight_decay=a.wd),
+                                                 "table": optax.adamw(sched_t, b2=a.beta2, weight_decay=(a.table_wd if a.table_wd is not None else a.wd))},
+                                                {"model": "model", "table": "table"}))
+        print(f"TABLE OPTIMIZER: lr {a.table_lr if a.table_lr is not None else a.lr} wd {a.table_wd if a.table_wd is not None else a.wd} (the model: lr {a.lr} wd {a.wd})", flush=True)
     opt_state = opt.init(state)
     start_step = 0
     rng = k_run
@@ -842,7 +867,7 @@ def run_sot_rg(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tas
     print("DONE", flush=True)
 
 
-def field_fpa_loss(TCm, p, cfg, x, y, key, hw):
+def field_fpa_loss(TCm, p, cfg, x, y, key, hw, codes=None):
     """FINAL PHASE (Plan_2026-09-05_FinalPhase §2 / §6.1; arms A1, A5): FPA ANCHOR ROWS on the field
     loop. The first round(B * cfg.fpa_frac) rows of the step's batch are re-run for cfg.fpa_k SEGMENTS
     from z_H := the embedded CORRUPTED solution (TCm.embed_answer; eps ~ U[0, fpa_eps] of the NON-GIVEN
@@ -856,14 +881,18 @@ def field_fpa_loss(TCm, p, cfg, x, y, key, hw):
     k_e, k_m, k_c, k_n = jax.random.split(key, 4)
     xs, ys = x[:nf], y[:nf]
     eps = jax.random.uniform(k_e, (nf,), minval=0.0, maxval=cfg.fpa_eps)
-    flip = (jax.random.uniform(k_m, (nf, H, W)) < eps[:, None, None]) & (xs == 0)
-    rand = jax.random.randint(k_c, (nf, H, W), 1, 10)
+    if codes is None:
+        flip = (jax.random.uniform(k_m, (nf, H, W)) < eps[:, None, None]) & (xs == 0)
+        rand = jax.random.randint(k_c, (nf, H, W), 1, 10)
+    else:   # DEC-ARC BUILD: corrupt inside the OUTPUT region, uniformly over the ten colours (the code rows ride along)
+        flip = (jax.random.uniform(k_m, (nf, H, W)) < eps[:, None, None]) & (ys != G.VOID)
+        rand = jax.random.randint(k_c, (nf, H, W), 0, 10)
     y_corr = jnp.where(flip, rand, ys)
     zL0 = TCm.z0(cfg, hw, rng=None)[1]
     keys = jax.random.split(k_n, nf)
 
-    def one(xx, yy, yc, kk):
-        emb = TCm.embed(p, cfg, xx)
+    def one(xx, yy, yc, kk, cc=None):
+        emb = TCm.embed(p, cfg, xx) if cc is None else TCm.embed(p, cfg, xx, cc)
         zH, zL = TCm.embed_answer(p, cfg, yc), zL0
         ks = jax.random.split(kk, cfg.fpa_k)
         ces = []
@@ -871,10 +900,61 @@ def field_fpa_loss(TCm, p, cfg, x, y, key, hw):
             zH, zL = TCm.segment(p, cfg, emb, zH, zL, rng=ks[j] if cfg.trm_beta > 0 else None)
             logits, _ = TCm.readout(p, cfg, zH, xx.shape)
             logp = log_stablemax(logits) if cfg.loss_kind == "stablemax" else jax.nn.log_softmax(logits, axis=-1)
-            ces.append(-jnp.mean(jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0]))
+            ce_map = -jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0]
+            if cc is None:
+                ces.append(jnp.mean(ce_map))
+            else:   # DEC-ARC: the output region and the VOID region averaged separately (objective._step_loss's form)
+                m = yy != G.VOID
+                ces.append(jnp.sum(ce_map * m) / jnp.maximum(m.sum(), 1) + cfg.w_void * jnp.sum(ce_map * ~m) / jnp.maximum((~m).sum(), 1))
             zH, zL = jax.lax.stop_gradient(zH), jax.lax.stop_gradient(zL)
         return jnp.mean(jnp.stack(ces))
-    return jnp.mean(jax.vmap(one)(xs, ys, y_corr, keys))
+    if codes is None:
+        return jnp.mean(jax.vmap(one)(xs, ys, y_corr, keys))
+    return jnp.mean(jax.vmap(one)(xs, ys, y_corr, keys, codes[:nf]))
+
+
+def arc_monitor(state, cfg, val):
+    """DEC-ARC BUILD: the 2k trajectory monitor on ARC — the cold rollout (the fixed start) of cfg.T segments on the
+    val tasks' held-out queries with their TRAINED code rows; exact = every canvas cell incl. VOID equals the target
+    (the size is part of the answer); val_pix = cell accuracy inside the target region. Chunked (the attention
+    scores of 10 fields x 1,024 cells per row bound the chunk)."""
+    xs, ys, ts = [], [], []
+    for t, _tid, qs in val:
+        for qx, qy in qs:
+            xs.append(G.place(np.asarray(qx))); ys.append(G.place(np.asarray(qy))); ts.append(int(t))
+    if not xs:
+        return {f"val_t{cfg.T}": float("nan"), "val_pix": float("nan"), "n_val": 0}
+    x = np.stack(xs).astype(np.int32); y = np.stack(ys).astype(np.int32); tt = np.asarray(ts, np.int32)
+    params, table = state["model"], jnp.asarray(state["table"])
+    fn = _arc_monitor_fn(cfg); chunk = min(MON_CHUNK, 16)
+    ex, pix = [], []
+    for i0 in range(0, x.shape[0], chunk):
+        e, px = fn(params, table, jnp.asarray(x[i0:i0 + chunk]), jnp.asarray(y[i0:i0 + chunk]), jnp.asarray(tt[i0:i0 + chunk]))
+        ex.append(np.asarray(e)); pix.append(np.asarray(px))
+    ex = np.concatenate(ex); pix = np.concatenate(pix)
+    return {f"val_t{cfg.T}": float(ex.mean()), "val_pix": float(pix.mean()), "n_val": int(x.shape[0])}
+
+
+@functools.lru_cache(maxsize=None)
+def _arc_monitor_fn(cfg):
+    hw = cfg.canvas * cfg.canvas
+
+    @jax.jit
+    def fn(params, table, x, y, t):
+        p = params["decarc"]
+
+        def one(xx, yy, ti):
+            emb = DAC.embed(p, cfg, xx, table[ti])
+            z = DAC.z0(cfg, hw)
+            zH, zL = z[0], z[1]
+            for _ in range(cfg.T):
+                zH, zL = DAC.segment(p, cfg, emb, zH, zL, rng=None)
+            logits, _ = DAC.readout(p, cfg, zH, xx.shape)
+            pred = jnp.argmax(logits, axis=-1)
+            m = yy != G.VOID
+            return jnp.all(pred == yy), jnp.sum((pred == yy) & m) / jnp.maximum(m.sum(), 1)
+        return jax.vmap(one)(x, y, t)
+    return fn
 
 
 def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks, val, out, latest, ema, n_dev):
@@ -892,7 +972,8 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
     T = cfg.T
     H = W = cfg.canvas
     hw = H * W
-    TCm = TC if cfg.cell_kind == "trm" else DC     # final phase: the DEC cell shares this loop
+    TCm = {"trm": TC, "dec": DC, "decarc": DAC}[cfg.cell_kind]     # final phase: the DEC cell shares this loop; DEC-ARC likewise
+    decarc = cfg.cell_kind == "decarc"
     zshape = tuple(TCm.carry_shape(cfg, hw))
     B = a.batch // n_dev
     use_ema = ema is not None
@@ -900,19 +981,20 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
     def init_carry():
         return dict(x=jnp.zeros((B, H, W), jnp.int32), y=jnp.zeros((B, H, W), jnp.int32),
                     z=jnp.zeros((B,) + zshape, jnp.float32), steps=jnp.zeros((B,), jnp.int32),
-                    halted=jnp.ones((B,), bool))
+                    halted=jnp.ones((B,), bool), t=jnp.zeros((B,), jnp.int32))
 
     commit_on = cfg.cell_kind == "dec" and bool(getattr(cfg, "dec_commit", False))   # C6: the commit head (BCE + hardening)
     orbit_on = bool(getattr(a, "sudoku_orbit_online", False))                          # C3: the online position orbit
 
     def sot_step(state, opt_state, carry, rng, ema_tree):
         rng, k_s, k_r, k_n, k_e1, k_e2 = jax.random.split(rng, 6)
-        x_f, y_f, _, _ = E.sample_batch(k_s, dev, n_tasks, B)
+        x_f, y_f, t_f, _ = E.sample_batch(k_s, dev, n_tasks, B)
         if orbit_on:   # a fresh group element per fresh row (a fold-in of the sample key: the plain stream is bit-exact)
             x_f, y_f = SX.orbit_batch(jax.random.fold_in(k_s, 1), x_f, y_f)
         h = carry["halted"]
         x = jnp.where(h[:, None, None], x_f, carry["x"])
         y = jnp.where(h[:, None, None], y_f, carry["y"])
+        t = jnp.where(h, t_f, carry["t"])
         z_fresh = jax.vmap(lambda k: TCm.z0(cfg, hw, rng=k))(jax.random.split(k_r, B))
         z = jnp.where(h.reshape((B,) + (1,) * len(zshape)), z_fresh, carry["z"])
         steps = jnp.where(h, 0, carry["steps"])
@@ -920,28 +1002,37 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
 
         def loss_fn(st):
             p = st["model"][cfg.cell_kind]
+            codes = st["table"][t] if decarc else jnp.zeros((B, 1), jnp.float32)   # DEC-ARC: the per-colour code rows (trained through the loss); a dummy otherwise
 
-            def one(xx, yy, zz, kk):
+            def one(xx, yy, zz, kk, cc):
                 if commit_on:
                     # C6: the head reads the CARRIED state (the segment's input: a fresh row's start buffers / RI draw
                     # included, exactly as the evaluator's cold pass and its multi-init draws do) — hardening from it,
                     # and the BCE on it: target = 'this cell's current argmax is correct' over the free cells. The
                     # carried state is detached, so the BCE and the straight-through path train the head alone.
-                    emb, _g = TCm.embed_effective(p, cfg, xx, zz[0])
+                    if decarc:
+                        emb = TCm.embed(p, cfg, xx, cc)          # DEC-ARC: no hardening (tau >= 1 asserted in the cell); the head is a readout
+                    else:
+                        emb, _g = TCm.embed_effective(p, cfg, xx, zz[0])
                     lg_in, _ = TCm.readout(p, cfg, zz[0], xx.shape)
                     cl = TCm.commit_logits(p, zz[0])
                     tgt = (jnp.argmax(lg_in, axis=-1) == yy).reshape(-1).astype(jnp.float32)
-                    fm = (xx.reshape(-1) == 0).astype(jnp.float32)
+                    fm = (jnp.ones_like(xx) if decarc else (xx == 0)).reshape(-1).astype(jnp.float32)
                     bce = jnp.sum(optax.sigmoid_binary_cross_entropy(cl, tgt) * fm) / jnp.maximum(jnp.sum(fm), 1.0)
                 else:
-                    emb = TCm.embed(p, cfg, xx); bce = jnp.zeros(())
+                    emb = (TCm.embed(p, cfg, xx, cc) if decarc else TCm.embed(p, cfg, xx)); bce = jnp.zeros(())
                 zH, zL = TCm.segment(p, cfg, emb, zz[0], zz[1], rng=kk if cfg.trm_beta > 0 else None)
                 logits, q = TCm.readout(p, cfg, zH, xx.shape)
                 logp = log_stablemax(logits) if cfg.loss_kind == "stablemax" else jax.nn.log_softmax(logits, axis=-1)
-                ce = -jnp.mean(jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0])
+                ce_map = -jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0]
+                if decarc:   # the output region and the VOID region averaged separately (objective._step_loss's form)
+                    m = yy != G.VOID
+                    ce = jnp.sum(ce_map * m) / jnp.maximum(m.sum(), 1) + cfg.w_void * jnp.sum(ce_map * ~m) / jnp.maximum((~m).sum(), 1)
+                else:
+                    ce = jnp.mean(ce_map)
                 correct = jnp.all(jnp.argmax(logits, axis=-1) == yy)
                 return ce, q, correct, jnp.stack([zH, zL]), bce
-            ce, q, corr, z_new, bce = jax.vmap(one)(x, y, z, keys)
+            ce, q, corr, z_new, bce = jax.vmap(one)(x, y, z, keys, codes)
             lm = jnp.mean(ce)
             q_halt = q[:, 0]
             q_loss = jnp.mean(optax.sigmoid_binary_cross_entropy(q_halt, corr.astype(jnp.float32)))
@@ -955,7 +1046,7 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             if cfg.fpa_k > 0:
                 # final phase: the FPA anchor rows on the field loop (a fold-in of the row key:
                 # fpa_k = 0 leaves the registered rng stream bit-exact — X0's path untouched)
-                fce = field_fpa_loss(TCm, p, cfg, x, y, jax.random.fold_in(k_n, 1), hw)
+                fce = field_fpa_loss(TCm, p, cfg, x, y, jax.random.fold_in(k_n, 1), hw, codes=codes if decarc else None)
                 total = total + cfg.fpa_w * fce
                 aux["fpa_ce"] = fce
             return total, aux
@@ -976,7 +1067,7 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             explore = jax.random.uniform(k_e1, (B,)) < a.halt_explore
             min_halt = jnp.where(explore, jax.random.randint(k_e2, (B,), 2, T + 1), 0)
             halted = (is_last | (aux["q_halt"] > 0)) & (steps >= min_halt)
-        carry = dict(x=x, y=y, z=jax.lax.stop_gradient(aux["z_new"]), steps=steps, halted=halted)
+        carry = dict(x=x, y=y, z=jax.lax.stop_gradient(aux["z_new"]), steps=steps, halted=halted, t=t)
         scal["halt_frac"] = jnp.mean(halted.astype(jnp.float32))
         scal["mean_steps"] = jnp.mean(steps.astype(jnp.float32))
         return state, opt_state, carry, loss, scal, rng, ema_tree
@@ -1021,10 +1112,10 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             ema1 = first(ema) if use_ema else None
         if do_mon:
             t_m = time.time()
-            mon = sudoku_monitor(st1, cfg, val[0][2])
+            mon = arc_monitor(st1, cfg, val) if decarc else sudoku_monitor(st1, cfg, val[0][2])
             if use_ema:
                 vk = [k for k in mon if k.startswith("val_t")][0]
-                mon[vk + "_ema"] = sudoku_monitor(ema1, cfg, val[0][2])[vk]
+                mon[vk + "_ema"] = (arc_monitor(ema1, cfg, val) if decarc else sudoku_monitor(ema1, cfg, val[0][2]))[vk]
             mon["step"] = i + 1; mon["wall_s"] = round(time.time() - t_m, 1)
             metrics_f.write(json.dumps({"monitor": mon}) + "\n"); metrics_f.flush()
             print("  MONITOR step %d: %s (%ss)" % (i + 1, " ".join(f"{k} {v:.3f}" for k, v in mon.items()

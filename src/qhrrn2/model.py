@@ -19,6 +19,7 @@ from qhrrn2 import cell
 from qhrrn2 import objects as OBJ
 from qhrrn2 import trm_cell
 from qhrrn2 import dec_cell
+from qhrrn2 import decarc_cell
 from qhrrn2.config import Config
 from qhrrn2.grid import CANVAS, NUM_COLORS, VOCAB, VOID
 
@@ -83,6 +84,9 @@ def init_params(key, cfg: Config):
     if cfg.cell_kind == "dec":
         # FINAL PHASE: the DEC cell under the same contract (qhrrn2.dec_cell)
         return {**eq, "dec": dec_cell.init_params(ks[0], cfg, hw=cfg.canvas * cfg.canvas)}
+    if cfg.cell_kind == "decarc":
+        # DEC-ARC BUILD: the ten-field colour DEC under the same contract (qhrrn2.decarc_cell)
+        return {**eq, "decarc": decarc_cell.init_params(ks[0], cfg, hw=cfg.canvas * cfg.canvas)}
     return {**eq,
         "embed": {  # shared 3x3 conv over each field's 2 channels (x, y_prev)
             "w": jax.random.normal(ks[0], (d, 2, 3, 3)) * 0.3,
@@ -161,6 +165,8 @@ def carry_shape(cfg: Config):
         return trm_cell.carry_shape(cfg, hw)
     if cfg.cell_kind == "dec":
         return dec_cell.carry_shape(cfg, hw)
+    if cfg.cell_kind == "decarc":
+        return decarc_cell.carry_shape(cfg, hw)
     return None
 
 
@@ -216,13 +222,18 @@ def forward_fields(params, cfg: Config, fields, *, t_norm: float, tau: float,
     pre-E4 graph, exactly.
     """
     d, db, S = cfg.d, cfg.d_b, cfg.scales
-    if cfg.cell_kind in ("trm", "dec"):
+    if cfg.cell_kind in ("trm", "dec", "decarc"):
         # X0 (sportC1 §11.2): the TRM/EqR block stack under the same contract —
         # logits + carried z_fine; y is a READOUT (not read); no flux / rule /
         # size channels exist in this cell (zeros, never priced). "dec" (final
-        # phase) = the DEC cell under the identical contract.
-        core = trm_cell.forward_core if cfg.cell_kind == "trm" else dec_cell.forward_core
-        logits, _q, z_fine = core(params[cfg.cell_kind], cfg, fields, z_in=z_in, rng=rng)
+        # phase) = the DEC cell under the identical contract; "decarc" (the DEC-ARC
+        # build) reads the per-colour task code through task_vec and carries the size
+        # in its VOID readout (decode_size).
+        if cfg.cell_kind == "decarc":
+            logits, _q, z_fine = decarc_cell.forward_core(params["decarc"], cfg, fields, task_vec=task_vec, z_in=z_in, rng=rng)
+        else:
+            core = trm_cell.forward_core if cfg.cell_kind == "trm" else dec_cell.forward_core
+            logits, _q, z_fine = core(params[cfg.cell_kind], cfg, fields, z_in=z_in, rng=rng)
         zeros = jnp.zeros
         return StepOutput(
             logits=logits, size_h=zeros((30,)), size_w=zeros((30,)),
@@ -390,6 +401,17 @@ def size_candidates(x_canvas):
         return jnp.stack([a, b, 2 * a, 3 * a, (a + 1) // 2, (a + 2) // 3, occ, top1])
     cands = jnp.stack([axis(h_in, w_in, occ_r), axis(w_in, h_in, occ_c)])
     return jnp.clip(cands, 1, 30)
+
+
+def decode_size(cfg: Config, out, x_canvas):
+    """(p_h, p_w), each (30,) with index = size - 1: the rg cells' candidate-mixture decode (the pre-existing
+    expressions, bit-exact) or, for the DEC-ARC cell, the crop of the non-VOID argmax region (a one-hot).
+    Every size-decoding consumer (train.predict, the probes, the ARC suite) reads it here."""
+    if cfg.cell_kind == "decarc":
+        return decarc_cell.size_from_logits(out.logits)
+    cands = size_candidates(x_canvas)
+    return (size_mixture_probs(out.size_sel_h, out.size_h, cands[0]),
+            size_mixture_probs(out.size_sel_w, out.size_w, cands[1]))
 
 
 def size_mixture_probs(sel_logits, off_logits, cands):
