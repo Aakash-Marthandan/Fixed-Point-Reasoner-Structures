@@ -258,5 +258,11 @@ mk_sandbox
 run_chain 0 1
 grep -q "LIVE-RESTORE pulled=" "$SB/w0.log" && grep -q "RESUMED from runs/pretraindecarc_D0/ckpt_latest.pkl at step 2000" "$SB/repo/runs/pretraindecarc_D0.log" && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && ok "S11 live-bank restore + RESUMED" || bad "S11"
 
+echo "== S12 the registry guard: warmup >= the DEC steps -> REGISTRY-ABORT before any launch =="
+mk_sandbox; run_chain 0 1 DA_WARMUP=8000
+grep -q "REGISTRY-BAD warmup 8000 >= DEC steps 8000" "$SB/w0.log" && grep -q "DECARC-REGISTRY-ABORT" "$SB/w0.log" && ! grep -q "PREFLIGHT\|PRETRAIN-START" "$SB/w0.log" && ok "S12 registry guard aborts before launch" || bad "S12"
+mk_sandbox; run_chain 0 1 DA_WARMUP=200
+pargv D0 | grep -q -- "--warmup 200" && [ "$(n_ok)" = 4 ] && ok "S12b the warmup knob reaches the trainer" || bad "S12b"
+
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

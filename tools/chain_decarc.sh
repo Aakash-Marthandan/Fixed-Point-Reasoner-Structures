@@ -27,6 +27,7 @@ STEPS_DEC=${DA_STEPS_DEC:-30000}; STEPS_NAT=${DA_STEPS_NAT:-40000}
 EXT_STEPS=${DA_EXT_STEPS:-10000}; EXT_WINDOW=${DA_EXT_WINDOW:-4000}
 DEC_W=${DA_DEC_W:-160}; HEADS=${DA_HEADS:-4}; BATCH=${DA_BATCH:-64}; NVAL=${DA_NVAL:-96}; W_VOID=${DA_W_VOID:-0.5}
 TABLE_LR=${DA_TABLE_LR:-1e-2}; TABLE_WD=${DA_TABLE_WD:-0.1}   # the task-code table's own optimizer (the audit, plan §10 item 2)
+WARMUP=${DA_WARMUP:-2000}   # the pilot sets a short warmup: optax's cosine schedule needs steps > warmup (the 2026-09-10 pilot launch crash)
 WD=${DA_WD:-0.1}; LR=${DA_LR:-2e-4}   # the FIELD'S ARC REGIME (TRM ARC-1: lr 2e-4 constant after warmup, weight decay .1; the Sudoku regime was wd 1.0 / lr 1e-4) — plan §11
 MON=${DA_MON:-2000}; CKPT_EVERY=${DA_CKPT_EVERY:-500}; PF_STEPS=${DA_PF_STEPS:-60}
 K_VH=${DA_K_VH:-32}; K_GATE=${DA_K_GATE:-8}; VIEWS_VH=${DA_VIEWS_VH:-8}; ARC1_VIEWS=${DA_ARC1_VIEWS:-8}; ARC1_K=${DA_ARC1_K:-8}
@@ -42,6 +43,8 @@ pt () { JAX_DEFAULT_MATMUL_PRECISION=$ARM_PREC $PY tools/pretrain.py "$@"; }
 pin () { local c=$1; shift; TPU_CHIPS_PER_PROCESS_BOUNDS=1,1,1 TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=$c JAX_DEFAULT_MATMUL_PRECISION=$ARM_PREC "$@"; }
 
 echo "=== $SENT START worker=$W/$NW chips=$NCHIP $(date -u +%FT%TZ) ==="
+# REGISTRY GUARD (the pilot lesson): a schedule with warmup >= steps crashes the trainer at launch, after the preflight (which runs a 10-step warmup)
+[ "$WARMUP" -lt "$STEPS_DEC" ] && [ 500 -lt "$STEPS_NAT" ] || { echo "REGISTRY-BAD warmup $WARMUP >= DEC steps $STEPS_DEC (or the native warmup 500 >= $STEPS_NAT)"; echo "$SENT-REGISTRY-ABORT worker=$W $(date -u +%FT%TZ)"; exit 2; }
 
 # ---------- the ARC data on the node (git-ignored; banked as one tarball at launch) ----------
 ensure_data () {
@@ -68,7 +71,7 @@ corpus_common () { echo "--equilibrium --rearc --conceptarc --orbit 4 --n-val $N
 decarc_common () {   # the DEC on the ten-field colour state under the champion loop + regime (plan §1)
   echo "$(corpus_common) --sot --act --cell decarc --dec-width $DEC_W --decarc-heads $HEADS \
         --trm-layers 2 --trm-h-cycles 3 --trm-l-cycles 6 --T 16 --trm-lambda 0.05 --trm-beta 0.01 \
-        --loss stablemax --batch $BATCH --wd $WD --warmup 2000 --lr $LR --lr-end $LR --beta2 0.95 --ema 0.999 \
+        --loss stablemax --batch $BATCH --wd $WD --warmup $WARMUP --lr $LR --lr-end $LR --beta2 0.95 --ema 0.999 \
         --w-void $W_VOID --table-lr $TABLE_LR --table-wd $TABLE_WD --beta-flux-nl 0 --remat --monitor-every $MON --grid-every $MON --ckpt-every $CKPT_EVERY --val-every 100000"
 }
 native_common () {   # the d96 rung's A5-class arm (chain_r0.sh: PRICED + NI, B64/T6, the knee; the back-port: 2k val rows + grids)
