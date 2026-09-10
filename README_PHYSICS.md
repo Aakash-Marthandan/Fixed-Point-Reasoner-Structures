@@ -1,5 +1,7 @@
 # The Physics of QHRRN-2
 
+> **Status (2026-09-10).** This document is the physics background of the original RG architecture (QHRRN-2, the ARC program of 2026-07 → 08; paper 2's lineage). The measured Sudoku-Extreme program of 2026-08-21 → 09-10 runs on the Decimating Equilibrium Cell (`src/qhrrn2/dec_cell.py`: the field's two-timescale loop on a nine-field S9-exact state); its record is `Documentation/Design_Ledger.md` §5 and the reports indexed in `Documentation/README.md`. The rigor classes below still govern every physics sentence in the paper.
+
 *The inspiration, the mathematical tools, and — importantly — the exact
 boundary between what is load-bearing mathematics and what is metaphor.
 Every physics claim here carries one of the project's rigor classes:*

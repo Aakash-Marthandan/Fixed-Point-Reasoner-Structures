@@ -1,5 +1,7 @@
 # QHRRN-2 Architecture Specification
 
+> **Status (2026-09-10).** This is the specification of the original RG cell (`--cell rg`), the ARC program's architecture and paper 2's lineage; it is not the cell of the Sudoku-Extreme results. The Decimating Equilibrium Cell (`--cell dec`, `src/qhrrn2/dec_cell.py`) is specified in `Plan_2026-09-05_FinalPhase.md` §2 and `Plan_2026-09-08_Champion_Night.md` §2, and its ARC generalization in `Plan_2026-09-10_DEC-ARC_Build.md` §1. The compute plan and budget lines below are historical.
+
 **Status:** v0.3 — v0.2 added the expressivity audit §16 and Amendments A/B/C; v0.3 registers **Amendment D** (ledger C14, 2026-07-21): KL-priced attention channels at *all* scales ("wormhole tolls"), each with measured flux A_s and price β_nl — required by thesis statement S3 (`Thesis_Information_Holography.md` §6), making nonlocal information demand a per-task measurable. Implemented 2026-07-27 (§2.2b; measured net **−144 params** at d=12 — the VIB messages replace the heavier full-width value path) · **Date:** 2026-07-18/27 · **Working paper name candidates:** HoloMERA / FluxRG / RG-Adapt
 **Companion:** `Design_Ledger.md` (the epistemic record) · **Target:** AAMAS 2027, submission early October 2026 · **Budget:** ≤ $4000 GCP
 
