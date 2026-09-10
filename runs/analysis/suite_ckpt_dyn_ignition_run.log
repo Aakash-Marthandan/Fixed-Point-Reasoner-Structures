@@ -1,0 +1,46 @@
+[2026-09-10T06:58:55Z] START champ/C0@002000-ign
+== suite_ckpt dyn: champ/C0@2k-ign (runs/pretrainchamp_C0/ckpt_002000.pkl, ema=True, n=128, t=64) ==
+    step 1 in 10s (incl. compile)
+  champ/C0@2k-ign: solved 0.0 | cells s -/-/-/-/-/-/- u 37/38/39/39/38/39/39 | commit s -/-/- u 36/49/50 | conf-wrong s -/-/- u 20/27/27 | mono - | fe None/None step1 - | E3@.9 {'n_stalled': 128, 'committed_frac': 0.5027070317728293, 'wrong_committed_frac': 0.5528199602115915, 'all_committed_correct': 0.0, 'peel_solves': 0.0, 'peel_stuck': 0.0, 'peel_contradiction': 1.0} (1039.6s)
+[2026-09-10T07:16:16Z] DONE champ/C0@002000-ign rc=0
+[2026-09-10T07:16:16Z] START champ/C0@004000-ign
+== suite_ckpt dyn: champ/C0@4k-ign (runs/pretrainchamp_C0/ckpt_004000.pkl, ema=True, n=128, t=64) ==
+    step 1 in 20s (incl. compile)
+  champ/C0@4k-ign: solved 24.2 | cells s 69/84/92/96/98/100/100 u 48/50/50/49/49/49/49 | commit s 94/99/100 u 88/90/90 | conf-wrong s 28/3/0 u 44/44/44 | mono 48.4 | fe 2.0/10.0 step1 16 | E3@.9 {'n_stalled': 97, 'committed_frac': 0.8998972030028652, 'wrong_committed_frac': 0.4913253050826387, 'all_committed_correct': 0.0, 'peel_solves': 0.0, 'peel_stuck': 0.0, 'peel_contradiction': 1.0} (1050.0s)
+[2026-09-10T07:33:47Z] DONE champ/C0@004000-ign rc=0
+[2026-09-10T07:33:47Z] START champ/C0@006000-ign
+== suite_ckpt dyn: champ/C0@6k-ign (runs/pretrainchamp_C0/ckpt_006000.pkl, ema=True, n=128, t=64) ==
+    step 1 in 10s (incl. compile)
+  champ/C0@6k-ign: solved 77.3 | cells s 62/75/86/92/95/97/100 u 42/36/38/36/38/39/36 | commit s 92/99/100 u 89/92/92 | conf-wrong s 33/7/0 u 51/59/59 | mono 42.4 | fe 2.0/17.0 step1 7 | E3@.9 {'n_stalled': 29, 'committed_frac': 0.9211869506524251, 'wrong_committed_frac': 0.6352055267023015, 'all_committed_correct': 0.0, 'peel_solves': 0.0, 'peel_stuck': 0.0, 'peel_contradiction': 1.0} (604.3s)
+[2026-09-10T07:43:52Z] DONE champ/C0@006000-ign rc=0
+[2026-09-10T07:43:52Z] START champ/C0@008000-ign
+== suite_ckpt dyn: champ/C0@8k-ign (runs/pretrainchamp_C0/ckpt_008000.pkl, ema=True, n=128, t=64) ==
+    step 1 in 10s (incl. compile)
+  champ/C0@8k-ign: solved 93.8 | cells s 63/79/88/94/96/98/100 u 38/35/36/43/38/40/42 | commit s 93/99/100 u 93/90/91 | conf-wrong s 32/6/0 u 58/51/53 | mono 56.7 | fe 1.0/10.0 step1 11 | E3@.9 {'n_stalled': 8, 'committed_frac': 0.9145158727347505, 'wrong_committed_frac': 0.5780158534199183, 'all_committed_correct': 0.0, 'peel_solves': 0.0, 'peel_stuck': 0.0, 'peel_contradiction': 1.0} (596.5s)
+[2026-09-10T07:53:49Z] DONE champ/C0@008000-ign rc=0
+[2026-09-10T07:53:49Z] START champ/C0@010000-ign
+== suite_ckpt dyn: champ/C0@10k-ign (runs/pretrainchamp_C0/ckpt_010000.pkl, ema=True, n=128, t=64) ==
+    step 1 in 10s (incl. compile)
+  champ/C0@10k-ign: solved 96.9 | cells s 63/77/88/93/96/99/100 u 30/31/36/35/37/34/32 | commit s 94/99/100 u 89/92/88 | conf-wrong s 32/6/0 u 63/60/60 | mono 53.2 | fe 1.5/10.700000000000003 step1 12 | E3@.9 {'n_stalled': 4, 'committed_frac': 0.8807993730407523, 'wrong_committed_frac': 0.6783333333333333, 'all_committed_correct': 0.0, 'peel_solves': 0.0, 'peel_stuck': 0.0, 'peel_contradiction': 1.0} (588.2s)
+[2026-09-10T08:03:38Z] DONE champ/C0@010000-ign rc=0
+[2026-09-10T08:03:38Z] START champ/C5@010000-traj
+== suite_ckpt dyn: champ/C5@10k-traj (runs/pretrainchamp_C5/ckpt_010000.pkl, ema=True, n=128, t=64) ==
+    step 1 in 4s (incl. compile)
+  champ/C5@10k-traj: solved 94.5 | cells s 55/65/79/90/94/97/100 u 41/44/36/35/36/36/40 | commit s 89/98/100 u 87/88/88 | conf-wrong s 38/8/0 u 50/56/52 | mono 24.8 | fe 3.0/18.0 step1 6 | E3@.9 {'n_stalled': 7, 'committed_frac': 0.8806312411121848, 'wrong_committed_frac': 0.5877227081308715, 'all_committed_correct': 0.0, 'peel_solves': 0.0, 'peel_stuck': 0.0, 'peel_contradiction': 1.0} (220.3s)
+[2026-09-10T08:07:19Z] DONE champ/C5@010000-traj rc=0
+[2026-09-10T08:07:19Z] START champ/C5@030000-traj
+== suite_ckpt dyn: champ/C5@30k-traj (runs/pretrainchamp_C5/ckpt_030000.pkl, ema=True, n=128, t=64) ==
+    step 1 in 4s (incl. compile)
+  champ/C5@30k-traj: solved 98.4 | cells s 58/71/83/94/98/99/100 u 33/41/49/40/37/39/37 | commit s 87/99/100 u 85/83/86 | conf-wrong s 34/5/0 u 55/49/54 | mono 41.3 | fe 2.0/8.5 step1 9 | E3@.9 {'n_stalled': 2, 'committed_frac': 0.8583072100313479, 'wrong_committed_frac': 0.6310638297872341, 'all_committed_correct': 0.0, 'peel_solves': 0.0, 'peel_stuck': 0.0, 'peel_contradiction': 1.0} (219.3s)
+[2026-09-10T08:10:59Z] DONE champ/C5@030000-traj rc=0
+[2026-09-10T08:10:59Z] START champ/C5@040000-traj
+== suite_ckpt dyn: champ/C5@40k-traj (runs/pretrainchamp_C5/ckpt_040000.pkl, ema=True, n=128, t=64) ==
+    step 1 in 4s (incl. compile)
+  champ/C5@40k-traj: solved 96.9 | cells s 53/62/80/92/97/98/100 u 38/36/37/37/39/40/40 | commit s 95/98/100 u 94/91/96 | conf-wrong s 44/7/0 u 59/57/57 | mono 31.5 | fe 3.0/11.400000000000006 step1 10 | E3@.9 {'n_stalled': 4, 'committed_frac': 0.9559386973180077, 'wrong_committed_frac': 0.5937159586056645, 'all_committed_correct': 0.0, 'peel_solves': 0.0, 'peel_stuck': 0.0, 'peel_contradiction': 1.0} (218.6s)
+[2026-09-10T08:14:38Z] DONE champ/C5@040000-traj rc=0
+[2026-09-10T08:14:38Z] START champ/C5@014000-traj
+== suite_ckpt dyn: champ/C5@14k-traj (runs/pretrainchamp_C5/ckpt_014000.pkl, ema=True, n=128, t=64) ==
+    step 1 in 4s (incl. compile)
+  champ/C5@14k-traj: solved 95.3 | cells s 56/67/83/92/95/99/100 u 44/43/41/40/41/42/39 | commit s 89/98/100 u 90/88/89 | conf-wrong s 36/7/0 u 50/53/52 | mono 34.4 | fe 2.0/11.900000000000006 step1 4 | E3@.9 {'n_stalled': 6, 'committed_frac': 0.889056962620181, 'wrong_committed_frac': 0.5896048037627288, 'all_committed_correct': 0.0, 'peel_solves': 0.0, 'peel_stuck': 0.0, 'peel_contradiction': 1.0} (220.2s)
+[2026-09-10T08:18:19Z] DONE champ/C5@014000-traj rc=0
+[2026-09-10T08:18:19Z] ALL-DONE

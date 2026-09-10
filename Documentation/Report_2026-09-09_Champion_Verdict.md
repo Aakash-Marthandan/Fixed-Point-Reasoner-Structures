@@ -253,4 +253,32 @@ Readings (descriptive):
 4. **Next (the calendar):** the ARC work of the 2026-09-08 freethink (A-5 i–iii: the selector law on ARC, the $0 dynamics backfill, the d96 rung) inside the remaining envelope; freeze Sep 16.
 5. **Owed:** the MAC instrument (the compute column is analytic); a US-zone control of the k128 scan pace; the physics tool's selftest; the analyzer's onset definition for the next registration; the k128 rows for C1–C4 and the d64full rows when the filler banks them (they change no letter: the registered rows are complete).
 
+## 8. Addendum (2026-09-10): the filler's rows — k = 128 on every arm and the FULL-SET D64 rows on five arms (the pod closed at the cap 06:30Z Sep 10; the run's spend ≈ $757; `runs/_champ_pull/filler/*.tgz`, crc32c verified; the physics pass re-run with sections D and I2)
+
+**k = 128 restarts on the identical 5k (t64, batch 32; the matched-restart column against EqR's B = 128):** residual selection equals the free verifier to within 0.06 pp on all seven arms; the spurious rate stays ≤ 0.2 %.
+
+| arm | cold | b1 | residual-selected @128 | verified @128 | spurious | AUC |
+|---|---|---|---|---|---|---|
+| C0 | 98.54 | 98.66 | 99.76 | 99.76 | 0.04 % (4 of 9231) | 0.999 |
+| C1 | 97.44 | 97.42 | 99.48 | 99.52 | 0.02 % (3 of 15701) | 0.999 |
+| C2 | 98.70 | 98.52 | 99.78 | 99.82 | 0.04 % (3 of 8136) | 0.999 |
+| C3 | 98.22 | 98.36 | 99.52 | 99.58 | 0.04 % (5 of 11252) | 0.999 |
+| C4 | 98.98 | 98.82 | 99.66 | 99.66 | 0.00 % (0 of 7012) | 1.000 |
+| C5 | 99.20 | 99.16 | 99.88 | 99.88 | 0.20 % (12 of 6021) | 0.998 |
+| C6 | 98.72 | 98.66 | 99.74 | 99.78 | 0.15 % (13 of 8795) | 0.998 |
+
+**The full-set D64 rows (the selected grid on all 422,786 at D64; C2 and C4 did not finish before the cap):** the full set reads 0.05–0.12 pp above the 100k row on every arm because the 100k subsample is slightly harder than the rest (the full's rate on the 100k subset reproduces the 100k row to 0.01 pp: the evaluator's numerics floor is invisible at the rate level); depth regressions D16 → D64 are ZERO on every arm with exact pairing on 422,786 (12.5k–14.3k puzzles gained); the paired deltas against the field's released weights on the identical full set are the paper's D64 comparison row.
+
+| arm | D64 FULL | the full's rate on the 100k subset | on the other 322,786 | regressions / gains D16 → D64 | vs EqR (only-ours / only-EqR) | vs CGAR | vs alphaXiv |
+|---|---|---|---|---|---|---|---|
+| C0 | 98.47 | 98.42 | 98.49 | 0 / 14,275 | +5.32 (25,269 / 2,783) | +6.77 | +15.02 |
+| C1 | 97.55 | 97.46 | 97.57 | 0 / 13,571 | +4.39 (23,381 / 4,801) | +5.84 | +14.10 |
+| C3 | 98.13 | 98.01 | 98.16 | 0 / 14,177 | +4.98 (24,437 / 3,398) | +6.42 | +14.68 |
+| C5 | 99.16 | 99.11 | 99.17 | 0 / 13,738 | +6.00 (26,727 / 1,347) | +7.45 | +15.71 |
+| C6 | 98.58 | 98.50 | 98.61 | 0 / 12,504 | +5.43 (25,331 / 2,376) | +6.88 | +15.13 |
+
+Pairwise on the full set at D64: C5 − C0 +0.68 pp (4,651 / 1,757), C5 − C1 +1.61, C0 − C1 +0.92 (6,574 / 2,668), C6 − C0 +0.11 (3,466 / 2,997), C3 − C0 −0.34 (2,817 / 4,264). Rating bands on the full set at D64: the DEC's lead over EqR is +4.5 to +8.7 pp in every band from rating 1 up (C5 99.39 / 98.90 / 98.92 / 98.92 against EqR 94.93 / 90.21 / 91.61 / 92.35 on the bands 1–10 / 10–30 / 30–60 / 60+), and the rating-0 band is saturated for every model (99.75–99.99). The paper's D64 headline on the full set: **C5 99.16; the seed pair C0 / C1 98.47 / 97.55 (the triple's third seed, C2, has the 100k row 98.67 only)**; C6 98.58; C3 98.13.
+
+**The joint-readout lens (2026-09-10; `tools/lens_commit_joint.py` → `runs/analysis/champ_commit_joint_20260910.{txt,json}`; both readouts on the same cells of the same 512 strat trajectories at D16) refines §2.6:** on the 23 failing puzzles the softmax commits 88.3 % of the free cells (52.2 % wrong) and the head 1.3 % (5.9 % wrong), but for "this softmax-committed cell is wrong" the head's 1 − c reads AUC .635 against the softmax's own .618 — neither readout locates the wrong commitments; the head's c on a failing puzzle sits at .47 on average across right and wrong cells alike (ECE .013 against the softmax's .501), and at the puzzle level both readouts separate solved from unsolved perfectly (AUC 1.000 for mean c and for mean softmax confidence; .995 for the head on the 20k). The head is calibrated by per-puzzle abstention, not by cell-level knowledge, which is why it is inert: it cannot repair what it cannot localize and it cannot hurt a success. Law 2's sharpened form is accordingly two-level — the puzzle-level confidence is the readout's and recoverable at zero cost, the cell-level confidence at a stall is the decoder's and not recoverable from the state by any readout (`Note_2026-09-10_Champion_Mechanisms.md` §5).
+
 Analysis $0 (disk + Mac CPU).

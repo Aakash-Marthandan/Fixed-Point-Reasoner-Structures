@@ -448,6 +448,40 @@ def main():
             BAND[depth][f"{lo}-{hi}"] = {x: float(cols[x][m].mean()) for x in order}
             say(f"    [{lo},{hi if hi < 10**6 else 'inf'}) | {m.sum():6d} | " + " | ".join(f"{100*cols[x][m].mean():6.2f}" for x in order))
     J["bands"] = BAND
+    # ---------- I2: the filler's FULL-SET D64 rows ----------
+    say("\n== I2. THE FULL-SET D64 ROWS (the filler's d64full: the selected grid on all 422,786 at D64, EMA; exact pairing with the field's D64 fulls and with our D16 fulls) ==")
+    say("  arm | D64 FULL | its 100k row | the full's rate on the 100k subset (consistency) | on the other 322,786 | D16 FULL | depth regressions D16->D64 (solved at 16, unsolved at 64) / gains | vs EqR D64 full (delta, only-A/only-B, p) | vs CGAR | vs alphaXiv")
+    FULL64 = {}
+    for x in present:
+        z = recs(RUNS / f"filler_sxeval_p{TAG}{x}_full_t64"); s64 = summ(RUNS / f"filler_sxeval_p{TAG}{x}_full_t64")
+        if z is None or not s64: continue
+        FULL64[x] = z; z100 = F64.get(x); z16 = F16.get(x)
+        sub = None; comp = None
+        if z100 is not None:
+            common, ka, kb = np.intersect1d(z["idx"], z100["idx"], return_indices=True); m = np.zeros(len(z["idx"]), bool); m[ka] = True
+            sub = float(z["cold_exact"][m].mean()); comp = float(z["cold_exact"][~m].mean())
+        reg = gain = None
+        if z16 is not None and np.array_equal(z16["idx"], z["idx"]):
+            a16 = z16["cold_exact"].astype(bool); a64 = z["cold_exact"].astype(bool); reg = int((a16 & ~a64).sum()); gain = int((~a16 & a64).sum())
+        cells = []
+        for ref in ("eqr", "cgar", "trmpub"):
+            r = paired(z, F64.get(ref))
+            if r is None: cells.append("-"); continue
+            pa, pb, n_, note = r; oa, ob, pv = mcnemar(pa, pb); cells.append(f"{100*(pa.mean()-pb.mean()):+.2f} ({oa}/{ob}, p {pv:.0e})")
+            PR[f"D64FULL {x} vs {ref}"] = dict(a=float(pa.mean()), b=float(pb.mean()), delta=float(pa.mean()-pb.mean()), only_a=oa, only_b=ob, p=pv, n=n_)
+        EV[x]["cold64_full"] = s64.get("exact_acc"); EV[x]["cold64_full_on100k"] = sub; EV[x]["cold64_full_rest"] = comp; EV[x]["reg16_64_full"] = reg; EV[x]["gain16_64_full"] = gain
+        say(f"  {x} | {pp(s64.get('exact_acc'))} | {pp(EV[x]['cold64'])} | {pp(sub)} | {pp(comp)} | {pp(EV[x]['cold16'])} | {reg} / {gain} | " + " | ".join(cells))
+    if FULL64:
+        say("  pairwise on the full set: " + "; ".join(f"{a_} vs {b_}: {100*(FULL64[a_]['cold_exact'].mean()-FULL64[b_]['cold_exact'].mean()):+.2f} pp (only-A {int((FULL64[a_]['cold_exact'].astype(bool) & ~FULL64[b_]['cold_exact'].astype(bool)).sum())} / only-B {int((~FULL64[a_]['cold_exact'].astype(bool) & FULL64[b_]['cold_exact'].astype(bool)).sum())})" for a_, b_ in (("C5", "C0"), ("C5", "C1"), ("C0", "C1"), ("C6", "C0"), ("C3", "C0")) if a_ in FULL64 and b_ in FULL64))
+        say("  rating bands on the FULL set at D64 (cold): band | n | " + " | ".join(list(FULL64) + ["eqr", "cgar", "trmpub"]))
+        base = next(iter(FULL64.values())); rat = base["rating"]
+        cols = {x: FULL64[x]["cold_exact"].astype(bool) for x in FULL64}
+        for ref in ("eqr", "cgar", "trmpub"):
+            if F64.get(ref) is not None and np.array_equal(F64[ref]["idx"], base["idx"]): cols[ref] = F64[ref]["cold_exact"].astype(bool)
+        for lo, hi in RBANDS:
+            m = (rat >= lo) & (rat < hi)
+            if m.any(): say(f"    [{lo},{hi if hi < 10**6 else 'inf'}) | {m.sum():6d} | " + " | ".join(f"{100*cols[x][m].mean():6.2f}" for x in cols))
+    J["full64"] = {x: {k: EV[x].get(k) for k in ("cold64_full", "cold64_full_on100k", "cold64_full_rest", "reg16_64_full", "gain16_64_full")} for x in FULL64}
     # ---------- J ----------
     if not a.no_commit:
         say("\n== J. THE COMMIT HEAD (C6; sub20k_t16_commit: the head's probability per free cell per step + correctness bits; tau .9) ==")

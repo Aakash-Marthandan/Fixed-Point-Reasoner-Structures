@@ -95,7 +95,8 @@ for pass in $(seq 1 "${PASSES:-400}"); do   # 400 x 600 s ≈ 2.8 days: the queu
       gsutil -q stat "$FG/arcsuite_OK" 2>/dev/null && continue
       todo=$((todo + 1))
       pending=""; for a in $FILLER_ARMS; do for j in k128 d64full; do gsutil -q stat "$FG/${j}_${a}_OK" 2>/dev/null || pending="$pending ${j}_$a"; done; done
-      [ -z "$pending" ] || { log "FILLER-ARC-DEFERRED (Sudoku rows pending:$pending)"; continue; }
+      [ -z "$pending" ] || [ "${FORCE_ARC:-0}" = 1 ] || { log "FILLER-ARC-DEFERRED (Sudoku rows pending:$pending)"; continue; }
+      [ -z "$pending" ] || log "FILLER-ARC-FORCED (PI 2026-09-10: run ARC now; Sudoku pending:$pending)"
       claimed_elsewhere arcsuite && { log "FILLER-CLAIMED arcsuite (another worker)"; continue; }
       wait_idle; echo "$W $(date -u +%FT%TZ)" | gsutil -q cp - "$FG/arcsuite_CLAIM_w$W"; arcsuite_job && did=$((did + 1)); continue
     fi

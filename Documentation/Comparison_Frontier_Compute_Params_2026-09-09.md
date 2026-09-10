@@ -1,4 +1,4 @@
-# The frontier comparison, organized by parameters and by inference compute (2026-09-09)
+# The frontier comparison, organized by parameters and by inference compute (2026-09-09; the full-set D64 rows and the k = 128 rows on every arm added 2026-09-10)
 
 Every accuracy carries its training-data column (the 1k convention = 1,000 base puzzles × augmentation; the full split = 2.7–3.8M puzzles), its protocol (single pass / restarts / search; the depth; the test set) and a compute tier: **M** = analytic multiply-accumulates per puzzle from our accounting (our cells and the TRM-MLP cell: 70.0 GMAC per outer step at w384, 20.4 at w192, 15.2 for the field's 5M cell; TFLOPs = 2 × TMAC); **R** = read from the paper's own compute axis; **I** = inferred from the parameter count × 81 tokens × the reported iterations (a lower bound, no attention terms); **–** = not computed. Our numbers: EMA weights, bf16, val-selected inside the run on train-file puzzles; the field's released weights through the same evaluator on identical puzzles. Sets: FULL = 422,786; 100k / 20k / 5k = uniform subsamples (binomial SE 0.04 / 0.07 / 0.09 pp at 99 %).
 
@@ -6,7 +6,7 @@ Every accuracy carries its training-data column (the 1k convention = 1,000 base 
 
 | params | system | training data | protocol | accuracy | inference compute per puzzle (tier) |
 |---|---|---|---|---|---|
-| 789,125 | **DEC-w192 (C5, ours, one seed)** | 1k × position aug | single pass D64, 100k | **99.10** | 1.31 TMAC = 2.6 TFLOPs (M); D16 95.91 at 0.33 TMAC; D128 99.42 at 2.61; D256 99.60 at 5.22 |
+| 789,125 | **DEC-w192 (C5, ours, one seed)** | 1k × position aug | single pass D64, FULL 422,786 (99.10 on the 100k) | **99.16** | 1.31 TMAC = 2.6 TFLOPs (M); D16 95.91 at 0.33 TMAC; D128 99.42 at 2.61; D256 99.60 at 5.22 |
 | 796,937 | Sotaku v2 (GitHub) | **2.7M puzzles** | single pass, 1,024 iterations, a 25k subset | 99.12 | ≈ 0.07 TMAC (I: 81 × 0.8M × 1,024); 96.29 at 128 iterations ≈ 0.008 |
 | 800,000 | Lattice Deduction Transformer | 1k × (digit + D4) aug | learned elimination + branching search; 300 puzzles | 100 (2 timeouts) | – (search) |
 | 2,000,000 | SE-RRM ✓ | 1k × aug (digit permutation) | single pass, 16 supervision steps | 93.73 | – (attention over 9 symbols × 81 positions; not computed) |
@@ -42,7 +42,7 @@ Every accuracy carries its training-data column (the 1k convention = 1,000 base 
 | 1.12 | 2.2 | **DEC-w384 triple, D16** | 2.78M | FULL | **95.02 ± 0.65** |
 | 1.12 | 2.2 | DEC-w384 C2 (champion by rule), D16 | 2.78M | FULL | 95.63 |
 | 1.12 | 2.2 | DEC-w384 + set attention C4, D16 (+ q/k, lower bound) | 2.98M | FULL | 96.70 |
-| 1.31 | 2.6 | **DEC-w192 C5, D64** | 0.79M | 100k | **99.10** |
+| 1.31 | 2.6 | **DEC-w192 C5, D64** | 0.79M | FULL (100k: 99.10) | **99.16** |
 | 1.95 | 3.9 | alphaXiv TRM-MLP, D128 | 5.04M | 20k | 84.97 |
 | 1.95 | 3.9 | CGAR, D128 | 5.04M | 20k | 93.17 |
 | 1.95 | 3.9 | EqR, D128 | 5.04M | 20k | 95.02 |
@@ -79,6 +79,7 @@ Every accuracy carries its training-data column (the 1k convention = 1,000 base 
 | 125 | alphaXiv TRM-MLP (released, our evaluator), k = 128 at D64 | 5.04M | 20k | 93.84 / 97.50 | residual / verifier |
 | 148 | DEC-w384 triple, k = 32 at D64 | 2.78M | 5k | 99.28–99.70 residual = verified | residual / verifier |
 | 168 | **DEC-w192 C5, k = 128 at D64** | 0.79M | 5k | **99.88** / 99.88 | residual / verifier |
+| 578 | DEC-w384 triple, k = 128 at D64 | 2.78M | 5k | 99.48–99.78 residual = verified (C0 99.76, C1 99.48, C2 99.78) | residual / verifier |
 | 578 | DEC-w384 C0, k = 128 at D64 | 2.78M | 5k | 99.76 / 99.76 | residual / verifier |
 | – | GRAM, 20 sampled trajectories + majority vote at 16 iterations | 10M | 1,000 puzzles | 97.0 | unverified vote |
 | – | Guided reasoning (TRM base), halting-head reweighted trajectories | 5M | ? | 98.0 | halting-head selection |
@@ -97,7 +98,7 @@ Every accuracy carries its training-data column (the 1k convention = 1,000 base 
 ## 5. What the tables say
 
 1. **Per parameter, the DEC is the smallest model at the top of every thousand-puzzle column:** the w192 DEC (0.79M) is 16 % of EqR / PTRM (5M), 11 % of FPRM / FRM (7M), 8 % of GRAM (10M) and 3 % of HRM (27M), and reads 99.10 at D64 against their 93.0–94.2 single pass; the w384 triple (2.78M) is 55 % of the 5M cell at 98.18 ± 0.61. Only Sotaku (0.80M) and LDT (0.8M) are of the w192's size, and both sit in other columns (2.7M training puzzles; search).
-2. **Per unit of inference arithmetic under the thousand-puzzle convention, the ladder is ours from 0.33 TMAC upward:** at 0.24–0.33 TMAC the released 5M weights read 79–87 (D16) and the w192 DEC 95.91 (D16); at ≈ 1 TMAC EqR's D64 93.15 vs the w192's D64 99.10 (1.31); at 2–4 TMAC EqR's D128 / D256 95.02 / 95.88 vs the w192's D128 99.42 (2.61) and the triple's D16 95.02 (1.12); every DEC point above 1 TMAC is above every field point at any depth. FRM's 99.5 peak sits at ≈ 0.5–5 TMAC on their own axis, on a 1,000-puzzle subset, within error of the w192's 99.42–99.60 rows on different subsets: the two systems share the top of this ladder, and neither is measured on the other's set.
+2. **Per unit of inference arithmetic under the thousand-puzzle convention, the ladder is ours from 0.33 TMAC upward** (the w192's D64 now on the full 422,786: 99.16, +6.00 pp over EqR's 93.15 on the identical set, 26,727 puzzles only-ours against 1,347 only-EqR): at 0.24–0.33 TMAC the released 5M weights read 79–87 (D16) and the w192 DEC 95.91 (D16); at ≈ 1 TMAC EqR's D64 93.15 vs the w192's D64 99.10 (1.31); at 2–4 TMAC EqR's D128 / D256 95.02 / 95.88 vs the w192's D128 99.42 (2.61) and the triple's D16 95.02 (1.12); every DEC point above 1 TMAC is above every field point at any depth. FRM's 99.5 peak sits at ≈ 0.5–5 TMAC on their own axis, on a 1,000-puzzle subset, within error of the w192's 99.42–99.60 rows on different subsets: the two systems share the top of this ladder, and neither is measured on the other's set.
 3. **The w384 DEC buys its lead with arithmetic, the w192 does not:** at D64 the w384 triple costs 4.6× EqR's arithmetic for +5.1 pp; the w192 costs 1.34× for +6.0 pp on identical puzzles. The compute story of the paper is the w192 row; the w384 rows are the seeded claim.
 4. **On the restart columns the compute is comparable and the DEC is at or above the field:** 43 TMAC buys 99.82 verification-free at k = 32 on the w192 (EqR needs ≈ 125 TMAC for 99.8 in its paper and reads 98.85 through our evaluator on the 20k; PTRM ≈ 97 TMAC for 98.75); at matched k = 128 the w192 reads 99.88 at 169 TMAC. These are coverage-class numbers on a 5k subsample, one seed for the w192.
 5. **The full-split solvers are cheaper AND more accurate, and they are a different problem:** Sotaku's ≈ 0.07 TMAC for 99.12 and the diffusion curriculum's 99.90 are trained on 2,700–3,800× more puzzles; under the thousand-puzzle convention the DEC leads, and no thousand-puzzle model has been shown to reach those numbers. The paper claims the small-data column and says so.
