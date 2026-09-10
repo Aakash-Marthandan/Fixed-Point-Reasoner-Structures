@@ -32,6 +32,7 @@ WD=${DA_WD:-0.1}; LR=${DA_LR:-2e-4}   # the FIELD'S ARC REGIME (TRM ARC-1: lr 2e
 MON=${DA_MON:-2000}; CKPT_EVERY=${DA_CKPT_EVERY:-500}; PF_STEPS=${DA_PF_STEPS:-60}
 K_VH=${DA_K_VH:-32}; K_GATE=${DA_K_GATE:-8}; VIEWS_VH=${DA_VIEWS_VH:-8}; ARC1_VIEWS=${DA_ARC1_VIEWS:-8}; ARC1_K=${DA_ARC1_K:-8}
 FIT_STEPS=${DA_FIT_STEPS:-600}; T_TOTAL=${DA_T_TOTAL:-16}
+LIMIT=${DA_LIMIT:-}   # PILOT ONLY (2026-09-10): the first LIMIT tasks of every eval set (eval_decarc --limit; arc_suite --tasks); the n-gates honor it; the night leaves it unset -> byte-identical commands
 RIDER=${RIDER:-0}
 NPZ=${SX_NPZ_PATH:-data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz}
 SEED_ARMS="D0 D1"; OPTIONAL_ARMS="D2 N0"; ALL_ARMS="D0 D1 D2 N0"
@@ -261,7 +262,10 @@ PYEOF
   for p in "${pids[@]}"; do wait "$p" 2>/dev/null || rc=2; done
   return $rc
 }
-set_n () { case $1 in valhard*) echo 48;; dev30) echo 30;; rg96) echo 96;; rt48) echo 48;; arc1eval) echo 400;; *) echo 0;; esac; }
+set_n () {  # SETNAME -> the registered task count of the set (the pilot's LIMIT caps it)
+  local n; case $1 in valhard*) n=48;; dev30) n=30;; rg96) n=96;; rt48) n=48;; arc1eval) n=400;; *) n=0;; esac
+  [ -n "$LIMIT" ] && [ "$LIMIT" -lt "$n" ] 2>/dev/null && n=$LIMIT; echo "$n"; }
+set_tasks () { [ -n "$LIMIT" ] && gate_tasks "$1" || echo ""; }   # the native sets' --tasks list: empty unless the pilot's LIMIT is set
 finish_dec_eval () {  # NAME OUTDIR NGATE — summarize, n-gate on the task count, bank, mark
   local name=$1 O=$2 NGATE=$3
   $PY tools/eval_decarc.py --out "$O" --summarize > "$O/summary.log" 2>&1 || { echo "EVAL-SUMMARY-FAILED $name"; return 1; }
@@ -280,7 +284,7 @@ eval_dec () {  # ARM SETNAME SET CK NSH EXTRA... — the DEC-ARC battery on one 
     pids=()
     for i in $(seq 0 $((NSH - 1))); do
       pin $((i % NCHIP)) ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/eval_decarc.py --ckpt "$CK" --set "$set" --out "$O" --shard "$i/$NSH" \
-          --steps "$FIT_STEPS" --t-total "$T_TOTAL" "$@" >> "$O/shard_$i.log" 2>&1 & pids+=($!)
+          --steps "$FIT_STEPS" --t-total "$T_TOTAL" ${LIMIT:+--limit $LIMIT} "$@" >> "$O/shard_$i.log" 2>&1 & pids+=($!)
     done
     watch_shards "$name" "$O" "${pids[@]}"; rc=$?
     [ $rc -eq 1 ] && [ $attempt -eq 1 ] && { echo "EVAL-STALL-RETRY $name (the shards are resume-safe: only the missing tasks re-run)"; continue; }
@@ -309,13 +313,21 @@ eval_nat () {  # SETNAME SET CHIP TASKS_CSV EXTRA... — the native control thro
   echo ok | gsutil -q cp - "$GCS/evals/${name}_OK"
   echo "EVAL-OK $name $(date -u +%H:%M)"
 }
-gate_tasks () {  # SET [i/n] -> the comma list of the set's task ids from the data dirs (the same rule as eval_decarc.task_ids_of; no heavy import)
-  ${REAL_PY:-python3} - "$1" "${2:-}" <<'PYEOF'
-import sys
+gate_tasks () {  # SET [i/n] -> the comma list of the set's task ids (the same rule as eval_decarc.task_ids_of; no heavy import); the pilot's LIMIT caps the list BEFORE the shard slice
+  ${REAL_PY:-python3} - "$1" "${2:-}" "${LIMIT:-0}" <<'PYEOF'
+import ast, json, sys
 from pathlib import Path
-name, shard = sys.argv[1], sys.argv[2]
-dirs = {"rg96": ("re_gate48", "re_gateb48"), "rt48": ("re_train48",), "arc1eval": ("ARC-AGI/data/evaluation",)}[name]
-ids = sorted(p.stem for d in dirs for p in (Path("data") / d).glob("*.json") if not p.name.startswith("."))
+name, shard, limit = sys.argv[1], sys.argv[2], int(sys.argv[3])
+if name == "valhard":
+    ids = json.load(open("tools/valhard.json"))["valhard"]
+elif name == "dev30":   # dev30.MANIFEST parsed as a literal (no qhrrn2 import in the chain's helpers)
+    tree = ast.parse(Path("tools/dev30.py").read_text())
+    ids = sorted(next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.AnnAssign) and getattr(n.target, "id", "") == "MANIFEST"))
+else:
+    dirs = {"rg96": ("re_gate48", "re_gateb48"), "rt48": ("re_train48",), "arc1eval": ("ARC-AGI/data/evaluation",)}[name]
+    ids = sorted(p.stem for d in dirs for p in (Path("data") / d).glob("*.json") if not p.name.startswith("."))
+if limit > 0:
+    ids = ids[:limit]
 if shard:
     i, n = (int(v) for v in shard.split("/")); ids = ids[i::n]
 print(",".join(ids))
@@ -354,8 +366,8 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
     fi
   else
     N0_CK="$VBCK"; local pids=() r=0
-    eval_nat valhard valhard 0 "" --k "$K_VH" & pids+=($!)
-    eval_nat dev30 dev30 1 "" --k "$K_VH" & pids+=($!)
+    eval_nat valhard valhard 0 "$(set_tasks valhard)" --k "$K_VH" & pids+=($!)
+    eval_nat dev30 dev30 1 "$(set_tasks dev30)" --k "$K_VH" & pids+=($!)
     eval_nat rg96 valhard 2 "$(gate_tasks rg96)" --k "$K_GATE" & pids+=($!)
     eval_nat rt48 valhard 3 "$(gate_tasks rt48)" --k "$K_GATE" & pids+=($!)
     for p in "${pids[@]}"; do wait "$p" || r=1; done
@@ -372,7 +384,7 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
         [ $rr -eq 1 ] && [ $att -eq 1 ] && { echo "EVAL-STALL-RETRY N0_arc1eval"; continue; }
         break
       done
-      if [ $rr -eq 0 ] && merge_nat_shards "$O" "$NCHIP" 400; then
+      if [ $rr -eq 0 ] && merge_nat_shards "$O" "$NCHIP" "$(set_n arc1eval)"; then
         tar czf /tmp/N0_arc1eval.tgz "$O" && gsutil -q cp /tmp/N0_arc1eval.tgz "$GCS/evals/N0_arc1eval.tgz"
         echo ok | gsutil -q cp - "$GCS/evals/N0_arc1eval_OK"; echo "EVAL-OK N0_arc1eval $(date -u +%H:%M)"
       else

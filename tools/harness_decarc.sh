@@ -140,6 +140,8 @@ if tool.endswith("eval_decarc.py"):
         elif setn == "arc1eval": ids = sorted(p[:-5] for p in os.listdir(os.path.join(HERE, "..", "repo", "data", "ARC-AGI", "data", "evaluation")) if p.endswith(".json"))
     except Exception as e:
         print(f"set load failed: {e}", file=sys.stderr); sys.exit(1)
+    lim = int(flag("--limit", "0"))
+    if lim: ids = ids[:lim]   # the real tool: ids[:limit] BEFORE the shard slice
     sh = flag("--shard"); tag = ""
     if sh:
         i, n = (int(v) for v in sh.split("/")); ids = ids[i::n]; tag = f"_{i}"
@@ -207,6 +209,7 @@ for s in valhard dev30 rg96 rt48 arc1eval; do [ -f "$SB/gcs/decarc/evals/N0_${s}
 EV=$(eargv "$SB/repo/runs/decarceval_N0/rg96/summary.json"); echo "$EV" | grep -q -- "--tasks" && echo "$EV" | grep -q "rg_00d62c1b" && echo "$EV" | grep -q -- "--k 8" && ok "S1 N0 rg-96 through arc_suite --tasks (96 ids), k8" || bad "S1 N0 rg96: ${EV:0:200}"
 "$REAL_PY" -c "import json; v=json.load(open('$SB/repo/runs/pretraindecarc_D0/vsel.json')); assert v['step'] and v['ckpt'].endswith('.pkl'), v; v=json.load(open('$SB/repo/runs/pretraindecarc_N0/vsel.json')); assert v['step'], v" && [ -f "$SB/gcs/decarc/D0_vsel.json" ] && ok "S1 vsel.json written and banked (DEC on the EMA monitor, N0 on its val rows)" || bad "S1 vsel"
 grep -q "RIDER-OFF" "$SB/w0.log" && ok "S1 rider off by default" || bad "S1 rider default"
+EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); EN=$(eargv "$SB/repo/runs/decarceval_N0/valhard/summary.json"); ! echo "$EV" | grep -q -- "--limit" && ! echo "$EN" | grep -q -- "--tasks" && ok "S1 no LIMIT: the eval commands carry no --limit / no --tasks on the native sets (byte-identical night path)" || bad "S1 limit leak: $EV | $EN"
 
 echo "== S2 idempotent rerun: nothing re-runs, completion again =="
 run_chain 0 1
@@ -278,6 +281,14 @@ mk_sandbox; run_chain 0 1 STUB_EVAL_STALL="D0:dev30:1" STUB_EVAL_STALL_ALWAYS=1
 [ "$(grep -c 'EVAL-STALLED D0_dev30' "$SB/w0.log")" = 2 ] && grep -q "EVAL-SHARD-FAILED D0_dev30" "$SB/w0.log" && grep -q "ARM-PARTIAL D0" "$SB/w0.log" && [ ! -f "$SB/gcs/decarc/D0_ARM_OK" ] && ok "S13b a persistent stall fails the row after one retry (ARM-PARTIAL, rerunnable)" || bad "S13b"
 mk_sandbox; run_chain 0 1 STUB_EVAL_STALL="N0:valhard:"
 grep -q "EVAL-STALLED N0_valhard" "$SB/w0.log" && grep -q "EVAL-OK N0_valhard" "$SB/w0.log" && [ -f "$SB/gcs/decarc/N0_ARM_OK" ] && ok "S13c the native single-process set is watched too" || bad "S13c"
+
+echo "== S14 the PILOT LIMIT: DA_LIMIT=8 -> every eval set is its first 8 tasks, every n-gate = 8, completion =="
+mk_sandbox; run_chain 0 1 DA_LIMIT=8
+grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S14 complete with 4 ARM_OK under LIMIT 8" || bad "S14 complete ($(n_ok) ok)"
+"$REAL_PY" -c "import json; [ (lambda s: (_ for _ in ()).throw(AssertionError(s)) if s['n_tasks']!=8 else None)(json.load(open(f'$SB/repo/runs/decarceval_D0/{x}/summary.json'))) for x in ('valhard','dev30','rg96','rt48','arc1eval','valhard_final')]; s=json.load(open('$SB/repo/runs/decarceval_N0/arc1eval/summary.json')); assert s['n_tasks']==8 and s['shards']==4, s" && ok "S14 every D0 set + the N0 public row n-gated at 8" || bad "S14 n-gates"
+EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); echo "$EV" | grep -q -- "--limit 8" && ok "S14 eval_decarc carries --limit 8" || bad "S14 --limit: $EV"
+EN=$(eargv "$SB/repo/runs/decarceval_N0/valhard/summary.json"); ED=$(eargv "$SB/repo/runs/decarceval_N0/dev30/summary.json"); [ "$(echo "$EN" | sed -n "s/.*--tasks \([^ ]*\).*/\1/p" | tr "," "\n" | wc -l | tr -d " ")" = 8 ] && [ "$(echo "$ED" | sed -n "s/.*--tasks \([^ ]*\).*/\1/p" | tr "," "\n" | wc -l | tr -d " ")" = 8 ] && echo "$ED" | grep -q "1e0a9b12" && ok "S14 the native val-hard / dev-30 rows carry --tasks with 8 ids (dev-30 from the manifest literal)" || bad "S14 native --tasks: $EN | $ED"
+[ "$(cat "$SB/repo/runs/decarceval_N0/rg96/results.jsonl" | wc -l | tr -d " ")" = 8 ] && ok "S14 rg-96 native row = 8 tasks" || bad "S14 rg96 rows"
 
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

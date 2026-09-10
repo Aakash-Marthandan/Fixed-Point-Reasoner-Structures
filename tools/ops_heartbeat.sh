@@ -20,7 +20,7 @@ while true; do
   l1=$(echo "$load" | awk '{print int($1)}'); np=$(echo "$load" | grep -oE "nproc=[0-9]+" | cut -d= -f2)
   evage=$(echo "$snap" | grep -E "^  EV" | grep -oE "age=[0-9]+s" | tr -dc '0-9'); evtasks=$(echo "$snap" | grep -E "^  EV" | grep -oE "tasks=[0-9]+" | cut -d= -f2)
   suptail=$(tail -3 "$PODLOG" 2>/dev/null | grep -oE "PREEMPT[A-Z]*|node [A-Z]+ in|down|relaunch|DEMOTE[D]?|sick|unreachable|STRIKE" | tr '\n' ',' )
-  echo "$ts | sup:$sup dl:${dlm}m ${wd:-<no-snap>} | ${mark:-?} | ${pt:-${ev:-idle}} | load:${load:-?} | dms${dms:-?} lb:${lb:-?} ${suptail:+sup:$suptail}"
+  echo "$ts | sup:$sup dl:${dlm}m ${wd:-<no-snap>} | ${mark:-?} | ${pt:-idle} | ev:${ev:-none} | load:${load:-?} | dms${dms:-?} lb:${lb:-?} ${suptail:+sup:$suptail}"
   [ "$sup" = DOWN ] && echo "  ALERT supervisor process DOWN (restart: DRY_SLEEP=480 nohup bash tools/pod.sh supervise <h> &)"
   [ -n "$wd" ] && ! echo "$wd" | grep -q READY && echo "  ALERT node not READY: $wd"
   [ "${dlm:-1}" -lt 0 ] && echo "  ALERT past deadline knob"
