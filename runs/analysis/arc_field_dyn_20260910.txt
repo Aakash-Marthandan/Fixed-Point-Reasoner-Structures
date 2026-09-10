@@ -1,0 +1,10 @@
+THE FIELD'S ARC-1 TRM, per-step dynamics on the 419 canonical inputs (fp32, D16): n 419, exact 30.55 %
+  [solved n 128] cells right by step: s1 99.4 | s2 99.9 | s4 99.9 | s8 100.0 | s16 100.0 | monotone trajectories 98.4 % | cells right FALL from step 1 to 16 on 0.0 %
+      delta cells-right (16 - 1): mean +0.56 pp, p10 +0.00, p90 +0.00
+  [unsolved n 291] cells right by step: s1 82.2 | s2 82.3 | s4 82.3 | s8 82.1 | s16 82.0 | monotone trajectories 34.4 % | cells right FALL from step 1 to 16 on 37.1 %
+      delta cells-right (16 - 1): mean -0.15 pp, p10 -3.99, p90 +4.17
+  first-exact of the solved (0-based step): step 0 90.6 %, step 1 8.6 %, later 0.8 % (median 0)
+  exactness flips along the rollout: solved mean 0.12, unsolved 0.04; inputs with >= 1 flip: 5.7 %
+  halting logit q by step (s1 s2 s4 s8 s16): solved +7.21 +7.57 +7.88 +7.92 +7.94 | unsolved -1.28 -0.70 -0.05 +0.14 +0.28
+  q >= 0 at step 1: solved 91.4 % / unsolved 30.9 %; at step 16: 97.7 / 38.8
+  token-exact but not exact (crop/size cases): 0; exact but not token-exact: 0

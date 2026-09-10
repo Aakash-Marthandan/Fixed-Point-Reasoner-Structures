@@ -1,0 +1,50 @@
+{
+ "measured": [
+  {
+   "label": "EqR-port-w512",
+   "cell": "trm",
+   "params": 5038085,
+   "macs_per_step": 12872603648.0
+  },
+  {
+   "label": "CGAR-port-w512",
+   "cell": "trm",
+   "params": 5038085,
+   "macs_per_step": 12871438336.0
+  },
+  {
+   "label": "alphaXiv-port-w512",
+   "cell": "trm",
+   "params": 5038085,
+   "macs_per_step": 12871438336.0
+  },
+  {
+   "label": "DEC-w192-C5",
+   "cell": "dec",
+   "params": 789125,
+   "macs_per_step": 14816297984.0,
+   "method": "XLA cost_analysis of the evaluator's jitted one-step map, batch 1, CPU backend; MACs = flops / 2"
+  },
+  {
+   "label": "DEC-w384-C0",
+   "cell": "dec",
+   "params": 2780933,
+   "macs_per_step": 49949122560.0,
+   "method": "XLA cost_analysis of the evaluator's jitted one-step map, batch 1, CPU backend; MACs = flops / 2"
+  },
+  {
+   "label": "DEC-w384-attn-C4",
+   "cell": "dec",
+   "params": 2977541,
+   "macs_per_step": 53092118528.0,
+   "method": "XLA cost_analysis of the evaluator's jitted one-step map, batch 1, CPU backend; MACs = flops / 2"
+  },
+  {
+   "label": "rg-d64-Dri-ARC",
+   "cell": "rg",
+   "params": 763420,
+   "macs_per_step": 3436358144.0,
+   "method": "XLA cost_analysis of the evaluator's jitted one-step map, batch 1, CPU backend; MACs = flops / 2"
+  }
+ ]
+}
