@@ -28,8 +28,8 @@ while true; do
   echo "$snap" | grep -qiE "DMS.*in -" && echo "  ALERT DMS before deadline"
   [ -n "$l1" ] && [ -n "$np" ] && [ "$l1" -gt $(( np * 3 / 2 )) ] && echo "  ALERT host load $l1 > 1.5 x nproc $np (the thrash class: something besides the chain is on the host)"
   echo "$mark" | grep -qE "VALBEST|VB-FALLBACK|PRETRAIN-OK|EVAL-OK" && [ -n "$evage" ] && [ "$evage" -gt 1800 ] && echo "  ALERT eval stall: newest eval file ${evage}s old (tasks=${evtasks:-?}) while in the battery"
-  if echo "$snap $mark" | grep -q "CHAIN-DECARC-COMPLETE" || gsutil -q stat gs://qhrrn2-rescue/decarc_pilot/decarc_final.tgz 2>/dev/null; then
-    echo "  PILOT-COMPLETE — verify G1 done + pull decarc_pilot/decarc_final.tgz before node loss"; break
+  if echo "$snap $mark" | grep -q "${HB_SENTINEL:-CHAIN-DECARC-COMPLETE}" || gsutil -q stat "${HB_FINAL:-gs://qhrrn2-rescue/decarc_pilot/decarc_final.tgz}" 2>/dev/null; then
+    echo "  CAMPAIGN-COMPLETE (${HB_SENTINEL:-CHAIN-DECARC-COMPLETE} / the final object) — run the close"; break
   fi
   sleep 900
 done
