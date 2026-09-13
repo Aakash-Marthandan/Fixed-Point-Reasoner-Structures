@@ -32,7 +32,7 @@ echo "SNAPSHOT $NOW | watchdog: $(cat runs/tpu_status.txt 2>/dev/null || echo no
 REMOTE='cd ~/qhrrn2 2>/dev/null || { echo "NOREPO"; exit 0; }
 echo "T $(date -u +%FT%TZ)"
 P=$(cat runs/detached.pid 2>/dev/null); if [ -n "$P" ] && kill -0 "$P" 2>/dev/null; then echo "PID $P alive"; else echo "PID ${P:-none} DEAD exit=$(cat runs/detached.exit 2>/dev/null || echo ?)"; fi
-echo "MARK $(grep -E "FILLER-(FULL|JOB|LANE|N-BAD|NO-GRID|CLAIMED|WAIT)[A-Z -]*|FULLSET-|FINAL-BANKED|ARM-OK|PRETRAIN-(START|OK|SKIP|NAN|RESTORE|OOM)|STAGEA|EVAL-(OK|SKIP|FAILED|N-BAD|SHARD)|CENSUS-(OK|SKIP|FAILED)|CALIB-(OK|SKIP|FAILED)|VALBEST|VB-FALLBACK|AMPUTAT|RIDER|WORKER-DONE|COMPLETE|INCOMPLETE|TEARDOWN|BAD-ARM|MISSING" runs/detached.log 2>/dev/null | tail -1 | cut -c1-120)"
+echo "MARK $(grep -E "PF-(LANE1|FILLER|ORPHANS)|PAPERFINAL-|PREFLIGHT-(OK|FAILED|ABORT)|PRETRAIN-EXTEND|DEC-SCAN|SCAN-DEADLOCK|FILLER-(FULL|JOB|LANE|N-BAD|NO-GRID|NO-PORT|CLAIMED|WAIT|PASSES)[A-Z -]*|FULLSET-|FINAL-BANKED|ARM-OK|PRETRAIN-(START|OK|SKIP|NAN|RESTORE|OOM)|STAGEA|EVAL-(OK|SKIP|FAILED|N-BAD|SHARD)|CENSUS-(OK|SKIP|FAILED)|CALIB-(OK|SKIP|FAILED)|VALBEST|VB-FALLBACK|AMPUTAT|RIDER|WORKER-DONE|COMPLETE|INCOMPLETE|TEARDOWN|BAD-ARM|MISSING" runs/detached.log 2>/dev/null | tail -1 | cut -c1-120)"
 L=$(ls -t runs/pretrain'"$R_TAG"'_*.log 2>/dev/null | head -1)
 [ -n "$L" ] && echo "PT $(basename "$L" .log) @$(stat -c %y "$L" | cut -c12-19)Z: $(grep -E "^step |RESUMED|INIT-FROM|DP:|NAN|OOM" "$L" | tail -1 | cut -c1-110)"
 E=$(ls -td runs/sx*/ runs/sx*/*/ runs/filler_sx*/ runs/decarceval_*/*/ 2>/dev/null | grep -vE "/(records|partial|s[0-9])" | head -1)   # nested eval dirs (sxeval_p*/full_*, decarceval_<arm>/<set>) too

@@ -29,6 +29,8 @@
 # arm, C5 ~ 7 h): w0 C0 C4 · w1 C1 C2 · w2 C6 · w3 [sync rider] C3 C5 (pole w0 ~ 26 h + extensions). 8x4: one arm per
 # worker, the rider on w7.
 # 1x8: C0 C1 C2 C5 C4 C3 C6 sequential (science per hour). Harness: tools/harness_champ.sh.
+# 2026-09-13 (Plan_2026-09-13_Paper_Final_Runs.md, the registration): C7 / C8 = C5's recipe (w192) at seeds 1 / 2, run on a
+# 1x8 host through the wrapper tools/chain_paperfinal.sh (CHAMP_ARMS_1X8="C7 C8" CHAMP_EXTRA_ARMS="C7 C8"); C0-C6 unchanged.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 export PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src
@@ -49,7 +51,7 @@ N_FIN_WIDE=${C1_N_FIN_WIDE:-50000}; N_D64_WIDE=${C1_N_D64_WIDE:-100000}; N_SCAN_
 DEC_SCAN_BATCH=${DEC_SCAN_BATCH:-128}; STALL_MIN=${STALL_MIN:-25}; STALL_SEC=${STALL_SEC:-$((STALL_MIN * 60))}; DEC_EVAL_TIMEOUT=${DEC_EVAL_TIMEOUT:-9000}
 PF_STEPS=${C1_PF_STEPS:-60}
 CKPT_EVERY=${C1_CKPT_EVERY:-500}
-SEED_ARMS="C0 C1 C2"; OPTIONAL_ARMS="C3 C4 C5 C6"; ALL_ARMS="C0 C1 C2 C3 C4 C5 C6"
+SEED_ARMS="C0 C1 C2"; OPTIONAL_ARMS="C3 C4 C5 C6"; ALL_ARMS="C0 C1 C2 C3 C4 C5 C6${CHAMP_EXTRA_ARMS:+ $CHAMP_EXTRA_ARMS}"   # C7/C8 are NOT optional: a preflight failure stops the run
 MON=${C1_MON:-2000}
 SUB=${C1_SUB:-20000}; STRAT=${C1_STRAT:-512}
 SYNC_ROWS=${C1_SYNC_ROWS:-256}; SYNC_K=${C1_SYNC_K:-8}
@@ -89,6 +91,8 @@ arm_flags () {   # one variable per arm from C0 (a later flag overrides an earli
     C4)  echo "$(champ_common) --seed 0 --dec-coupling attn --dec-attn-heads 4 --dec-attn-dk 32";;
     C5)  echo "$(champ_common) --seed 0 --dec-width 192";;
     C6)  echo "$(champ_common) --seed 0 --dec-commit --dec-commit-tau 0.9 --dec-commit-w 0.1";;
+    C7)  echo "$(champ_common) --seed 1 --dec-width 192";;   # C5's recipe at seed 1 (2026-09-13 registration)
+    C8)  echo "$(champ_common) --seed 2 --dec-width 192";;   # C5's recipe at seed 2
     *)   return 1;;
   esac
 }

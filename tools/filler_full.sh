@@ -20,6 +20,7 @@ FILLER_ARMS=${FILLER_ARMS:-C0 C2 C1 C5}; JOBS=${JOBS:-d64full}
 ARC_GATE_ARMS=${ARC_GATE_ARMS:-}                     # the ARC suite waits for these arms' d64full rows (default: no gate)
 ARC_BUNDLE=${ARC_BUNDLE:-$FG/arcsuite_bundle.tgz}; ARC_K=${ARC_K:-32}
 IDLE_POLL=${IDLE_POLL:-300}; N_FULL=${N_FULL:-422786}; SUB_N=${SUB_N:-50000}
+N_SCAN=${N_SCAN:-5000}; K_PORT=${K_PORT:-128}; FILLER_PORTS=${FILLER_PORTS:-eqr}; GCS_FRONTIER=${GCS_FRONTIER:-gs://qhrrn2-rescue/frontier}   # k128port (2026-09-13)
 pin () { local c=$1; shift; TPU_CHIPS_PER_PROCESS_BOUNDS=1,1,1 TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=$c JAX_DEFAULT_MATMUL_PRECISION=$ARM_PREC "$@"; }
 log () { echo "[$(date -u +%FT%TZ)] $*"; }
 busy () { pgrep -f 'tools/pretrain[.]py|tools/eval_sudoku_extreme[.]py|tools/arc_suite[.]py' >/dev/null 2>&1; }
@@ -78,6 +79,15 @@ arcsuite_job () {
   tar czf "/tmp/filler_${name}.tgz" "$O" && gsutil -q cp "/tmp/filler_${name}.tgz" "$FG/${name}.tgz" && echo ok | gsutil -q cp - "$FG/${name}_OK"
   log "FILLER-JOB-OK $name"
 }
+port_ckpt () {  # MODEL -> runs/frontier_ckpts/MODEL.pkl (the frontier run's ported checkpoint; load-verified like chain_frontier.sh)
+  local m=$1 f="runs/frontier_ckpts/$1.pkl" try
+  mkdir -p runs/frontier_ckpts
+  for try in 1 2; do
+    if [ -s "$f" ] && JAX_PLATFORMS=cpu ${REAL_PY:-python3} -c "import pickle,sys; d=pickle.load(open(sys.argv[1],'rb')); assert isinstance(d, dict) and 'state' in d and 'config' in d" "$f" >/dev/null 2>&1; then echo "$f"; return 0; fi
+    rm -f "$f"; gsutil -q cp "$GCS_FRONTIER/ckpts/$m.pkl" "$f" 2>/dev/null || true
+  done
+  echo ""; return 1
+}
 mkdir -p runs; PIDF=runs/filler_full_w$W.pid
 if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null; then echo "FILLER-ALREADY-RUNNING pid=$(cat "$PIDF")"; exit 0; fi
 echo $$ > "$PIDF"
@@ -93,6 +103,19 @@ for pass in $(seq 1 "${PASSES:-400}"); do
       [ -z "$pending" ] || { log "FILLER-ARC-DEFERRED (pending:$pending)"; continue; }
       claimed_elsewhere arcsuite && { log "FILLER-CLAIMED arcsuite (another worker)"; continue; }
       wait_idle; echo "$W $(date -u +%FT%TZ)" | gsutil -q cp - "$FG/arcsuite_CLAIM_w$W"; arcsuite_job && did=$((did + 1)); continue
+    fi
+    if [ "$job" = k128port ]; then   # the released weights' k128 t64 scan on the champion arms' identical 5k (the frontier headline scan's flags, n 5k)
+      for m in $FILLER_PORTS; do
+        name=k128port_$m
+        gsutil -q stat "$FG/${name}_OK" 2>/dev/null && continue
+        todo=$((todo + 1))
+        claimed_elsewhere "$name" && { log "FILLER-CLAIMED $name (another worker)"; continue; }
+        wait_idle
+        echo "$W $(date -u +%FT%TZ)" | gsutil -q cp - "$FG/${name}_CLAIM_w$W"
+        ck=$(port_ckpt "$m") || { log "FILLER-NO-PORT $m"; continue; }
+        fill_eval "$name" "$ck" "runs/filler_sxscan${K_PORT}_pport_$m" "$N_SCAN" --split test --subsample "$N_SCAN" --t-total 64 --k-init "$K_PORT" --ema && did=$((did + 1))
+      done
+      continue
     fi
     for arm in $FILLER_ARMS; do
       case $job in d64full) name=d64full_$arm;; d128sub) name=d128sub_$arm;; d256sub) name=d256sub_$arm;; *) log "FILLER-BAD-JOB $job"; continue;; esac
