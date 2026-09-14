@@ -2,6 +2,47 @@
 
 **Read this first, then `tools/OPS_RUNBOOK.md`.** The repo outranks conversation memory. The ops model runs a campaign to completion and STOPS; the analysis pass (Fable, on PI go) adjudicates. ETAs/clocks to the PI in IST (UTC+5:30) with UTC in parentheses. **Concision pass 2026-09-02:** every superseded campaign block (2026-08-19 → 2026-09-01) is preserved verbatim in git — §8 lists the commit per campaign — and its lessons are folded into §7.
 
+## OPS PICKUP — THE WIDTH-192 LONG RUN (registration = `Documentation/Plan_2026-09-14_W192_Long.md`; the analysis is the analysis session's; ops reads NO accuracy values)
+
+**The PI's words for this run:** "let's do it, this is worth looking into for the ARC DEC port — but use a 50k subsample for evals to test things rather than the full"; standing: delete or change no previous result.
+
+**What runs.** One spot v6e-8 in asia-south1-c.
+- **Supervisor:** `tools/pod.sh supervise 18` (pid in `runs/pod_qhrrn2-pod2_supervisor.pid`, caffeinate on it); env `tools/campaign.env` = `campaign_c5l.env`; deadline knob launch + 18 h.
+- **The chain `tools/chain_c5l.sh`:**
+  - **Lane 0:** C5's banked 50k state read from `champ/C5_pretrain.tgz`, without `RETRY_REMAT.txt`.
+  - **Lane 1:** `chain_champ.sh` pretrain-only: preflight, resume 50k → 150k, the monitor pick.
+  - **Lane 2:** C5's held-out 10k + train-1k rows, one grid per chip.
+  - **Lane 3:** test rows on the 50k subsample only, D16 + D64 for the picks.
+  - **Lane 4:** held-out + train-1k rows of C1, A5, A7, A8 (read-only from `champ/` and `finalA/`).
+  - **Finish:** `c5l_final.tgz` + `CHAIN-C5L-COMPLETE`, then the supervisor tears the node down.
+- **Heartbeat Monitor:** `HB_SENTINEL=CHAIN-C5L-COMPLETE HB_FINAL=gs://qhrrn2-rescue/c5l/c5l_final.tgz bash tools/ops_heartbeat.sh`.
+
+**Markers in order:**
+`=== C5L START` → `C5L-VALSET-OK` → `C5L-RESTORE-SRC` → `C5L-RESUME-POINT step 50000` → `C5L-LANE1` → `PREFLIGHT-OK C5` → `PRETRAIN-EXTENDED-BUDGET C5 150000` → `PRETRAIN-START C5` → `PRETRAIN-OK C5` → `VALBEST C5` → `ARM-OK C5 pretrain-only` → `CHAIN-CHAMPC5L-COMPLETE` (the inner chain's, NOT the campaign's) → `C5L-LANE1-END` → `C5L-LANE2` → `C5L-ROWS-PASS c5-1 127` → `C5L-ROW-OK val|tr1k/C5_s…` → `C5L-PICKS g_mon=… g_val=…` → `C5L-TEST-ROWS […]` → `C5L-TEST-START/OK …` → `C5L-LANE4` → `C5L-SRC-PULL C1|A5|A7|A8` → `C5L-ROWS-PASS wide-1 152` → `C5L-ROW-OK …` → `FINAL-BANKED` → `CHAIN-C5L-COMPLETE`.
+
+**Failure meanings:**
+- **`C5L-NO-RESUME-STATE`:** the 50k state did not restore. The chain never trains from scratch; escalate.
+- **`C5L-ROW-N-BAD`:** a row failed its gate. It is retried in pass 2; `C5L-INCOMPLETE` names it if still missing.
+- **`C5L-NO-GRIDS` / `C5L-NO-GRID`:** a source tarball or grid is missing; escalate.
+- **`C5L-TEST-FAILED`:** a shard failed; the partials stay for the resume.
+- **`C5L-VALBEST-MISMATCH`:** after a node change, the replayed monitor pick disagrees with the one recorded at ARM_OK. The chain stops; escalate.
+- **`C5L-ORPHANS`:** an evaluator outlived lane 1. The kill is the PI's call.
+- **A preemption** needs nothing: the supervisor re-hunts, the live bank under `c5l/live` restores, and the markers skip finished work.
+
+**NEVER:**
+- Write, move or delete anything under `champ/`, `finalA/` or `c8x/`.
+- Extract pulls over `runs/`.
+- Extend the deadline knob.
+- Run a second pod.
+- Read accuracy values.
+
+**THE CLOSE (ops):** on COMPLETE:
+1. Pull `c5l/{val,tr1k,test}/*.tgz`, `C5_pretrain.tgz` and `c5l_final.tgz` with `gcloud storage cp` into `runs/_c5l_pull/tgz/` and crc32c-compare every object, UNEXTRACTED.
+2. Diff the `champ/`, `finalA/` and `c8x/` listings against `runs/_c5l_pull/*_listing_prelaunch.txt`.
+3. Verify the teardown at the source.
+4. Hand-derive the spend.
+5. Write the close block here and the ledger ops line; commit.
+
 ## CLOSE — THE C8 EXTENSION COMPLETE 2026-09-14 14:05:47Z (`Documentation/Report_2026-09-14_C8_Extension_Verdict.md`)
 
 **Ops.**

@@ -446,6 +446,10 @@ run_arm () {  # ARM — pretrain (+ the extension rule), then the DEC-class batt
   else
     echo "VALBEST $arm $(cat "$D/val_best.txt") -> $VBCK"
   fi
+  if [ "${CHAMP_PRETRAIN_ONLY:-0}" = 1 ]; then   # the width-192 long run (2026-09-14; tools/chain_c5l.sh): train + select, no battery (unset = byte-identical)
+    echo "pretrain-only: $(cat "$D/val_best.txt") $(date -u +%FT%TZ)" | gsutil -q cp - "$GCS/${arm}_ARM_OK"
+    echo "ARM-OK $arm pretrain-only (CHAMP_PRETRAIN_ONLY=1: no evaluation battery) $(date -u +%H:%M)"; return 0
+  fi
   local ST; ST=$(stopped_step "$arm")
   for st in $(screen_steps "$arm"); do
     [ -f "$D/ckpt_$st.pkl" ] || continue
