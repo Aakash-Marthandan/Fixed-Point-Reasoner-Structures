@@ -30,6 +30,8 @@ On the Sudoku DEC path each is inert by construction. With both table knobs None
 
 **Reading.** The registration says no letter is read if INTEGRITY fails. The letters below are read **conditional on this addendum**, labeled, because the failure is a reader-format defect and the registered condition itself holds. **The PI confirms or overrides this reading.** If overridden, the paper keeps the one-seed labels (plan §5).
 
+**Resolved 2026-09-14.** The PI: "The integrity fail is fine if it's trivial but we can't compromise the science." The verification pass (§9) confirms it is trivial: the recipe, the rows, the selection and the checkpoints all check out independently of the frozen reader. The letters stand.
+
 ## 3. The registered letters
 
 | rule | letter | numbers |
@@ -110,8 +112,8 @@ Selection matters only once the curve leaves its plateau. The memorized finals c
 Moving to a common step changes a seed gap by about 0.1 pp.
 
 **What is seed-dependent is the budget, through the extension rule.** The rule reads the monitor's argmax, which is noise-level inside a plateau:
-- C2's 24k and 30k grids tie at 96.5, so the earliest tie kept it at 30k.
-- C8's argmax fell at 22k, so it never extended.
+- C2's 30k grid tied its 24k grid exactly on both keys (EMA 494/512, raw 483/512). The earliest tie selected 24k, outside the 26–30k window, so it did not extend.
+- C8's 26k grid read 484/512 on the EMA monitor against 485/512 at 22k. One more solved puzzle would have made a tie, and 26k's higher raw reading (462 vs 453/512) would then have selected it and fired the extension.
 
 C5 and C7 extended and kept rising past 30k on the monitor (+0.6 and +1.0 pp to 46k). **So the width-192 triple mixes budgets of 50k, 50k and 30k, and C8's deficit (D16 −1.8 pp vs C7, D64 −0.85 pp) cannot be split into seed and budget with the rows that exist.**
 - **Against a pure budget effect:** at the common 28–30k grids C8's monitor reads 91.8 / 93.2 against C7's 95.3 / 95.5 and C5's 97.1 / 96.5, about 1.7–3.9 SE lower on a difference of two 512-puzzle readings. Its 30k grid is also 0.86 pp below its own 22k grid at n 50k.
@@ -150,3 +152,88 @@ The common-step test fixed before C8's curve was read (46/48/50k for width 192) 
 - **A selftest fixture must be built from a real artifact's schema** (copy a real `config.json`), never a hand-written guess. The argv gate passed 25/25 on a list the trainer never writes. Next registration: the analyzer's no-data run on a real prior config asserts each INTEGRITY clause actually executed.
 - **The crc check earned its keep twice in one pull.** Skip-if-present without a hash comparison can bank a wrong file under the right name.
 - **A budget rule keyed on a noisy argmax makes the budget seed-dependent.** Next time, read the extension on the plateau (e.g., max over the last 4k within 1 SE of the running max), or fix the budget per width.
+
+## 9. Verification pass (2026-09-14, at the PI's request, before the records and the abstract changed)
+
+`tools/verify_paperfinal.py` (own code, never imports the frozen analyzer; selftest 2/2) → `stage/analysis/verify.txt`: **ALL CHECKS PASS**.
+
+- **Rows (V1).** 66 rows, each checked for:
+  - n and unique idx
+  - accuracy recomputed from the records equal to its summary
+  - depth, EMA flag (off on the raw-weights rows only) and selected checkpoint
+  - the full-set rows cover idx 0..422,785 exactly
+  - no shard-log errors
+
+  Every paired comparison uses one puzzle set (the 50k: 20 rows; the 100k, 20k: 7 each; the 5k: 18 rows including EqR).
+- **Numbers (V2).** Every letter-bearing number reproduces under a separate pairing implementation and scipy's binomial test. The restart selection is unchanged under worst- and best-case breaking of tied minimal residuals: EqR 98.84 either way, every arm AHEAD under adversarial ties.
+- **Selection (V3).** Replayed from each `metrics.jsonl` (EMA key, raw second key, earliest tie, banked grids, the 4k window), all nine selected grids and all extension decisions equal what the chain did.
+- **Recipe and code.**
+  - The argv comparison on the dict form: §2.
+  - Data parallelism folds each device's index into its own random stream, with rows per device = batch / devices and gradients mean-averaged. Eight chips × 96 rows and four × 192 give the same 768-row mean gradient on a different random stream, which amounts to another seed.
+  - Between C5's commit (7ada7c7) and C7/C8's (7a99d9e), `tools/eval_sudoku_extreme.py` and `src/qhrrn2/dec_cell.py` are byte-identical. The trainer and model changes are DEC-ARC branches gated on `cell == "decarc"` or on flags at their defaults. The `select_ckpt.py` change is inert on the monitor row.
+  - Training: no non-finite values. Early training-loss curves of C5, C7 and C8 overlay.
+- **Determinism (V5).** The same checkpoint scored in two separate pod runs (the D16 row vs step 16 of the D64 row) differs on 0 or 1 of 422,786 puzzles for C0, C1, C5, C7 and C8, and on 37 for C2, whose two rows ran on different pods.
+- **Checkpoint identity (V6).** Each banked selected grid was re-evaluated on the Mac (CPU, 384 test puzzles, D16) and compared per puzzle with the pods' records.
+  - **Exact bits:** agreement is 95.1 / 94.5 / 89.8 %. That is the documented CPU-vs-TPU round-off floor (`Note_2026-09-10_Champion_Mechanisms.md` §3: 4.3–4.7 % of solve statuses flip on another compute route, at high ratings), so exact bits cannot identify a model: other seeds agree at 89–95 % too.
+  - **First-exact step:** on the puzzles the pod solves at step 1–2, each re-evaluation reproduces its own model's step on **94.9 / 95.6 / 97.1 %** of puzzles, against **6–46 %** for the other seeds' models. The banked checkpoints are the models the pods scored.
+- **Two instrument slips of mine, caught before any number was used:**
+  - The verifier expected EMA on the raw-weights rows.
+  - The width lens first read the evaluator's `first_exact` as 1-based. It is 0-based. The lens's own consistency check (step 16 of D64 = the D16 row) caught it; after the fix, every arm matches to 0–37 puzzles.
+- **An error in the installed abstract, found by this pass:** "95.0 ± 0.7" should read ± 0.6. The half-spread is (95.629 − 94.337)/2 = 0.646; rounding 0.646 → 0.65 → 0.7 rounded twice. The paper's own number macro already reads `95.0\,$\pm$\,0.6`.
+
+## 10. Why the new seeds lowered the width-192 number (descriptive; `tools/lens_width_seed.py`, selftest 4/4 → `stage/analysis/width_seed.txt`)
+
+The single-seed D64 full-set number was 99.16 (C5). The three-seed mean is 98.65. That −0.51 pp is measured, not an artifact (§9), and it has two parts.
+
+**Part 1: the single seed was the best draw.**
+- C5 was the best of the champion night's seven models at D64 (99.10 on the 100k, ahead of C4 98.90 and C2 98.67).
+- Seed-to-seed variation at D64 is the same at both widths: SD 0.61 pp at width 192, 0.60 at width 384.
+- C5 sits +0.83 SD above its own triple. Taking the best of seven comparable runs is expected to land +1.35 SD above their mean.
+- So the number the abstract carried was the recipe's best seed, not its mean.
+- C7 trained on the same 50k budget and was selected at the same 46k step as C5. It lies 0.34 pp below C5 at D64: a pure seed difference that accounts for −0.11 of the −0.51.
+
+**Part 2: C8, −0.39 of the −0.51, is low for two entangled reasons.**
+- **(a) A shorter budget, decided by one puzzle.** The extension rule gave C8 30k steps where C5 and C7 got 50k, and C8 missed it by one puzzle out of 512 on the monitor (§5). The two extended seeds kept improving on the monitor after 30k (+0.6 and +1.0 pp to 46k). Coincidentally, seed 2 at width 384 (C2) also missed its extension, by an exact tie on both keys.
+- **(b) A weaker map at equal training.**
+  - At the common 28–30k grids, C8's monitor reads 91.8 / 93.2 against C7's 95.3 / 95.5 and C5's 97.1 / 96.5.
+  - Its selected grid is the slowest to decide: mean first-exact step 6.0, against 4.4 (C5) and 4.8 (C7).
+  - Its gap shrinks with depth: −2.92 pp vs C5 at D16, −1.18 at D64, −0.97 at D128, −0.82 at D256.
+
+The rows that exist cannot split (a) from (b). C8 trained on to 50k would.
+
+## 11. Why the 0.79M width-192 cell matches the 2.78M width-384 cell (descriptive; same lens)
+
+**The registered reading is PARITY:** +0.42 pp mean at D64 on the full set, two of three seeds ahead (+0.68, +1.27), and the short-budget seed behind (−0.70). At D128 (20k) and D256 (5k) the mean is +0.33, with the same signs per seed. The claim is "on par"; "ahead" holds only where the budget matched.
+
+**Why a third of the parameters can match:**
+
+1. **Width buys the speed of the decision, not the final answer.** Accuracy per iteration on all 422,786 puzzles, from the D64 records:
+   - The wide cell leads early on every seed. At step 4 it reads 79–81 % against 58–73 %.
+   - The narrow cell passes it at step 10 (seed 0) and step 14 (seed 1). Seed 2 narrows from −2.65 pp at step 16 to −0.70 at step 64.
+   - The narrow cell takes longer (mean first-exact step 4.4–6.0 vs 3.7–3.9) and gains more from depth: from 16 to 64 steps it gains +3.2 / +4.0 / +5.0 pp against +3.4 / +3.2 / +3.0.
+
+   The recursion reuses the same weights at every step, so iterations substitute for width. This is the champion night's revision axis, now read on three seeds per width.
+2. **The extra width is spent memorizing the 1,000 training puzzles.**
+   - **Width 384** fits them faster: the logged training-batch exact rate is 0.36–0.39 at 30k, against 0.23–0.27 at width 192.
+   - **Width 384 trained to 50k** reaches 0.52–0.78 while its held-out monitor falls 7–12 pp (C1, C3, C6).
+   - **Width 192 at 50k** stays at 0.19–0.28, with the held-out monitor flat (C5 +0.0, C7 −1.2 pp).
+
+   With a thousand training puzzles, generalization limits accuracy before capacity does. The narrow cell's slower memorization keeps it on its held-out plateau longer (28–50k vs 14–30k) and lets the extension pay.
+3. **Few parameters are enough for this rule** (interpretation, by construction). The exactly equivariant cell shares its weights across the nine digit fields and the 81 cells. Parameter count therefore sizes the rule's description, not the computation: per iteration the 0.79M cell performs 14.8 GMAC, more than EqR's 5.0M-parameter cell (12.9).
+4. **At equal arithmetic, width 192 is the better point.** At ≈ 950 GMAC per puzzle, width 384 runs 19 iterations and solves 95.7 %; width 192 runs 64 and solves 98.6 %. That is +1.7 to +3.8 pp on every seed. Width 384 buys earlier decisions at 3.4× the arithmetic per iteration.
+
+**Limits:** three seeds per width, one width-192 seed on a 30k budget, one task, a thousand training puzzles.
+
+## 12. What changed in the records and the paper (2026-09-14, the PI's go after §9)
+
+- **The abstract (`paper/draft/main.tex`, local, git-ignored).**
+  - "Three seeds reach 95.0 ± 0.7 %" → "95.0 ± 0.6 %" (the §9 rounding error).
+  - "A version with 0.8M parameters reaches 99.2 % at 64 iterations." → "A version with 0.8M parameters, also trained with three seeds, reaches 98.6 ± 0.6 % at 64 iterations." This is the registered reporting rule: the triple's D64 full-set mean to one decimal, whatever it reads.
+  - The logged note is in `ABSTRACT_CANDIDATES.md`.
+- **`paper/documentation/claims.tex` item 2** carries the three-seed row, the letters and the two explanations.
+- **For the writing session**, per §7:
+  - Table 1's width-192 row becomes three seeds.
+  - The restart column uses EqR's identical-5k row.
+  - C4's dagger goes.
+  - The width sentence in §4 reads "matches".
+  - `numbers.tex` needs regeneration with the triple.
