@@ -6,6 +6,8 @@
 
 **The PI's words for this run:** "let's do it, this is worth looking into for the ARC DEC port — but use a 50k subsample for evals to test things rather than the full"; standing: delete or change no previous result.
 
+**The 100k look (plan §8, read 2026-09-14 19:14Z): NOT-YET — the run continues to 150k.** Plan §9 (fixed before any instrument row exists) adds, for the analysis session, a collapse-vs-memorization label beside every onset letter and the disclosure that the device split changed at the resume (4 × 192 → 8 × 96, global batch 768). Nothing in ops changes.
+
 **What runs.** One spot v6e-8 in asia-south1-c.
 - **Supervisor:** `tools/pod.sh supervise 18` (pid in `runs/pod_qhrrn2-pod2_supervisor.pid`, caffeinate on it); env `tools/campaign.env` = `campaign_c5l.env`; deadline knob launch + 18 h.
 - **The chain `tools/chain_c5l.sh`:**
