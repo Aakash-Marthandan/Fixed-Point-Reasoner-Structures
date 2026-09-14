@@ -52,6 +52,7 @@ DEC_SCAN_BATCH=${DEC_SCAN_BATCH:-128}; STALL_MIN=${STALL_MIN:-25}; STALL_SEC=${S
 PF_STEPS=${C1_PF_STEPS:-60}
 CKPT_EVERY=${C1_CKPT_EVERY:-500}
 SEED_ARMS="C0 C1 C2"; OPTIONAL_ARMS="C3 C4 C5 C6"; ALL_ARMS="C0 C1 C2 C3 C4 C5 C6${CHAMP_EXTRA_ARMS:+ $CHAMP_EXTRA_ARMS}"   # C7/C8 are NOT optional: a preflight failure stops the run
+[ -n "${CHAMP_ALL_ARMS:-}" ] && ALL_ARMS=$CHAMP_ALL_ARMS   # the C8 extension (2026-09-14; tools/chain_c8x.sh): the completion set and the live bank = C8 only under a fresh prefix (unset = byte-identical)
 MON=${C1_MON:-2000}
 SUB=${C1_SUB:-20000}; STRAT=${C1_STRAT:-512}
 SYNC_ROWS=${C1_SYNC_ROWS:-256}; SYNC_K=${C1_SYNC_K:-8}

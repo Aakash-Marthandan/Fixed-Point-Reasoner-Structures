@@ -24,7 +24,7 @@ while true; do
   [ "$sup" = DOWN ] && echo "  ALERT supervisor process DOWN (restart: DRY_SLEEP=480 nohup bash tools/pod.sh supervise <h> &)"
   [ -n "$wd" ] && ! echo "$wd" | grep -q READY && echo "  ALERT node not READY: $wd"
   [ "${dlm:-1}" -lt 0 ] && echo "  ALERT past deadline knob"
-  echo "$mark" | grep -qiE "NAN|AMPUTATE|FAILED|ABORT|N-BAD|SKIPPED|INCOMPLETE|NO-PORT|NO-GRID|DEADLOCK|EXHAUSTED|ORPHANS" && echo "  ALERT chain marker: $mark"
+  echo "$mark" | grep -qiE "NAN|AMPUTATE|FAILED|ABORT|N-BAD|SKIPPED|INCOMPLETE|NO-PORT|NO-GRID|DEADLOCK|EXHAUSTED|ORPHANS|NO-RESUME-STATE|VALSET-MISSING|VAL-N-BAD|XROW-FAILED|XROW-N-BAD|NO-GRIDS" && echo "  ALERT chain marker: $mark"
   echo "$snap" | grep -qiE "DMS.*in -" && echo "  ALERT DMS before deadline"
   [ -n "$l1" ] && [ -n "$np" ] && [ "$l1" -gt $(( np * 3 / 2 )) ] && echo "  ALERT host load $l1 > 1.5 x nproc $np (the thrash class: something besides the chain is on the host)"
   echo "$mark" | grep -qE "VALBEST|VB-FALLBACK|PRETRAIN-OK|EVAL-OK" && [ -n "$evage" ] && [ "$evage" -gt 1800 ] && echo "  ALERT eval stall: newest eval file ${evage}s old (tasks=${evtasks:-?}) while in the battery"

@@ -2,6 +2,39 @@
 
 **Read this first, then `tools/OPS_RUNBOOK.md`.** The repo outranks conversation memory. The ops model runs a campaign to completion and STOPS; the analysis pass (Fable, on PI go) adjudicates. ETAs/clocks to the PI in IST (UTC+5:30) with UTC in parentheses. **Concision pass 2026-09-02:** every superseded campaign block (2026-08-19 → 2026-09-01) is preserved verbatim in git — §8 lists the commit per campaign — and its lessons are folded into §7.
 
+## OPS PICKUP — THE C8 EXTENSION (registration = `Documentation/Plan_2026-09-14_C8_Extension.md`; the analysis is the analysis session's; ops reads NO accuracy values)
+
+**The PI's standing words for this run:** "extend C8 ... to 50k steps ... check if we get a better optimal point than the current step"; "make sure not to delete or change previous results and data. Science integrity needs to be top priority."
+
+**What runs.** One spot v6e-8 in asia-south1-c.
+- **Supervisor:** `tools/pod.sh supervise 13` (pid in `runs/pod_qhrrn2-pod2_supervisor.pid`, caffeinate on it); env `tools/campaign.env` = `campaign_c8x.env`; deadline knob launch + 13 h.
+- **The chain `tools/chain_c8x.sh`:**
+  - **Lane 0:** the resume point. C8's banked 30k state is read from `champ/C8_pretrain.tgz`.
+  - **Lane 1:** `chain_champ.sh` for C8 alone. The pre-staged `c8x/C8_EXTENDED` marker sets the budget to 50k; then preflight, the resume 30k → 50k, the registered selection, the battery.
+  - **Lane 2:** 63 validation-curve grids of C8/C5/C7 on the 10k held-out set, one grid per chip.
+  - **Lane 3:** the filler rows for the monitor's pick, then 0–4 extra test rows.
+  - **Finish:** `c8x_final.tgz` + `CHAIN-C8X-COMPLETE`, on which the supervisor tears the node down.
+- **Heartbeat Monitor:** `HB_SENTINEL=CHAIN-C8X-COMPLETE HB_FINAL=gs://qhrrn2-rescue/c8x/c8x_final.tgz bash tools/ops_heartbeat.sh`.
+
+**Markers in order** (`runs/detached.log`):
+`=== C8X START` → `C8X-VALSET-OK` → `C8X-RESTORE-SRC` (fresh node) → `C8X-RESUME-POINT step 30000` → `C8X-LANE1` → `=== CHAMPC8X START` → `PREFLIGHT-OK C8` → `PRETRAIN-EXTENDED-BUDGET C8 50000` → `PRETRAIN-START C8` → `PRETRAIN-OK C8` → `VALBEST C8 …` → `EVAL-OK screen_C8_* / full_C8_vsel_t16 / … / scan_C8 / census / calib` → `ARM-OK C8` → `CHAIN-CHAMPC8X-COMPLETE` (the inner chain's own sentinel, NOT the campaign's) → `C8X-LANE1-END` → `C8X-LANE2` → `C8X-VAL-PASS 63 grids` → `C8X-VAL-OK <arm>_s<step>` ×63 → `C8X-VAL-PASS 0 grids` → `C8X-PICKS g_mon=… g_val=… hyp=046000` → `C8X-FILLER` → `FILLER-JOB-START/OK d64full_C8 / d128sub_C8 / d256sub_C8` → `C8X-XROWS [...]` → `C8X-XROW-START/OK …` → `FINAL-BANKED` → `CHAIN-C8X-COMPLETE`.
+
+**Failure meanings:**
+- **`C8X-NO-RESUME-STATE`:** the 30k state did not restore. The chain refuses to train from scratch; escalate, and never work around it.
+- **`C8X-VALSET-MISSING`:** `c8x/sets/sudoku_extreme_seed0_val10k.npz` is absent.
+- **`C8X-VAL-N-BAD`:** a validation grid failed. It is retried once; a second failure ends in `C8X-INCOMPLETE` naming it.
+- **`C8X-XROW-FAILED`:** a shard failed. The partials stay for the resume.
+- **`C8X-ORPHANS`:** an evaluator outlived lane 1. The kill is the PI's call.
+- **A preemption** needs nothing: the supervisor re-hunts, the live bank under `c8x/live` restores, and the markers skip finished work.
+
+**NEVER** write, move or delete anything under `gs://qhrrn2-rescue/champ` (read-only for this run), extract pulls over `runs/`, extend the deadline knob, run a second pod, or read accuracy values.
+
+**THE CLOSE (ops):** on COMPLETE:
+1. Pull `gs://qhrrn2-rescue/c8x/` with `gcloud storage cp` into `runs/_c8x_pull/tgz/` and crc32c-compare every object (never skip-if-present), UNEXTRACTED. Objects: `evals/*.tgz`, `filler/*.tgz`, `val/*.tgz`, `xrows/*.tgz`, `C8_pretrain.tgz`, `c8x_final.tgz`.
+2. Verify the teardown at the source.
+3. Hand-derive the spend from the pod log.
+4. Write the close block here and the ledger's ops line; commit.
+
 ## CLOSE — THE PAPER'S FINAL SUDOKU RUNS COMPLETE 2026-09-14 03:31Z; ANALYZED 2026-09-14 (`Documentation/Report_2026-09-14_Paper_Final_Verdict.md`)
 **Ops.** `CHAIN-PAPERFINAL-COMPLETE` 03:31:06Z. The supervisor logged COMPLETE at 03:33:39Z, then `Deleted tpu` / `down rc=0` at 03:35:56Z. Fleet zero at the source in all six zones with nothing queued; supervisor and heartbeat exited. No preemption. **SPEND:** node 12:13:32Z Sep 13 → 03:35:56Z Sep 14 = 15.4 h × ≈ $8/h ≈ **$123**.
 
