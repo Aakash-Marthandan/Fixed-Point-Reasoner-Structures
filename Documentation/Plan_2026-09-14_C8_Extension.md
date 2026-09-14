@@ -109,3 +109,18 @@ One spot v6e-8 in asia-south1-c (the PI's standing choice).
 - **Extra budget alone might help any seed.** R-X4 compares against C7's measured gap, and R-X6 shows whether C5 and C7 also peak late on the same instrument.
 - **The one-seed counterfactual is still one seed:** labeled.
 - **The analysis overwrites local data.** Pulls land in a new directory; the paper-final staging root is read-only.
+
+## 8. THE PI's REPORTING DECISION — (B), recorded 2026-09-14 07:05Z, before any of this run's data exist
+
+The PI chose (B), in the words "Go with B", at 07:05Z. At that moment `gs://qhrrn2-rescue/c8x/` held only the supervisor's `ops/` files and `sets/`: no training step, evaluation or validation row. The decision is applied as registered in §5, whatever the rows read.
+
+- **The width-192 row of Table 1 is the budget-matched triple.** All three seeds are trained to 50k and selected by the same registered monitor rule over every banked grid:
+  - C5 at its 46k grid
+  - C7 at its 46k grid
+  - C8 at **g_mon**, the monitor rule's pick over C8's 2k–50k grids, from this run's battery and filler rows
+- **The row's numbers:** mean ± half-spread at D16 on the full set, D64 on the full set, and D128 and D256 on the 50k.
+- **The abstract's 0.8M sentence** uses that triple's D64 full-set mean to one decimal, whatever it reads. If g_mon = 22k, the triple equals the registered one and the sentence stays at 98.6 ± 0.6.
+- **The registered 30k-budget triple** (98.65 ± 0.59, letters SEEDS WIDE / HEADLINE SOFTENS / WIDTH PARITY) moves to the appendix, labeled as the registered protocol with the extension rule's one-puzzle decision.
+- **The validation-set pick g_val** does not set the headline. It is the selection-precision instrument (R-X2, R-X6) and the letter of record for R-X3 and R-X4.
+- **The paper-final letters and rows are unchanged** in the ledger and the report. The paper's presentation changes; the recorded outcomes do not.
+- **If INTEGRITY fails,** no letter is read and the paper falls back to the registered triple (the §5 rule).
