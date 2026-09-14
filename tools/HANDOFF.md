@@ -6,6 +6,8 @@
 
 **The PI's standing words for this run:** "extend C8 ... to 50k steps ... check if we get a better optimal point than the current step"; "make sure not to delete or change previous results and data. Science integrity needs to be top priority."
 
+**REPORTING DECISION (B), recorded 07:05Z before any data (63a3917; plan §8):** the paper's width-192 row becomes the budget-matched triple, with every seed at 50k and the registered monitor pick (C5 46k, C7 46k, C8 g_mon). The abstract takes its D64 full-set mean whatever it reads; the 30k-budget triple moves to the appendix, labeled. The analysis applies this; ops reads no values.
+
 **What runs.** One spot v6e-8 in asia-south1-c.
 - **Supervisor:** `tools/pod.sh supervise 13` (pid in `runs/pod_qhrrn2-pod2_supervisor.pid`, caffeinate on it); env `tools/campaign.env` = `campaign_c8x.env`; deadline knob launch + 13 h.
 - **The chain `tools/chain_c8x.sh`:**

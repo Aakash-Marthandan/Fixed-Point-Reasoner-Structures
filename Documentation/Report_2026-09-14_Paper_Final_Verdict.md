@@ -237,3 +237,36 @@ The rows that exist cannot split (a) from (b). C8 trained on to 50k would.
   - C4's dagger goes.
   - The width sentence in §4 reads "matches".
   - `numbers.tex` needs regeneration with the triple.
+
+## 13. Superseded for the paper by the PI's decision (B) (2026-09-14 evening)
+
+The PI chose reporting rule (B) of the C8 extension at 07:05Z, before any extension data existed (`Plan_2026-09-14_C8_Extension.md` §8, commit 63a3917). The **record above is unchanged**: the letters, the rows and the verification. What changed is the paper's width-192 row and the abstract's 0.8M number, replacing §7's and §12's instructions.
+
+**The paper's row is now the budget-matched triple.** Every width-192 seed is trained to 50k and selected by the same registered monitor rule. C8 was trained on from its banked 30k state, and the monitor picked 46k (`runs/analysis/paperfinal_rows_20260914.json`, `tools/paperfinal_paper_rows.py`; every row n-gated and checkpoint-checked):
+
+| | D16 full | D64 full | D128 50k | D256 50k |
+|---|---|---|---|---|
+| **budget-matched (the paper, Table 1)** | 95.41 ± 0.54 | **99.05 ± 0.18** | 99.40 ± 0.13 | 99.56 ± 0.10 |
+| registered 30k (Appendix D, labeled) | 94.57 ± 1.46 | 98.65 ± 0.59 | 99.05 ± 0.49 | 99.26 ± 0.41 |
+
+**C8 at 46k vs its 22k grid,** on identical puzzles: D16 full +2.50 pp (21,158 vs 10,574 discordant), D64 full +1.21 pp (6,862 vs 1,764), p ≈ 0.
+
+**Width per seed, budget-matched,** D64 on the full set:
+- **D64:** C5−C0 +0.68, C7−C1 +1.27, C8−C2 +0.51, so all three seeds are ahead. With C8 at 30k the registered letter was PARITY (−0.70 on seed 2).
+- **D16:** +0.81, +0.49, −0.14.
+
+**The paper as updated (local, git-ignored):**
+- **Abstract:** "reaches 99.0 ± 0.2 % at 64 iterations". A scripted check confirms it equals the pipeline macro `w192.bm.d64full.pm1`.
+- **Table 1:** the width-192 row is the budget-matched triple, with the restart column at 32 restarts. C4's D64 is its full-set row (98.93, no dagger). EqR's restart entry is its identical-5k row (98.84 / 98.84).
+- **Table 3:** the width row is on three budget-matched seeds.
+- **Appendix D:** adds C7, C8 at 30k and C8 at 50k, and states the registered 30k triple in its caption.
+- **Numbers file and claims:** `numbers.tex` gains 129 macros and loses none; `claims.tex` item 2 and `ABSTRACT_CANDIDATES.md` are updated.
+- **Build:** the PDF builds (tectonic rc 0, no undefined macros).
+- **Generator:** `tools/paper_numbers.py` reads the new artifact. It stays untracked, like the other paper tools, until the PI's checkpoint commit.
+
+**The C8 extension's own letters are preliminary** (`tools/analyze_c8x.py`, byte-untouched against 543e7bf; INTEGRITY PASS). They are final after the 48k test rows land and appear in the extension's report:
+- **R-X1:** MOVED to 46k.
+- **R-X2:** PEAK-LATE at 48k; 22k lies below the plateau; 46k sits 3 puzzles outside the 0.5 pp plateau but above 22k.
+- **R-X3 for the 46k pick:** BETTER.
+- **R-X5:** HOLDS.
+- **R-X6:** SHARED-PEAK (46k / 48k / 48k); the monitor's pick lies inside its own plateau on 1 seed of 3.
