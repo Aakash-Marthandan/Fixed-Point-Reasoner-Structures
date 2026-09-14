@@ -51,10 +51,14 @@ def arm_rows(root, arm, step):
     out.update(scan32(root, arm, step))
     return out
 
+NS = {"d16": N_FULL, "d64_full": N_FULL, "d128_50k": N_50K, "d256_50k": N_50K}
 def triple(rows, keys=("d16", "d64_full", "d128_50k", "d256_50k")):
+    """Mean and half-spread; `counts` = the exact solved counts (accuracy x n), so the paper can round from exact fractions."""
     t = {}
     for k in keys:
-        v = [r[k] for r in rows]; t[k] = dict(values=v, mean=float(np.mean(v)), half=float((max(v) - min(v)) / 2))
+        v = [r[k] for r in rows]; n = NS[k]; c = [int(round(x * n)) for x in v]
+        assert all(abs(ci / n - x) < 1e-12 for ci, x in zip(c, v)), f"{k}: accuracy is not an exact count over n {n}"
+        t[k] = dict(values=v, mean=float(np.mean(v)), half=float((max(v) - min(v)) / 2), counts=c, n=n)
     return t
 
 def build(pf, x):
