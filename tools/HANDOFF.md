@@ -2,6 +2,24 @@
 
 **Read this first, then `tools/OPS_RUNBOOK.md`.** The repo outranks conversation memory. The ops model runs a campaign to completion and STOPS; the analysis pass (Fable, on PI go) adjudicates. ETAs/clocks to the PI in IST (UTC+5:30) with UTC in parentheses. **Concision pass 2026-09-02:** every superseded campaign block (2026-08-19 → 2026-09-01) is preserved verbatim in git — §8 lists the commit per campaign — and its lessons are folded into §7.
 
+## CLOSE — THE C8 EXTENSION COMPLETE 2026-09-14 14:05:47Z (`Documentation/Report_2026-09-14_C8_Extension_Verdict.md`)
+
+**Ops.**
+- **Completion:** `CHAIN-C8X-COMPLETE` + `c8x/c8x_final.tgz` at 14:05:47Z; the supervisor logged `DOWN`, then `Deleted tpu`, `down rc=0` at 14:07:32Z.
+- **Fleet zero** at the source in six zones, queued 0; the supervisor exited.
+- **No preemption.** The resume at 30000 was verified on the node.
+- **Spend:** node 07:02:23Z → 14:07:32Z = 7.09 h × ≈ $8/h ≈ **$57**.
+
+**The pull.**
+- **Objects:** 83 under `c8x/` (evals, filler, val, xrows, `C8_pretrain.tgz`, `c8x_final.tgz`), fetched with `gcloud storage cp` into `runs/_c8x_pull/tgz/`, crc32c 83/83, extracted only to `x/`.
+- **`champ/` untouched:** its listing (2,182 objects) is byte-identical before launch and after the run.
+
+**Analysis.** The analyzer is 0-diff against 543e7bf.
+- **INTEGRITY PASS.**
+- **Readings:** MOVED(46k), PEAK-LATE(48k), BETTER, BUDGET-MOSTLY, HOLDS 99.05 ± 0.18, SHARED-PEAK.
+
+**Nothing running; no further ops.**
+
 ## OPS PICKUP — THE C8 EXTENSION (registration = `Documentation/Plan_2026-09-14_C8_Extension.md`; the analysis is the analysis session's; ops reads NO accuracy values)
 
 **The PI's standing words for this run:** "extend C8 ... to 50k steps ... check if we get a better optimal point than the current step"; "make sure not to delete or change previous results and data. Science integrity needs to be top priority."
