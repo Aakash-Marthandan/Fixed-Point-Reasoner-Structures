@@ -77,6 +77,8 @@ At each onset grid and the next three held-out grids, dH and dT are the drops un
 
 ## 6. What we learn (descriptive; no rules)
 
+**SUPERSEDED IN PART (2026-09-15 ~09:30Z): the CPU lens landed — §8 replaces items 1–3 below; items 4–5 stand as cold-start readings.** The caution that preceded it, kept as written:
+
 **CAUTION (2026-09-15 ~07:35Z, while the CPU lens runs; do not cite items 1–3 below until its addendum lands).** Items 1–3 read the collapse through the benchmark's cold start, which starts the carry from the DEC's fixed buffers; the champion recipe trains every fresh row from z ~ N(0, 1) instead (verified in `tools/pretrain.py` and `src/qhrrn2/dec_cell.py`). The lens's 16-puzzle smoke at 94k: cold 1/16, one random start (the training family) 16/16, one shared random start 16/16, the embedded solution held at every step. If the full lens (38 grids × 128 held-out puzzles, `tools/lens_c5l_dynamics.py`) confirms it, the collapse is the fixed start leaving the basin, not the map failing, and items 1–3 are rewritten. The registered readings in §3 are unaffected (they are defined on the cold start).
 
 **Held-out / train-1k at D16 for C5 (%):** 12k 90.4/92.2 · 16k 88.6/90.2 · 20k 20.8/23.2 · 22k 15.2/15.4 · 26k 94.2/95.1 · 46k 96.0/97.1 · 50k 95.9/97.8 · 58k 92.7/94.1 · 70k 90.6/93.0 · 76k 85.8/87.4 · 84k 49.3/50.7 · 90k 12.5/12.6 · 94k 6.9/7.8 · 100k 48.4/51.5 · 120k 19.9/21.1 · 130k 54.9/62.8 · 140k 78.1/86.7 · 150k 81.4/89.8.
@@ -93,3 +95,50 @@ At each onset grid and the next three held-out grids, dH and dT are the drops un
 
 - **Is the collapse a learning-rate instability?** A registered test from the banked 46k state: the same recipe with a cooldown (or lr 5e-5) to 100k, instruments as here.
 - **What breaks inside the recursion?** A zero-cloud CPU lens on the 75 banked C5 checkpoints: weight and spectral norms, the relative update per 2k steps, and a fixed-point probe (start at the solution: held or lost?) across 46k–150k.
+
+## 8. Addendum — the CPU lens: the collapse belongs to the cold start, not the model (2026-09-15 ~09:30Z; descriptive, exploratory)
+
+**The PI:** "go ahead with the CPU lens, nothing on the pod. We'll close sudoku with this."
+
+**Tool and data.**
+- `tools/lens_c5l_dynamics.py` (selftest 8/8) → `runs/analysis/c5l_lens_20260915/{lens.txt, lens.json, weights.json, dyn/}`. Zero cloud; about 2 h on the Mac.
+- **Dynamics:** 38 grids (every 4k from 2k) × the first 128 held-out puzzles, D16, EMA weights, through the evaluator's own `run_batch`.
+- **Weights:** all 75 banked checkpoints (2k–150k).
+- **Numerics check:** the CPU cold pass agrees with the TPU cold records per puzzle at 77–98 % (median 94), lowest at grids inside the collapses, where puzzles sit near a basin edge; its per-grid curve reproduces the TPU collapse (94k: 8.6 % on the CPU vs 6.9 % on all 10,000).
+
+**What the passes differ in.** The DEC reads no canvas, so the passes differ only in the start carry z = (z_H, z_L).
+- **Training:** every fresh row starts from z ~ N(0, 1), i.i.d. per element (`tools/pretrain.py`: `TCm.z0(cfg, hw, rng=k)` with `trm_ri_sigma` 1). FPA rows start from an embedded solution with the fixed L buffer.
+- **The benchmark's cold pass:** starts from the fixed buffers, one trunc-normal vector per stream, identical in all 81 cells and 9 fields. No training row starts from the H buffer.
+
+**Readings** (the 35 grids from 14k to 150k unless named; exact at D16 on 128 puzzles):
+
+| start carry | exact at D16 | solved at some step, lost by 16 |
+|---|---|---|
+| COLD: the fixed buffers (the benchmark) | 8.6–99.2 % | up to 58.6 % |
+| RI: one N(0, 1) draw per puzzle | 93.8–99.2 % | 0 at every grid |
+| RIFIX: one N(0, 1) draw shared by every puzzle (deterministic) | 94.5–100 % | 0 at every grid |
+| SYM: one N(0, 1) vector copied into every cell (11 grids) | 73.4–97.7 % | — |
+| ANCHOR: the embedded solution (11 grids) | 100 % at every grid, never lost | — |
+
+- **Selected grids** (COLD / RI / RIFIX, %): 22k 24.2 / 99.2 / 97.7 · 46k 98.4 / 96.9 / 99.2 · 78k 77.3 / 96.1 / 97.7 · 94k 8.6 / 96.9 / 96.9 · 122k 44.5 / 94.5 / 98.4 · 150k 86.7 / 96.9 / 96.1.
+- **Paired on the same puzzles:** over the 13 grids where COLD < 50 %, COLD solved 0 puzzles that RI missed and RI solved 1,166 that COLD missed (exact McNemar p < 1e-300; 94k alone 0 vs 113, p = 1.9e-34; 22k 0 vs 96, p = 2.5e-29). Over all 35 grids: 38 vs 1,481.
+- **Weights:** no weight-space event marks either collapse.
+  - The relative update per 2k steps settles at 0.085–0.095 from 40k, and the raw-to-EMA distance at 0.044–0.050; both stay flat through the collapses.
+  - The channel gradient RMS stays at 0.86–1.06 × 10⁻³.
+  - The top singular value of block 0's channel matrix peaks at 4.56 (26k) and drifts to 3.75; block 1's grows monotonically from 3.02 to 8.38.
+
+**What it means.**
+1. **The collapse belongs to the cold start, not the model.** From its training start distribution the width-192 cell solves 94–99 % of these puzzles at every grid from 14k to 150k, and the embedded solution is a fixed point at every tested grid. One start fails: the fixed buffers, never trained, leave and re-enter the basin as the weights drift (18–24k and 76k–150k). From the buffers the trajectory often reaches the answer and then leaves it; from random starts it never leaves.
+2. **It is neither memorization nor a training instability.** From the buffers, training puzzles fail together with held-out ones (the §9 COLLAPSE-TYPE label stands as measured), and the weights move smoothly throughout.
+3. **Symmetry is part of it, not the whole of it.** A random vector copied into every cell holds 73–98 %: below the i.i.d. starts at some grids (142k 73.4 %), far above the buffers at others (94k 94.5 % vs 8.6 %).
+4. **§6 items 1–3 are superseded.** Width 192 does not destabilize; its cold start does. Items 4–5 stand as cold-start readings.
+5. **The registered readings (§3) stand, scoped to the cold start**, the benchmark convention they were defined on. "No later point beats 46k" and "150k is worse" describe the fixed-buffer start. On these 128 puzzles the 150k checkpoint from RI / RIFIX (96.9 / 96.1 %) sits within a few puzzles of 46k's (96.9 / 99.2 %); this is untested on the test set.
+6. **The paper's rows are unaffected in their own terms.** At 46k the buffers sit inside the basin (COLD 98.4 ≈ RI 96.9 ≈ RIFIX 99.2 on these puzzles). Cold-start readings of width-192 training dynamics (the mid-training collapse on every width-192 seed, the late peaks, the in-training monitor's selections) describe the start's basin membership, not the map's quality, and should be written that way.
+7. **For the ARC DEC port** (replacing §5's COLLAPSE-TYPE rule):
+   - Define the deterministic evaluation pass on a start from the training distribution (one seeded RI draw shared by every input, as RIFIX), or train from the evaluation start.
+   - Select checkpoints on a monitor run from the start the evaluation uses.
+   - Treat the fixed buffers as an uncontrolled start for an RI-trained cell.
+
+**Caveats.** Descriptive; one seed; the first 128 held-out puzzles; CPU numerics (per-puzzle agreement 77–98 %); one RIFIX draw (robustness across draws untested, though RI's per-puzzle draws suggest generic draws work); no RI / RIFIX row on the test set; the wider runs were not probed from random starts (their cold starts still solve all their training puzzles, so their held-out declines are not this start effect).
+
+**Proposed, nothing launched:** a registered test-set check — the 46k and 150k checkpoints from COLD and RIFIX on a test subsample at D16 and D64 (≈ 1 h on the Mac for 2,000 puzzles, or minutes on a spot pod in the ARC project).
