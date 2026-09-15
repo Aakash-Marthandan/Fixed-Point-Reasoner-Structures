@@ -45,6 +45,21 @@
 4. Hand-derive the spend.
 5. Write the close block here and the ledger ops line; commit.
 
+## CLOSE — THE WIDTH-192 LONG RUN COMPLETE 2026-09-15 02:25Z (registration `Documentation/Plan_2026-09-14_W192_Long.md`; analysis = the frozen `tools/analyze_c5l.py` + `tools/c5l_mechanism.py`)
+
+**Ops.**
+- **Completion:** `c5l/c5l_final.tgz` present by 02:25:37Z; the supervisor logged `COMPLETE (GCS c5l_final.tgz present)` at 02:27:18Z, scp'd `runs/cloud/qhrrn2-pod2-20260915-075719.tgz`, then `Deleted tpu`, `down rc=0` at 02:30:02Z.
+- **Fleet zero** at the source in six zones (asia-south1-c, us-east1-d, us-east5-b, us-central1-a, us-central2-b, us-west1-c), queued 0; the supervisor exited; the heartbeat stopped.
+- **No preemption** (one CREATE, 16:04:07Z; no re-create, strike or relaunch). The resume at 50000 was verified on the node (`RESUMED ... at step 50000`; `resumes.txt` 30000 / 37500 / 50000).
+- **Spend:** node 16:04:07Z → 02:30:02Z = 10.43 h × ≈ $8/h ≈ **$83**.
+- **The 100k look** (plan §8/§9) read NOT-YET at 19:14Z; the run went to 150k as registered.
+
+**The pull.**
+- **Objects:** 283 under `c5l/` (val 129, tr1k 150, test 2, `C5_pretrain.tgz`, `c5l_final.tgz`), fetched with `gcloud storage cp` into `runs/_c5l_pull/tgz/`, crc32c 283/283 (`remote_crc_close.txt` / `local_crc_close.txt`), UNEXTRACTED at the close.
+- **Read-only prefixes:** the `champ/` (2,044 objects), `finalA/` (1,491) and `c8x/` (875) listings are identical before and after (size + timestamp of every object; none missing, changed or new; `*_listing_postclose.txt`).
+- **The 50k-subsample rule held:** both test rows (`d16_s150000`, `d64_s150000`) ran with `--split test --subsample 50000`; the chain picked g_mon = g_val = 046000, so the 150k grid was the only new test row.
+- **Disclosure for the analysis:** the extension ran on 8 devices × 96 rows; C5's first 50k on 4 × 192 (plan §9 Note 2).
+
 ## CLOSE — THE C8 EXTENSION COMPLETE 2026-09-14 14:05:47Z (`Documentation/Report_2026-09-14_C8_Extension_Verdict.md`)
 
 **Ops.**
