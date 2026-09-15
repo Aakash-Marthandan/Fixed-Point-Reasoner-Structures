@@ -17,6 +17,8 @@ for t in $(seq 1 "$TICKS"); do
     printf '%s\n' "$out" | tee -a "$LOG"
     [ "$rc" -gt "$worst" ] && worst=$rc
   done
+  # the ARC project's spend record (tools/arc_spend.py, refreshed by the launchd watchdog every 15 min): quoted once per tick
+  [ -f runs/arc_spend_log.txt ] && echo "  SPEND $(tail -1 runs/arc_spend_log.txt)" | tee -a "$LOG"
   [ "$worst" -ne 0 ] && { echo "WATCH-END code=$worst tick=$t/$TICKS $(date -u +%FT%TZ)" | tee -a "$LOG"; exit "$worst"; }
   [ "$t" -lt "$TICKS" ] && sleep "${HB_EVERY:-900}"
 done

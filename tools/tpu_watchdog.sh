@@ -118,3 +118,12 @@ deleted (work is banked in GCS)\" with title \"QHRRN watchdog: AUTO-TEARDOWN\"" 
       2>/dev/null
   fi
 fi
+
+# ---- THE ARC PROJECT SPEND RECORD (2026-09-15; the PI: "Keep fresh record of the spend estimate on this google cloud project") ----
+# After the inventory and the backstop above, refresh runs/arc_spend.md (tools/arc_spend.py: our nodes' measured lifetimes x the program's
+# rates + storage + transfer; read-only listings, our qhrrn2-* nodes only). Bounded, non-fatal, and skipped when the tool, the venv or an
+# ARC project is absent (the offline harness's sandbox has neither) — it can never change this watchdog's inventory, alarms or deletions.
+if [ -n "${ARC_PROJECT:-}" ] && [ -f tools/arc_spend.py ] && [ -x .venv/bin/python ]; then
+  perl -e 'alarm 300; exec @ARGV' -- .venv/bin/python tools/arc_spend.py --quiet >> runs/arc_spend_hook.log 2>&1 || \
+    echo "$(date -u +%FT%TZ) | ARC-SPEND refresh failed (see runs/arc_spend_hook.log)" >> "$LOG"
+fi
