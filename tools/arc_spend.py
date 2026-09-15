@@ -51,7 +51,7 @@ BRINGUP_PULL_GB = 0.12         # the ARC data tarball + the code archive per bri
 # pods (D0 1.93 it/s, D1 1.96 it/s from the metrics' timestamps; the pilot's 5.42 it/s was the trainer's printed rate, 2.8x high on the field
 # loop): a DEC arm = pretrain 4.3 h + monitors 0.9 + fits 4.0-4.6 + traces 0.3 + probe/compile 0.5 ~ 10.1-10.7 h (+1.7 h if extended);
 # pod0 = D0 + D2 ~ 20.2-25.9 h (27.9 h on the eager-trace fallback); pod1 = D1 + N0 ~ 11.4-13.7 h (N0's pace unmeasured on this image)
-POD_WALL_BANDS_H = {"qhrrn2-arc-pod0": (20.2, 25.9), "qhrrn2-arc-pod1": (11.4, 13.7)}
+POD_WALL_BANDS_H = {"qhrrn2-arc-pod0": (20.2, 31.0), "qhrrn2-arc-pod1": (11.4, 17.0)}   # 2026-09-15 18:25Z: the extension +20k (the PI) adds up to 3.5 h per DEC arm
 
 
 def utcnow() -> dt.datetime:
