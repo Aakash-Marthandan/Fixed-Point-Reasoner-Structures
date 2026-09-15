@@ -14,6 +14,7 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 source tools/campaign.env   # POD
+source tools/gcp_local.sh || exit 2   # project ids: the git-ignored tools/.gcp_local.env (2026-09-15)
 LOG=runs/pod_${POD}.log
 PIDF=runs/pod_supervisor.pid
 prev=""; same=0; dead_alerted=0
@@ -40,7 +41,7 @@ while true; do
   prev="$last"
   if [ "$same" -ge "$lim" ]; then
     st=$(perl -e 'alarm shift; exec @ARGV' 60 gcloud compute tpus tpu-vm describe "$POD" \
-         --zone="$zone" --project=quantum-llm --format="value(state)" 2>&1)
+         --zone="$zone" --project=${PROJECT:-$SUDOKU_PROJECT} --format="value(state)" 2>&1)
     pos=$(printf '%s' "$st" | grep -oE '^(READY|CREATING|PREEMPTED|STOPPING|STOPPED|TERMINATED|REPAIRING)$|NOT_FOUND' | head -1)
     case "$pos" in
       READY|CREATING|"") continue;;   # healthy-or-unknown: never act

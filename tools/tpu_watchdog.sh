@@ -20,21 +20,28 @@ cd "$(dirname "$0")/.." || exit 1
 # deadline-enforcement backstop with a coverage hole. Keep this list a SUPERSET
 # of campaign.env ZONES whenever zones are added.
 ZONES="us-east1-d us-east1-c us-east5-b us-central1-a us-central2-b us-west1-c us-west4-a asia-east1-c asia-south1-a asia-south1-b asia-south1-c"
-# THE ARC ERA (2026-09-15; the PI: "all further ARC project content and compute goes there"). Every project in WATCH_PROJECTS is
-# swept. quantum-llm (the Sudoku era's own project) keeps its behaviour byte-for-byte: every node listed, every node deleted past
-# the deadline, the snapshot token "zone=name:state". anita-hunter is a SHARED lab project (other members' buckets live in it):
-# ONLY nodes whose name starts with OWN_PREFIX are listed, reported or deleted — another member's TPU is never touched — and its
-# tokens read "anita-hunter/zone=name:state" (the readers' "[a-z0-9-]+=POD:READY" still extracts the zone). ARC_ZONES = every
-# anita-hunter zone offering v6e (probed 2026-09-15); keep it a SUPERSET of the ARC env's ZONES.
-WATCH_PROJECTS=${WATCH_PROJECTS:-"quantum-llm anita-hunter"}
-OWN_PREFIX=qhrrn2-
-ARC_ZONES="us-east1-d us-east5-a us-east5-b us-central1-a us-central1-b us-central1-c us-west1-c us-south1-a europe-west4-a asia-south1-c"
-zones_of () { if [ "$1" = quantum-llm ]; then echo "$ZONES"; else echo "$ARC_ZONES"; fi; }
-mine () { if [ "$1" = quantum-llm ]; then cat; else awk -v p="$OWN_PREFIX" 'index($1, p) == 1'; fi; }   # stdin rows "name[\tstate]"
-tagz () { if [ "$1" = quantum-llm ]; then echo "$2"; else echo "$1/$2"; fi; }
+# THE ARC ERA (2026-09-15; the PI: "all further ARC project content and compute goes there"; "the monitoring tools ... safe as we
+# shouldn't intrude others' work in the shared project funding and compute"). Project ids and the sharing policy come from the
+# git-ignored tools/.gcp_local.env (tools/gcp_local.sh); missing -> an ALARM and exit (the backstop is BLIND, never guessing).
+# Every project in WATCH_PROJECTS is swept. The Sudoku era's own project keeps its behaviour byte-for-byte: every node listed,
+# every node deleted past the deadline, the snapshot token "zone=name:state". In a SHARED project (SHARED_PROJECTS) ONLY nodes
+# whose name starts with OWN_PREFIX are listed, reported or deleted — another member's TPU is never touched — and its tokens read
+# "project/zone=name:state" (the readers' "[a-z0-9-]+=POD:READY" still extracts the zone). ARC_ZONES = every zone offering v6e
+# in the ARC project (probed 2026-09-15); keep it a SUPERSET of the ARC env's ZONES.
 SNAP=runs/tpu_status.txt
 LOG=runs/tpu_status_log.txt
 mkdir -p runs
+if ! source tools/gcp_local.sh; then
+  echo "$(date -u +%FT%TZ) | BLIND: tools/.gcp_local.env missing or incomplete — no project swept, no deadline enforced" >> "$LOG"
+  "$OSA" -e "display notification \"tools/.gcp_local.env missing — the TPU backstop is BLIND\" \
+    with title \"QHRRN TPU watchdog ALARM\"" 2>/dev/null
+  exit 1
+fi
+WATCH_PROJECTS=${WATCH_PROJECTS:-"$SUDOKU_PROJECT ${ARC_PROJECT:-}"}
+ARC_ZONES="us-east1-d us-east5-a us-east5-b us-central1-a us-central1-b us-central1-c us-west1-c us-south1-a europe-west4-a asia-south1-c"
+zones_of () { if is_shared_project "$1"; then echo "$ARC_ZONES"; else echo "$ZONES"; fi; }
+mine () { if is_shared_project "$1"; then awk -v p="$OWN_PREFIX" 'index($1, p) == 1'; else cat; fi; }   # stdin rows "name[\tstate]"
+tagz () { if is_shared_project "$1"; then echo "$1/$2"; else echo "$2"; fi; }
 NEW=""
 for proj in $WATCH_PROJECTS; do
 for z in $(zones_of "$proj"); do

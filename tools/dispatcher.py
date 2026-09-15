@@ -51,6 +51,41 @@ def _identity():
 
 
 ACCOUNT, PROJECT = _identity()
+
+
+# THE ARC ERA (2026-09-15; the PI: spot only in the shared project; "we shouldn't intrude others' work in the shared project
+# funding and compute"). The sharing policy lives in the git-ignored tools/.gcp_local.env (GCP_LOCAL_ENV overrides the path for
+# the offline harness). main() refuses every verb when it is missing, a non-prefixed node name in a SHARED project, and
+# --on-demand in a SPOT-ONLY project; status lists only our nodes there; a create there must carry POD_LABELS.
+SHARED = False
+OWN_PREFIX = ""
+
+
+def local_policy():
+    p = Path(os.environ.get("GCP_LOCAL_ENV") or (Path(__file__).parent / ".gcp_local.env"))
+    if not p.is_file():
+        return None
+    pol = {}
+    for line in p.read_text().splitlines():
+        line = line.split("#", 1)[0].strip()
+        if "=" in line:
+            k, v = line.split("=", 1)
+            pol[k.strip()] = v.strip().strip('"').strip("'")
+    return pol
+
+
+def policy_refusal(pol, project: str, name: str, on_demand: bool) -> str | None:
+    """None = allowed; else the refusal reason (pure; tests/harness_shared_project.sh)."""
+    if pol is None:
+        return "tools/.gcp_local.env missing (template tools/gcp_local.env.example)"
+    if not name:
+        return "an empty node name (a partially loaded env?)"
+    prefix = pol.get("OWN_PREFIX", "")
+    if project in pol.get("SHARED_PROJECTS", "").split() and not (prefix and name.startswith(prefix)):
+        return f"'{name}' lacks the {prefix or '(unset)'} prefix in a shared project"
+    if on_demand and project in pol.get("SPOT_ONLY_PROJECTS", "").split():
+        return "--on-demand in a spot-only project"
+    return None
 # MULTI-HOST (2026-08-22, wave 2 on a spot v6e-16 = 2 workers x 8 chips): every
 # remote verb takes the worker set explicitly — `up` bootstraps/syncs ALL
 # workers, `canary` certifies EACH worker (chip-pinned, so a worker never tries
@@ -298,11 +333,15 @@ def cmd_up(args) -> int:
         print(f">>> up: '{TPU_NAME}' already exists (state={state}) — reusing")
     else:
         spot = "" if args.on_demand else " --spot"
+        labels = os.environ.get("POD_LABELS", "")
+        if SHARED and not labels:
+            print(">>> up: refusing to create in a shared project without POD_LABELS", flush=True)
+            return 2
         print(f">>> up: provisioning {args.accelerator} [{prof['version']}]"
               f"{spot or ' (ON-DEMAND)'}")
         sh(f"gcloud compute tpus tpu-vm create {TPU_NAME} --zone={args.zone} "
            f"--project={PROJECT} --accelerator-type={args.accelerator} "
-           f"--version={prof['version']}{spot}", dry=args.dry_run)
+           f"--version={prof['version']}{spot}" + (f" --labels={shlex.quote(labels)}" if labels else ""), dry=args.dry_run)
     arm_dms(args.zone, args.dry_run)
     sync_code(args.zone, args.dry_run, args.with_data)
     # O1 second half: venv-tarball restore attempt (non-fatal, validation-gated;
@@ -504,7 +543,9 @@ def cmd_status(args) -> int:
         f"gcloud compute tpus tpu-vm list --zone={args.zone} --project={PROJECT} "
         "--format='value(name,state)'", shell=True, capture_output=True, text=True)
     fleet = [l for l in r.stdout.strip().splitlines() if l]
-    print(f"fleet: {len(fleet)} VM(s) in {args.zone}"
+    if SHARED:   # a shared project: other members' nodes are not our fleet (never listed, counted or acted on)
+        fleet = [l for l in fleet if l.split()[0].startswith(OWN_PREFIX)]
+    print(f"fleet: {len(fleet)} VM(s) in {args.zone}" + (" (ours only: shared project)" if SHARED else "")
           + (": " + "; ".join(fleet) if fleet else ""))
     if state and args.jobs:
         # Detached-job forensics (2026-08-07 incident: manual kills left local
@@ -627,6 +668,14 @@ def main():
 
     args = ap.parse_args()
     TPU_NAME = args.name  # every helper reads the module global
+    global SHARED, OWN_PREFIX
+    pol = local_policy()
+    why = policy_refusal(pol, PROJECT, TPU_NAME, bool(getattr(args, "on_demand", False)))
+    if why:
+        print(f"dispatcher: refusing — {why}", flush=True)
+        sys.exit(2)
+    OWN_PREFIX = pol.get("OWN_PREFIX", "")
+    SHARED = PROJECT in pol.get("SHARED_PROJECTS", "").split()
     global WORKERS
     WORKERS = max(int(args.workers), 1)
     sys.exit({"up": cmd_up, "run": cmd_run, "down": cmd_down,

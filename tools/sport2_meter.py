@@ -19,7 +19,13 @@ LOG = ROOT / "runs" / "pod_qhrrn2-pod2.log"
 OUT = ROOT / "runs" / "sport2_meter.txt"
 HTML = ROOT / "runs" / "sport2_meter.html"
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
-PROJECT = "quantum-llm"
+def _sudoku_project():   # 2026-09-15 (the PI): identities live in the git-ignored tools/.gcp_local.env, never in this public repo
+    p = Path(__file__).resolve().parent / ".gcp_local.env"
+    for line in (p.read_text().splitlines() if p.is_file() else []):
+        if line.startswith("SUDOKU_PROJECT="):
+            return line.split("=", 1)[1].split("#", 1)[0].strip().strip('"')
+    sys.exit("sport2_meter: tools/.gcp_local.env missing (template tools/gcp_local.env.example)")
+PROJECT = os.environ.get("PROJECT") or _sudoku_project()
 # phase-duration priors (min) for the COMPLETE estimate after PHASE1-OK — labeled "est"
 PHASE2_MIN, PHASE3_MIN = 75, 30
 

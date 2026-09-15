@@ -4,7 +4,7 @@
 # tail_runbook.sh detached, resupervise through preemptions. The normal pod.sh
 # supervisor stays DEAD: its chain launch on a non-16 node would hollow-merge.
 set -uo pipefail
-PROJECT=quantum-llm
+source "$(dirname "$0")/gcp_local.sh" || exit 2; PROJECT=$SUDOKU_PROJECT   # project ids: the git-ignored tools/.gcp_local.env (2026-09-15)
 POD=qhrrn2-pod2
 ZONES="us-east1-d us-east1-c us-east5-b us-central1-a us-central2-b us-west1-c us-west4-a asia-east1-c"
 ACCELS="v6e-8 v6e-4"

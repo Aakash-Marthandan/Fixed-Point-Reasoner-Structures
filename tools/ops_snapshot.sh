@@ -15,11 +15,12 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 source tools/campaign.env
+source tools/gcp_local.sh || exit 2   # project ids: the git-ignored tools/.gcp_local.env (2026-09-15)
 NOW=$(date -u +%FT%TZ)
 Z=$(grep -oE "[a-z0-9-]+=${POD}:READY" runs/tpu_status.txt 2>/dev/null | head -1 | cut -d= -f1)
 if [ -z "$Z" ]; then
   for z in $ZONES; do
-    st=$(perl -e 'alarm 45; exec @ARGV' -- gcloud compute tpus tpu-vm describe "$POD" --zone="$z" --project=${PROJECT:-quantum-llm} --format='value(state)' 2>/dev/null)
+    st=$(perl -e 'alarm 45; exec @ARGV' -- gcloud compute tpus tpu-vm describe "$POD" --zone="$z" --project=${PROJECT:-$SUDOKU_PROJECT} --format='value(state)' 2>/dev/null)
     [ "$st" = READY ] && { Z=$z; break; }
   done
 fi
@@ -46,7 +47,7 @@ G=$(pgrep -af "tpu-vm [d]elete" | head -1 | cut -c1-90); echo "GUARD ${G:-NONE P
 echo "LOAD $(cut -d" " -f1-3 /proc/loadavg) nproc=$(nproc)"
 echo "DISK $(df -h / | awk "NR==2{print \$4\" free\"}")"
 echo "LB $(tail -1 runs/live_bank.log 2>/dev/null || echo "no live_bank.log — the 5-min live bank is NOT running on this node")"'
-perl -e 'alarm 120; exec @ARGV' -- gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=${PROJECT:-quantum-llm} --worker=0 \
+perl -e 'alarm 120; exec @ARGV' -- gcloud compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=${PROJECT:-$SUDOKU_PROJECT} --worker=0 \
   --ssh-flag "-o StrictHostKeyChecking=no" --ssh-flag "-o UserKnownHostsFile=/dev/null" --ssh-flag "-o ConnectTimeout=20" \
   --command="$REMOTE" 2>/dev/null | grep -vE "^(SSH:|Using ssh|Warning:|Updating|Existing|External IP)" | sed "s/^/  /"
 rc=${PIPESTATUS[0]}; [ "$rc" -ne 0 ] && echo "  SSH-FAILED rc=$rc (zone $Z) — an UNKNOWN read, not a state"

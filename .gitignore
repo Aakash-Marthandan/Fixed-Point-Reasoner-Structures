@@ -28,6 +28,7 @@ data/
 .jax_cache/
 runs/
 tools/.gcp_identity
+tools/.gcp_local.env
 Documentation/private/
 # Professor review-log PDFs (measurement note + update logs); local only
 Documentation/Review logs/

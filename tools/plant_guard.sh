@@ -14,6 +14,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 source "${POD_ENV:-tools/campaign.env}"
+source tools/gcp_local.sh || exit 2   # project ids: the git-ignored tools/.gcp_local.env (2026-09-15)
 DL=$(cat runs/tpu_deadline.txt)
 DMS_MIN=${DMS_MIN:-780}
 ATTEMPTS=${1:-10}
@@ -23,7 +24,7 @@ now=$(date +%s)
 find_zone () {
   for z in $ZONES; do
     st=$(perl -e 'alarm 45; exec @ARGV' -- gcloud compute tpus tpu-vm describe "$POD" \
-         --zone="$z" --project=${PROJECT:-quantum-llm} --format='value(state)' 2>/dev/null)
+         --zone="$z" --project=${PROJECT:-$SUDOKU_PROJECT} --format='value(state)' 2>/dev/null)
     if [ "$st" = "READY" ]; then echo "$z"; return 0; fi
   done
   return 1
@@ -31,14 +32,14 @@ find_zone () {
 
 for i in $(seq 1 "$ATTEMPTS"); do
   Z=$(find_zone) || { echo "GUARD-RETRY attempt=$i (no READY node yet)"; sleep 45; continue; }
-  SSH=(compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=${PROJECT:-quantum-llm} --worker=0
+  SSH=(compute tpus tpu-vm ssh "$POD" --zone="$Z" --project=${PROJECT:-$SUDOKU_PROJECT} --worker=0
        --ssh-flag "-o StrictHostKeyChecking=no" --ssh-flag "-o UserKnownHostsFile=/dev/null"
        --ssh-flag "-o ConnectTimeout=20")
   if perl -e 'alarm 70; exec @ARGV' -- gcloud "${SSH[@]}" \
       --command "pkill -f 'tpu-vm [d]elete $POD' 2>/dev/null; sudo shutdown -c 2>/dev/null; sudo shutdown -h +$DMS_MIN >/dev/null 2>&1; echo DMS-PUSHED-${DMS_MIN}min"; then
     echo "CALL1-OK zone=$Z attempt=$i"
     if perl -e 'alarm 70; exec @ARGV' -- gcloud "${SSH[@]}" \
-        --command "SECS=\$(( $DL - \$(date +%s) )); setsid nohup bash -c \"sleep \$SECS; gcloud compute tpus tpu-vm delete $POD --zone=$Z --project=${PROJECT:-quantum-llm} --quiet\" </dev/null >/tmp/deadline_guard.log 2>&1 & sleep 1; pgrep -f 'tpu-vm [d]elete' && echo GUARD-PLANTED-fires-in-\${SECS}s"; then
+        --command "SECS=\$(( $DL - \$(date +%s) )); setsid nohup bash -c \"sleep \$SECS; gcloud compute tpus tpu-vm delete $POD --zone=$Z --project=${PROJECT:-$SUDOKU_PROJECT} --quiet\" </dev/null >/tmp/deadline_guard.log 2>&1 & sleep 1; pgrep -f 'tpu-vm [d]elete' && echo GUARD-PLANTED-fires-in-\${SECS}s"; then
       echo "GUARD-OK zone=$Z (fires at epoch $DL = $(date -r "$DL" '+%F %T %Z'))"
       exit 0
     fi

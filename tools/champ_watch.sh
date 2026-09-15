@@ -6,6 +6,7 @@
 # MONITOR numbers are redacted). Never acts.
 cd /Users/aakash/Projects/HRRN || exit 1
 source tools/campaign.env
+source tools/gcp_local.sh || exit 2   # project ids: the git-ignored tools/.gcp_local.env (2026-09-15)
 LOG=runs/pod_qhrrn2-pod2.log
 prev_state=""; t_launch=$(date +%s); zone_hours=""
 # scope every log read to THIS launch (the supervisor log is appended across campaigns: a stale "CREATED in" line misled the first tick)
@@ -22,7 +23,7 @@ while :; do
   # an ADOPTED node (a supervisor restart) never prints CREATED: fall back to the supervisor's own "READY <zone> |" state line
   [ -n "$z" ] || z=$(lg | grep -oE "\| READY [a-z0-9-]+ \|" | tail -1 | awk '{print $3}')
   lg | grep -qE "DOWN $POD in $z" 2>/dev/null && [ -n "$z" ] && { dz=$(lg | grep -nE "CREATED in $z|DOWN $POD in $z" | tail -1); case $dz in *DOWN*) z="";; esac; }
-  st=""; if [ -n "$z" ]; then st=$(perl -e 'alarm 60; exec @ARGV' -- gcloud compute tpus tpu-vm describe "$POD" --zone="$z" --project=quantum-llm --format='value(state)' 2>/dev/null | grep -oE '^[A-Z]+$' | head -1); fi
+  st=""; if [ -n "$z" ]; then st=$(perl -e 'alarm 60; exec @ARGV' -- gcloud compute tpus tpu-vm describe "$POD" --zone="$z" --project=${PROJECT:-$SUDOKU_PROJECT} --format='value(state)' 2>/dev/null | grep -oE '^[A-Z]+$' | head -1); fi
   state="${z:-hunting}:${st:-absent}"
   if [ "$state" != "$prev_state" ]; then echo "[$now $ist] EVENT node state $prev_state -> $state | $last"; prev_state=$state; fi
   snap=""

@@ -47,7 +47,18 @@ source "${POD_ENV:-tools/campaign.env}"   # TWO-POD mode (PI 2026-09-06): each s
 # shellcheck source=r0_tasks.sh
 source tools/r0_tasks.sh          # VH RG RB RT
 PY=.venv/bin/python
-PROJECT=${PROJECT:-quantum-llm}   # THE ARC ERA (2026-09-15): an env sets PROJECT=anita-hunter (+ CLOUDSDK_ACTIVE_CONFIG_NAME, QHRRN_GCP_PROJECT); unset = the Sudoku era's project, byte-identical
+# THE ARC ERA (2026-09-15): project ids + the sharing policy live in the git-ignored tools/.gcp_local.env (tools/gcp_local.sh);
+# an ARC env sets PROJECT; unset = the Sudoku era's project (the old behaviour). In a SHARED project (the PI: never intrude on
+# others' work) the node must carry OWN_PREFIX and POD_LABELS, and pod.sh only ever creates --spot.
+source tools/gcp_local.sh || { echo "pod.sh: refusing — tools/.gcp_local.env missing (template tools/gcp_local.env.example)"; exit 2; }
+PROJECT=${PROJECT:-$SUDOKU_PROJECT}
+export QHRRN_GCP_PROJECT=${QHRRN_GCP_PROJECT:-$PROJECT}      # the dispatcher's identity guard follows the same project
+[ "$QHRRN_GCP_PROJECT" = "$PROJECT" ] || { echo "pod.sh: refusing — PROJECT and QHRRN_GCP_PROJECT differ"; exit 2; }
+export POD_LABELS
+if is_shared_project "$PROJECT"; then
+  is_own_name "$POD" || { echo "pod.sh: refusing — POD '$POD' lacks the $OWN_PREFIX prefix in a shared project"; exit 2; }
+  [ -n "${POD_LABELS:-}" ] || { echo "pod.sh: refusing — POD_LABELS unset in a shared project"; exit 2; }
+fi
 LOG=${POD_LOG:-runs/pod_${POD}.log}          # overridable ONLY for the offline harness
 PIDF=${POD_PIDF:-runs/pod_${POD}_supervisor.pid}
 POLL=${POLL:-300}
