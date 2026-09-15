@@ -47,7 +47,7 @@ source "${POD_ENV:-tools/campaign.env}"   # TWO-POD mode (PI 2026-09-06): each s
 # shellcheck source=r0_tasks.sh
 source tools/r0_tasks.sh          # VH RG RB RT
 PY=.venv/bin/python
-PROJECT=quantum-llm
+PROJECT=${PROJECT:-quantum-llm}   # THE ARC ERA (2026-09-15): an env sets PROJECT=anita-hunter (+ CLOUDSDK_ACTIVE_CONFIG_NAME, QHRRN_GCP_PROJECT); unset = the Sudoku era's project, byte-identical
 LOG=${POD_LOG:-runs/pod_${POD}.log}          # overridable ONLY for the offline harness
 PIDF=${POD_PIDF:-runs/pod_${POD}_supervisor.pid}
 POLL=${POLL:-300}
@@ -218,7 +218,7 @@ v_hunt () {   # try every (accelerator, zone) once in ladder order; 0 = chain la
       accel_allowed_in "$acc" "$z" || { say "  skip $acc in $z (ACCEL_ZONE_RESTRICT)"; continue; }
       say "CREATE $POD ($acc spot) in $z"
       if ! bounded 600 gcloud compute tpus tpu-vm create "$POD" --zone="$z" --project=$PROJECT \
-           --accelerator-type="$acc" --version=v6e-ubuntu-2404 --spot >> "$LOG" 2>&1; then
+           --accelerator-type="$acc" --version=v6e-ubuntu-2404 --spot ${POD_LABELS:+--labels="$POD_LABELS"} >> "$LOG" 2>&1; then   # POD_LABELS: the shared ARC project's ownership labels (unset = no flag)
         say "  no capacity in $z ($acc)"
         v_clear_leftover "$z"; lrc=$?
         [ "$lrc" -eq 2 ] || continue

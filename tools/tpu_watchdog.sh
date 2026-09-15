@@ -11,7 +11,8 @@
 #     these reach the PI even when no Claude session is alive.
 # Layers 2/3 (session-side): Monitor on the snapshot; hourly cron report.
 # Install: tools/install_watchdog.sh (launchd, user-level, no sudo).
-PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
+PATH=${WATCHDOG_PATH:-/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin}   # WATCHDOG_PATH / WATCHDOG_OSASCRIPT: the offline harness only (tools/harness_watchdog_projects.sh)
+OSA=${WATCHDOG_OSASCRIPT:-/usr/bin/osascript}
 cd "$(dirname "$0")/.." || exit 1
 # asia-south1-* added 2026-08-28 (autonomous-mode fix): the Mumbai zones joined
 # the campaign rotation on 08-27 but the watchdog never swept them — it reported
@@ -19,32 +20,47 @@ cd "$(dirname "$0")/.." || exit 1
 # deadline-enforcement backstop with a coverage hole. Keep this list a SUPERSET
 # of campaign.env ZONES whenever zones are added.
 ZONES="us-east1-d us-east1-c us-east5-b us-central1-a us-central2-b us-west1-c us-west4-a asia-east1-c asia-south1-a asia-south1-b asia-south1-c"
+# THE ARC ERA (2026-09-15; the PI: "all further ARC project content and compute goes there"). Every project in WATCH_PROJECTS is
+# swept. quantum-llm (the Sudoku era's own project) keeps its behaviour byte-for-byte: every node listed, every node deleted past
+# the deadline, the snapshot token "zone=name:state". anita-hunter is a SHARED lab project (other members' buckets live in it):
+# ONLY nodes whose name starts with OWN_PREFIX are listed, reported or deleted — another member's TPU is never touched — and its
+# tokens read "anita-hunter/zone=name:state" (the readers' "[a-z0-9-]+=POD:READY" still extracts the zone). ARC_ZONES = every
+# anita-hunter zone offering v6e (probed 2026-09-15); keep it a SUPERSET of the ARC env's ZONES.
+WATCH_PROJECTS=${WATCH_PROJECTS:-"quantum-llm anita-hunter"}
+OWN_PREFIX=qhrrn2-
+ARC_ZONES="us-east1-d us-east5-a us-east5-b us-central1-a us-central1-b us-central1-c us-west1-c us-south1-a europe-west4-a asia-south1-c"
+zones_of () { if [ "$1" = quantum-llm ]; then echo "$ZONES"; else echo "$ARC_ZONES"; fi; }
+mine () { if [ "$1" = quantum-llm ]; then cat; else awk -v p="$OWN_PREFIX" 'index($1, p) == 1'; fi; }   # stdin rows "name[\tstate]"
+tagz () { if [ "$1" = quantum-llm ]; then echo "$2"; else echo "$1/$2"; fi; }
 SNAP=runs/tpu_status.txt
 LOG=runs/tpu_status_log.txt
 mkdir -p runs
 NEW=""
-for z in $ZONES; do
+for proj in $WATCH_PROJECTS; do
+for z in $(zones_of "$proj"); do
   # perl alarm = portable timeout (no coreutils on this Mac); a wedged gcloud
   # connection must never freeze the watchdog (2026-08-14: one hung poll
   # blinded layer 1 for 45 min — the 07-29 bounded-call law applies here too).
   RAW=$(perl -e 'alarm shift; exec @ARGV' 120 \
-      gcloud compute tpus tpu-vm list --zone="$z" --project=quantum-llm \
+      gcloud compute tpus tpu-vm list --zone="$z" --project="$proj" \
       --format="value(name,state)" 2>/dev/null)
   RC=$?
   if [ "$RC" -ne 0 ]; then
     # A failed probe is NOT an empty zone — surface blindness, never mask it.
-    NEW="$NEW$z=PROBE-FAIL "
+    NEW="$NEW$(tagz "$proj" "$z")=PROBE-FAIL "
   else
-    R=$(printf '%s' "$RAW" | tr '\n\t' ' :')
-    [ -n "$R" ] && NEW="$NEW$z=$R "
+    R=$(printf '%s' "$RAW" | mine "$proj" | tr '\n\t' ' :')
+    R=${R% }
+    [ -n "$R" ] && NEW="$NEW$(tagz "$proj" "$z")=$R "
   fi
+done
 done
 NEW=$(echo "$NEW" | sed 's/ *$//')
 OLD=$(cat "$SNAP" 2>/dev/null || echo "")
 echo "$(date -u +%FT%TZ) | ${NEW:-none}" >> "$LOG"
 if [ "$NEW" != "$OLD" ]; then
   echo "$NEW" > "$SNAP"
-  /usr/bin/osascript -e "display notification \"${NEW:-all zones clear}\" \
+  "$OSA" -e "display notification \"${NEW:-all zones clear}\" \
     with title \"QHRRN TPU watchdog: inventory changed\"" 2>/dev/null
 fi
 if [ -n "$NEW" ]; then
@@ -60,7 +76,7 @@ if [ -n "$NEW" ]; then
     if [ "$SUP_ALIVE" -eq 1 ] && [ "$FAR" -eq 1 ]; then
       echo "$(date -u +%FT%TZ) | >=8h READY but supervised (pid $SP) with deadline >1h away — alarm suppressed" >> "$LOG"
     else
-      /usr/bin/osascript -e "display notification \"$NEW up >=8h — check DMS \
+      "$OSA" -e "display notification \"$NEW up >=8h — check DMS \
 and teardown\" with title \"QHRRN TPU watchdog ALARM\"" 2>/dev/null
     fi
   fi
@@ -79,16 +95,18 @@ if [ -n "$NEW" ] && [ -f "$DEADLINE_FILE" ]; then
   DEADLINE=$(head -1 "$DEADLINE_FILE" | tr -dc '0-9')
   NOW=$(date -u +%s)
   if [ -n "$DEADLINE" ] && [ "$NOW" -gt "$DEADLINE" ]; then
-    for z in $ZONES; do
+    for proj in $WATCH_PROJECTS; do
+    for z in $(zones_of "$proj"); do
       for n in $(gcloud compute tpus tpu-vm list --zone="$z" \
-                 --project=quantum-llm --format="value(name)" 2>/dev/null); do
-        echo "$(date -u +%FT%TZ) | DEADLINE-DELETE $z/$n" >> "$LOG"
+                 --project="$proj" --format="value(name)" 2>/dev/null | mine "$proj"); do
+        echo "$(date -u +%FT%TZ) | DEADLINE-DELETE $(tagz "$proj" "$z")/$n" >> "$LOG"
         gcloud compute tpus tpu-vm delete "$n" --zone="$z" \
-          --project=quantum-llm --quiet >/dev/null 2>&1 &
+          --project="$proj" --quiet >/dev/null 2>&1 &
       done
     done
+    done
     wait
-    /usr/bin/osascript -e "display notification \"deadline passed — all TPUs \
+    "$OSA" -e "display notification \"deadline passed — all TPUs \
 deleted (work is banked in GCS)\" with title \"QHRRN watchdog: AUTO-TEARDOWN\"" \
       2>/dev/null
   fi

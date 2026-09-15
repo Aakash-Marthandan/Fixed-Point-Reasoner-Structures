@@ -2,6 +2,25 @@
 
 **Read this first, then `tools/OPS_RUNBOOK.md`.** The repo outranks conversation memory. The ops model runs a campaign to completion and STOPS; the analysis pass (Fable, on PI go) adjudicates. ETAs/clocks to the PI in IST (UTC+5:30) with UTC in parentheses. **Concision pass 2026-09-02:** every superseded campaign block (2026-08-19 → 2026-09-01) is preserved verbatim in git — §8 lists the commit per campaign — and its lessons are folded into §7.
 
+## THE ARC PROJECT — where ARC content and compute live (standing from 2026-09-15; the PI: "all further ARC project content and compute goes there")
+
+**Two projects, one account.**
+- **Sudoku era (closed):** GCP project `quantum-llm`, bucket `gs://qhrrn2-rescue` (us-east1). Its data is read-only history: copy from it, never write, move or delete.
+- **ARC era:** GCP project `anita-hunter`, bucket `gs://qhrrn2-arc` (US multi-region; uniform bucket-level access; public access prevention enforced; soft delete 7 d; labels program=qhrrn2, owner=aakash, purpose=arc). The Cloud TPU API was enabled 2026-09-15.
+- **gcloud:** the default configuration stays on `quantum-llm`. The configuration `qhrrn2-arc` (not active) points at `anita-hunter`; ARC envs export `CLOUDSDK_ACTIVE_CONFIG_NAME=qhrrn2-arc` and `QHRRN_GCP_PROJECT=anita-hunter` (the dispatcher's identity guard). Interactive: `CLOUDSDK_ACTIVE_CONFIG_NAME=qhrrn2-arc gcloud ...`.
+
+**`anita-hunter` is a SHARED lab project** (inside an organization; other members' buckets live in it; the billing account is not visible to our account; our role is Editor). Rules:
+- Our nodes are named `qhrrn2-*` and carry `POD_LABELS`; fleet checks, inventories and deletes act on `qhrrn2-*` names only. The launchd watchdog enforces this (`tools/tpu_watchdog.sh` WATCH_PROJECTS; `tools/harness_watchdog_projects.sh` W1–W6, 14/14).
+- Never change IAM, org policy, networks or firewall rules; never read, list for use, or write another member's bucket; never name other members' resources in this public repo.
+- Spend belongs to the lab's billing: **no launch without the PI's spend envelope for this project**, and on-demand only on the PI's explicit go (the project holds v6e on-demand quota too).
+
+**What is staged.**
+- `gs://qhrrn2-arc/sets/`: `arc_data.tgz`, `C2_vsel.pkl`, `p13C53.pkl`, `p13Dri.pkl` (from `qhrrn2-rescue/decarc/sets`) and `sudoku_extreme_seed0_mon512.npz` (from `qhrrn2-rescue/champ/sets`); server-side copies, crc32c 5/5, sources unchanged; `PROVENANCE.txt` beside them.
+- **Quota (read 2026-09-15):** v6e 512 chips on-demand and 1,536 spot per zone. Zones offering v6e: us-east1-d, us-east5-a/b, us-central1-a/b/c, us-west1-c, us-south1-a, europe-west4-a, asia-south1-c (us-central2-b has none here; us-west1-a denies TPU).
+- **Tooling:** `PROJECT` is an env knob in `pod.sh`, `ops_snapshot.sh`, `dms_keeper.sh` and `plant_guard.sh` (unset = `quantum-llm`, byte-identical); `pod.sh` adds `--labels "$POD_LABELS"` when set. The first ARC env is `tools/campaign_decarc_arc.env` (the registered DEC-ARC env re-pointed: project, bucket, node name, labels, zones; the science knobs diff-identical). It is NOT `tools/campaign.env` until a launch is approved.
+
+**Before the first ARC launch here:** the PI's spend envelope → a canary in this project (create `qhrrn2-arc-pod` v6e-8 spot, bring-up from `gs://qhrrn2-arc`, read/write the bucket from the node, delete; ≈ 20 min) → the campaign's own registration and harness as usual.
+
 ## OPS PICKUP — THE WIDTH-192 LONG RUN (registration = `Documentation/Plan_2026-09-14_W192_Long.md`; the analysis is the analysis session's; ops reads NO accuracy values)
 
 **The PI's words for this run:** "let's do it, this is worth looking into for the ARC DEC port — but use a 50k subsample for evals to test things rather than the full"; standing: delete or change no previous result.

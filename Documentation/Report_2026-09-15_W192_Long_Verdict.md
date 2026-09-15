@@ -77,6 +77,8 @@ At each onset grid and the next three held-out grids, dH and dT are the drops un
 
 ## 6. What we learn (descriptive; no rules)
 
+**CAUTION (2026-09-15 ~07:35Z, while the CPU lens runs; do not cite items 1–3 below until its addendum lands).** Items 1–3 read the collapse through the benchmark's cold start, which starts the carry from the DEC's fixed buffers; the champion recipe trains every fresh row from z ~ N(0, 1) instead (verified in `tools/pretrain.py` and `src/qhrrn2/dec_cell.py`). The lens's 16-puzzle smoke at 94k: cold 1/16, one random start (the training family) 16/16, one shared random start 16/16, the embedded solution held at every step. If the full lens (38 grids × 128 held-out puzzles, `tools/lens_c5l_dynamics.py`) confirms it, the collapse is the fixed start leaving the basin, not the map failing, and items 1–3 are rewritten. The registered readings in §3 are unaffected (they are defined on the cold start).
+
 **Held-out / train-1k at D16 for C5 (%):** 12k 90.4/92.2 · 16k 88.6/90.2 · 20k 20.8/23.2 · 22k 15.2/15.4 · 26k 94.2/95.1 · 46k 96.0/97.1 · 50k 95.9/97.8 · 58k 92.7/94.1 · 70k 90.6/93.0 · 76k 85.8/87.4 · 84k 49.3/50.7 · 90k 12.5/12.6 · 94k 6.9/7.8 · 100k 48.4/51.5 · 120k 19.9/21.1 · 130k 54.9/62.8 · 140k 78.1/86.7 · 150k 81.4/89.8.
 
 1. **Width 192 does not memorize within 150k at this lr; it destabilizes.** Its training puzzles fail with its held-out puzzles, point for point: the transient collapse at 18k–24k, a slide of 3–6 pp from 58k, then repeated collapses (6.9 % at 94k, 19.9 % at 120k) with recoveries (81.4 % at 150k). The training loss kept falling through all of it. It never fits its own 1,000 puzzles at D16 (best 97.8 %).
