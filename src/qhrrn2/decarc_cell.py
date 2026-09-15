@@ -23,16 +23,29 @@
 # embed_answer = the FPA anchor state (the embedded corrupted OUTPUT, void cells included, through
 # the input's own role table so it trains through the input path — dec_cell's note) = the DEC's
 # handed-truth RETENTION instrument on ARC (the FPA start at eps = 0) and its basin-radius ladder.
+# THE DETERMINISTIC EVALUATION START (2026-09-15; the width-192 long run's CPU lens, Report_2026-09-15_W192_Long_Verdict
+# §8): an RI-trained cell trains every fresh row from z ~ N(0, sigma) and never from its fixed buffers, so the buffers are an
+# UNCONTROLLED start for it (on Sudoku the fixed start left and re-entered the basin as the weights drifted while every
+# random start solved). The cold pass of the monitor, the evaluator, predict and the fit's validation therefore starts
+# from z0_eval: a SEEDED draw from the training family, shared by every input (deterministic), TIED OVER THE FIELD AXIS so
+# that it is exactly S10-invariant and the cell's colour exactness survives the start (cfg.decarc_eval_start:
+# "fieldfix" = one draw per (stream, cell, channel) broadcast over the ten fields [the default]; "symfix" = one vector per
+# stream broadcast over fields and cells; "rifix" = an untied draw, NOT S10-invariant — a descriptive row only, never
+# the selection or the cold row; "buffers" = the pre-2026-09-15 start). A plain cell (sigma 0) keeps its buffers (they
+# are its training start). Training (an rng threaded) is untouched: the RI draw, or the buffers when sigma is 0.
 """The DEC-ARC block stack as pure functions over explicit param pytrees.
 
   params = init_params(key, cfg, hw)                      # cfg.dec_width, cfg.decarc_heads, the trm_* loop dials
   logits, q, z_fine = forward_core(params, cfg, fields, task_vec=code, z_in=..., rng=...)
   segment(params, cfg, emb, zH, zL, rng)                  # one outer segment (the SOT unit)
+  z0_eval(cfg, hw[, kind])                                # the deterministic evaluation start (S10-invariant kinds)
 """
 from __future__ import annotations
 
+import functools
 import math
 
+import numpy as np
 import jax
 import jax.numpy as jnp
 
@@ -80,12 +93,38 @@ def init_states(cfg: Config):
 
 def z0(cfg: Config, hw: int, rng=None):
     """(2, F, S, w): the fixed buffers broadcast over fields and cells (exactly S10-invariant), or the
-    RI draw z ~ N(0, sigma I) when cfg.trm_ri_sigma > 0 and an rng is threaded."""
+    RI draw z ~ N(0, sigma I) when cfg.trm_ri_sigma > 0 and an rng is threaded. The FPA anchor's z_L and the
+    plain cell's start read this; the deterministic evaluation start is z0_eval."""
     w = cfg.dec_width
     if cfg.trm_ri_sigma > 0 and rng is not None:
         return cfg.trm_ri_sigma * jax.random.normal(rng, (2, F, hw, w))
     H0, L0 = init_states(cfg)
     return jnp.stack([jnp.broadcast_to(H0, (F, hw, w)), jnp.broadcast_to(L0, (F, hw, w))])
+
+
+EVAL_START_SEED = 20260915                                   # the seeded evaluation draw (the date the start was defined)
+EVAL_STARTS = ("buffers", "symfix", "fieldfix", "rifix")      # the S10-invariant kinds: buffers, symfix, fieldfix
+EVAL_START_INVARIANT = ("buffers", "symfix", "fieldfix")
+
+
+@functools.lru_cache(maxsize=8)
+def _eval_start_draw(kind: str, hw: int, w: int, sigma: float):
+    """NumPy draws (platform-independent bits: the same start on the CPU and the TPU), cached per shape."""
+    g = np.random.default_rng([EVAL_START_SEED, {"symfix": 1, "fieldfix": 2, "rifix": 3}[kind]])
+    shape = {"symfix": (2, 1, 1, w), "fieldfix": (2, 1, hw, w), "rifix": (2, F, hw, w)}[kind]
+    return (sigma * g.standard_normal(shape)).astype(np.float32)
+
+
+def z0_eval(cfg: Config, hw: int, kind: str | None = None):
+    """The DETERMINISTIC EVALUATION START (2, F, S, w) of an RI-trained DEC-ARC (see the module note): kind = cfg.decarc_eval_start
+    unless given. The buffers when the cell trains from them (sigma 0) or kind = "buffers"; otherwise the seeded draw
+    sigma * N(0, 1) tied over the fields ("fieldfix"), over fields and cells ("symfix"), or untied ("rifix", not invariant)."""
+    kind = cfg.decarc_eval_start if kind is None else kind
+    assert kind in EVAL_STARTS, kind
+    if kind == "buffers" or cfg.trm_ri_sigma <= 0:
+        return z0(cfg, hw)
+    g = _eval_start_draw(kind, hw, cfg.dec_width, float(cfg.trm_ri_sigma))
+    return jnp.broadcast_to(jnp.asarray(g), (2, F, hw, cfg.dec_width))
 
 
 def _attention(pa, h, nh: int):
@@ -198,7 +237,12 @@ def forward_core(p, cfg: Config, fields, *, task_vec=None, z_in=None, rng=None):
     x_tokens = jnp.argmax(fields[..., 0], axis=0)            # exact on one-hot input
     emb = embed(p, cfg, x_tokens, task_vec)
     k_ri, k_seg = (None, None) if rng is None else tuple(jax.random.split(rng))
-    z = z0(cfg, H * W, rng=k_ri) if z_in is None else z_in
+    if z_in is not None:
+        z = z_in
+    elif rng is None:
+        z = z0_eval(cfg, H * W)          # the deterministic evaluation start (2026-09-15; the buffers for a plain cell)
+    else:
+        z = z0(cfg, H * W, rng=k_ri)     # training: the RI draw (sigma > 0) or the buffers
     zH, zL = segment(p, cfg, emb, z[0], z[1], rng=k_seg)
     logits, q = readout(p, cfg, zH, (H, W))
     return logits, q, jnp.stack([zH, zL])

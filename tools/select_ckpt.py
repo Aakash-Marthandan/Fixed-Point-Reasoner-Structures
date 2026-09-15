@@ -12,6 +12,12 @@
 #   --second-key KEY     a second monitor field breaks ties on the first (the chain passes the
 #                        RAW-weights monitor val_t16 under the EMA key val_t16_ema)
 # The default call is byte-identical to the pre-existing behaviour.
+# DEC-ARC (2026-09-15; the paper-final and Night A selection lessons ported to a ~150-query ARC monitor):
+#   --third-key KEY      a third field breaks the ties the second leaves (the chain passes the EMA pixel accuracy
+#                        val_pix_ema under val_t16_ema / val_t16: exact counts tie on small monitors)
+#   --plateau-pp PP      also print the PLATEAU END step (the last banked grid whose key >= max - PP) as a fourth token:
+#                        the chain keys the extension rule on it instead of the argmax (the C8 extension missed by ONE
+#                        monitor puzzle at 30k; a noise-level argmax is not the object the rule means)
 """  .venv/bin/python tools/select_ckpt.py runs/pretrainsport3a_A3  """
 from __future__ import annotations
 import json, re, sys
@@ -26,6 +32,8 @@ def main():
     # arms' raw weights; val_t64_ema / val_t16_ema = the EMA rows of R0 / X0)
     key = _opt("--key", "val_t64")
     key2 = _opt("--second-key", None)
+    key3 = _opt("--third-key", None)
+    plateau = _opt("--plateau-pp", None)
     tie = _opt("--tie", "later")
     # DEC-ARC BUILD (2026-09-10): --row val reads the native ARC loop's {"val": ...} rows (val20_eval: val_exact / val_total /
     # val_pix_mean) instead of the {"monitor": ...} rows; --key val_frac = val_exact / val_total. The default is byte-identical.
@@ -45,13 +53,18 @@ def main():
                 m["val_frac"] = float(m["val_exact"]) / max(int(m["val_total"]), 1)
             if key in m:
                 v2 = float(m[key2]) if (key2 and key2 in m) else 0.0
-                rows.append((int(m["step"]), float(m[key]), v2))
-    cand = [(v, v2, s) for s, v, v2 in rows if s in banked]
+                v3 = float(m[key3]) if (key3 and key3 in m) else 0.0
+                rows.append((int(m["step"]), float(m[key]), v2, v3))
+    cand = [(v, v2, v3, s) for s, v, v2, v3 in rows if s in banked]
     if not cand:
         print("NONE", file=sys.stderr); sys.exit(1)
     sgn = -1 if tie == "earliest" else 1
-    v, v2, s = max(cand, key=lambda x: (x[0], x[1], sgn * x[2]))   # best val; second key; ties -> earliest/later step
-    print(f"{s:06d} {v:.4f} {s}")
+    v, v2, v3, s = max(cand, key=lambda x: (x[0], x[1], x[2], sgn * x[3]))   # best val; second key; third key; ties -> earliest/later step
+    line = f"{s:06d} {v:.4f} {s}"
+    if plateau is not None:
+        vmax = max(c[0] for c in cand)
+        line += f" {max(c[3] for c in cand if c[0] >= vmax - float(plateau))}"   # the plateau's end (a 4th token; the default output is untouched)
+    print(line)
 
 if __name__ == "__main__":
     main()

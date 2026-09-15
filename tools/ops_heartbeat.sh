@@ -3,14 +3,19 @@
 # Exits on CHAIN-DECARC-COMPLETE (drives the close). Coverage: supervisor-dead, node-not-READY, past-deadline,
 # DMS<deadline, stale live-bank, NAN/AMPUTATE/FAILED/ABORT markers, node-gone.
 cd /Users/aakash/Projects/HRRN
-PODLOG=runs/pod_qhrrn2-pod2.log
+# 2026-09-15 (the ARC era): the pod name, the bucket prefix, the final object and the sentinel come from the campaign env
+# (tools/campaign.env = the ARC env at an ARC launch: POD=qhrrn2-arc-pod, GCS=gs://qhrrn2-arc/decarc; it also selects the
+# gcloud configuration); the Sudoku-era pods (qhrrn2-pod2) read byte-identically. HB_SENTINEL / HB_FINAL still override.
+source tools/campaign.env || { echo "ops_heartbeat: tools/campaign.env failed to load (the identity file?)"; exit 2; }
+POD=${POD:-qhrrn2-pod2}
+PODLOG=runs/pod_${POD}.log
 while true; do
   ts=$(date -u +%H:%M:%SZ)
-  SP=$(cat runs/pod_qhrrn2-pod2_supervisor.pid 2>/dev/null)
+  SP=$(cat "runs/pod_${POD}_supervisor.pid" 2>/dev/null)
   sup=$(kill -0 "$SP" 2>/dev/null && echo up || echo DOWN)
   dl=$(tr -dc '0-9' < runs/tpu_deadline.txt 2>/dev/null); now=$(date +%s); dlm=$(( (${dl:-now}-now)/60 ))
   snap=$(bash tools/ops_snapshot.sh 2>/dev/null)
-  wd=$(echo "$snap" | grep -oE "qhrrn2-pod2:[A-Z_]+" | head -1)
+  wd=$(echo "$snap" | grep -oE "${POD}:[A-Z_]+" | head -1)
   mark=$(echo "$snap" | grep -E "^  MARK" | head -1 | sed 's/^  MARK //' | cut -c1-56)
   pt=$(echo "$snap" | grep -E "^  PT" | head -1 | grep -oE "step +[0-9]+.*it/s" | tr -s ' ' | cut -c1-46)
   ev=$(echo "$snap" | grep -E "^  EV" | head -1 | sed 's/^  EV //' | cut -c1-40)
@@ -28,8 +33,9 @@ while true; do
   echo "$snap" | grep -qiE "DMS.*in -" && echo "  ALERT DMS before deadline"
   [ -n "$l1" ] && [ -n "$np" ] && [ "$l1" -gt $(( np * 3 / 2 )) ] && echo "  ALERT host load $l1 > 1.5 x nproc $np (the thrash class: something besides the chain is on the host)"
   echo "$mark" | grep -qE "VALBEST|VB-FALLBACK|PRETRAIN-OK|EVAL-OK" && [ -n "$evage" ] && [ "$evage" -gt 1800 ] && echo "  ALERT eval stall: newest eval file ${evage}s old (tasks=${evtasks:-?}) while in the battery"
-  if echo "$snap $mark" | grep -q "${HB_SENTINEL:-CHAIN-DECARC-COMPLETE}" || gsutil -q stat "${HB_FINAL:-gs://qhrrn2-rescue/decarc_pilot/decarc_final.tgz}" 2>/dev/null; then
-    echo "  CAMPAIGN-COMPLETE (${HB_SENTINEL:-CHAIN-DECARC-COMPLETE} / the final object) — run the close"; break
+  if echo "$snap $mark" | grep -q "${HB_SENTINEL:-${SENTINEL:-CHAIN-DECARC-COMPLETE}}" || gsutil -q stat "${HB_FINAL:-${GCS:-gs://qhrrn2-rescue/decarc_pilot}/${FINAL_OBJ:-decarc_final.tgz}}" 2>/dev/null; then
+    echo "  CAMPAIGN-COMPLETE (${HB_SENTINEL:-${SENTINEL:-CHAIN-DECARC-COMPLETE}} / the final object) — run the close"; break
   fi
+  gsutil -q stat "${GCS:-gs://qhrrn2-rescue/decarc_pilot}/CHAIN-COST-ABORT" 2>/dev/null && echo "  ALERT CHAIN-COST-ABORT marker present: the chain refused a battery (projected wall > DA_COST_BUDGET_H); the supervisor tears down and exits 4; the protocol decision is the PI's" 
   sleep 900
 done

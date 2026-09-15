@@ -12,6 +12,12 @@
 # preflight failure: an optional arm SKIPPED, a seed arm ABORTS; S7 launch-time OOM -> ONE --remat retry; S8 the rider
 # (RIDER=1: claimed once, n-gated 422786; RIDER=0: off); S9 a shard failure -> ARM-PARTIAL, the rerun redoes only the
 # missing row; S10 missing data -> DATA-ABORT before any launch; S11 the live-bank restore -> RESUMED.
+# 2026-09-15 (the Sudoku lessons folded in; Plan §12): S1 also asserts the registry's --decarc-eval-start, the mon96 row (n-gated
+# NVAL, k 0, no re-fit flags), N0's bridge row (48 rows, k 0) and --trace-fused 1 on every DEC eval; S15 asserts the bridge
+# carries NO --fit-t while the night rows do; S17 the ARC env's exact CHAIN_EXTRA_ENV (the ARC bucket mapped; every knob reaches
+# the tools; NOTHING written under the Sudoku era's prefix); S18 the plateau-keyed extension (a flat, declining monitor extends
+# under DA_EXT_PLATEAU_PP and not without); S19 the fused-trace cross-check failing on the 'chip' -> the eager fallback (--trace-fused
+# 0) and completion; S20 DA_MON96=0 DA_BRIDGE=0 remove the two rows (default-inert switches).
 set -uo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 export REAL_PY="$REPO/.venv/bin/python3"
@@ -21,22 +27,24 @@ bad () { FAIL=$((FAIL+1)); echo "  FAIL  $1"; }
 
 mk_sandbox () {
   SB=$(mktemp -d /tmp/hda.XXXXXX)
-  mkdir -p "$SB/repo/tools" "$SB/repo/runs" "$SB/repo/data" "$SB/gcs/decarc/sets" "$SB/gcs/champ/sets" "$SB/bin"
+  mkdir -p "$SB/repo/tools" "$SB/repo/runs" "$SB/repo/data" "$SB/gcs/decarc/sets" "$SB/gcs/champ/sets" "$SB/gcs/arc/sets" "$SB/bin"
   cp "$REPO/tools/chain_decarc.sh" "$REPO/tools/live_bank.sh" "$REPO/tools/select_ckpt.py" "$REPO/tools/eval_decarc.py" "$REPO/tools/valhard.json" "$REPO/tools/dev30.py" "$SB/repo/tools/"
   ln -s "$REPO/src" "$SB/repo/src"
   if [ "${NO_DATA:-0}" != 1 ]; then for d in ARC-AGI ConceptARC re_arc re_gate48 re_gateb48 re_train48; do ln -s "$REPO/data/$d" "$SB/repo/data/$d"; done; fi
   : > "$SB/gcs/champ/sets/sudoku_extreme_seed0_mon512.npz"; echo c2 > "$SB/gcs/decarc/sets/C2_vsel.pkl"
+  : > "$SB/gcs/arc/sets/sudoku_extreme_seed0_mon512.npz"; echo c2 > "$SB/gcs/arc/sets/C2_vsel.pkl"   # the ARC project's sets (gs://qhrrn2-arc/sets)
   cat > "$SB/bin/gsutil" <<SH
 #!/bin/bash
 GB="$SB/gcs"
 SH
   cat >> "$SB/bin/gsutil" <<'SH'
-map () { echo "$1" | sed "s|gs://qhrrn2-rescue/|$GB/|"; }
+map () { echo "$1" | sed "s|gs://qhrrn2-arc/|$GB/arc/|; s|gs://qhrrn2-rescue/|$GB/|"; }
+unmap () { sed "s|$GB/arc/|gs://qhrrn2-arc/|; s|$GB/|gs://qhrrn2-rescue/|"; }
 args=(); for a in "$@"; do [ "$a" = "-q" ] || [ "$a" = "-m" ] || args+=("$a"); done
 cmd=${args[0]:-}
 case $cmd in
   stat) p=$(map "${args[1]}"); [ -f "$p" ];;
-  ls)   rc=1; for g in "${args[@]:1}"; do p=$(map "$g"); for f in $p; do [ -e "$f" ] && { echo "$f" | sed "s|$GB/|gs://qhrrn2-rescue/|"; rc=0; }; done; done; exit $rc;;
+  ls)   rc=1; for g in "${args[@]:1}"; do p=$(map "$g"); for f in $p; do [ -e "$f" ] && { echo "$f" | unmap; rc=0; }; done; done; exit $rc;;
   cp)   src=${args[1]}; dst=${args[2]}
         if [ "$src" = "-" ]; then p=$(map "$dst"); mkdir -p "$(dirname "$p")"; cat > "$p"
         elif [[ "$src" == gs://* ]]; then p=$(map "$src"); if [ "$dst" = "-" ]; then cat "$p" 2>/dev/null || exit 1; else [ -f "$p" ] && { mkdir -p "$(dirname "$dst")" 2>/dev/null; cp "$p" "$dst"; } || exit 1; fi
@@ -96,7 +104,7 @@ if tool.endswith("pretrain.py"):
         rows.append(json.dumps({"step": s, "loss": loss, "ce_in": .4, "q_loss": .01, "train_exact": .3, "halt_frac": .5, "mean_steps": 4.0, "I_total": 0.0, "A_total": 0.0, "rule_H": 0.0, "lr": 1e-4, "steps_per_sec": 1.1, "t": "T"}))
         if int(flag("--monitor-every", "0")) and dec:
             v = 0.30 + (0.001 * s / 8000.0 if peak_last else -0.001 * s / 8000.0)   # monotone in the ABSOLUTE step (a resumed extension keeps rising)
-            rows.append(json.dumps({"monitor": {"val_t16": v - 0.02, "val_pix": .5, "n_val": 100, "val_t16_ema": v, "step": s, "wall_s": 9.0}}))
+            rows.append(json.dumps({"monitor": {"val_t16": v - 0.02, "val_pix": .5, "n_val": 100, "val_t16_ema": v, "val_pix_ema": .5 + s / 1e6, "step": s, "wall_s": 9.0}}))
         if int(flag("--val-every", "0")) and not dec and s % int(flag("--val-every")) == 0:
             ne = 10 + (s // 2000 if peak_last else -(s // 2000) % 5)
             rows.append(json.dumps({"val": {"val_exact": ne, "val_total": 100, "val_pix_mean": .6, "obj_consistency": 0, "obj_consistency_n": 0, "step": s}}))
@@ -114,6 +122,8 @@ if tool.endswith("pretrain.py"):
             pickle.dump(g, open(out / f"ckpt_{s:06d}.pkl", "wb"))
     pickle.dump(ck, open(latest, "wb"))
     (out / "config.json").write_text(json.dumps({"argv": argv, "n_tasks": 3}))
+    if dec and arm_run:   # the real trainer writes the monitor tasks (table row, id, query count) for the evaluator's mon96 set
+        nv = int(flag("--n-val", "96")); (out / "val_tasks.json").write_text(json.dumps([{"t": i, "tid": f"mon{i:02d}", "n_q": 1} for i in range(nv)]))
     print(f"step {steps:6d}  loss 0.5", flush=True); print("DONE"); sys.exit(0)
 if tool.endswith("eval_decarc.py"):
     out = Path(flag("--out")); out.mkdir(parents=True, exist_ok=True)
@@ -138,6 +148,9 @@ if tool.endswith("eval_decarc.py"):
         elif setn == "rg96": ids = sorted(p[:-5] for d in ("re_gate48", "re_gateb48") for p in os.listdir(os.path.join(HERE, "..", "repo", "data", d)) if p.endswith(".json"))
         elif setn == "rt48": ids = sorted(p[:-5] for p in os.listdir(os.path.join(HERE, "..", "repo", "data", "re_train48")) if p.endswith(".json"))
         elif setn == "arc1eval": ids = sorted(p[:-5] for p in os.listdir(os.path.join(HERE, "..", "repo", "data", "ARC-AGI", "data", "evaluation")) if p.endswith(".json"))
+        elif setn == "mon96":   # the real tool: the ids from the checkpoint dir's val_tasks.json (no fit)
+            assert int(flag("--views", "8")) <= 1 and "--flip-test" not in argv, "mon96 takes no re-fit flags"
+            ids = [r["tid"] for r in _j.load(open(os.path.join(os.path.dirname(flag("--ckpt")), "val_tasks.json")))]
     except Exception as e:
         print(f"set load failed: {e}", file=sys.stderr); sys.exit(1)
     lim = int(flag("--limit", "0"))
@@ -171,7 +184,9 @@ if tool.endswith("arc_suite.py"):
 if tool.endswith("cost_probe.py"):
     out = Path(flag("--out")); out.parent.mkdir(parents=True, exist_ok=True)
     s = float(os.environ.get("STUB_COST_S", "0.01")); dec = "decarc_D" in flag("--ckpt")   # 0.01 s/step -> the full registered battery projects ~1.8 h on the sandbox's 4 chips (inside the 8 h budget); S16 sets 100
-    out.write_text(json.dumps({"ckpt": flag("--ckpt"), "set": flag("--set"), "task": "t", "cell_kind": "decarc" if dec else "rg", "B": 6, "n_support": 3, "fit_T": int(flag("--fit-t", "16")), "cfg_T": 16, "t_total": int(flag("--t-total", "16")), "steps": int(flag("--steps", "8")), "compile_s": 1.0, "s_per_step": s, "val_first_s": 1.0, "val_s": 0.1, "trace_first_s": 1.0, "trace_s": 0.2, "device": "stub", "argv": argv})); sys.exit(0)
+    rec = {"ckpt": flag("--ckpt"), "set": flag("--set"), "task": "t", "cell_kind": "decarc" if dec else "rg", "B": 6, "n_support": 3, "fit_T": int(flag("--fit-t", "16")), "cfg_T": 16, "t_total": int(flag("--t-total", "16")), "steps": int(flag("--steps", "8")), "compile_s": 1.0, "s_per_step": s, "val_first_s": 1.0, "val_s": 0.1, "trace_first_s": 1.0, "trace_s": 0.2, "device": "stub", "argv": argv}
+    if dec: rec.update({"trace_dec_first_s": 1.0, "trace_dec_s": 0.2, "trace_dec_eager_s": 1.0, "xcheck_fused_eager": os.environ.get("STUB_XCHECK_FAIL") != "1", "xcheck_fused_probe": True})
+    out.write_text(json.dumps(rec)); sys.exit(0)
 if tool.endswith("eval_sudoku_extreme.py"):
     if "--merge" in argv:
         d = Path(flag("--merge")); n = sum(json.load(open(p))["n"] for p in d.glob("shard_*.json"))
@@ -203,7 +218,13 @@ A0=$(pargv D0); A2=$(pargv D2); AN=$(pargv N0)
 echo "$A0" | grep -q -- "--cell decarc --dec-width 160 --decarc-heads 4" && echo "$A0" | grep -q -- "--trm-ri-sigma 1.0 --fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25 --seed 0" && echo "$A0" | grep -q -- "--w-void 0.5 --table-lr 1e-2 --table-wd 0.1" && echo "$A0" | grep -q -- "--rearc --conceptarc --orbit 4 --n-val 96 --dp" && echo "$A0" | grep -q -- "--steps 8000" && echo "$A0" | grep -q -- "--wd 0.1 --warmup 2000 --lr 2e-4 --lr-end 2e-4" && ok "S1r D0 registry reaches the trainer (the field ARC regime)" || bad "S1r D0 registry: $A0"
 echo "$A2" | grep -q -- "--trm-ri-sigma 0 --fpa-k 0 --seed 0" && ! echo "$A2" | grep -q -- "--trm-ri-sigma 1.0" && ok "S1r D2 = the plain twin" || bad "S1r D2: $A2"
 echo "$AN" | grep -q -- "--d 96 --T 6 --anchor-p 0.3 --beta-flux 3e-5 --beta-flux-nl 1e-5 --ni-sigma 0.01" && echo "$AN" | grep -q -- "--steps 6000" && ! echo "$AN" | grep -q -- "--cell" && echo "$AN" | grep -q -- "--val-every 2000" && ok "S1r N0 = the native A5-class d96 arm with the val back-port" || bad "S1r N0: $AN"
-for s in valhard dev30 rg96 rt48 arc1eval valhard_final; do [ -f "$SB/gcs/decarc/evals/D0_${s}_OK" ] || bad "S1 D0 eval $s missing"; done
+for s in valhard dev30 mon96 rg96 rt48 arc1eval valhard_final; do [ -f "$SB/gcs/decarc/evals/D0_${s}_OK" ] || bad "S1 D0 eval $s missing"; done
+echo "$A0" | grep -q -- "--decarc-eval-start fieldfix" && ok "S1r D0 registry carries the deterministic evaluation start (fieldfix)" || bad "S1r eval start: $A0"
+"$REAL_PY" -c "import json; s=json.load(open('$SB/repo/runs/decarceval_D0/mon96/summary.json')); assert s['n_tasks']==96, s" && ok "S1 the mon96 row n-gated at NVAL 96" || bad "S1 mon96 n-gate"
+EV=$(eargv "$SB/repo/runs/decarceval_D0/mon96/provenance_0.json"); echo "$EV" | grep -q -- "--k 0" && echo "$EV" | grep -q -- "--views 1" && ! echo "$EV" | grep -q -- "--flip-test" && echo "$EV" | grep -q -- "--ladder 0,0.2,0.4,0.6,0.8" && ok "S1 mon96 flags (k 0, views 1, no flip, the ladder)" || bad "S1 mon96 flags: $EV"
+EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); echo "$EV" | grep -q -- "--trace-fused 1" && ! echo "$EV" | grep -q -- "--start-rows" && ok "S1 every DEC eval carries --trace-fused 1; no start rows by default" || bad "S1 trace-fused: $EV"
+[ -f "$SB/gcs/decarc/evals/N0_valhard_bridge_OK" ] && [ "$(cat "$SB/repo/runs/decarceval_N0/valhard_bridge/results.jsonl" | wc -l | tr -d " ")" = 48 ] && EB=$(eargv "$SB/repo/runs/decarceval_N0/valhard_bridge/summary.json") && echo "$EB" | grep -q -- "--k 0" && ! echo "$EB" | grep -q -- "--fit-t" && ok "S1 N0's bridge row: 48 tasks, k 0, the deployed fit" || bad "S1 bridge"
+grep -q "SELECT-KEYS D0 key=val_t16_ema key2=val_t16 start=fieldfix" "$SB/w0.log" && ok "S1 the registered two selection keys by default (no third key, no plateau)" || bad "S1 select keys: $(grep SELECT-KEYS "$SB/w0.log" | head -1)"
 [ -f "$SB/gcs/decarc/evals/D0_arc1eval_OK" ] && [ "$(ls "$SB/repo/runs/decarceval_D0/valhard/results_"*.jsonl | wc -l | tr -d ' ')" = 4 ] && ok "S1 D0's six sets banked; val-hard 4-way sharded" || bad "S1 D0 sets"
 "$REAL_PY" -c "import json; s=json.load(open('$SB/repo/runs/decarceval_D0/valhard/summary.json')); assert s['n_tasks']==48 and s['ema'] is True, s; s=json.load(open('$SB/repo/runs/decarceval_D0/arc1eval/summary.json')); assert s['n_tasks']==400, s; s=json.load(open('$SB/repo/runs/decarceval_D0/rg96/summary.json')); assert s['n_tasks']==96, s" && ok "S1 n-gates (48 / 400 / 96) and --ema recorded" || bad "S1 n-gates"
 EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); echo "$EV" | grep -q -- "--k 32" && echo "$EV" | grep -q -- "--views 8" && echo "$EV" | grep -q -- "--flip-test" && echo "$EV" | grep -q -- "--ladder 0,0.2,0.4,0.6,0.8" && ok "S1 val-hard battery flags (k32, 8 views, flip, ladder)" || bad "S1 val-hard flags: $EV"
@@ -299,6 +320,7 @@ echo "== S15 the FIT_T knob: DA_FIT_T=1 -> every fit (DEC shards, the native set
 mk_sandbox; run_chain 0 1 DA_FIT_T=1
 grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S15 complete under FIT_T 1" || bad "S15 complete ($(n_ok) ok)"
 EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); EG=$(eargv "$SB/repo/runs/decarceval_D0/arc1eval/provenance_0.json"); EN=$(eargv "$SB/repo/runs/decarceval_N0/valhard/summary.json"); EP=$(eargv "$SB/repo/runs/decarceval_N0/arc1eval/s0/summary.json"); echo "$EV" | grep -q -- "--fit-t 1" && echo "$EG" | grep -q -- "--fit-t 1" && echo "$EN" | grep -q -- "--fit-t 1" && echo "$EP" | grep -q -- "--fit-t 1" && echo "$EV" | grep -q -- "--t-total 16" && ok "S15 --fit-t 1 on the DEC sets, the native sets and the native public row; --t-total untouched" || bad "S15 fit-t: $EV | $EG | $EN | $EP"
+EB=$(eargv "$SB/repo/runs/decarceval_N0/valhard_bridge/summary.json"); ! echo "$EB" | grep -q -- "--fit-t" && echo "$EB" | grep -q -- "--k 0" && ok "S15 the bridge row keeps the DEPLOYED fit (no --fit-t) while the night rows carry --fit-t 1" || bad "S15 bridge: $EB"
 
 echo "== S16 the COST PROBE budget: a 100 s/step fit -> COST-ABORT on D0 before its battery, the CHAIN-COST-ABORT marker, nothing else launched; the rerun stands down =="
 mk_sandbox; run_chain 0 1 STUB_COST_S=100
@@ -307,6 +329,41 @@ run_chain 0 1 STUB_COST_S=100
 grep -q "COST-ABORT-STANDING" "$SB/w0.log" && [ "$(grep -c "PRETRAIN-START" "$SB/w0.log")" = 0 ] && ok "S16 the rerun stands down on the marker" || bad "S16 rerun"
 rm -f "$SB/gcs/decarc/CHAIN-COST-ABORT"; run_chain 0 1
 grep -q "COST-OK D0" "$SB/w0.log" && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S16 marker removed + a sane cost -> the chain completes (D0's pretrain resumed from its grid)" || bad "S16 recovery ($(n_ok) ok)"
+
+echo "== S17 the ARC env: the exact CHAIN_EXTRA_ENV of tools/campaign_decarc_arc.env (the ARC bucket; every knob reaches the tools; nothing written under the Sudoku prefix) =="
+mk_sandbox
+ARC_ENV=$(grep '^CHAIN_EXTRA_ENV=' "$REPO/tools/campaign_decarc_arc.env" | sed 's/^CHAIN_EXTRA_ENV="//; s/"$//')
+echo "$ARC_ENV" | grep -q "GCS=gs://qhrrn2-arc/decarc" && echo "$ARC_ENV" | grep -q "GCS_SETS=gs://qhrrn2-arc/sets" && ok "S17 the ARC env names the ARC bucket for the markers and the sets" || bad "S17 env: $ARC_ENV"
+BEFORE=$(cd "$SB/gcs" && find decarc champ -type f | sort | md5)
+run_chain 0 1 $ARC_ENV
+AFTER=$(cd "$SB/gcs" && find decarc champ -type f | sort | md5)
+grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(ls "$SB/gcs/arc/decarc/"*_ARM_OK 2>/dev/null | wc -l | tr -d ' ')" = 4 ] && [ -f "$SB/gcs/arc/decarc/decarc_final.tgz" ] && ok "S17 complete under gs://qhrrn2-arc/decarc (4 ARM_OK + the final tarball)" || bad "S17 complete ($(ls "$SB/gcs/arc/decarc/" 2>/dev/null | tr '\n' ' '))"
+[ "$BEFORE" = "$AFTER" ] && ok "S17 NOTHING written under the Sudoku era's prefixes (decarc/, champ/ byte-identical)" || bad "S17 the Sudoku prefix changed"
+A0=$(pargv D0); echo "$A0" | grep -q -- "--decarc-eval-start fieldfix" && ok "S17 the evaluation start reaches the trainer" || bad "S17 D0 argv: $A0"
+EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json"); echo "$EV" | grep -q -- "--fit-t 1" && echo "$EV" | grep -q -- "--steps 150" && echo "$EV" | grep -q -- "--k 16" && echo "$EV" | grep -q -- "--views 2" && echo "$EV" | grep -q -- "--start-rows buffers,symfix,rifix" && echo "$EV" | grep -q -- "--trace-fused 1" && ok "S17 val-hard: fit-t 1, 150 steps, k 16, views 2, the start rows, the fused trace" || bad "S17 val-hard flags: $EV"
+EG=$(eargv "$SB/repo/runs/decarceval_D0/arc1eval/provenance_0.json"); echo "$EG" | grep -q -- "--views 1" && echo "$EG" | grep -q -- "--k 4" && ok "S17 the public row: views 1, k 4" || bad "S17 arc1eval flags: $EG"
+grep -q "SELECT-KEYS D0 key=val_t16_ema key2=val_t16 key3=val_pix_ema plateau=0.02 start=fieldfix" "$SB/w0.log" && grep -qE "PRETRAIN-(NO-)?EXTEND D1.*plateau end" "$SB/w0.log" && ok "S17 the third key and the plateau reach the selection (the stub's flat monitor extends under the plateau, as S18 asserts)" || bad "S17 select: $(grep -E 'SELECT-KEYS D0|EXTEND D1' "$SB/w0.log" | head -2)"
+grep -q "COST-OK D0 projected" "$SB/w0.log" && ! grep -q "COST-ABORT" "$SB/w0.log" && ok "S17 the cost probe accepts the battery under the 6 h budget (stub paces)" || bad "S17 cost: $(grep -E 'COST-' "$SB/w0.log" | head -3)"
+[ -f "$SB/gcs/arc/decarc/evals/D0_mon96_OK" ] && [ -f "$SB/gcs/arc/decarc/evals/N0_valhard_bridge_OK" ] && ok "S17 the mon96 and bridge rows banked under the ARC prefix" || bad "S17 rows"
+
+echo "== S18 the plateau-keyed extension: a flat declining monitor (every grid within 2 pp of the max) extends under DA_EXT_PLATEAU_PP and not without =="
+mk_sandbox; run_chain 0 1 DA_EXT_PLATEAU_PP=0.02
+grep -q "PRETRAIN-EXTEND D0: plateau end 8000 (within 0.02 of the max; selected grid 2000) inside the last 2000 of 8000 -> +4000" "$SB/w0.log" && [ -f "$SB/repo/runs/pretraindecarc_D0/EXTENDED.txt" ] && grep -q "plateau end 8000" "$SB/repo/runs/pretraindecarc_D0/EXTENDED.txt" && ok "S18 D0 extended on the plateau's end (the argmax at 2000 would not have)" || bad "S18 extend: $(grep -E 'PRETRAIN-(NO-)?EXTEND D0' "$SB/w0.log")"
+"$REAL_PY" -c "import json; v=json.load(open('$SB/repo/runs/pretraindecarc_D0/vsel.json')); assert v['step']==2000, v" && ok "S18 the SELECTION is still the earliest maximum (2000): the plateau keys only the extension" || bad "S18 vsel"
+! grep -q "PRETRAIN-EXTEND N0" "$SB/w0.log" && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && ok "S18 N0 never extends; complete" || bad "S18 N0/complete"
+mk_sandbox; run_chain 0 1
+grep -q "PRETRAIN-NO-EXTEND D0 (selected grid 2000 vs budget 8000 window 2000)" "$SB/w0.log" && ok "S18b without the knob the argmax rule stands (byte-identical message)" || bad "S18b: $(grep -E 'PRETRAIN-(NO-)?EXTEND D0' "$SB/w0.log")"
+
+echo "== S19 the fused-trace cross-check fails on the 'chip' -> the eager fallback (--trace-fused 0), labeled; completion =="
+mk_sandbox; run_chain 0 1 STUB_XCHECK_FAIL=1
+grep -q "TRACE-FUSED-XCHECK-FAILED D0" "$SB/w0.log" && EV=$(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json") && echo "$EV" | grep -q -- "--trace-fused 0" && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S19 fallback to the eager trace on every DEC row; complete" || bad "S19: $(grep -c TRACE-FUSED "$SB/w0.log") $(eargv "$SB/repo/runs/decarceval_D0/valhard/provenance_0.json" | grep -o -- '--trace-fused [01]')"
+EG=$(eargv "$SB/repo/runs/decarceval_D0/arc1eval/provenance_0.json"); echo "$EG" | grep -q -- "--trace-fused 0" && [ -f "$SB/gcs/decarc/D0_TRACE_EAGER" ] && ok "S19 the fallback holds for the arm's later rows too; the marker persists it" || bad "S19 arc1eval: $EG"
+rm -f "$SB/gcs/decarc/evals/D0_rt48_OK" "$SB/gcs/decarc/D0_ARM_OK"; run_chain 0 1
+grep -q "TRACE-EAGER-STANDING D0" "$SB/w0.log" && grep -q "COST-SKIP D0" "$SB/w0.log" && ER=$(eargv "$SB/repo/runs/decarceval_D0/rt48/provenance_0.json") && echo "$ER" | grep -q -- "--trace-fused 0" && ok "S19b a rerun (the probe skipped) keeps the eager path for the re-done row" || bad "S19b rerun: $(grep -c TRACE-EAGER-STANDING "$SB/w0.log")"
+
+echo "== S20 DA_MON96=0 DA_BRIDGE=0: the two rows are switches (off -> absent; every other row and completion unchanged) =="
+mk_sandbox; run_chain 0 1 DA_MON96=0 DA_BRIDGE=0
+[ ! -f "$SB/gcs/decarc/evals/D0_mon96_OK" ] && [ ! -f "$SB/gcs/decarc/evals/N0_valhard_bridge_OK" ] && [ -f "$SB/gcs/decarc/evals/D0_valhard_OK" ] && [ -f "$SB/gcs/decarc/evals/N0_valhard_OK" ] && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S20 rows off, the night otherwise unchanged, complete" || bad "S20"
 
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -162,6 +162,13 @@ class Config:
     # heads (dk = dec_width / decarc_heads), the DEC's coupling and channel SwiGLU, the per-colour task code
     # (F, d_task) through a shared projection, a VOID readout from the invariant cell mean for the size.
     decarc_heads: int = 4
+    # THE DETERMINISTIC EVALUATION START of an RI-trained DEC-ARC (2026-09-15; decarc_cell.z0_eval; the width-192 CPU
+    # lens: the fixed buffers are an uncontrolled start for a cell that trains from z ~ N(0, sigma)). "fieldfix" (the
+    # default) = one seeded draw per (stream, cell, channel) broadcast over the ten fields — exactly S10-invariant, so the
+    # colour exactness survives the start; "symfix" = one vector per stream over fields and cells; "buffers" = the
+    # pre-2026-09-15 start; "rifix" = an untied draw (NOT invariant; a descriptive row, never the selection start).
+    # A plain cell (trm_ri_sigma 0) keeps its buffers whatever this reads. The monitor selects on this start.
+    decarc_eval_start: str = "fieldfix"
     # FINAL PHASE FPA on the FIELD LOOP (cell_kind trm / dec under --sot; pretrain.field_fpa_loss):
     # per optimizer step the first round(B * fpa_frac) rows are re-run for fpa_k SEGMENTS from
     # z_H := the embedded corrupted solution (eps ~ U[0, fpa_eps] of the NON-GIVEN cells resampled

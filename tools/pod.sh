@@ -19,6 +19,10 @@
 #   node CREATING / STOPPING / REPAIRING       -> wait
 #   node PREEMPTED / STOPPED / TERMINATED       -> down (delete)   [next poll hunts]
 #   node READY + chain COMPLETE (sentinel/GCS)  -> down -> exit 0
+#   $GCS/CHAIN-COST-ABORT present (any node     -> down (if any) -> exit 4   [2026-09-15: the DEC-ARC chain
+#     state; read before the node)                 refused a battery whose measured projection exceeds
+#                                                  DA_COST_BUDGET_H and every rerun stands down — never relaunch
+#                                                  into it; remove the marker after the protocol decision]
 #   node READY + chain RUNNING                  -> log progress
 #   node READY + chain IDLE (crash/ceiling/kill)-> relaunch (<=3 per node life,
 #                                                  then down + exit 3 LOUDLY)
@@ -322,6 +326,12 @@ cmd_supervise () {
       say "COMPLETE (GCS $FINAL_OBJ present)"; nw=$(node_where)
       case $nw in ABSENT|UNKNOWN) say "  node $nw — nothing to tear down";; *) v_down "${nw%% *}" "campaign complete";; esac
       notify "COMPLETE" "rung chain finished; node torn down"; rm -f "$PIDF"; exit 0
+    fi
+    if gsutil -q stat "$GCS/CHAIN-COST-ABORT" 2>/dev/null; then   # 2026-09-15: the chain's cost-probe refusal (rule 13a) is a terminal state of the campaign, not a crash to relaunch
+      say "COST-ABORT (marker $GCS/CHAIN-COST-ABORT present: the chain refused a battery whose measured projection exceeds DA_COST_BUDGET_H; every rerun stands down until the marker is removed after the protocol decision — not relaunching)"
+      nw=$(node_where)
+      case $nw in ABSENT|UNKNOWN) say "  node $nw — nothing to tear down";; *) v_down "${nw%% *}" "cost abort — never leave an idle biller";; esac
+      notify "COST-ABORT" "the chain refused its battery (projected wall > budget); node torn down; supervisor exited"; rm -f "$PIDF"; exit 4
     fi
     nw=$(node_where)
     case $nw in

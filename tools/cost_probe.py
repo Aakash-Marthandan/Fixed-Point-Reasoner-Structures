@@ -57,6 +57,18 @@ def main():
            "s_per_step": round(float(np.median(walls[1:])), 3) if len(walls) > 1 else round(walls[0], 3),
            "val_first_s": round(val_first, 2), "val_s": round(val_s, 3), "trace_first_s": round(trace_first, 2), "trace_s": round(trace_s, 3),
            "device": str(jax.devices()[0].platform)}
+    if cfg.cell_kind == "decarc":
+        # 2026-09-15: the battery's OWN trace (tools/eval_decarc.trace_dec, fused stats) timed on the chip — the pilot priced the
+        # trace term from the probe trace and missed 8.5x — and cross-checked here, before any battery, against the eager path
+        # and the probe trace (identical preds); the chain falls back to --trace-fused 0 when xcheck_fused_eager is false.
+        import eval_decarc as EA
+        same = lambda A, B: all(x["hw"] == y_["hw"] and np.array_equal(x["pred"], y_["pred"]) for x, y_ in zip(A, B))
+        ts = time.time(); sf = EA.trace_dec(trainable["model"], cfg, qx, code=tv, t_total=a.t_total, fused=True); td_first = time.time() - ts
+        ts = time.time(); sf = EA.trace_dec(trainable["model"], cfg, qx, code=tv, t_total=a.t_total, fused=True); td_s = time.time() - ts
+        ts = time.time(); se = EA.trace_dec(trainable["model"], cfg, qx, code=tv, t_total=a.t_total, fused=False); te_s = time.time() - ts
+        sp = P.trace(trainable["model"], cfg, qx, tau=1.0, task_vec=tv, t_total=a.t_total)
+        rec.update({"trace_dec_first_s": round(td_first, 2), "trace_dec_s": round(td_s, 3), "trace_dec_eager_s": round(te_s, 3),
+                    "xcheck_fused_eager": bool(same(sf, se)), "xcheck_fused_probe": bool(same(sf, sp)), "eval_start": cfg.decarc_eval_start})
     Path(a.out).parent.mkdir(parents=True, exist_ok=True); Path(a.out).write_text(json.dumps(rec, indent=1)); print(json.dumps(rec), flush=True)
 
 

@@ -189,3 +189,71 @@ def test_decarc_deployed_fit_and_probe_trace():
     tr_canvas = np.where(st[TINY.T - 1]["pred"] == 0, 0, st[TINY.T - 1]["pred"])
     assert np.array_equal(np.where(resolvable[:h, :w], tr_canvas, -1), np.where(resolvable[:h, :w], pred, -1))
     assert resolvable.mean() > 0.5, "the fitted model should resolve most cells"
+
+
+# ---------- THE DETERMINISTIC EVALUATION START (2026-09-15; the width-192 CPU lens ported) ----------
+RI_TINY = Config(**TINY.__dict__ | {"trm_ri_sigma": 1.0})
+
+
+def test_decarc_eval_start_kinds():
+    """z0_eval: the plain cell keeps its buffers for every kind; an RI cell gets a seeded, deterministic draw of the
+    training family's scale; symfix / fieldfix are tied over the field axis (S10-invariant), fieldfix varies over the
+    cells, rifix varies over the fields; buffers = the pre-existing start."""
+    hw = G.CANVAS * G.CANVAS
+    zb = DAC.z0(TINY, hw)
+    for kind in DAC.EVAL_STARTS:
+        assert np.array_equal(np.asarray(DAC.z0_eval(TINY, hw, kind)), np.asarray(zb)), kind   # sigma 0: the buffers
+    assert np.array_equal(np.asarray(DAC.z0_eval(RI_TINY, hw, "buffers")), np.asarray(zb))
+    for kind in ("symfix", "fieldfix", "rifix"):
+        z = np.asarray(DAC.z0_eval(RI_TINY, hw, kind)); z2 = np.asarray(DAC.z0_eval(RI_TINY, hw, kind))
+        assert z.shape == (2, DAC.F, hw, TINY.dec_width) and np.array_equal(z, z2), kind        # deterministic
+        assert abs(float(z.std()) - 1.0) < (0.25 if kind == "symfix" else 0.05), (kind, z.std())   # the training family's scale (symfix draws 2 x w numbers)
+        if kind in DAC.EVAL_START_INVARIANT:
+            for f in range(1, DAC.F): assert np.array_equal(z[:, f], z[:, 0]), kind                # tied over the fields
+        else:
+            assert not np.array_equal(z[:, 1], z[:, 0])
+        if kind == "fieldfix": assert not np.array_equal(z[:, 0, 0], z[:, 0, 1])                 # varies over the cells
+        if kind == "symfix": assert np.array_equal(z[:, 0, 0], z[:, 0, 1])
+    assert RI_TINY.decarc_eval_start == "fieldfix"
+    z_def = np.asarray(DAC.z0_eval(RI_TINY, hw)); assert np.array_equal(z_def, np.asarray(DAC.z0_eval(RI_TINY, hw, "fieldfix")))
+    with pytest.raises(AssertionError):
+        DAC.z0_eval(RI_TINY, hw, "cold")
+
+
+def test_decarc_forward_uses_eval_start_and_training_uses_ri():
+    """forward_core with no rng and no carry starts from z0_eval (the cfg kind); with an rng it draws the RI start; the
+    buffers-kind config reproduces the pre-existing cold pass exactly."""
+    x, _ = _grid(seed=8); code = _code(4); hw = G.CANVAS * G.CANVAS
+    p = M.init_params(jax.random.PRNGKey(0), RI_TINY)
+    fields = M.build_fields(x, jnp.full_like(x, G.VOID))
+    lg_cold, _, z_cold = DAC.forward_core(p["decarc"], RI_TINY, fields, task_vec=code)
+    lg_exp, _, z_exp = DAC.forward_core(p["decarc"], RI_TINY, fields, task_vec=code, z_in=DAC.z0_eval(RI_TINY, hw))
+    assert np.array_equal(np.asarray(lg_cold), np.asarray(lg_exp)) and np.array_equal(np.asarray(z_cold), np.asarray(z_exp))
+    lg_buf, _, _ = DAC.forward_core(p["decarc"], RI_TINY, fields, task_vec=code, z_in=DAC.z0(RI_TINY, hw))
+    assert not np.array_equal(np.asarray(lg_cold), np.asarray(lg_buf)), "the default start must differ from the buffers on an RI cell"
+    cfg_b = Config(**RI_TINY.__dict__ | {"decarc_eval_start": "buffers"})
+    lg_b, _, _ = DAC.forward_core(p["decarc"], cfg_b, fields, task_vec=code)
+    assert np.array_equal(np.asarray(lg_b), np.asarray(lg_buf)), "kind buffers = the pre-2026-09-15 cold pass"
+    lg_tr, _, _ = DAC.forward_core(p["decarc"], RI_TINY, fields, task_vec=code, rng=jax.random.PRNGKey(5))
+    k_ri, _ = jax.random.split(jax.random.PRNGKey(5))
+    lg_tr2, _, _ = DAC.forward_core(p["decarc"], RI_TINY, fields, task_vec=code, z_in=DAC.z0(RI_TINY, hw, rng=k_ri))
+    assert np.array_equal(np.asarray(lg_tr), np.asarray(lg_tr2)), "training (an rng threaded) draws the RI start as before"
+    # the plain cell: every path is the buffers
+    p0 = M.init_params(jax.random.PRNGKey(0), TINY)
+    a, _, _ = DAC.forward_core(p0["decarc"], TINY, fields, task_vec=code)
+    b, _, _ = DAC.forward_core(p0["decarc"], TINY, fields, task_vec=code, z_in=DAC.z0(TINY, hw))
+    assert np.array_equal(np.asarray(a), np.asarray(b))
+
+
+def test_decarc_exact_s10_survives_the_invariant_starts_not_rifix():
+    """The joint colour permutation stays an exact symmetry of the deployed cold pass under the S10-invariant starts
+    (fieldfix, symfix, buffers) and is broken by the untied rifix draw — which is why rifix is a descriptive row only."""
+    x, _ = _grid(seed=9); code = _code(5)
+    p = M.init_params(jax.random.PRNGKey(0), RI_TINY)
+    pi = _perm(4); inv = np.argsort(pi[:10]); xp = jnp.asarray(pi)[x]; codep = code[jnp.asarray(inv)]
+    for kind in ("fieldfix", "symfix", "buffers", "rifix"):
+        cfg = Config(**RI_TINY.__dict__ | {"decarc_eval_start": kind})
+        outs, _, _ = M.iterate_eq(p, cfg, x, tau=1.0, t_total=2, task_vec=code)
+        outs_p, _, _ = M.iterate_eq(p, cfg, xp, tau=1.0, t_total=2, task_vec=codep)
+        ok = all(np.allclose(np.asarray(op.logits)[..., pi], np.asarray(o.logits), atol=1e-4) for o, op in zip(outs, outs_p))
+        assert ok == (kind in DAC.EVAL_START_INVARIANT), (kind, ok)

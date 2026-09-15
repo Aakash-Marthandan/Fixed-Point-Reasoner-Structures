@@ -206,6 +206,8 @@ def parse_args():
     p.add_argument("--dec-commit-tau", type=float, default=1.0, help="hardening threshold on the commit probability (>= 1 = the head trains, no hardening)")
     p.add_argument("--dec-commit-w", type=float, default=0.1, help="the commit BCE's loss weight")
     p.add_argument("--decarc-heads", type=int, default=4, help="DEC-ARC BUILD: attention heads over the cells per field (dk = dec_width / heads)")
+    p.add_argument("--decarc-eval-start", default=None, choices=["buffers", "symfix", "fieldfix", "rifix"],
+                   help="DEC-ARC (2026-09-15): the deterministic evaluation start the 2k monitor selects on and the evaluator's cold pass uses (cfg.decarc_eval_start; None = the Config default 'fieldfix'; a plain cell keeps its buffers)")
     p.add_argument("--w-void", type=float, default=None, help="cfg.w_void: the VOID-region CE weight relative to the output region (None = the Config default; the DEC-ARC registry sets it)")
     p.add_argument("--sudoku-orbit-online", action="store_true",
                    help="CHAMPION NIGHT C3: a fresh position-group element per row per step on the device (sudoku_extreme.orbit_batch; the n_aug -> infinity limit; pair with --sudoku-aug 0)")
@@ -425,6 +427,7 @@ def main():
     cfg = Config(d=a.d, K=a.K, T=a.T, use_obj=a.obj, remat=a.remat, **side, **geo, **trm,
                  d_task=a.d_task, equilibrium=a.equilibrium,
                  **({"w_void": a.w_void} if a.w_void is not None else {}),
+                 **({"decarc_eval_start": a.decarc_eval_start} if a.decarc_eval_start is not None else {}),
                  beta_flux=a.beta_flux, beta_flux_nl=a.beta_flux_nl,
                  eta_floor=a.eta_floor, z_gate_init=a.z_gate_init,
                  eq_coupled=a.eq_coupled, ni_sigma=a.ni_sigma,
@@ -495,6 +498,8 @@ def main():
                                      rearc_families=rearc_families,
                                      rearc_per_family=a.rearc_per_family,
                                      rearc_seed=a.rearc_seed)
+        if cfg.cell_kind == "decarc":   # DEC-ARC (2026-09-15): the monitor tasks (table row, task id, query count) for the evaluator's mon96 row
+            (out / "val_tasks.json").write_text(json.dumps([{"t": int(t), "tid": tid, "n_q": len(qs)} for t, tid, qs in val]))
     dev = E.corpus_to_device(corpus)
     n_tasks = len(corpus.task_ids)
     n_pairs = int(corpus.x.shape[0])
@@ -945,7 +950,7 @@ def _arc_monitor_fn(cfg):
 
         def one(xx, yy, ti):
             emb = DAC.embed(p, cfg, xx, table[ti])
-            z = DAC.z0(cfg, hw)
+            z = DAC.z0_eval(cfg, hw)   # 2026-09-15: the deterministic evaluation start (the start the battery's cold pass uses; the buffers for a plain cell)
             zH, zL = z[0], z[1]
             for _ in range(cfg.T):
                 zH, zL = DAC.segment(p, cfg, emb, zH, zL, rng=None)
@@ -1115,7 +1120,9 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             mon = arc_monitor(st1, cfg, val) if decarc else sudoku_monitor(st1, cfg, val[0][2])
             if use_ema:
                 vk = [k for k in mon if k.startswith("val_t")][0]
-                mon[vk + "_ema"] = (arc_monitor(ema1, cfg, val) if decarc else sudoku_monitor(ema1, cfg, val[0][2]))[vk]
+                mon_e = arc_monitor(ema1, cfg, val) if decarc else sudoku_monitor(ema1, cfg, val[0][2])
+                mon[vk + "_ema"] = mon_e[vk]
+                if decarc: mon["val_pix_ema"] = mon_e["val_pix"]   # 2026-09-15: the EMA pixel accuracy = the selection's third key (ties on ~150 exact counts)
             mon["step"] = i + 1; mon["wall_s"] = round(time.time() - t_m, 1)
             metrics_f.write(json.dumps({"monitor": mon}) + "\n"); metrics_f.flush()
             print("  MONITOR step %d: %s (%ss)" % (i + 1, " ".join(f"{k} {v:.3f}" for k, v in mon.items()

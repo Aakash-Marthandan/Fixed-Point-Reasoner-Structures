@@ -35,6 +35,14 @@ FIT_STEPS=${DA_FIT_STEPS:-600}; T_TOTAL=${DA_T_TOTAL:-16}
 COST_STEPS=${DA_COST_STEPS:-8}; COST_BUDGET_H=${DA_COST_BUDGET_H:-8}   # rule 13a: the cost probe's fit steps; the per-arm battery budget (hours on this host; 0 = probe only)
 FIT_T=${DA_FIT_T:-}   # the FIT-ONLY outer-pass count for EVERY cell's arm-A fit step (1 = one map application per step, the training form; unset = the deployed cfg.T); the predict/trace protocol (T_TOTAL) is untouched
 LIMIT=${DA_LIMIT:-}   # PILOT ONLY (2026-09-10): the first LIMIT tasks of every eval set (eval_decarc --limit; arc_suite --tasks); the n-gates honor it; the night leaves it unset -> byte-identical commands
+# 2026-09-15 — the Sudoku lessons folded in before the registration (Plan_2026-09-10_DEC-ARC_Build §12; the ARC env sets the night's values):
+EVAL_START=${DA_EVAL_START:-fieldfix}   # the deterministic evaluation start the 2k monitor selects on and every cold row uses (decarc_cell.z0_eval; fieldfix = the S10-invariant seeded draw from the training family; buffers = the pre-2026-09-15 start)
+START_ROWS=${DA_START_ROWS:-}           # extra cold traces of every query from these starts, no re-fit (eval_decarc --start-rows; unset = none)
+TRACE_FUSED=${DA_TRACE_FUSED:-1}        # eval_decarc --trace-fused (one device call per trace step); the cost probe cross-checks it on the chip and a mismatch falls back to 0 (the pilot-proven eager path)
+SEL_KEY3=${DA_SEL_KEY3:-}               # select_ckpt --third-key (val_pix_ema: the EMA pixel accuracy breaks the exact-count ties the raw monitor leaves); unset = the registered two keys
+EXT_PLATEAU_PP=${DA_EXT_PLATEAU_PP:-}   # the extension rule keys on the PLATEAU'S END (select_ckpt --plateau-pp: the last grid within PP of the maximum) instead of the argmax; unset = the argmax rule
+MON96=${DA_MON96:-1}                    # the mon96 row: the trained monitor tasks' held-out queries with their trained codes, NO fit (R-DA-5b, the direct retention instrument); 0 = off
+BRIDGE=${DA_BRIDGE:-1}                  # N0 on val-hard at its DEPLOYED cfg.T-pass fit, k 0 (the protocol bridge between the banked d64 twin's rows and the night's fits; labeled); 0 = off
 RIDER=${RIDER:-0}
 NPZ=${SX_NPZ_PATH:-data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz}
 SEED_ARMS="D0 D1"; OPTIONAL_ARMS="D2 N0"; ALL_ARMS="D0 D1 D2 N0"
@@ -77,7 +85,8 @@ decarc_common () {   # the DEC on the ten-field colour state under the champion 
   echo "$(corpus_common) --sot --act --cell decarc --dec-width $DEC_W --decarc-heads $HEADS \
         --trm-layers 2 --trm-h-cycles 3 --trm-l-cycles 6 --T 16 --trm-lambda 0.05 --trm-beta 0.01 \
         --loss stablemax --batch $BATCH --wd $WD --warmup $WARMUP --lr $LR --lr-end $LR --beta2 0.95 --ema 0.999 \
-        --w-void $W_VOID --table-lr $TABLE_LR --table-wd $TABLE_WD --beta-flux-nl 0 --remat --monitor-every $MON --grid-every $MON --ckpt-every $CKPT_EVERY --val-every 100000"
+        --w-void $W_VOID --table-lr $TABLE_LR --table-wd $TABLE_WD --beta-flux-nl 0 --remat --monitor-every $MON --grid-every $MON --ckpt-every $CKPT_EVERY --val-every 100000 \
+        --decarc-eval-start $EVAL_START"
 }
 native_common () {   # the d96 rung's A5-class arm (chain_r0.sh: PRICED + NI, B64/T6, the knee; the back-port: 2k val rows + grids)
   echo "$(corpus_common) --d 96 --T 6 --anchor-p 0.3 --beta-flux 3e-5 --beta-flux-nl 1e-5 --ni-sigma 0.01 \
@@ -184,8 +193,8 @@ preflight () {  # PF_STEPS full-batch steps of every arm this worker will run: c
   echo ok | gsutil -q cp - "$GCS/PREFLIGHT_OK_w${W}_nw${NW}"
 }
 
-select_best () {  # ARM DIR -> "NNNNNN val step": the DEC arms on the EMA monitor (earliest tie, the raw monitor second); N0 on its val rows
-  if is_dec "$1"; then $PY tools/select_ckpt.py "$2" --key val_t16_ema --tie earliest --second-key val_t16 2>/dev/null
+select_best () {  # ARM DIR -> "NNNNNN val step [plateau_end]": the DEC arms on the EMA monitor (earliest tie, the raw monitor second, the EMA pixel accuracy third when set); N0 on its val rows
+  if is_dec "$1"; then $PY tools/select_ckpt.py "$2" --key val_t16_ema --tie earliest --second-key val_t16 ${SEL_KEY3:+--third-key $SEL_KEY3} ${EXT_PLATEAU_PP:+--plateau-pp $EXT_PLATEAU_PP} 2>/dev/null
   else $PY tools/select_ckpt.py "$2" --row val --key val_frac --tie earliest --second-key val_pix_mean 2>/dev/null; fi
 }
 
@@ -204,17 +213,19 @@ run_pretrain () {  # ARM — ONE-SHOT NaN amputation; the registered EXTENSION r
     echo "PRETRAIN-NAN $arm (rc=$rc) -> amputate"; amputate "$D" || return 1
   fi
   if is_dec "$arm" && [ ! -f "$D/STOPPED.txt" ] && [ ! -f "$D/EXTENDED.txt" ]; then
-    sel=$(select_best "$arm" "$D") && best=$(echo "$sel" | awk '{print $3}')
-    if [ -n "${best:-}" ] && [ "$best" -ge $((budget - EXT_WINDOW)) ]; then
-      echo "EXTENDED from $budget to $((budget + EXT_STEPS)) (peak at $best) $(date -u +%FT%TZ)" > "$D/EXTENDED.txt"
+    sel=$(select_best "$arm" "$D") && best=$(echo "$sel" | awk '{print $3}') && pend=$(echo "$sel" | awk '{print $4}')
+    ref=${pend:-${best:-}}   # 2026-09-15: with EXT_PLATEAU_PP the plateau's end is the reference (the argmax is noise-level on a small monitor); else the selected grid, as registered
+    if [ -n "${ref:-}" ] && [ "$ref" -ge $((budget - EXT_WINDOW)) ]; then
+      echo "EXTENDED from $budget to $((budget + EXT_STEPS)) (${pend:+plateau end $pend within $EXT_PLATEAU_PP of the max; }peak at $best) $(date -u +%FT%TZ)" > "$D/EXTENDED.txt"
       gsutil -q cp "$D/EXTENDED.txt" "$GCS/${arm}_EXTENDED"
-      echo "PRETRAIN-EXTEND $arm: selected grid $best inside the last $EXT_WINDOW of $budget -> +$EXT_STEPS (R-DA-EXT, once)"
+      if [ -n "${pend:-}" ]; then echo "PRETRAIN-EXTEND $arm: plateau end $pend (within $EXT_PLATEAU_PP of the max; selected grid $best) inside the last $EXT_WINDOW of $budget -> +$EXT_STEPS (R-DA-EXT, once)"
+      else echo "PRETRAIN-EXTEND $arm: selected grid $best inside the last $EXT_WINDOW of $budget -> +$EXT_STEPS (R-DA-EXT, once)"; fi
       pt_run "$D.log" "$arm" "$D" --out "$D" $FL --steps $((budget + EXT_STEPS)); rc=$?
       if [ $rc -ne 0 ] || ! nan_check "$D"; then
         echo "PRETRAIN-NAN $arm in the extension (rc=$rc) -> amputate"; amputate "$D" || return 1
       fi
     else
-      echo "PRETRAIN-NO-EXTEND $arm (selected grid ${best:-none} vs budget $budget window $EXT_WINDOW)"
+      echo "PRETRAIN-NO-EXTEND $arm (${pend:+plateau end $pend; }selected grid ${best:-none} vs budget $budget window $EXT_WINDOW)"
     fi
   fi
   bank_dir "$arm" "$D" "${arm}_pretrain"
@@ -266,7 +277,7 @@ PYEOF
   return $rc
 }
 set_n () {  # SETNAME -> the registered task count of the set (the pilot's LIMIT caps it)
-  local n; case $1 in valhard*) n=48;; dev30) n=30;; rg96) n=96;; rt48) n=48;; arc1eval) n=400;; *) n=0;; esac
+  local n; case $1 in valhard*) n=48;; dev30) n=30;; rg96) n=96;; rt48) n=48;; arc1eval) n=400;; mon96) n=$NVAL;; *) n=0;; esac
   [ -n "$LIMIT" ] && [ "$LIMIT" -lt "$n" ] 2>/dev/null && n=$LIMIT; echo "$n"; }
 set_tasks () { [ -n "$LIMIT" ] && gate_tasks "$1" || echo ""; }   # the native sets' --tasks list: empty unless the pilot's LIMIT is set
 finish_dec_eval () {  # NAME OUTDIR NGATE — summarize, n-gate on the task count, bank, mark
@@ -287,7 +298,7 @@ eval_dec () {  # ARM SETNAME SET CK NSH EXTRA... — the DEC-ARC battery on one 
     pids=()
     for i in $(seq 0 $((NSH - 1))); do
       pin $((i % NCHIP)) ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/eval_decarc.py --ckpt "$CK" --set "$set" --out "$O" --shard "$i/$NSH" \
-          --steps "$FIT_STEPS" --t-total "$T_TOTAL"${FIT_T:+ --fit-t $FIT_T} ${LIMIT:+--limit $LIMIT} "$@" >> "$O/shard_$i.log" 2>&1 & pids+=($!)
+          --steps "$FIT_STEPS" --t-total "$T_TOTAL"${FIT_T:+ --fit-t $FIT_T} ${LIMIT:+--limit $LIMIT} --trace-fused "$TRACE_FUSED" ${START_ROWS:+--start-rows $START_ROWS} "$@" >> "$O/shard_$i.log" 2>&1 & pids+=($!)
     done
     watch_shards "$name" "$O" "${pids[@]}"; rc=$?
     [ $rc -eq 1 ] && [ $attempt -eq 1 ] && { echo "EVAL-STALL-RETRY $name (the shards are resume-safe: only the missing tasks re-run)"; continue; }
@@ -359,6 +370,9 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
   if is_dec "$arm"; then
     eval_dec "$arm" valhard valhard "$VBCK" "$NCHIP" --ema --k "$K_VH" --ladder 0,0.2,0.4,0.6,0.8 --views "$VIEWS_VH" --flip-test || rc=1
     eval_dec "$arm" dev30 dev30 "$VBCK" "$NCHIP" --ema --k "$K_VH" --ladder 0,0.2,0.4,0.6,0.8 --views "$VIEWS_VH" --flip-test || rc=1
+    if [ "$MON96" = 1 ]; then   # 2026-09-15: the trained monitor tasks with their trained codes, no fit — the ladder from eps 0 = the direct retention row (cheap: traces only)
+      eval_dec "$arm" mon96 mon96 "$VBCK" "$NCHIP" --ema --k 0 --ladder 0,0.2,0.4,0.6,0.8 --views 1 || rc=1
+    fi
     eval_dec "$arm" rg96 rg96 "$VBCK" "$NCHIP" --ema --k "$K_GATE" --ladder 0 --views 1 || rc=1
     eval_dec "$arm" rt48 rt48 "$VBCK" "$NCHIP" --ema --k "$K_GATE" --ladder 0 --views 1 || rc=1
     eval_dec "$arm" arc1eval arc1eval "$VBCK" "$NCHIP" --ema --k "$ARC1_K" --ladder 0 --views "$ARC1_VIEWS" || rc=1
@@ -373,6 +387,9 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
     eval_nat dev30 dev30 1 "$(set_tasks dev30)" --k "$K_VH" & pids+=($!)
     eval_nat rg96 valhard 2 "$(gate_tasks rg96)" --k "$K_GATE" & pids+=($!)
     eval_nat rt48 valhard 3 "$(gate_tasks rt48)" --k "$K_GATE" & pids+=($!)
+    if [ "$BRIDGE" = 1 ]; then   # 2026-09-15: the protocol bridge — the deployed cfg.T-pass fit (FIT_T unset in this subshell), k 0, on a free chip
+      ( FIT_T=""; eval_nat valhard_bridge valhard $((4 % NCHIP)) "$(set_tasks valhard)" --k 0 ) & pids+=($!)
+    fi
     for p in "${pids[@]}"; do wait "$p" || r=1; done
     # the native control's PUBLIC row: the 400 ARC-1 evaluation tasks through arc_suite, 4-way sharded by task lists, merged
     if ! gsutil -q stat "$GCS/evals/N0_arc1eval_OK" 2>/dev/null; then
@@ -404,24 +421,33 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
 cost_probe () {  # ARM CK — rule 13a (2026-09-10): time ONE task's rows on ONE chip (tools/cost_probe.py), project the arm's battery wall
   # from the MEASURED cost, bank the json, and refuse to start the battery when the projection exceeds COST_BUDGET_H (0 = never abort).
   local arm=$1 CK=$2 J="runs/cost_probe_${arm}.json" ema=""
+  TRACE_FUSED=${DA_TRACE_FUSED:-1}   # per arm: a fallback on one arm does not carry to the next (each arm's probe decides its own path)
+  if gsutil -q stat "$GCS/${arm}_TRACE_EAGER" 2>/dev/null; then TRACE_FUSED=0; echo "TRACE-EAGER-STANDING $arm (a rerun keeps the labeled eager trace this arm fell back to)"; fi
   gsutil -q stat "$GCS/${arm}_COST_OK" 2>/dev/null && { echo "COST-SKIP $arm (done)"; return 0; }
   is_dec "$arm" && ema="--ema"
   pin 0 ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/cost_probe.py --ckpt "$CK" --set valhard --out "$J" --steps "$COST_STEPS" --t-total "$T_TOTAL" ${FIT_T:+--fit-t $FIT_T} $ema > "runs/cost_probe_${arm}.log" 2>&1 \
     || { echo "COST-PROBE-FAILED $arm (the battery runs unprojected; see runs/cost_probe_${arm}.log)"; return 0; }
   local proj
-  proj=$(${REAL_PY:-python3} - "$J" "$FIT_STEPS" "$K_VH" "$K_GATE" "$VIEWS_VH" "$ARC1_VIEWS" "$ARC1_K" "$NCHIP" "$(set_n valhard) $(set_n dev30) $(set_n rg96) $(set_n rt48) $(set_n arc1eval)" <<'PYEOF2'
+  proj=$(${REAL_PY:-python3} - "$J" "$FIT_STEPS" "$K_VH" "$K_GATE" "$VIEWS_VH" "$ARC1_VIEWS" "$ARC1_K" "$NCHIP" "$(set_n valhard) $(set_n dev30) $(set_n rg96) $(set_n rt48) $(set_n arc1eval) $(set_n mon96)" "$START_ROWS" "$MON96" "$BRIDGE" <<'PYEOF2'
 import json, sys
 j = json.load(open(sys.argv[1])); steps = int(sys.argv[2]); k_vh, k_gate, views_vh, arc1_views, arc1_k, nchip = (int(v) for v in sys.argv[3:9])
-n_vh, n_dev, n_rg, n_rt, n_arc1 = (int(v) for v in sys.argv[9].split())
+n_vh, n_dev, n_rg, n_rt, n_arc1, n_mon = (int(v) for v in sys.argv[9].split())
+n_start = len([k for k in sys.argv[10].split(",") if k]); mon96 = sys.argv[11] == "1"; bridge = sys.argv[12] == "1"
 dec = j["cell_kind"] == "decarc"
-fits = (n_vh + n_dev) * (1 + (views_vh - 1) + 2) + n_rg + n_rt + n_arc1 * arc1_views + (n_vh if dec else 0)     # the final grid row (DEC arms)
-traces = (n_vh + n_dev) * (1 + k_vh + 5 + views_vh + 2) + (n_rg + n_rt) * (1 + k_gate) + n_arc1 * (1 + arc1_k + arc1_views)  # ~per query; the ladder ~5 t16-equivalents
-fit_h = fits * steps * j["s_per_step"] / 3600; trace_h = traces * 1.5 * j["trace_s"] / 3600; compile_h = 5 * (j["compile_s"] + j["val_first_s"] + j["trace_first_s"]) / 3600
+fits = (n_vh + n_dev) * (1 + (views_vh - 1) + 2) + n_rg + n_rt + n_arc1 * arc1_views + (n_vh if dec else (n_vh if bridge else 0))     # the final grid row (DEC arms) / the bridge (N0)
+traces = ((n_vh + n_dev) * (1 + k_vh + 5 + views_vh + 2 + n_start) + (n_rg + n_rt) * (1 + k_gate) + n_arc1 * (1 + arc1_k + arc1_views)
+          + (n_mon * 2 * (1 + 5 + n_start) if (dec and mon96) else 0))   # ~per query; the ladder ~5 t16-equivalents; mon96 ~2 queries per task, no fit
+per_trace = j.get("trace_dec_s") or 1.5 * j["trace_s"]   # 2026-09-15: the battery's OWN trace when the probe timed it (the pilot priced the trace term from the probe trace and missed 8.5x)
+fit_h = fits * steps * j["s_per_step"] / 3600; trace_h = traces * per_trace / 3600; compile_h = 5 * (j["compile_s"] + j["val_first_s"] + j["trace_first_s"] + j.get("trace_dec_first_s", 0.0)) / 3600
 total = (fit_h + trace_h) / nchip + compile_h
-print(f"{total:.2f} fit_h={fit_h:.1f} trace_h={trace_h:.1f} compile_h={compile_h:.2f} nchip={nchip} s_per_step={j['s_per_step']} trace_s={j['trace_s']} B={j['B']} fit_T={j['fit_T']} steps={steps} fits={fits} traces={traces}")
+print(f"{total:.2f} fit_h={fit_h:.1f} trace_h={trace_h:.1f} compile_h={compile_h:.2f} nchip={nchip} s_per_step={j['s_per_step']} trace_s={per_trace} B={j['B']} fit_T={j['fit_T']} steps={steps} fits={fits} traces={traces} xcheck_fused={j.get('xcheck_fused_eager')}")
 PYEOF2
 ) || { echo "COST-PROJECT-FAILED $arm (the battery runs unprojected)"; return 0; }
   echo "COST-PROBE $arm projected_h=$proj"; gsutil -q cp "$J" "$GCS/${arm}_cost_probe.json"
+  if [ "$TRACE_FUSED" = 1 ] && ${REAL_PY:-python3} -c "import json,sys; j=json.load(open('$J')); sys.exit(0 if j.get('xcheck_fused_eager') is False else 1)"; then
+    echo "TRACE-FUSED-XCHECK-FAILED $arm (the fused trace's preds differ from the eager path's on this chip: the battery runs the pilot-proven eager trace, --trace-fused 0, labeled)"; TRACE_FUSED=0
+    echo "eager $(date -u +%FT%TZ)" | gsutil -q cp - "$GCS/${arm}_TRACE_EAGER"   # persisted: a rerun of this arm keeps the same labeled path
+  fi
   local h; h=$(echo "$proj" | awk '{print $1}')
   if [ "$COST_BUDGET_H" != 0 ] && awk -v h="$h" -v b="$COST_BUDGET_H" 'BEGIN{exit !(h > b)}'; then
     echo "COST-ABORT $arm projected ${h} h > budget ${COST_BUDGET_H} h (the battery is NOT started)"; return 1
@@ -435,6 +461,7 @@ run_arm () {  # ARM — pretrain (+ the extension rule), the selection, the batt
   run_pretrain "$arm" || return 1
   ensure_local_pretrain "$arm"
   local VB="" VBCK="$D/ckpt_latest.pkl" sel v
+  is_dec "$arm" && echo "SELECT-KEYS $arm key=val_t16_ema key2=val_t16${SEL_KEY3:+ key3=$SEL_KEY3}${EXT_PLATEAU_PP:+ plateau=$EXT_PLATEAU_PP} start=$EVAL_START"
   sel=$(select_best "$arm" "$D") && v=$(echo "$sel" | awk '{print $2}')
   if [ -n "${v:-}" ]; then VB=$(echo "$sel" | awk '{print $1}'); [ -f "$D/ckpt_$VB.pkl" ] && VBCK="$D/ckpt_$VB.pkl"; echo "$sel" > "$D/val_best.txt"; fi
   if [ "$VBCK" = "$D/ckpt_latest.pkl" ]; then

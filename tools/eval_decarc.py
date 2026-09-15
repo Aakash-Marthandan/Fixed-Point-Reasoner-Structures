@@ -14,7 +14,7 @@
   .venv/bin/python tools/eval_decarc.py --out runs/decarc_D0/eval_valhard --summarize
 """
 from __future__ import annotations
-import argparse, json, sys, time, hashlib, zlib
+import argparse, functools, json, sys, time, hashlib, zlib
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -31,8 +31,24 @@ import arc_suite as AS
 ROOT = Path(__file__).resolve().parents[1]
 
 
+# ---------- 2026-09-15 additions (the Sudoku lessons folded in before the registration) ----------
+# (1) TRACE FUSION: trace_dec's per-step host work (argmax / confidence / size / halting q / commit c / residuals) was
+#     ~12 eager device ops + ~8 host round-trips per step = 2.9 s per t16 trace on the pilot (the probe trace 0.34 s); it is
+#     now ONE jitted stats call per step. The carried state's and the readout's updates stay the eager ops they were, so
+#     the preds are bit-identical by construction (the stats read the same device arrays); --trace-fused 0 = the
+#     pilot-proven eager path (the chip's fallback; the cost probe cross-checks the two before any battery).
+#     One descriptive field changed on BOTH paths: res_y is now |softmax - y| BEFORE the readout update (arc_suite's
+#     definition; it read ~0 after the update with eta 1). No rule reads res_y.
+# (2) START ROWS (--start-rows buffers,symfix,rifix): extra cold traces of every query from the other deterministic starts
+#     (decarc_cell.z0_eval; no re-fit) — the ARC twin of the width-192 CPU lens: which start sits inside the basin.
+# (3) THE mon96 SET (--set mon96): the trained monitor tasks' held-out queries with their TRAINED code rows and NO fit
+#     (the pilot read: retention is conditioned on the code, so the direct R-DA-5 instrument is the trained tasks').
+TRACE_FUSED = True
+MON96: dict | None = None    # task id -> table row when the set is mon96 (set in main)
+
+
 # ---------- sets ----------
-def task_ids_of(name: str) -> list[str]:
+def task_ids_of(name: str, ckpt: str | None = None) -> list[str]:
     if name == "valhard":
         return json.load(open(Path(__file__).parent / "valhard.json"))["valhard"]
     if name == "dev30":
@@ -43,7 +59,15 @@ def task_ids_of(name: str) -> list[str]:
         return sorted(p.stem for p in (ROOT / "data" / "re_train48").glob("*.json"))
     if name == "arc1eval":
         return sorted(p.stem for p in (G.ARC_DATA_ROOT / "evaluation").glob("*.json"))
+    if name == "mon96":   # the trainer's val_tasks.json beside the checkpoint (tools/pretrain.py, the DEC-ARC corpus)
+        assert ckpt, "--set mon96 needs --ckpt (its pretrain dir's val_tasks.json names the monitor tasks)"
+        rows = json.load(open(Path(ckpt).parent / "val_tasks.json"))
+        return [r["tid"] for r in rows]
     raise ValueError(name)
+
+
+def mon96_rows(ckpt: str) -> dict:
+    return {r["tid"]: int(r["t"]) for r in json.load(open(Path(ckpt).parent / "val_tasks.json"))}
 
 
 def load_task(tid: str):
@@ -55,11 +79,36 @@ def load_task(tid: str):
 
 
 # ---------- the trace with an explicit start (the DEC-ARC has no answer register: restarts and anchors live in z) ----------
-def trace_dec(params, cfg: Config, x_grid, *, code, t_total: int, z_init=None, tau: float = 1.0):
+@functools.lru_cache(maxsize=16)
+def _stats_fn(cfg: Config, has_c: bool):
+    """ONE jitted per-step readout of the trace's descriptive fields from the device arrays the eager path already
+    holds: canvas (argmax), conf (max prob), the VOID-crop size, the halting logits of the UPDATED carry, the commit
+    probabilities, res_y = mean |softmax - y_old|, res_z = mean |z_fine - z_old| (nan on the first step)."""
+    hw = (G.CANVAS, G.CANVAS)
+
+    @jax.jit
+    def f(p, logits, probs, z_new, z_old, z_fine, y_old, first):
+        canvas = jnp.argmax(logits, axis=-1).astype(jnp.int8)
+        conf = jnp.max(probs, axis=-1)
+        p_h, p_w = DAC.size_from_logits(logits)
+        h = jnp.argmax(p_h) + 1; w = jnp.argmax(p_w) + 1
+        q = DAC.readout(p, cfg, z_new[0], hw)[1]
+        res_y = jnp.mean(jnp.abs(probs.transpose(2, 0, 1) - y_old))
+        res_z = jnp.where(first, jnp.nan, jnp.mean(jnp.abs(z_fine - z_old)))
+        c = jax.nn.sigmoid(DAC.commit_logits(p, z_new[0])).reshape(hw) if has_c else jnp.zeros(())
+        return canvas, conf, h, w, q, res_y, res_z, c
+    return f
+
+
+def trace_dec(params, cfg: Config, x_grid, *, code, t_total: int, z_init=None, tau: float = 1.0, fused=None):
     """probe_e1e3.trace's equilibrium path (P._traced_fwd_eq, M.decode_size) from an EXPLICIT initial carry z_init
-    (2, F, S, w) or the cell's own start (None); per step: pred, hw, canvas, conf, res_z, q (halting logits), c (the
-    commit probabilities when the head exists). Preds equal probe_e1e3.trace's for z_init = None (the same jitted map)."""
+    (2, F, S, w) or the cell's own deterministic start (None = decarc_cell.z0_eval through forward_core); per step: pred,
+    hw, canvas, conf, res_z, res_y, q (halting logits), c (the commit probabilities when the head exists). Preds equal
+    probe_e1e3.trace's for z_init = None (the same jitted map). fused (None = the module flag TRACE_FUSED): the stats
+    through _stats_fn (one device call per step) or the pilot-proven eager ops; the two agree bit-for-bit on the preds
+    (tests/test_decarc_eval.py) and the cost probe cross-checks them on the chip."""
     assert cfg.cell_kind == "decarc"
+    fused = TRACE_FUSED if fused is None else bool(fused)
     x_can = jnp.asarray(G.place(np.asarray(x_grid)), dtype=jnp.int32)
     y = jax.nn.one_hot(jnp.full((G.CANVAS, G.CANVAS), G.VOID, jnp.int32), M.VOCAB).transpose(2, 0, 1)
     eta, eta_z = M.eq_etas(params, cfg)
@@ -67,20 +116,29 @@ def trace_dec(params, cfg: Config, x_grid, *, code, t_total: int, z_init=None, t
     z_c = None if z_init is None else jnp.asarray(z_init)
     steps = []
     fwd = P._traced_fwd_eq(cfg, tau, 1.0)     # the DEC-ARC ignores t_norm: one compiled map
+    stats = _stats_fn(cfg, has_c) if fused else None
     for t in range(t_total):
         out = fwd(params, x_can, y, code, z_c if z_c is not None else jnp.zeros(1))
-        res_z = None if z_c is None else float(jnp.mean(jnp.abs(out.z_fine - z_c)))
+        z_old = z_c
         z_c = out.z_fine if z_c is None else z_c + eta_z * (out.z_fine - z_c)
-        probs = jax.nn.softmax(out.logits, axis=-1); y = y + eta * (probs.transpose(2, 0, 1) - y)
-        canvas = np.asarray(jnp.argmax(out.logits, axis=-1)); conf = np.asarray(jnp.max(probs, axis=-1))
-        p_h, p_w = M.decode_size(cfg, out, x_can)
-        h = int(jnp.argmax(p_h)) + 1; w = int(jnp.argmax(p_w)) + 1
+        probs = jax.nn.softmax(out.logits, axis=-1); y_old = y; y = y + eta * (probs.transpose(2, 0, 1) - y)
+        if fused:
+            canvas, conf, h, w, q, res_y, res_z, c = jax.device_get(stats(p, out.logits, probs, z_c, out.z_fine if z_old is None else z_old, out.z_fine, y_old, z_old is None))
+            h = int(h); w = int(w); canvas = np.asarray(canvas); conf = np.asarray(conf)
+            res_z = None if z_old is None else float(res_z); res_y = float(res_y); q = np.asarray(q)
+        else:
+            res_z = None if z_old is None else float(jnp.mean(jnp.abs(out.z_fine - z_old)))
+            canvas = np.asarray(jnp.argmax(out.logits, axis=-1)); conf = np.asarray(jnp.max(probs, axis=-1))
+            p_h, p_w = M.decode_size(cfg, out, x_can)
+            h = int(jnp.argmax(p_h)) + 1; w = int(jnp.argmax(p_w)) + 1
+            q = np.asarray(DAC.readout(p, cfg, z_c[0], (G.CANVAS, G.CANVAS))[1])
+            res_y = float(jnp.mean(jnp.abs(probs.transpose(2, 0, 1) - y_old)))
+            if has_c: c = np.asarray(jax.nn.sigmoid(DAC.commit_logits(p, z_c[0]))).reshape(G.CANVAS, G.CANVAS)
         pred = np.where(canvas[:h, :w] == G.VOID, 0, canvas[:h, :w]).astype(np.int8)
-        q = np.asarray(DAC.readout(p, cfg, z_c[0], (G.CANVAS, G.CANVAS))[1])
         rec = {"pred": pred, "hw": (h, w), "H_q": 0.0, "conf": conf[:h, :w].astype(np.float32), "canvas": canvas.astype(np.int8),
-               "res_y": float(jnp.mean(jnp.abs(probs.transpose(2, 0, 1) - y))), "res_z": res_z, "q": (float(q[0]), float(q[1]))}
+               "res_y": res_y, "res_z": res_z, "q": (float(q[0]), float(q[1]))}
         if has_c:
-            rec["c"] = np.asarray(jax.nn.sigmoid(DAC.commit_logits(p, z_c[0]))).reshape(G.CANVAS, G.CANVAS)[:h, :w].astype(np.float32)
+            rec["c"] = np.asarray(c)[:h, :w].astype(np.float32)
         steps.append(rec)
     return steps
 
@@ -110,9 +168,13 @@ def ex(p, gt):
 def run_task(state, cfg, tid, a):
     eps = load_task(tid)
     t0 = time.time()
-    model, _snaps, sel, _F = P.fit_arm_a(state, cfg, eps, steps=a.steps, val_every=a.val_every, seed=a.seed, fit_T=a.fit_t)
+    if MON96 is not None:   # the trained monitor task: its trained code row, no fit (the direct retention instrument)
+        model = jax.tree.map(jnp.asarray, state["model"]); sel = (None, np.asarray(state["table"])[MON96[tid]])
+    else:
+        model, _snaps, sel, _F = P.fit_arm_a(state, cfg, eps, steps=a.steps, val_every=a.val_every, seed=a.seed, fit_T=a.fit_t)
     code = jnp.asarray(sel[1]); assert code.shape == (DAC.F, cfg.d_task), code.shape
     rec = {"task": tid, "sel_step": sel[0], "fit_s": round(time.time() - t0, 1), "queries": []}
+    start_rows = [k for k in (getattr(a, "start_rows", None) or []) if k != cfg.decarc_eval_start]
     for qi, ep in enumerate(eps):
         gt = ep.query_y
         if gt is None: continue
@@ -123,6 +185,13 @@ def run_task(state, cfg, tid, a):
         q = {"q": qi, "dyn": AS.dyn_record(st, gt), "exact_T": ex(st[cfg.T - 1]["pred"], gt),
              "q_by_step": [s["q"][0] - s["q"][1] for s in st],            # q_halt - q_continue per step
              "exact_by_step": [ex(s["pred"], gt) for s in st]}
+        if start_rows:   # the other deterministic starts of the same fitted code (no re-fit): the basin-membership lens on ARC
+            q["starts"] = {}
+            for kind in start_rows:
+                sk = trace_dec(model, cfg, ep.query_x, code=code, t_total=a.t_total, z_init=DAC.z0_eval(cfg, G.CANVAS * G.CANVAS, kind))
+                pk = sk[cfg.T - 1]["pred"]; p0 = st[cfg.T - 1]["pred"]
+                q["starts"][kind] = {"exact_T": ex(pk, gt), "exact_by_step": [ex(s["pred"], gt) for s in sk],
+                                     "agree_T": bool(pk.shape == p0.shape and np.array_equal(pk, p0))}
         if "c" in st[-1]:
             cl = st[-1]["c"]; pred = st[-1]["pred"]
             if pred.shape == gt.shape:
@@ -266,6 +335,13 @@ def summarize(out: Path, a):
         fl = [(q["exact_T"], q["flip"]["exact_perm"], q["flip"]["exact_refit"]) for q in Q]
         S["flip"] = {"exact_identity": mean([e for e, _, _ in fl]), "exact_perm": mean([p for _, p, _ in fl]), "exact_refit": mean([r for _, _, r in fl]),
                      "flip_rate_colour": mean([e != p for e, p, _ in fl]), "flip_rate_floor": mean([e != r for e, _, r in fl])}
+    if Q and "starts" in Q[0]:   # the other deterministic starts beside the cold row (eval_start = the cold row's start)
+        S["eval_start"] = getattr(a, "eval_start", None)
+        S["starts"] = {k: {"exact_T": mean([q["starts"][k]["exact_T"] for q in Q if k in q.get("starts", {})]),
+                           "ever_exact": mean([any(q["starts"][k]["exact_by_step"]) for q in Q if k in q.get("starts", {})]),
+                           "lost": int(sum(any(q["starts"][k]["exact_by_step"]) and not q["starts"][k]["exact_by_step"][-1] for q in Q if k in q.get("starts", {}))),
+                           "agree_T": mean([q["starts"][k]["agree_T"] for q in Q if k in q.get("starts", {})])}
+                       for k in sorted({k for q in Q for k in q.get("starts", {})})}
     (out / "summary.json").write_text(json.dumps(S, indent=1))
     print(json.dumps(S, indent=1))
     return S
@@ -274,7 +350,9 @@ def summarize(out: Path, a):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt"); ap.add_argument("--out", required=True); ap.add_argument("--ema", action="store_true")
-    ap.add_argument("--set", default="valhard", choices=["valhard", "dev30", "rg96", "rt48", "arc1eval"]); ap.add_argument("--tasks", default=None)
+    ap.add_argument("--set", default="valhard", choices=["valhard", "dev30", "rg96", "rt48", "arc1eval", "mon96"]); ap.add_argument("--tasks", default=None)
+    ap.add_argument("--start-rows", default="", help="2026-09-15: extra cold traces per query from these deterministic starts (comma list of buffers,symfix,fieldfix,rifix; no re-fit)")
+    ap.add_argument("--trace-fused", type=int, default=1, help="2026-09-15: 1 = the trace's per-step stats in one jitted call (preds bit-identical); 0 = the pilot-proven eager ops")
     ap.add_argument("--limit", type=int, default=0); ap.add_argument("--shard", default=None, help="i/n: this process's task slice")
     ap.add_argument("--steps", type=int, default=600); ap.add_argument("--val-every", type=int, default=50)
     ap.add_argument("--t-total", type=int, default=16); ap.add_argument("--fit-t", type=int, default=None, help="FIT-ONLY outer passes for the arm-A fit step (None = the deployed cfg.T); the predict/trace protocol is untouched"); ap.add_argument("--k", type=int, default=32); ap.add_argument("--sigma", type=float, default=None)
@@ -283,10 +361,14 @@ def main():
     ap.add_argument("--seed", type=int, default=0); ap.add_argument("--summarize", action="store_true")
     a = ap.parse_args(); out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     a.ladder = [float(v) for v in a.ladder.split(",")] if a.ladder else []
+    a.start_rows = [k for k in a.start_rows.split(",") if k] if a.start_rows else []
+    for k in a.start_rows: assert k in DAC.EVAL_STARTS, f"--start-rows: unknown start {k}"
+    global TRACE_FUSED, MON96
+    TRACE_FUSED = bool(a.trace_fused)
     if a.summarize:
         provs = sorted(out.glob("provenance*.json"))
         if provs:
-            pv = json.load(open(provs[0])); a.ckpt = pv.get("ckpt"); a.ema = pv.get("ema"); a.set = pv.get("set")
+            pv = json.load(open(provs[0])); a.ckpt = pv.get("ckpt"); a.ema = pv.get("ema"); a.set = pv.get("set"); a.eval_start = pv.get("eval_start")
             assert all(json.load(open(q)).get("ckpt") == a.ckpt for q in provs), "shards evaluated different checkpoints"
         return summarize(out, a)
     saved = E.load_ckpt(a.ckpt); defaults = Config()
@@ -294,7 +376,11 @@ def main():
     assert cfg.cell_kind == "decarc", cfg.cell_kind
     state = saved["state_ema"] if (a.ema and saved.get("state_ema") is not None) else saved["state"]
     if a.sigma is None: a.sigma = cfg.trm_ri_sigma if cfg.trm_ri_sigma > 0 else 1.0
-    ids = a.tasks.split(",") if a.tasks else task_ids_of(a.set)
+    a.eval_start = cfg.decarc_eval_start
+    if a.set == "mon96":
+        assert a.views <= 1 and not a.flip_test, "--set mon96 evaluates trained codes: no re-fits (views 1, no flip test)"
+        MON96 = mon96_rows(a.ckpt)
+    ids = a.tasks.split(",") if a.tasks else task_ids_of(a.set, a.ckpt)
     if a.limit: ids = ids[:a.limit]
     tag = ""
     if a.shard:
@@ -304,7 +390,8 @@ def main():
         for line in results.read_text().splitlines():
             try: done.add(json.loads(line)["task"])
             except Exception: pass
-    (out / f"provenance{tag}.json").write_text(json.dumps({"ckpt": a.ckpt, "ema": a.ema, "set": a.set, "k": a.k, "views": a.views, "ladder": a.ladder, "steps": a.steps, "t_total": a.t_total, "seed": a.seed, "sigma": a.sigma, "fit_T": a.fit_t}))
+    (out / f"provenance{tag}.json").write_text(json.dumps({"ckpt": a.ckpt, "ema": a.ema, "set": a.set, "k": a.k, "views": a.views, "ladder": a.ladder, "steps": a.steps, "t_total": a.t_total, "seed": a.seed, "sigma": a.sigma, "fit_T": a.fit_t,
+                                                           "eval_start": a.eval_start, "start_rows": a.start_rows, "trace_fused": TRACE_FUSED, "no_fit": MON96 is not None}))
     with open(results, "a") as f:
         for tid in ids:
             if tid in done: print(f"skip {tid}", flush=True); continue

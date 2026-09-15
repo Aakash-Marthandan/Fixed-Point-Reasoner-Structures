@@ -125,6 +125,15 @@ def letters(rec):
         cond = s.get("oracle_given_retains"), s.get("oracle_given_not")
         out.append(f"{arm} " + ("BASINS-HELD" if held else "BASINS-NOT-HELD") + f" (ret {100*s['retention_gt']:.1f} %, solved {100*(s.get('retention_gt_solved') or 0):.0f} %; oracle|ret {cond[0]} vs {cond[1]})")
     L["R-DA-5 RETENTION"] = " | ".join(out)
+    # R-DA-5b RETENTION-TRAINED (2026-09-15; the mon96 set: the trained monitor tasks' held-out queries with their TRAINED code rows and
+    # no fit — the pilot read: retention is conditioned on the code, so this is the direct form of the instrument; the same thresholds)
+    out = []
+    for arm in DEC_ARMS:
+        s = ev(arm, "mon96")
+        if not s or s.get("retention_gt") is None: out.append(f"{arm} NO-DATA"); continue
+        held = (s.get("retention_gt_solved") or 0) >= R["retention_solved"] and s["retention_gt"] > R["retention_all_above"]
+        out.append(f"{arm} " + ("BASINS-HELD-TRAINED" if held else "BASINS-NOT-HELD-TRAINED") + f" (ret {100*s['retention_gt']:.1f} %, solved {100*(s.get('retention_gt_solved') or 0):.0f} %; cold {100*(s.get('clean_exact_limit') or 0):.1f} %)")
+    L["R-DA-5b RETENTION-TRAINED"] = " | ".join(out)
     # R-DA-6 FAILURE TEXTURE
     out = []
     for arm in SEED_PAIR:
@@ -173,6 +182,22 @@ def letters(rec):
         drop = sel[0][key] - mon[-1][key]
         out.append(f"{arm} " + ("MEMORIZED" if drop > R["memorized_drop"] else "AT-PEAK") + f" (sel {vs.get('step')} {100*sel[0][key]:.1f} → final {100*mon[-1][key]:.1f})")
     L["MEMORIZATION"] = " | ".join(out)
+    # START (descriptive, no rule; 2026-09-15): the cold row's deterministic start beside the other starts of the same fitted code on
+    # val-hard (the ARC twin of the width-192 CPU lens: which start sits inside the basin; agree = the same answer as the cold row)
+    out = []
+    for arm in DEC_ARMS:
+        s = ev(arm); st = s.get("starts")
+        if not st: out.append(f"{arm} NO-DATA"); continue
+        out.append(f"{arm} {s.get('eval_start', '?')} {100*(s.get('clean_exact_T') or 0):.1f} % | " + " | ".join(
+            f"{k} {100*(v.get('exact_T') or 0):.1f} % (agree {100*(v.get('agree_T') or 0):.0f} %, lost {v.get('lost')})" for k, v in st.items()))
+    L["START (descriptive)"] = " | ".join(out)
+    # BRIDGE (descriptive, no rule; 2026-09-15): N0 on val-hard at its DEPLOYED fit (cfg.T passes, k 0) beside its night-protocol row —
+    # the protocol delta that ties the banked d64 twin's 7.64 % (deployed fits) to the night's fits
+    b, v = ev("N0", "valhard_bridge"), ev("N0")
+    if b and b.get("clean_exact_limit") is not None and v.get("clean_exact_limit") is not None:
+        L["BRIDGE (descriptive)"] = f"N0 deployed-fit {100*b['clean_exact_limit']:.1f} % vs night-fit {100*v['clean_exact_limit']:.1f} % (delta {100*(b['clean_exact_limit'] - v['clean_exact_limit']):+.1f} pp)"
+    else:
+        L["BRIDGE (descriptive)"] = "NO-DATA"
     return L
 
 
@@ -187,17 +212,21 @@ def _fake(clean, auc, oracle, ret_all, ret_solved, cw, flips, ebs, flip_c, flip_
 
 
 def selftest():
-    def rec_of(d0, d1, d2, n0_rg, mon_drop=0.0):
+    def rec_of(d0, d1, d2, n0_rg, mon_drop=0.0, mon_ret=None, bridge=None, starts=None):
         mon = [{"step": 20000, "val_t16_ema": 0.30}, {"step": 30000, "val_t16_ema": 0.30 - mon_drop}]
         base = lambda ev: {"present": True, "stopped": False, "monitor": mon, "vsel": {"step": 20000}, "evals": ev}
-        return {"D0": base({"valhard": d0, "arc1eval": _fake(0.10, .9, .12, .5, .95, .95, 1.0, [.05, .1, .1], .02, .02, vote_p2=.15)}),
-                "D1": base({"valhard": d1}), "D2": base({"valhard": d2}),
-                "N0": base({"rg96": {"ckpt": "n", "xcheck_all": True, "clean_exact_limit": n0_rg}, "valhard": {"ckpt": "n", "clean_exact_limit": 0.08}})}
+        if starts is not None: d0 = dict(d0, starts=starts, eval_start="fieldfix", clean_exact_T=d0["clean_exact_limit"])
+        m96 = lambda: ({"mon96": {"ckpt": "c", "xcheck_all": True, "retention_gt": mon_ret[0], "retention_gt_solved": mon_ret[1], "clean_exact_limit": .3, "n_queries": 150}} if mon_ret else {})
+        return {"D0": base({"valhard": d0, "arc1eval": _fake(0.10, .9, .12, .5, .95, .95, 1.0, [.05, .1, .1], .02, .02, vote_p2=.15), **m96()}),
+                "D1": base({"valhard": d1, **m96()}), "D2": base({"valhard": d2, **m96()}),
+                "N0": base({"rg96": {"ckpt": "n", "xcheck_all": True, "clean_exact_limit": n0_rg}, "valhard": {"ckpt": "n", "clean_exact_limit": 0.08},
+                            **({"valhard_bridge": {"ckpt": "n", "clean_exact_limit": bridge}} if bridge is not None else {})})}
     ok = 0
     # 1. the good night: exact, parity, propagates, clean+coverage with mechanism, basins held, frozen, vote pays, control hit, tight seeds
     r = rec_of(_fake(.09, .90, .15, .40, .95, .95, 1.0, [.05, .07, .07, .10], .02, .02, vote_p2=.12),
                _fake(.08, .88, .13, .38, .92, .93, 1.1, [.04, .06, .06, .09], .03, .02, vote_p2=.11),
-               _fake(.07, .60, .16, .30, .80, .90, 1.0, [.04, .07, .07, .07], .03, .02), 0.25)
+               _fake(.07, .60, .16, .30, .80, .90, 1.0, [.04, .07, .07, .07], .03, .02), 0.25,
+               mon_ret=(.50, .95), bridge=.06, starts={"buffers": {"exact_T": .05, "ever_exact": .06, "lost": 2, "agree_T": .80}, "rifix": {"exact_T": .09, "ever_exact": .09, "lost": 0, "agree_T": .97}})
     L = letters(r)
     exp = {"INTEGRITY": "PASS", "STABILITY": "ALL-STABLE"}
     for k, v in exp.items(): assert L[k] == v, (k, L[k]); ok += 1
@@ -211,12 +240,16 @@ def selftest():
     assert L["R-DA-9 CONTROL"].startswith("HIT"); ok += 1
     assert L["SEEDS"].startswith("TIGHT"); ok += 1
     assert L["MEMORIZATION"] == "D0 AT-PEAK (sel 20000 30.0 → final 30.0) | D1 AT-PEAK (sel 20000 30.0 → final 30.0) | D2 AT-PEAK (sel 20000 30.0 → final 30.0)", L["MEMORIZATION"]; ok += 1
+    assert L["R-DA-5b RETENTION-TRAINED"].startswith("D0 BASINS-HELD-TRAINED (ret 50.0 %, solved 95 %; cold 30.0 %)") and "D2 BASINS-HELD-TRAINED" in L["R-DA-5b RETENTION-TRAINED"], L["R-DA-5b RETENTION-TRAINED"]; ok += 1
+    assert L["START (descriptive)"].startswith("D0 fieldfix 9.0 % | buffers 5.0 % (agree 80 %, lost 2) | rifix 9.0 % (agree 97 %, lost 0)") and "D1 NO-DATA" in L["START (descriptive)"], L["START (descriptive)"]; ok += 1
+    assert L["BRIDGE (descriptive)"] == "N0 deployed-fit 6.0 % vs night-fit 8.0 % (delta -2.0 pp)", L["BRIDGE (descriptive)"]; ok += 1
     # 2. the bad night: not exact, below parity, flat depth, clean without coverage / no mechanism, basins not held, churn, vote flat, control kill, wide seeds, memorized
     r = rec_of(_fake(.03, .90, .03, .20, .50, .50, 5.0, [.03, .03, .03, .03], .20, .02, vote_p2=.03),
                _fake(.10, .90, .10, .20, .50, .50, 5.0, [.10, .10, .10, .10], .20, .02, vote_p2=.10),
-               _fake(.07, .85, .16, .30, .80, .90, 1.0, [.04, .07, .07, .07], .03, .02), 0.15, mon_drop=0.10)
+               _fake(.07, .85, .16, .30, .80, .90, 1.0, [.04, .07, .07, .07], .03, .02), 0.15, mon_drop=0.10, mon_ret=(.20, .50))
     L = letters(r)
     assert L["R-DA-1 EXACTNESS"] == "D0 NOT-EXACT | D1 NOT-EXACT | D2 EXACT"; ok += 1
+    assert L["R-DA-5b RETENTION-TRAINED"].startswith("D0 BASINS-NOT-HELD-TRAINED") and L["BRIDGE (descriptive)"] == "NO-DATA" and L["START (descriptive)"].startswith("D0 NO-DATA"); ok += 1
     assert L["R-DA-2 PARITY"] == "D0 BELOW | D1 PARITY"; ok += 1
     assert L["R-DA-3 DEPTH"].startswith("D0 FLAT"); ok += 1
     assert L["R-DA-4 SELECTOR"].startswith("D0 CLEAN-NO-COVERAGE") and L["R-DA-4 SELECTOR"].endswith("NO-MECHANISM"); ok += 1
@@ -251,6 +284,7 @@ def selftest():
     r = {a: {"present": False, "stopped": False, "monitor": [], "vsel": None, "evals": {}} for a in ARMS}
     L = letters(r)
     assert L["R-DA-1 EXACTNESS"].startswith("D0 NO-DATA") and L["R-DA-9 CONTROL"] == "NO-DATA" and L["SEEDS"] == "NO-DATA"; ok += 1
+    assert L["R-DA-5b RETENTION-TRAINED"] == "D0 NO-DATA | D1 NO-DATA | D2 NO-DATA" and L["BRIDGE (descriptive)"] == "NO-DATA"; ok += 1
     print(f"selftest OK: {ok}/{ok} checks")
 
 
