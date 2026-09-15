@@ -11,6 +11,12 @@
 #   P2 no marker, the node READY + IDLE            -> the pre-existing path: a relaunch attempted (LAUNCH chain), then
 #                                                     'chain died 1x' (MAX_RELAUNCH=1) -> delete, exit 3 — the edit is inert
 #   P3 the marker present, the node ABSENT         -> COST-ABORT logged, no delete, exit 4
+# 2026-09-16 (the two-pod night):
+#   P4 this pod's SHARE_DONE marker, node READY    -> SHARE-DONE logged, ONE delete, no launch, exit 0
+#   P5 the OTHER pod's SHARE marker only            -> ignored: the pre-existing relaunch path (P2's), and the relaunch
+#                                                     re-plants the node guard + DMS (v_guard after every relaunch)
+#   P6 node ABSENT, every zone dry                  -> the create carries --version=$TPU_RUNTIME --spot --labels; the supervisor
+#                                                     stops at the deadline (exit 2) without creating anything else
 set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 T=$(mktemp -d /tmp/hps.XXXXXX)
@@ -25,7 +31,7 @@ verb=""; name=""; zone=""; fmt=""; prev=""
 for a in "$@"; do
   case "$a" in
     --zone=*) zone=${a#--zone=} ;; --format=*) fmt=${a#--format=} ;;
-    list|delete|describe|get-value|ssh|scp|create) verb=$a ;;
+    list|delete|describe|get-value|ssh|scp|create) [ -z "$verb" ] && verb=$a ;;
     -*) ;;
     *) { [ "$prev" = delete ] || [ "$prev" = describe ] || [ "$prev" = ssh ] || [ "$prev" = scp ]; } && name=$a ;;
   esac
@@ -38,6 +44,7 @@ case "$verb" in
   describe) if have "$name"; then case "$fmt" in *ipAddress*) echo "10.0.0.1";; *) echo READY;; esac; fi; exit 0 ;;
   ssh)   printf 'IDLE 3\nPROGRESS ARM-OK D0 | \n'; exit 0 ;;   # the chain exited 3 (the marker); a neutral progress line
   scp)   exit 0 ;;
+  create) echo "CREATE $*" >> "$HPS_CALLS"; echo "ERROR: There is no more capacity in the zone" >&2; exit 1 ;;
   delete) echo "DELETE $zone $name" >> "$HPS_CALLS"; exit 0 ;;
 esac
 exit 0
@@ -80,6 +87,8 @@ R_STEPS=30000
 ARMS="D0 D1 D2 N0"
 CHAIN_SCRIPT=tools/chain_decarc.sh
 CHAIN_EXTRA_ENV="SELF_TEARDOWN=0 RIDER=0"
+TPU_RUNTIME=v2-alpha-tpuv6e
+SHARE_MARK=SHARE_DONE_w0
 WALL=30600
 SENTINEL=CHAIN-DECARC-COMPLETE
 GCS=gs://qhrrn2-arc/decarc
@@ -87,15 +96,16 @@ FINAL_OBJ=decarc_final.tgz
 CANARY_CKPT=runs/pretrain6_d24/ckpt_latest.pkl
 EOF
 }
-scenario () {   # NAME NODE_PRESENT(1/0) MARKER_PRESENT(1/0)
+scenario () {   # NAME NODE_PRESENT(1/0) MARKER_PRESENT(1/0) [SHARE_MARKER_NAME] [DEADLINE_OFFSET_S]
   local d="$T/$1"; mkdir -p "$d/gcs"; mkenv "$d/pod.env"; : > "$d/fix.txt"; : > "$d/calls.txt"; : > "$d/all.txt"
   [ "$2" = 1 ] && echo "us-east1-d qhrrn2-arc-pod" > "$d/fix.txt"
   [ "$3" = 1 ] && echo "D0 2026-09-15T00:00:00Z" > "$d/gcs/CHAIN-COST-ABORT"
-  echo $(( $(date -u +%s) + 3600 )) > "$d/deadline.txt"
+  [ -n "${4:-}" ] && echo "w0 2026-09-16T00:00:00Z" > "$d/gcs/$4"
+  echo $(( $(date -u +%s) + ${5:-3600} )) > "$d/deadline.txt"
   ( cd "$ROOT" && PATH="$T/bin:$PATH" HPS_ALL="$d/all.txt" HPS_FIX="$d/fix.txt" HPS_CALLS="$d/calls.txt" HPS_GCS="$d/gcs" HPS_NODE=qhrrn2-arc-pod \
       GCP_LOCAL_ENV="$T/local.env" FAKE_ACCOUNT=pi@example.com FAKE_PROJECT=lab-shared \
       POD_ENV="$d/pod.env" POD_LOG="$d/pod.log" POD_PIDF="$d/pod.pid" POD_WFILE="$d/workers.txt" POD_AFILE="$d/accel.txt" POD_SFILE="$d/strikes.txt" \
-      POD_DEADLINE_FILE="$d/deadline.txt" POLL=1 MAX_RELAUNCH=1 POD_QUIET=1 \
+      POD_DEADLINE_FILE="$d/deadline.txt" POLL=1 MAX_RELAUNCH=1 POD_QUIET=1 DRY_SLEEP=1 \
       env -u PROJECT -u QHRRN_GCP_PROJECT -u POD_LABELS perl -e 'alarm 240; exec @ARGV' -- bash tools/pod.sh supervise 1 > "$d/out.txt" 2>&1; echo $? > "$d/rc.txt" )
 }
 echo "P1 the COST-ABORT marker present, the node READY + IDLE"
@@ -116,5 +126,20 @@ scenario p3 0 1
 ok "P3 exit 4"                                   '[ "$(cat "$T/p3/rc.txt")" = 4 ]'
 ok "P3 COST-ABORT logged, nothing to tear down"  'grep -q "COST-ABORT (marker" "$T/p3/pod.log" && grep -q "node ABSENT — nothing to tear down" "$T/p3/pod.log"'
 ok "P3 zero deletes, no create"                  '[ ! -s "$T/p3/calls.txt" ] && ! grep -q "CREATE" "$T/p3/pod.log"'
+echo "P4 this pod's SHARE_DONE_w0 marker present, the node READY (the env's SHARE_MARK=SHARE_DONE_w0)"
+scenario p4 1 0 SHARE_DONE_w0
+ok "P4 exit 0"                                   '[ "$(cat "$T/p4/rc.txt")" = 0 ]'
+ok "P4 SHARE-DONE logged"                        'grep -q "SHARE-DONE (marker gs://qhrrn2-arc/decarc/SHARE_DONE_w0 present" "$T/p4/pod.log"'
+ok "P4 the node torn down exactly once"          '[ "$(grep -c "^DELETE us-east1-d qhrrn2-arc-pod" "$T/p4/calls.txt")" = 1 ]'
+ok "P4 no launch, no relaunch, pid file removed" '! grep -q "LAUNCH chain\|IDLE — relaunching" "$T/p4/pod.log" && [ ! -f "$T/p4/pod.pid" ]'
+echo "P5 only the OTHER pod's marker (SHARE_DONE_w1) present, the node READY + IDLE"
+scenario p5 1 0 SHARE_DONE_w1
+ok "P5 the other pod's marker is ignored (exit 3 by the relaunch cap, as P2)" '[ "$(cat "$T/p5/rc.txt")" = 3 ] && ! grep -q "SHARE-DONE" "$T/p5/pod.log"'
+ok "P5 the relaunch re-plants the node guard (v_guard after every relaunch)" 'awk "/IDLE — relaunching/{r=1} r && /guard re-planted|plant_guard failed/{g=1} END{exit !g}" "$T/p5/pod.log"'
+echo "P6 the node ABSENT, every zone dry: the create's image, spot and labels (TPU_RUNTIME=v2-alpha-tpuv6e); stop at the deadline"
+scenario p6 0 0 "" 25
+ok "P6 exit 2 at the deadline, nothing created"  '[ "$(cat "$T/p6/rc.txt")" = 2 ] && grep -q "reached the watchdog deadline" "$T/p6/pod.log"'
+ok "P6 the create carries the runtime, spot and labels" 'grep -q "^CREATE compute tpus tpu-vm create qhrrn2-arc-pod --zone=us-east1-d --project=lab-shared --accelerator-type=v6e-8 --version=v2-alpha-tpuv6e --spot --labels=program=qhrrn2,owner=pi,purpose=arc" "$T/p6/calls.txt"'
+ok "P6 no delete of anything"                    '! grep -q "^DELETE" "$T/p6/calls.txt"'
 echo "harness_pod_state: $PASS passed, $FAIL failed ($T)"
 [ "$FAIL" -eq 0 ]

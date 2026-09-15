@@ -511,14 +511,45 @@ run_rider || echo "RIDER-FAILED (labeled; the night's arms are unaffected)"
 # ---------- completion (any worker; idempotent) ----------
 need="$ALL_ARMS"
 echo "COMPLETION-SET nw=$NW need=[$need]"
+# 2026-09-16 (the two-pod night): this worker's OWN arms must be done before it waits for anyone — an ARM-PARTIAL used to sit in
+# the wait loop for C1_WAIT_PASSES x C1_WAIT_SLEEP (20 h at 600) although no other worker runs its arms; now it exits 1 at once so
+# the supervisor's relaunch redoes only the missing rows (MAX_RELAUNCH bounds a persistent failure).
+own_done () { local a; for a in $(worker_arms); do gsutil -q stat "$GCS/${a}_ARM_OK" 2>/dev/null || gsutil -q stat "$GCS/${a}_SKIPPED" 2>/dev/null || return 1; done; return 0; }
 for pass in $(seq 1 "${C1_WAIT_PASSES:-300}"); do
   all=1
   for armx in $need; do gsutil -q stat "$GCS/${armx}_ARM_OK" 2>/dev/null || gsutil -q stat "$GCS/${armx}_SKIPPED" 2>/dev/null || all=0; done
+  if [ "$all" -eq 0 ] && ! own_done; then
+    echo "$SENT-OWN-ARMS-INCOMPLETE worker=$W arms=[$(worker_arms)] (a local row failed; exiting 1 so the relaunch redoes only the missing rows) $(date -u +%FT%TZ)"
+    exit 1
+  fi
+  if [ "$all" -eq 0 ] && [ "${DA_SHARE_EXIT:-0}" = 1 ]; then
+    # the TWO-POD mode (2026-09-16; the PI: "let's use two v6e-8 pods"): each pod runs its worker share on its own node; the pod whose
+    # share finishes while the other's is still running banks a SHARE_DONE_w<W> marker and exits 0 — its supervisor (SHARE_MARK) tears the
+    # node down instead of idling; the pod that finds every arm done builds the final tarball and the sentinel
+    echo "w$W $(date -u +%FT%TZ) arms=[$(worker_arms)]" | gsutil -q cp - "$GCS/SHARE_DONE_w$W"
+    echo "$SENT-SHARE-DONE worker=$W arms=[$(worker_arms)] (this pod's share is banked; the pod with the remaining arms finalizes) $(date -u +%FT%TZ)"
+    exit 0
+  fi
   if [ "$all" -eq 1 ]; then
     if ! gsutil -q stat "$GCS/${R_TAG}_final.tgz" 2>/dev/null; then
+      # 2026-09-16 (the two-pod night: the finalizing pod pulls the OTHER pod's rows): the cache records a SUCCESSFUL EXTRACTION, never a
+      # file's mere presence — a pull interrupted by a wall recycle left a partial /tmp copy that every rerun skipped unextracted (and the
+      # harness's shared /tmp hid other sandboxes' rows the same way); TMPDIR isolates the harness's nodes
+      PULLD=${TMPDIR:-/tmp}/${R_TAG}_final_pull; mkdir -p "$PULLD"
       for f in $(gsutil ls "$GCS/evals/*.tgz" "$GCS"/*_pretrain.tgz 2>/dev/null); do
-        b=$(basename "$f"); [ -f "/tmp/pull_$b" ] || { gsutil -q cp "$f" "/tmp/pull_$b" && tar xzf "/tmp/pull_$b" 2>/dev/null; }
+        b=$(basename "$f"); [ -f "$PULLD/$b.extracted" ] && continue
+        { gsutil -q cp "$f" "$PULLD/$b" && tar xzf "$PULLD/$b" && touch "$PULLD/$b.extracted" && rm -f "$PULLD/$b"; } || echo "FINAL-PULL-FAILED $b"
       done
+      # the gate: every banked eval row (an evals/<arm>_<set>_OK marker) must have its summary in this repo before the final is banked
+      miss=""
+      for m in $(gsutil ls "$GCS/evals/*_OK" 2>/dev/null); do
+        n=$(basename "$m"); n=${n%_OK}; a=${n%%_*}; st=${n#*_}
+        [ -f "runs/decarceval_${a}/${st}/summary.json" ] || miss="$miss $n"
+      done
+      if [ -n "$miss" ]; then
+        echo "$SENT-FINAL-INCOMPLETE worker=$W missing summaries:$miss (the final is NOT banked; exiting 1 so the relaunch re-pulls) $(date -u +%FT%TZ)"
+        exit 1
+      fi
       for armx in $need; do gsutil -q cp "$GCS/${armx}_vsel.json" "runs/pretrain${R_TAG}_${armx}/vsel.json" 2>/dev/null || true; done
       tar czf "/tmp/${R_TAG}_final.tgz" runs/pretrain${R_TAG}_* runs/preflight${R_TAG}_*.log runs/decarceval_* runs/sxeval_${R_TAG}_rider 2>/dev/null
       gsutil -q cp "/tmp/${R_TAG}_final.tgz" "$GCS/${R_TAG}_final.tgz"

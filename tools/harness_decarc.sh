@@ -18,6 +18,10 @@
 # the tools; NOTHING written under the Sudoku era's prefix); S18 the plateau-keyed extension (a flat, declining monitor extends
 # under DA_EXT_PLATEAU_PP and not without); S19 the fused-trace cross-check failing on the 'chip' -> the eager fallback (--trace-fused
 # 0) and completion; S20 DA_MON96=0 DA_BRIDGE=0 remove the two rows (default-inert switches).
+# 2026-09-16 (the two-pod night): S21 two pods = two separate node repos sharing one bucket, CHAIN_WORKERS=2 + DA_SHARE_EXIT=1 +
+# a live prefix per pod: the pod that finishes its share first banks SHARE_DONE_w<W> and exits 0 without the sentinel; the other
+# pod finds every arm done and finalizes; each pod's live bank writes only its own prefix; both finishing orders. S22 an
+# ARM-PARTIAL no longer waits in the completion loop: the worker exits 1 at once (OWN-ARMS-INCOMPLETE) and a rerun completes.
 set -uo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 export REAL_PY="$REPO/.venv/bin/python3"
@@ -202,9 +206,24 @@ PYEOF
 
 run_chain () {  # W NW [extra VAR=val...]
   local w=$1 nw=$2; shift 2
-  ( cd "$SB/repo" && env PATH="$SB/bin:$PATH" CHAIN_PY="$SB/bin/stubpy" CHAIN_WORKER="$w" CHAIN_WORKERS="$nw" NCHIP_OVERRIDE=4 \
+  mkdir -p "$SB/tmp"
+  ( cd "$SB/repo" && env PATH="$SB/bin:$PATH" TMPDIR="$SB/tmp" CHAIN_PY="$SB/bin/stubpy" CHAIN_WORKER="$w" CHAIN_WORKERS="$nw" NCHIP_OVERRIDE=4 \
       LIVE_EVERY=1 C1_WAIT_PASSES=3 C1_WAIT_SLEEP=0 DA_PF_STEPS=20 DA_STEPS_DEC=8000 DA_STEPS_NAT=6000 DA_EXT_STEPS=4000 DA_EXT_WINDOW=2000 \
       DA_MON=2000 DA_CKPT_EVERY=1000 DA_EVAL_STALL_SEC=3 WATCH_EVERY=1 "$@" bash tools/chain_decarc.sh > "$SB/w$w.log" 2>&1 )
+}
+run_chain_in () {  # REPO W NW [extra VAR=val...] — a second node's repo in the same sandbox bucket (S21)
+  local repo=$1 w=$2 nw=$3; shift 3
+  mkdir -p "$repo/tmp"
+  ( cd "$repo" && env PATH="$SB/bin:$PATH" TMPDIR="$repo/tmp" CHAIN_PY="$SB/bin/stubpy" CHAIN_WORKER="$w" CHAIN_WORKERS="$nw" NCHIP_OVERRIDE=4 \
+      LIVE_EVERY=1 C1_WAIT_PASSES=3 C1_WAIT_SLEEP=0 DA_PF_STEPS=20 DA_STEPS_DEC=8000 DA_STEPS_NAT=6000 DA_EXT_STEPS=4000 DA_EXT_WINDOW=2000 \
+      DA_MON=2000 DA_CKPT_EVERY=1000 DA_EVAL_STALL_SEC=3 WATCH_EVERY=1 "$@" bash tools/chain_decarc.sh > "$SB/$(basename "$repo")_w$w.log" 2>&1 )
+}
+mk_repo2 () {  # a second node's repo: the same tools (copied), src and data linked, its own runs/
+  local r="$SB/node$1"; mkdir -p "$r/tools" "$r/runs" "$r/data"
+  cp "$SB/repo/tools/"* "$r/tools/"; ln -s "$REPO/src" "$r/src"
+  for d in ARC-AGI ConceptARC re_arc re_gate48 re_gateb48 re_train48; do ln -s "$REPO/data/$d" "$r/data/$d"; done
+  # the stub finds its tool paths relative to $SB/repo (HERE/../repo): the chain's own helpers run inside this node's repo
+  echo "$r"
 }
 pargv () { "$REAL_PY" -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['argv']))" "$SB/repo/runs/pretraindecarc_$1/config.json"; }
 eargv () { "$REAL_PY" -c "import json,sys; print(' '.join(json.load(open(sys.argv[1])).get('argv', [])))" "$1"; }
@@ -364,6 +383,37 @@ grep -q "TRACE-EAGER-STANDING D0" "$SB/w0.log" && grep -q "COST-SKIP D0" "$SB/w0
 echo "== S20 DA_MON96=0 DA_BRIDGE=0: the two rows are switches (off -> absent; every other row and completion unchanged) =="
 mk_sandbox; run_chain 0 1 DA_MON96=0 DA_BRIDGE=0
 [ ! -f "$SB/gcs/decarc/evals/D0_mon96_OK" ] && [ ! -f "$SB/gcs/decarc/evals/N0_valhard_bridge_OK" ] && [ -f "$SB/gcs/decarc/evals/D0_valhard_OK" ] && [ -f "$SB/gcs/decarc/evals/N0_valhard_OK" ] && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S20 rows off, the night otherwise unchanged, complete" || bad "S20"
+
+echo "== S21 TWO PODS (separate nodes, one bucket): w0 = D0 D2 on node A, w1 = D1 N0 on node B; DA_SHARE_EXIT; a live prefix per pod =="
+mk_sandbox; NA=$(mk_repo2 A); NB=$(mk_repo2 B)
+run_chain_in "$NB" 1 2 DA_SHARE_EXIT=1 LIVE_PREFIX=gs://qhrrn2-rescue/decarc/live_w1
+LB=$SB/nodeB_w1.log
+grep -q "DECARC-SHARE-DONE worker=1 arms=\[D1 N0\]" "$LB" && [ -f "$SB/gcs/decarc/SHARE_DONE_w1" ] && ! grep -q "CHAIN-DECARC-COMPLETE" "$LB" && [ ! -f "$SB/gcs/decarc/decarc_final.tgz" ] && ok "S21 node B (the short share) banks SHARE_DONE_w1 and exits without the sentinel" || bad "S21 node B share: $(grep -E 'SHARE-DONE|COMPLETE|WORKER-DONE|INCOMPLETE' "$LB" | head -3)"
+( cd "$NB" && cat runs/detached.exit 2>/dev/null ); grep -q "PRETRAIN-START D1" "$LB" && grep -q "PRETRAIN-START N0" "$LB" && ! grep -q "PRETRAIN-START D0\|PRETRAIN-START D2" "$LB" && ok "S21 node B ran only its share (D1, N0)" || bad "S21 node B arms"
+[ -d "$SB/gcs/decarc/live_w1/runs/pretraindecarc_D1" ] || [ -d "$SB/gcs/decarc/live_w1/runs/pretraindecarc_N0" ] || [ -n "$(ls "$SB/gcs/decarc/live_w1/runs" 2>/dev/null)" ] && [ ! -d "$SB/gcs/decarc/live" ] && ok "S21 node B's live bank wrote only live_w1 (nothing under the default live/)" || bad "S21 live_w1: $(ls "$SB/gcs/decarc" | tr '\n' ' ')"
+run_chain_in "$NA" 0 2 DA_SHARE_EXIT=1 LIVE_PREFIX=gs://qhrrn2-rescue/decarc/live_w0
+LA=$SB/nodeA_w0.log
+grep -q "CHAIN-DECARC-COMPLETE worker=0" "$LA" && [ -f "$SB/gcs/decarc/decarc_final.tgz" ] && [ "$(n_ok)" = 4 ] && [ ! -f "$SB/gcs/decarc/SHARE_DONE_w0" ] && ok "S21 node A (the long share) finds every arm done and finalizes (final + sentinel; no SHARE_DONE_w0)" || bad "S21 node A: $(grep -E 'SHARE-DONE|COMPLETE|INCOMPLETE' "$LA" | head -3)"
+tar tzf "$SB/gcs/decarc/decarc_final.tgz" | grep -q "decarceval_D1/valhard/summary.json" && tar tzf "$SB/gcs/decarc/decarc_final.tgz" | grep -q "decarceval_N0/arc1eval/summary.json" && tar tzf "$SB/gcs/decarc/decarc_final.tgz" | grep -q "decarceval_D0/valhard/summary.json" && ok "S21 the final tarball carries both pods' rows (pulled from the bucket)" || bad "S21 final contents"
+[ -n "$(ls "$SB/gcs/decarc/live_w0/runs" 2>/dev/null)" ] && ! ls "$SB/gcs/decarc/live_w0/runs" | grep -q "pretraindecarc_D1\|pretraindecarc_N0" && ok "S21 node A's live bank wrote only its own arms under live_w0" || bad "S21 live_w0: $(ls "$SB/gcs/decarc/live_w0/runs" 2>/dev/null | tr '\n' ' ')"
+echo "== S21c the final gate: a banked row whose tarball is missing from the bucket -> FINAL-INCOMPLETE, exit 1, no final =="
+mk_sandbox; NA=$(mk_repo2 A); NB=$(mk_repo2 B)
+run_chain_in "$NB" 1 2 DA_SHARE_EXIT=1 LIVE_PREFIX=gs://qhrrn2-rescue/decarc/live_w1
+rm -f "$SB/gcs/decarc/evals/N0_rt48.tgz"
+run_chain_in "$NA" 0 2 DA_SHARE_EXIT=1 LIVE_PREFIX=gs://qhrrn2-rescue/decarc/live_w0
+grep -q "DECARC-FINAL-INCOMPLETE worker=0 missing summaries: N0_rt48" "$SB/nodeA_w0.log" && [ ! -f "$SB/gcs/decarc/decarc_final.tgz" ] && ! grep -q "CHAIN-DECARC-COMPLETE" "$SB/nodeA_w0.log" && ok "S21c the incomplete final is refused (N0_rt48 named), nothing banked" || bad "S21c: $(grep -E 'FINAL-|COMPLETE' "$SB/nodeA_w0.log" | head -2)"
+echo "== S21b the reverse order: node A (w0) finishes first -> SHARE_DONE_w0; node B (w1) finalizes =="
+mk_sandbox; NA=$(mk_repo2 A); NB=$(mk_repo2 B)
+run_chain_in "$NA" 0 2 DA_SHARE_EXIT=1 LIVE_PREFIX=gs://qhrrn2-rescue/decarc/live_w0
+run_chain_in "$NB" 1 2 DA_SHARE_EXIT=1 LIVE_PREFIX=gs://qhrrn2-rescue/decarc/live_w1
+grep -q "DECARC-SHARE-DONE worker=0 arms=\[D0 D2\]" "$SB/nodeA_w0.log" && [ -f "$SB/gcs/decarc/SHARE_DONE_w0" ] && grep -q "CHAIN-DECARC-COMPLETE worker=1" "$SB/nodeB_w1.log" && [ -f "$SB/gcs/decarc/decarc_final.tgz" ] && [ "$(n_ok)" = 4 ] && ok "S21b either order completes exactly once" || bad "S21b"
+run_chain_in "$NA" 0 2 DA_SHARE_EXIT=1 LIVE_PREFIX=gs://qhrrn2-rescue/decarc/live_w0
+grep -q "ARM-SKIP D0 (done)" "$SB/nodeA_w0.log" && grep -q "CHAIN-DECARC-COMPLETE worker=0" "$SB/nodeA_w0.log" && ! grep -q "PRETRAIN-START\|EVAL-OK" "$SB/nodeA_w0.log" && ok "S21b a relaunch of a finished pod re-runs nothing" || bad "S21b relaunch: $(grep -E 'PRETRAIN-START|EVAL-OK|COMPLETE|SHARE' "$SB/nodeA_w0.log" | head -3)"
+echo "== S22 an ARM-PARTIAL exits 1 at once (OWN-ARMS-INCOMPLETE; no 20-h wait); the rerun completes =="
+mk_sandbox; run_chain 0 1 STUB_EVAL_FAIL="D0:rt48:1" C1_WAIT_PASSES=600 C1_WAIT_SLEEP=120
+grep -q "ARM-PARTIAL D0" "$SB/w0.log" && grep -q "DECARC-OWN-ARMS-INCOMPLETE worker=0" "$SB/w0.log" && ! grep -q "WORKER-DONE" "$SB/w0.log" && ok "S22 the partial arm exits at once instead of waiting (C1_WAIT_PASSES 600 x 120 s would be 20 h)" || bad "S22: $(grep -E 'PARTIAL|INCOMPLETE|WORKER-DONE' "$SB/w0.log" | head -3)"
+run_chain 0 1 STUB_EVAL_FAIL="D0:rt48:1"
+grep -q "EVAL-OK D0_rt48" "$SB/w0.log" && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && ok "S22b the rerun redoes only the missing row and completes" || bad "S22b"
 
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

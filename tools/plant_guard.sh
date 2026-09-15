@@ -15,7 +15,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 source "${POD_ENV:-tools/campaign.env}"
 source tools/gcp_local.sh || exit 2   # project ids: the git-ignored tools/.gcp_local.env (2026-09-15)
-DL=$(cat runs/tpu_deadline.txt)
+DL=$(tr -dc '0-9' < "${POD_DEADLINE_FILE:-runs/tpu_deadline.txt}")   # POD_DEADLINE_FILE: the offline harness only (2026-09-16)
 DMS_MIN=${DMS_MIN:-780}
 ATTEMPTS=${1:-10}
 now=$(date +%s)

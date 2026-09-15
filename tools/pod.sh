@@ -23,6 +23,8 @@
 #     state; read before the node)                 refused a battery whose measured projection exceeds
 #                                                  DA_COST_BUDGET_H and every rerun stands down — never relaunch
 #                                                  into it; remove the marker after the protocol decision]
+#   $GCS/$SHARE_MARK present (SHARE_MARK set;    -> down (if any) -> exit 0   [2026-09-16: the two-pod night — this pod's
+#     read before the node)                        worker share is banked; the pod with the remaining arms finalizes]
 #   node READY + chain RUNNING                  -> log progress
 #   node READY + chain IDLE (crash/ceiling/kill)-> relaunch (<=3 per node life,
 #                                                  then down + exit 3 LOUDLY)
@@ -63,6 +65,8 @@ if is_shared_project "$PROJECT"; then
   is_own_name "$POD" || { echo "pod.sh: refusing — POD '$POD' lacks the $OWN_PREFIX prefix in a shared project"; exit 2; }
   [ -n "${POD_LABELS:-}" ] || { echo "pod.sh: refusing — POD_LABELS unset in a shared project"; exit 2; }
 fi
+TPU_RUNTIME=${TPU_RUNTIME:-v6e-ubuntu-2404}  # 2026-09-16: the node image (the ARC project offers v2-alpha-tpuv6e only); unset = the proven image
+export QHRRN_TPU_RUNTIME=$TPU_RUNTIME         # the dispatcher's profile reads it (bring-up of a node it creates itself)
 LOG=${POD_LOG:-runs/pod_${POD}.log}          # overridable ONLY for the offline harness
 PIDF=${POD_PIDF:-runs/pod_${POD}_supervisor.pid}
 POLL=${POLL:-300}
@@ -192,12 +196,16 @@ v_bring_up () { # ZONE (node exists) -> 0 = chain launched on every worker
       || { say "  canary FAILED"; return 1; }
   still_ready "$1" || return 1
   v_launch "$1" || return 1
-  # 2026-09-04/09-07 rule automated: the guest DMS must sit PAST the deadline (a guest poweroff before it kills the
-  # node-side guard's sleep without stopping billing) — re-plant the node guard with DMS = deadline + 60 min
-  if [ -f runs/tpu_deadline.txt ]; then
-    local dl now dms; dl=$(cat runs/tpu_deadline.txt); now=$(date +%s); dms=$(( (dl - now) / 60 + 60 )); [ "$dms" -ge 600 ] || dms=600
-    DMS_MIN=$dms bash tools/plant_guard.sh 6 >> "$LOG" 2>&1 && say "  guard re-planted (DMS +$dms min, past the deadline)" || say "  WARNING: plant_guard failed — plant by hand"
-  fi
+  v_guard "$1"
+  return 0
+}
+v_guard () { # ZONE — the node-side delete guard at the deadline + the guest DMS pushed PAST it (never fatal; a failure is logged loudly)
+  # 2026-09-04/09-07 rule automated: the guest DMS must sit PAST the deadline (a guest poweroff before it kills the node-side guard's
+  # sleep without stopping billing). 2026-09-16: called after EVERY (re)launch, not only at bring-up (the wall recycle re-arms the DMS).
+  local df=${POD_DEADLINE_FILE:-runs/tpu_deadline.txt}
+  [ -f "$df" ] || return 0
+  local dl now dms; dl=$(tr -dc '0-9' < "$df"); now=$(date +%s); dms=$(( (dl - now) / 60 + 60 )); [ "$dms" -ge 600 ] || dms=600
+  DMS_MIN=$dms bash tools/plant_guard.sh 6 >> "$LOG" 2>&1 && say "  guard re-planted (DMS +$dms min, past the deadline)" || say "  WARNING: plant_guard failed — plant by hand"
   return 0
 }
 accel_allowed_in () {  # ACC ZONE -> 0 iff the accelerator may be created in that zone (ACCEL_ZONE_RESTRICT="v6e-32:us-east1-d ..." from campaign.env;
@@ -233,7 +241,7 @@ v_hunt () {   # try every (accelerator, zone) once in ladder order; 0 = chain la
       accel_allowed_in "$acc" "$z" || { say "  skip $acc in $z (ACCEL_ZONE_RESTRICT)"; continue; }
       say "CREATE $POD ($acc spot) in $z"
       if ! bounded 600 gcloud compute tpus tpu-vm create "$POD" --zone="$z" --project=$PROJECT \
-           --accelerator-type="$acc" --version=v6e-ubuntu-2404 --spot ${POD_LABELS:+--labels="$POD_LABELS"} >> "$LOG" 2>&1; then   # POD_LABELS: the shared ARC project's ownership labels (unset = no flag)
+           --accelerator-type="$acc" --version="$TPU_RUNTIME" --spot ${POD_LABELS:+--labels="$POD_LABELS"} >> "$LOG" 2>&1; then   # POD_LABELS: the shared ARC project's ownership labels (unset = no flag); TPU_RUNTIME: the env's image (2026-09-16)
         say "  no capacity in $z ($acc)"
         v_clear_leftover "$z"; lrc=$?
         [ "$lrc" -eq 2 ] || continue
@@ -304,7 +312,9 @@ cmd_supervise () {
   # COPYFILE_DISABLE=1 = the 2026-08-01 AppleDouble law at create time.
   CSHA=$(git rev-parse --short HEAD 2>/dev/null || echo nogit)
   git diff --quiet 2>/dev/null || CSHA="${CSHA}dirty$(date -u +%H%M)"
-  if COPYFILE_DISABLE=1 tar czf /tmp/qhrrn2_code.tgz src tests tools requirements.txt pyproject.toml 2>/dev/null \
+  # 2026-09-16 (the shared ARC project): the archive lands in a bucket other lab members may read — the identity files and backups never ride
+  if COPYFILE_DISABLE=1 tar czf /tmp/qhrrn2_code.tgz --exclude='tools/.gcp_local.env' --exclude='tools/.gcp_identity' --exclude='*.bak' \
+      --exclude='__pycache__' src tests tools requirements.txt pyproject.toml 2>/dev/null \
       && gsutil -q cp /tmp/qhrrn2_code.tgz "$GCS/ops/code_${CSHA}.tgz" 2>/dev/null; then
     export QHRRN_CODE_TGZ="$GCS/ops/code_${CSHA}.tgz"
     say "code archive banked: code_${CSHA}.tgz (bring-ups pull from GCS; scp fallback stands)"
@@ -332,6 +342,12 @@ cmd_supervise () {
       nw=$(node_where)
       case $nw in ABSENT|UNKNOWN) say "  node $nw — nothing to tear down";; *) v_down "${nw%% *}" "cost abort — never leave an idle biller";; esac
       notify "COST-ABORT" "the chain refused its battery (projected wall > budget); node torn down; supervisor exited"; rm -f "$PIDF"; exit 4
+    fi
+    if [ -n "${SHARE_MARK:-}" ] && gsutil -q stat "$GCS/$SHARE_MARK" 2>/dev/null; then   # 2026-09-16: the two-pod night (chain_decarc.sh DA_SHARE_EXIT)
+      say "SHARE-DONE (marker $GCS/$SHARE_MARK present: this pod's worker share is banked; the pod with the remaining arms finalizes) — tearing this pod down"
+      nw=$(node_where)
+      case $nw in ABSENT|UNKNOWN) say "  node $nw — nothing to tear down";; *) v_down "${nw%% *}" "share done";; esac
+      notify "SHARE-DONE" "$POD's share is banked; node torn down; supervisor exited"; rm -f "$PIDF"; exit 0
     fi
     nw=$(node_where)
     case $nw in
@@ -378,7 +394,7 @@ cmd_supervise () {
               notify "NEEDS EYES" "chain died ${MAXRL}x; node deleted; supervisor exited"; rm -f "$PIDF"; exit 3
             fi
             if [ "$wnorepo" -eq 1 ]; then v_bring_up "$z" || v_down "$z" "bring-up failed"
-            else for wk in $target; do v_launch "$z" "$wk" || v_down "$z" "launch failed"; done; fi
+            else for wk in $target; do v_launch "$z" "$wk" || v_down "$z" "launch failed"; done; v_guard "$z"; fi
             RELAUNCHES=$((RELAUNCHES+1))
           else
             # HEALTHY poll (workers running, nothing to relaunch) — the relaunch streak is

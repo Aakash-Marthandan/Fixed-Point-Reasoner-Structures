@@ -119,7 +119,9 @@ def accel_profile(accel: str) -> dict:
     deviation; the canary remains the gate either way.
     """
     if accel.startswith("v6e"):
-        return {"version": "v6e-ubuntu-2404", "libtpu": "", "pep668": True}
+        # 2026-09-16 (the ARC project offers only v2-alpha-tpuv6e, not v6e-ubuntu-2404): QHRRN_TPU_RUNTIME overrides the image
+        # (pod.sh exports it from the env's TPU_RUNTIME); unset = the proven image, byte-identical
+        return {"version": os.environ.get("QHRRN_TPU_RUNTIME") or "v6e-ubuntu-2404", "libtpu": "", "pep668": True}
     return {"version": TPU_VERSION, "libtpu": "==0.0.43.1", "pep668": False}
 
 
@@ -355,8 +357,10 @@ def cmd_up(args) -> int:
     # exact pins incl. jax[tpu]==0.10.2 (shakedown-1: system Python too old).
     print(">>> Bootstrap (skipped if .venv/.boot_ok present)")
     # PEP-668 (v6e/ubuntu-24.04): the system pip refuses to seed uv without it.
-    seed = "python3 -m pip install -q uv" + (
-        " --break-system-packages" if prof["pep668"] else "")
+    # 2026-09-16: the seed tries the PEP-668 flag first and falls back to a plain install (an older pip on another v6e image
+    # rejects the unknown flag); the v5e path (pep668 False) is byte-identical.
+    seed = ("(python3 -m pip install -q uv --break-system-packages 2>/dev/null || python3 -m pip install -q uv)"
+            if prof["pep668"] else "python3 -m pip install -q uv")
     sh(gssh(f"export PATH=~/.local/bin:$PATH && cd {REMOTE_PROJECT} && "
             "test -f .venv/.boot_ok && echo 'bootstrap: already done' || ("
             f"{seed} && "

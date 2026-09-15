@@ -26,6 +26,48 @@
 
 **Before the first ARC launch there (not now — the PI 2026-09-15: "Let's not test it now"):** the PI's spend envelope → a canary (create `qhrrn2-arc-pod` v6e-8 spot, bring-up from `gs://qhrrn2-arc`, read/write the bucket from the node, delete; ≈ 20 min) → the campaign's own registration and harness as usual.
 
+## OPS PICKUP — THE DEC-ARC NIGHT ON TWO PODS IN THE ARC PROJECT (launched 2026-09-15 16:09Z; registration = the ledger entry of that time + `Documentation/Plan_2026-09-10_DEC-ARC_Build.md` §9/§12/§13; the analyzer frozen from the launch commit; ops reads NO accuracy values)
+
+**The PI's words:** "Let's launch the runs on the pod then. Carefully set up the Google cloud and monitoring environment as this is a shared project ... Yes let's use two v6e-8 pods." Standing for the shared project: spot only; never another member's node, bucket, spend, IAM or network (HANDOFF "THE ARC PROJECT").
+
+**What runs.** Two spot v6e-8 nodes in the ARC project, image `v2-alpha-tpuv6e`, US zones first and Mumbai last, each with its own supervisor:
+- **Pod 0** `qhrrn2-arc-pod0` — env `tools/campaign_decarc_arc_p0.env` — worker 0 of 2: **D0 then D2**; live prefix `gs://qhrrn2-arc/decarc/live_w0`; pid file `runs/pod_qhrrn2-arc-pod0_supervisor.pid`; log `runs/pod_qhrrn2-arc-pod0.log`. Wall ≈ 15.5–18 h (≈ 20.5 h on the eager fallback).
+- **Pod 1** `qhrrn2-arc-pod1` — env `tools/campaign_decarc_arc_p1.env` — worker 1 of 2: **D1 then N0**; live prefix `live_w1`; pid/log likewise. Wall ≈ 9–10.5 h.
+- **Shared:** markers, evals and the final tarball under `gs://qhrrn2-arc/decarc`; the sets under `gs://qhrrn2-arc/sets`; the deadline knob `runs/tpu_deadline.txt` = launch + 30 h (both supervisors + the launchd watchdog read it; the node-side guard is re-planted with the DMS past it after every launch).
+- **The finish:** the pod whose share ends first banks `SHARE_DONE_w<W>` and exits; its supervisor sees the marker, tears the node down and exits 0 (`SHARE-DONE` in its log). The other pod, finding every arm done, builds `decarc_final.tgz` + `CHAIN-DECARC-COMPLETE`; its supervisor tears down on the final object.
+
+**Supervisors (the ONE loop per pod; never two per pod):**
+```bash
+POD_ENV=tools/campaign_decarc_arc_p0.env DRY_SLEEP=480 nohup bash tools/pod.sh supervise 30 > /dev/null 2>&1 &
+POD_ENV=tools/campaign_decarc_arc_p1.env DRY_SLEEP=480 nohup bash tools/pod.sh supervise 30 > /dev/null 2>&1 &
+```
+plus `nohup caffeinate -s -i -w <pid> > /dev/null 2>&1 &` on each supervisor pid.
+
+**The watch (read-only):** `bash tools/ops_watch_pods.sh tools/campaign_decarc_arc_p0.env tools/campaign_decarc_arc_p1.env` as a background task (a 15-min tick per pod; ends on an ALERT = 10, the campaign COMPLETE = 20, a pod's SHARE-DONE = 21, or after an hour = the heartbeat; re-arm without a finished pod's env). One pod at the source: `POD_ENV=tools/campaign_decarc_arc_p<W>.env bash tools/ops_snapshot.sh`. The launchd watchdog's inventory: `runs/tpu_status.txt` (tokens `<ARC project>/<zone>=qhrrn2-arc-pod<W>:<STATE>`).
+
+**Markers in order, per pod** (`runs/detached.log` on the node; the snapshot's MARK line):
+`=== DECARC START worker=<W>/2` → `DATA-OK` → `LIVE-RESTORE` → `PREFLIGHT-OK <arm> <it/s>` ×2 → `PRETRAIN-START <arm>` → (`PRETRAIN-EXTEND <arm>: plateau end …` possible) → `PRETRAIN-OK <arm>` → `SELECT-KEYS <arm> … start=fieldfix` → `VALBEST <arm>` → `COST-PROBE <arm> projected_h=…` → `COST-OK <arm>` → `EVAL-OK <arm>_valhard` → `_dev30` → `_mon96` → `_rg96` → `_rt48` → `_arc1eval` → `_valhard_final` (N0: its four sets + `N0_valhard_bridge` in parallel, then `N0_arc1eval`) → `ARM-OK <arm>` → the second arm likewise → `COMPLETION-SET` → **either** `DECARC-SHARE-DONE worker=<W>` (then the supervisor's `SHARE-DONE`) **or** `CHAIN-DECARC-COMPLETE worker=<W>` (after the final tarball).
+
+**Failure meanings:**
+- **`TRACE-FUSED-XCHECK-FAILED <arm>`:** the fused trace disagreed with the eager path on this chip; that arm runs the eager trace (+≈ 1.3 h), persisted by `<arm>_TRACE_EAGER`. Labeled; nothing to do.
+- **`COST-ABORT <arm>` / `DECARC-COST-ABORT` + `gs://qhrrn2-arc/decarc/CHAIN-COST-ABORT`:** the measured battery projection exceeds 6 h per arm. BOTH supervisors tear their nodes down and exit 4. The fit protocol is the PI's to re-decide; remove the marker by hand after that decision.
+- **`DECARC-OWN-ARMS-INCOMPLETE worker=<W>`:** a row of this pod failed (ARM-PARTIAL); the chain exits 1 and the supervisor's relaunch redoes only the missing rows (≤ 10 relaunches per node life, then down + exit 3 "needs eyes").
+- **`DECARC-FINAL-INCOMPLETE worker=<W> missing summaries: …`:** the finalizing pod could not assemble every banked row from the bucket (a failed pull); the final is NOT banked, the chain exits 1 and the relaunch re-pulls (each tarball's extraction is recorded, never a file's presence). A repeat names the row to check in `gs://qhrrn2-arc/decarc/evals/`.
+- **`EVAL-STALLED` / `EVAL-STALL-RETRY`:** the in-chain watchdog killed silent shards and retried once (resume-safe). A second stall fails the row → OWN-ARMS-INCOMPLETE → relaunch.
+- **`PRETRAIN-NAN` / `AMPUTATED`:** the registered one-shot amputation (the arm evaluated on its last finite grid, STOPPED.txt). Never retry the arm.
+- **`PREFLIGHT-FAILED D0|D1`** (a seed arm): that pod's chain stops (`DECARC-PREFLIGHT-ABORT`); escalate. `PREFLIGHT-FAILED D2|N0`: SKIPPED, labeled.
+- **`DATA-ABORT` / `REGISTRY-BAD`:** before any launch; escalate.
+- **A preemption:** nothing to do — that pod's supervisor re-hunts, the chain resumes from its own live prefix and the markers skip finished work.
+- **A wall recycle** (≈ launch + 8.5 h per chain launch): `IDLE — relaunching` then a new `launch w0` and `guard re-planted` = NORMAL.
+
+**NEVER:** a second supervisor for one pod; a third pod; an on-demand, queued or unlabeled node; anything outside `qhrrn2-*` in the shared project; editing the analyzer, the chain's registry, the evaluator or an env while its supervisor runs; extending the deadline knob without the PI; running anything on a node host besides its chain; reading accuracy values in the ops phase; writing under `gs://qhrrn2-rescue`.
+
+**THE CLOSE (ops):** on `CHAIN-DECARC-COMPLETE` + `gs://qhrrn2-arc/decarc/decarc_final.tgz`:
+1. Confirm both supervisors exited (one `SHARE-DONE`, one `COMPLETE`), both nodes ABSENT by a positive describe, and zero `qhrrn2-*` nodes in every ARC zone.
+2. Pull `decarc_final.tgz` + `evals/*.tgz` + `*_pretrain.tgz` + the cost-probe jsons with `gcloud storage cp` into `runs/_decarc_pull/tgz/`, crc32c-compared, UNEXTRACTED.
+3. Hand-derive the spend from the two pod logs (US v6e-8 $6.82/h; Mumbai ≈ $8/h).
+4. Write the close block here + the ledger's ops line; commit. The analysis pass follows with `tools/analyze_decarc.py` byte-untouched against the launch commit.
+
 ## ARC READINESS — THE DEC-ARC BUILD STRESS-TESTED WITH THE SUDOKU LESSONS FOLDED IN (2026-09-15 evening; Fable; nothing launched, fleet zero in both projects; the PI: "get in top shape for this ARC reorientation with all the lessons we've learned from sudoku ... get the DEC-ARC build stress tested and ready for the pod"). Plan §12 = the registration-draft amendment (`Documentation/Plan_2026-09-10_DEC-ARC_Build.md`); the launch waits on the PI's decisions in §12.6 and the spend envelope.
 
 **What changed since the RESUME POINT below (every item tested; nothing touched the cloud):**
