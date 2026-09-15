@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.." || exit 1
 LOG=runs/ops_watch_pods.log
 [ $# -ge 1 ] || { echo "usage: ops_watch_pods.sh ENV [ENV ...]"; exit 64; }
 TICKS=${HB_TICKS:-4}
+[ "${HB_FIRST_SLEEP:-0}" -gt 0 ] && sleep "$HB_FIRST_SLEEP"   # 2026-09-15: HB_TICKS=1 HB_FIRST_SLEEP=900 = one tick every 15 min per background task (the PI: 15-min checks, minimal tokens)
 for t in $(seq 1 "$TICKS"); do
   worst=0
   for env in "$@"; do

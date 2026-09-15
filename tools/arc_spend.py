@@ -47,8 +47,11 @@ STORAGE_PER_GB_MONTH = 0.026   # Standard storage, US multi-region
 XFER_TO_ASIA_PER_GB = 0.12     # bucket (US multi-region) -> a node in Asia (rough)
 XFER_FROM_ASIA_PER_GB = 0.08   # a node in Asia -> the bucket (rough)
 BRINGUP_PULL_GB = 0.12         # the ARC data tarball + the code archive per bring-up (the venv tarball measured and added when readable)
-# the registered walls per pod (Plan_2026-09-10_DEC-ARC_Build.md §12.3/§13.4): node-hours per pod for the whole night (low, high)
-POD_WALL_BANDS_H = {"qhrrn2-arc-pod0": (15.5, 20.5), "qhrrn2-arc-pod1": (9.0, 10.5)}
+# the walls per pod, node-hours for the whole night (low, high). CORRECTED 2026-09-15 17:00Z from the MEASURED wall pace on the night's own
+# pods (D0 1.93 it/s, D1 1.96 it/s from the metrics' timestamps; the pilot's 5.42 it/s was the trainer's printed rate, 2.8x high on the field
+# loop): a DEC arm = pretrain 4.3 h + monitors 0.9 + fits 4.0-4.6 + traces 0.3 + probe/compile 0.5 ~ 10.1-10.7 h (+1.7 h if extended);
+# pod0 = D0 + D2 ~ 20.2-25.9 h (27.9 h on the eager-trace fallback); pod1 = D1 + N0 ~ 11.4-13.7 h (N0's pace unmeasured on this image)
+POD_WALL_BANDS_H = {"qhrrn2-arc-pod0": (20.2, 25.9), "qhrrn2-arc-pod1": (11.4, 13.7)}
 
 
 def utcnow() -> dt.datetime:
@@ -327,7 +330,8 @@ def selftest():
     est = estimate(led, t0 + dt.timedelta(hours=2), None, None, None)
     assert abs(est["compute_to_date"] - 16.0) < 1e-6 and est["running_rate_per_h"] == 8.0, est; ok += 1
     other = est["storage_to_date"] + est["transfer_to_date"]   # an Asia bring-up adds its (rounded) transfer term to the projection too
-    assert abs(est["projected_total_low"] - other - 8.0 * 15.5) < 0.02 and abs(est["projected_total_high"] - other - 8.0 * 20.5) < 0.02, est; ok += 1
+    lo, hi = POD_WALL_BANDS_H["qhrrn2-arc-pod0"]   # the projection = the node's rate x the pod's band (the elapsed 2 h is inside the band)
+    assert abs(est["projected_total_low"] - other - 8.0 * lo) < 0.02 and abs(est["projected_total_high"] - other - 8.0 * hi) < 0.02, est; ok += 1
     # 2. the node disappears; a logged teardown gives the exact end
     merge(led, [], [], t0 + dt.timedelta(hours=3), teardown=lambda n, z, a: parse_time("2026-09-15T18:30:00Z"))
     r = next(iter(led["nodes"].values()))
