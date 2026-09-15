@@ -33,6 +33,7 @@
   - `table_lr = table_wd = None` takes the original single-optimizer branch (`clip_by_global_norm(1.0)` + `adamw(sched, b2, wd)`), the line 04f995c moved into that branch unchanged.
   - `w_void = None` is not passed, so the model config keeps 0.1, identical in both `config.json` files.
 - **The addendum check (labeled, not a registered rule):** I1 with only those four keys dropped where the champion lacks them and the long run holds the inert value → **PASS**, no remaining difference, seed 0. The model dataclass differs only in `decarc_heads` (and `remat`, which I1 excludes by design).
+- **The PI's call (2026-09-15, after reading this report): trivial.** The readings below are the readings of record, with the I1 addendum beside them; the frozen analyzer is not edited.
 
 **Disclosures carried beside R-L1 and R-L6** (plan §9 Note 2): C5's first 50k steps ran on 4 devices × 192 rows with rematerialization; the extension ran on 8 × 96 without. The global batch (768), recipe, schedule (flat 1e-4) and per-row computation are the same; the random streams and float reduction order are not.
 
