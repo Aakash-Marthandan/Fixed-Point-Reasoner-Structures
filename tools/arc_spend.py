@@ -1,4 +1,4 @@
-"""THE ARC PROJECT SPEND RECORD (2026-09-15; the PI: "Keep fresh record of the spend estimate on this google cloud project").
+"""THE ARC PROJECT SPEND RECORD (2026-09-15): a fresh record of the spend estimate on the shared project.
 
 The lab's billing account is not visible to our account, so the spend is ESTIMATED from what we can measure at the source:
   * every node of ours (the OWN_PREFIX names) that ever existed in the ARC project: its start (the API's createTime, or a logged
@@ -47,7 +47,7 @@ STORAGE_PER_GB_MONTH = 0.026   # Standard storage, US multi-region
 XFER_TO_ASIA_PER_GB = 0.12     # bucket (US multi-region) -> a node in Asia (rough)
 XFER_FROM_ASIA_PER_GB = 0.08   # a node in Asia -> the bucket (rough)
 BRINGUP_PULL_GB = 0.12         # the ARC data tarball + the code archive per bring-up (the venv tarball measured and added when readable)
-# the walls per pod, node-hours for the whole night (low, high). CORRECTED 2026-09-15 17:00Z from the MEASURED wall pace on the night's own
+# the walls per pod, node-hours for the whole campaign (low, high). CORRECTED 2026-09-15 17:00Z from the MEASURED wall pace on the campaign's own
 # pods (D0 1.93 it/s, D1 1.96 it/s from the metrics' timestamps; the pilot's 5.42 it/s was the trainer's printed rate, 2.8x high on the field
 # loop): a DEC arm = pretrain 4.3 h + monitors 0.9 + fits 4.0-4.6 + traces 0.3 + probe/compile 0.5 ~ 10.1-10.7 h (+1.7 h if extended);
 # pod0 = D0 + D2 ~ 20.2-25.9 h (27.9 h on the eager-trace fallback); pod1 = D1 + N0 ~ 11.4-13.7 h (N0's pace unmeasured on this image)
@@ -238,7 +238,7 @@ def render_md(est: dict, failed_zones: list[str], failed_creates: int) -> str:
          "",
          f"**To date ≈ ${est['total_to_date']:.2f}** (compute ${est['compute_to_date']:.2f} · storage ${est['storage_to_date']:.2f} · transfer ${est['transfer_to_date']:.2f}). "
          f"Running now: ${est['running_rate_per_h']:.2f}/h. "
-         f"Projected for the DEC-ARC night: ≈ ${est['projected_total_low']:.2f}–{est['projected_total_high']:.2f} (the registered walls per live pod; churn not included).",
+         f"Projected for the campaign: ≈ ${est['projected_total_low']:.2f}–{est['projected_total_high']:.2f} (the registered walls per live pod; churn not included).",
          "",
          "The lab's billing account is not visible to us; this is an estimate from measured node lifetimes. Rates: " + RATE_SOURCE + ". "
          "A node counts from its create request to its deletion (CREATING minutes included, conservatively); a create refused for capacity allocated nothing and counts $0. "

@@ -23,7 +23,7 @@
 #     state; read before the node)                 refused a battery whose measured projection exceeds
 #                                                  DA_COST_BUDGET_H and every rerun stands down — never relaunch
 #                                                  into it; remove the marker after the protocol decision]
-#   $GCS/$SHARE_MARK present (SHARE_MARK set;    -> down (if any) -> exit 0   [2026-09-16: the two-pod night — this pod's
+#   $GCS/$SHARE_MARK present (SHARE_MARK set;    -> down (if any) -> exit 0   [2026-09-16: two-pod mode — this pod's
 #     read before the node)                        worker share is banked; the pod with the remaining arms finalizes]
 #   node READY + chain RUNNING                  -> log progress
 #   node READY + chain IDLE (crash/ceiling/kill)-> relaunch (<=3 per node life,
@@ -54,7 +54,7 @@ source "${POD_ENV:-tools/campaign.env}"   # TWO-POD mode (PI 2026-09-06): each s
 source tools/r0_tasks.sh          # VH RG RB RT
 PY=.venv/bin/python
 # THE ARC ERA (2026-09-15): project ids + the sharing policy live in the git-ignored tools/.gcp_local.env (tools/gcp_local.sh);
-# an ARC env sets PROJECT; unset = the Sudoku era's project (the old behaviour). In a SHARED project (the PI: never intrude on
+# an ARC env sets PROJECT; unset = the Sudoku era's project (the old behaviour). In a SHARED project (policy: never intrude on
 # others' work) the node must carry OWN_PREFIX and POD_LABELS, and pod.sh only ever creates --spot.
 source tools/gcp_local.sh || { echo "pod.sh: refusing — tools/.gcp_local.env missing (template tools/gcp_local.env.example)"; exit 2; }
 PROJECT=${PROJECT:-$SUDOKU_PROJECT}
@@ -343,7 +343,7 @@ cmd_supervise () {
       case $nw in ABSENT|UNKNOWN) say "  node $nw — nothing to tear down";; *) v_down "${nw%% *}" "cost abort — never leave an idle biller";; esac
       notify "COST-ABORT" "the chain refused its battery (projected wall > budget); node torn down; supervisor exited"; rm -f "$PIDF"; exit 4
     fi
-    if [ -n "${SHARE_MARK:-}" ] && gsutil -q stat "$GCS/$SHARE_MARK" 2>/dev/null; then   # 2026-09-16: the two-pod night (chain_decarc.sh DA_SHARE_EXIT)
+    if [ -n "${SHARE_MARK:-}" ] && gsutil -q stat "$GCS/$SHARE_MARK" 2>/dev/null; then   # 2026-09-16: two-pod mode (chain_decarc.sh DA_SHARE_EXIT)
       say "SHARE-DONE (marker $GCS/$SHARE_MARK present: this pod's worker share is banked; the pod with the remaining arms finalizes) — tearing this pod down"
       nw=$(node_where)
       case $nw in ABSENT|UNKNOWN) say "  node $nw — nothing to tear down";; *) v_down "${nw%% *}" "share done";; esac

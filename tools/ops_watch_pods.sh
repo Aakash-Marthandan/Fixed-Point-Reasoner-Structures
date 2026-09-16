@@ -1,5 +1,5 @@
 #!/bin/bash
-# tools/ops_watch_pods.sh — the session's wake-up driver for a multi-pod campaign (2026-09-16, the two-pod DEC-ARC night).
+# tools/ops_watch_pods.sh — the session's wake-up driver for a multi-pod campaign (2026-09-16, two-pod campaigns).
 # Runs tools/ops_heartbeat.sh in single-tick mode (HB_ONCE=1) for every pod env given, every HB_EVERY seconds (default 900), for at
 # most HB_TICKS ticks (default 4 = the hourly heartbeat), appending every line to runs/ops_watch_pods.log and printing it. Ends
 # EARLY with the largest heartbeat code of a tick: 10 an ALERT · 20 the campaign COMPLETE · 21 a pod's SHARE-DONE — so a

@@ -4,7 +4,7 @@
 # DMS<deadline, stale live-bank, NAN/AMPUTATE/FAILED/ABORT markers, host thrash, eval stall, the COST-ABORT marker.
 # 2026-09-15 (the ARC era): the pod name, the bucket prefix, the final object and the sentinel come from the campaign env
 # (tools/campaign.env, or POD_ENV); the Sudoku-era pods read byte-identically. HB_SENTINEL / HB_FINAL still override.
-# 2026-09-16 (the two-pod night): POD_ENV selects the pod (its env, its log, its pid file); SHARE_MARK (the env's) = this pod's
+# 2026-09-16 (two-pod mode): POD_ENV selects the pod (its env, its log, its pid file); SHARE_MARK (the env's) = this pod's
 # worker share is banked and its supervisor tears the node down — the heartbeat reports POD-SHARE-DONE and stops alerting on
 # the (legitimately) exited supervisor. HB_ONCE=1 = one tick, then exit with a code for a waiter:
 #   0 quiet · 10 at least one ALERT · 20 the campaign COMPLETE (the final object / sentinel) · 21 this pod's SHARE-DONE

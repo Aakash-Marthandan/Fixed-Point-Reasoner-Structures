@@ -20,7 +20,7 @@ cd "$(dirname "$0")/.." || exit 1
 # deadline-enforcement backstop with a coverage hole. Keep this list a SUPERSET
 # of campaign.env ZONES whenever zones are added.
 ZONES="us-east1-d us-east1-c us-east5-b us-central1-a us-central2-b us-west1-c us-west4-a asia-east1-c asia-south1-a asia-south1-b asia-south1-c"
-# THE ARC ERA (2026-09-15; the PI: "all further ARC project content and compute goes there"; "the monitoring tools ... safe as we
+# THE ARC ERA (2026-09-15; policy: all further ARC project content and compute goes there; the monitoring tools stay safe as we
 # shouldn't intrude others' work in the shared project funding and compute"). Project ids and the sharing policy come from the
 # git-ignored tools/.gcp_local.env (tools/gcp_local.sh); missing -> an ALARM and exit (the backstop is BLIND, never guessing).
 # Every project in WATCH_PROJECTS is swept. The Sudoku era's own project keeps its behaviour byte-for-byte: every node listed,
@@ -119,7 +119,7 @@ deleted (work is banked in GCS)\" with title \"QHRRN watchdog: AUTO-TEARDOWN\"" 
   fi
 fi
 
-# ---- THE ARC PROJECT SPEND RECORD (2026-09-15; the PI: "Keep fresh record of the spend estimate on this google cloud project") ----
+# ---- THE ARC PROJECT SPEND RECORD (2026-09-15: a fresh record of the spend estimate on the shared google cloud project") ----
 # After the inventory and the backstop above, refresh runs/arc_spend.md (tools/arc_spend.py: our nodes' measured lifetimes x the program's
 # rates + storage + transfer; read-only listings, our qhrrn2-* nodes only). Bounded, non-fatal, and skipped when the tool, the venv or an
 # ARC project is absent (the offline harness's sandbox has neither) — it can never change this watchdog's inventory, alarms or deletions.
