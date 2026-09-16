@@ -35,7 +35,7 @@ FIT_STEPS=${DA_FIT_STEPS:-600}; T_TOTAL=${DA_T_TOTAL:-16}
 COST_STEPS=${DA_COST_STEPS:-8}; COST_BUDGET_H=${DA_COST_BUDGET_H:-8}   # rule 13a: the cost probe's fit steps; the per-arm battery budget (hours on this host; 0 = probe only)
 FIT_T=${DA_FIT_T:-}   # the FIT-ONLY outer-pass count for EVERY cell's arm-A fit step (1 = one map application per step, the training form; unset = the deployed cfg.T); the predict/trace protocol (T_TOTAL) is untouched
 LIMIT=${DA_LIMIT:-}   # PILOT ONLY (2026-09-10): the first LIMIT tasks of every eval set (eval_decarc --limit; arc_suite --tasks); the n-gates honor it; the night leaves it unset -> byte-identical commands
-# 2026-09-15 — the Sudoku lessons folded in before the registration (Plan_2026-09-10_DEC-ARC_Build §12; the ARC env sets the night's values):
+# 2026-09-15 — the Sudoku-era evaluation lessons (Plan_2026-09-10_DEC-ARC_Build §12; the ARC env sets the registered values):
 EVAL_START=${DA_EVAL_START:-fieldfix}   # the deterministic evaluation start the 2k monitor selects on and every cold row uses (decarc_cell.z0_eval; fieldfix = the S10-invariant seeded draw from the training family; buffers = the pre-2026-09-15 start)
 START_ROWS=${DA_START_ROWS:-}           # extra cold traces of every query from these starts, no re-fit (eval_decarc --start-rows; unset = none)
 TRACE_FUSED=${DA_TRACE_FUSED:-1}        # eval_decarc --trace-fused (one device call per trace step); the cost probe cross-checks it on the chip and a mismatch falls back to 0 (the pilot-proven eager path)
@@ -52,6 +52,21 @@ ARM_PREC=default
 EVAL_TIMEOUT=${DA_EVAL_TIMEOUT:-14400}
 EVAL_STALL_SEC=${DA_EVAL_STALL_SEC:-2400}   # the 2026-09-10 pilot thrash: a starved battery wrote nothing for an hour; the watchdog kills + retries once
 pt () { JAX_DEFAULT_MATMUL_PRECISION=$ARM_PREC $PY tools/pretrain.py "$@"; }
+wait_chips () {  # 2026-09-16 (the chip-release race): a stage's processes can start before the PREVIOUS stage's have released
+  # their vfio groups, and every shard dies at once with "TPU initialization failed: open(/dev/vfio/N): Device or resource busy".
+  # Wait until no chip-using process of OURS is alive (dependency-free: they are the only users on the node's chips), then proceed.
+  local i n
+  for i in $(seq 1 "${DA_CHIP_WAIT_TRIES:-36}"); do
+    n=$(pgrep -fc "tools/(eval_decarc|arc_suite|pretrain|cost_probe)[.]py" 2>/dev/null || echo 0)
+    if [ "${n:-0}" -eq 0 ]; then [ "$i" -gt 1 ] && echo "CHIPS-FREE after $(( (i - 1) * 5 ))s"; return 0; fi
+    sleep 5
+  done
+  echo "CHIPS-BUSY after $(( ${DA_CHIP_WAIT_TRIES:-36} * 5 ))s of waiting (proceeding; a busy-chip failure is retried once)"
+  return 0
+}
+chip_busy_log () {  # DIR -> 0 when a log in it shows the busy-chip init failure
+  grep -qlE "Device or resource busy|TPU initialization failed" "$1"/*.log 2>/dev/null
+}
 pin () { local c=$1; shift; TPU_CHIPS_PER_PROCESS_BOUNDS=1,1,1 TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=$c JAX_DEFAULT_MATMUL_PRECISION=$ARM_PREC "$@"; }
 
 echo "=== $SENT START worker=$W/$NW chips=$NCHIP $(date -u +%FT%TZ) ==="
@@ -158,6 +173,7 @@ PYEOF
 log_has_step () { grep -qE '^step +[0-9]+ ' "$1"; }
 pt_run () {  # LOG ARM DIR pt-args... — ONE --remat retry on a LAUNCH-TIME HBM exhaustion (persisted in RETRY_REMAT.txt)
   local log=$1 arm=$2 dir=$3; shift 3
+  wait_chips
   if [ -f "$dir/RETRY_REMAT.txt" ] && ! printf '%s\n' "$@" | grep -qx -- '--remat'; then
     echo "REMAT-PERSISTED $arm (this arm needed --remat before; launching with it)"; set -- "$@" --remat
   fi
@@ -183,7 +199,7 @@ preflight () {  # PF_STEPS full-batch steps of every arm this worker will run: c
       if is_optional "$arm"; then
         echo "PREFLIGHT-FAILED $arm (rc=$rc) -> SKIPPED (optional arm, labeled)"; echo "preflight failed rc=$rc $(date -u +%FT%TZ)" | gsutil -q cp - "$GCS/${arm}_SKIPPED"
       else
-        echo "PREFLIGHT-FAILED $arm (rc=$rc) -> the night stops here (seed arm; stop-and-report)"; return 1
+        echo "PREFLIGHT-FAILED $arm (rc=$rc) -> the chain stops here (seed arm; stop-and-report)"; return 1
       fi
       continue
     fi
@@ -295,6 +311,7 @@ eval_dec () {  # ARM SETNAME SET CK NSH EXTRA... — the DEC-ARC battery on one 
   gsutil -q stat "$GCS/evals/${name}_OK" 2>/dev/null && { echo "EVAL-SKIP $name"; return 0; }
   mkdir -p "$O"; local pids=() rc=0 attempt
   for attempt in 1 2; do
+    wait_chips
     pids=()
     for i in $(seq 0 $((NSH - 1))); do
       pin $((i % NCHIP)) ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/eval_decarc.py --ckpt "$CK" --set "$set" --out "$O" --shard "$i/$NSH" \
@@ -302,6 +319,7 @@ eval_dec () {  # ARM SETNAME SET CK NSH EXTRA... — the DEC-ARC battery on one 
     done
     watch_shards "$name" "$O" "${pids[@]}"; rc=$?
     [ $rc -eq 1 ] && [ $attempt -eq 1 ] && { echo "EVAL-STALL-RETRY $name (the shards are resume-safe: only the missing tasks re-run)"; continue; }
+    [ $rc -eq 2 ] && [ $attempt -eq 1 ] && chip_busy_log "$O" && { echo "EVAL-CHIP-BUSY-RETRY $name (the previous stage still held the chips; waiting for them and re-running the missing tasks)"; continue; }
     break
   done
   [ $rc -eq 0 ] || { echo "EVAL-SHARD-FAILED $name (rc=$rc)"; return 1; }
@@ -315,9 +333,11 @@ eval_nat () {  # SETNAME SET CHIP TASKS_CSV EXTRA... — the native control thro
   mkdir -p "$O"
   local rc attempt
   for attempt in 1 2; do
+    wait_chips
     pin "$chip" ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/arc_suite.py --ckpt "$N0_CK" --set "$set" ${tasks:+--tasks "$tasks"} --out "$O" --steps "$FIT_STEPS" --t-total "$T_TOTAL"${FIT_T:+ --fit-t $FIT_T} "$@" >> "$O/run.log" 2>&1 & local pid=$!
     watch_shards "$name" "$O" "$pid"; rc=$?
     [ $rc -eq 1 ] && [ $attempt -eq 1 ] && { echo "EVAL-STALL-RETRY $name"; continue; }
+    [ $rc -eq 2 ] && [ $attempt -eq 1 ] && chip_busy_log "$O" && { echo "EVAL-CHIP-BUSY-RETRY $name"; continue; }
     break
   done
   [ $rc -eq 0 ] || { echo "EVAL-FAILED $name (rc=$rc)"; return 1; }
@@ -395,6 +415,7 @@ battery () {  # ARM VBCK D — the registered battery per arm (the DEC rows; N0'
     if ! gsutil -q stat "$GCS/evals/N0_arc1eval_OK" 2>/dev/null; then
       local O="runs/decarceval_N0/arc1eval" ps=() rr=0 att; mkdir -p "$O"
       for att in 1 2; do   # the same stall watchdog + one resume-safe retry as every other row
+        wait_chips
         ps=()
         for i in $(seq 0 $((NCHIP - 1))); do
           mkdir -p "$O/s$i"
@@ -425,6 +446,7 @@ cost_probe () {  # ARM CK — rule 13a (2026-09-10): time ONE task's rows on ONE
   if gsutil -q stat "$GCS/${arm}_TRACE_EAGER" 2>/dev/null; then TRACE_FUSED=0; echo "TRACE-EAGER-STANDING $arm (a rerun keeps the labeled eager trace this arm fell back to)"; fi
   gsutil -q stat "$GCS/${arm}_COST_OK" 2>/dev/null && { echo "COST-SKIP $arm (done)"; return 0; }
   is_dec "$arm" && ema="--ema"
+  wait_chips
   pin 0 ${EVAL_TIMEOUT:+timeout $EVAL_TIMEOUT} $PY tools/cost_probe.py --ckpt "$CK" --set valhard --out "$J" --steps "$COST_STEPS" --t-total "$T_TOTAL" ${FIT_T:+--fit-t $FIT_T} $ema > "runs/cost_probe_${arm}.log" 2>&1 \
     || { echo "COST-PROBE-FAILED $arm (the battery runs unprojected; see runs/cost_probe_${arm}.log)"; return 0; }
   local proj
@@ -506,12 +528,12 @@ run_rider () {
 rc=0
 preflight || { echo "$SENT-PREFLIGHT-ABORT worker=$W $(date -u +%FT%TZ)"; exit 1; }
 for arm in $(worker_arms); do run_arm "$arm" || rc=1; done
-run_rider || echo "RIDER-FAILED (labeled; the night's arms are unaffected)"
+run_rider || echo "RIDER-FAILED (labeled; the campaign's arms are unaffected)"
 
 # ---------- completion (any worker; idempotent) ----------
 need="$ALL_ARMS"
 echo "COMPLETION-SET nw=$NW need=[$need]"
-# 2026-09-16 (the two-pod night): this worker's OWN arms must be done before it waits for anyone — an ARM-PARTIAL used to sit in
+# 2026-09-16 (two-pod mode): this worker's OWN arms must be done before it waits for anyone — an ARM-PARTIAL used to sit in
 # the wait loop for C1_WAIT_PASSES x C1_WAIT_SLEEP (20 h at 600) although no other worker runs its arms; now it exits 1 at once so
 # the supervisor's relaunch redoes only the missing rows (MAX_RELAUNCH bounds a persistent failure).
 own_done () { local a; for a in $(worker_arms); do gsutil -q stat "$GCS/${a}_ARM_OK" 2>/dev/null || gsutil -q stat "$GCS/${a}_SKIPPED" 2>/dev/null || return 1; done; return 0; }
@@ -523,7 +545,7 @@ for pass in $(seq 1 "${C1_WAIT_PASSES:-300}"); do
     exit 1
   fi
   if [ "$all" -eq 0 ] && [ "${DA_SHARE_EXIT:-0}" = 1 ]; then
-    # the TWO-POD mode (2026-09-16; the PI: "let's use two v6e-8 pods"): each pod runs its worker share on its own node; the pod whose
+    # the TWO-POD mode (2026-09-16): each pod runs its worker share on its own node; the pod whose
     # share finishes while the other's is still running banks a SHARE_DONE_w<W> marker and exits 0 — its supervisor (SHARE_MARK) tears the
     # node down instead of idling; the pod that finds every arm done builds the final tarball and the sentinel
     echo "w$W $(date -u +%FT%TZ) arms=[$(worker_arms)]" | gsutil -q cp - "$GCS/SHARE_DONE_w$W"
@@ -532,7 +554,7 @@ for pass in $(seq 1 "${C1_WAIT_PASSES:-300}"); do
   fi
   if [ "$all" -eq 1 ]; then
     if ! gsutil -q stat "$GCS/${R_TAG}_final.tgz" 2>/dev/null; then
-      # 2026-09-16 (the two-pod night: the finalizing pod pulls the OTHER pod's rows): the cache records a SUCCESSFUL EXTRACTION, never a
+      # 2026-09-16 (two-pod mode: the finalizing pod pulls the OTHER pod's rows): the cache records a SUCCESSFUL EXTRACTION, never a
       # file's mere presence — a pull interrupted by a wall recycle left a partial /tmp copy that every rerun skipped unextracted (and the
       # harness's shared /tmp hid other sandboxes' rows the same way); TMPDIR isolates the harness's nodes
       PULLD=${TMPDIR:-/tmp}/${R_TAG}_final_pull; mkdir -p "$PULLD"

@@ -12,13 +12,13 @@
 # preflight failure: an optional arm SKIPPED, a seed arm ABORTS; S7 launch-time OOM -> ONE --remat retry; S8 the rider
 # (RIDER=1: claimed once, n-gated 422786; RIDER=0: off); S9 a shard failure -> ARM-PARTIAL, the rerun redoes only the
 # missing row; S10 missing data -> DATA-ABORT before any launch; S11 the live-bank restore -> RESUMED.
-# 2026-09-15 (the Sudoku lessons folded in; Plan §12): S1 also asserts the registry's --decarc-eval-start, the mon96 row (n-gated
+# 2026-09-15 (the Sudoku-era evaluation lessons; Plan §12): S1 also asserts the registry's --decarc-eval-start, the mon96 row (n-gated
 # NVAL, k 0, no re-fit flags), N0's bridge row (48 rows, k 0) and --trace-fused 1 on every DEC eval; S15 asserts the bridge
-# carries NO --fit-t while the night rows do; S17 the ARC env's exact CHAIN_EXTRA_ENV (the ARC bucket mapped; every knob reaches
+# carries NO --fit-t while the battery rows do; S17 the ARC env's exact CHAIN_EXTRA_ENV (the ARC bucket mapped; every knob reaches
 # the tools; NOTHING written under the Sudoku era's prefix); S18 the plateau-keyed extension (a flat, declining monitor extends
 # under DA_EXT_PLATEAU_PP and not without); S19 the fused-trace cross-check failing on the 'chip' -> the eager fallback (--trace-fused
 # 0) and completion; S20 DA_MON96=0 DA_BRIDGE=0 remove the two rows (default-inert switches).
-# 2026-09-16 (the two-pod night): S21 two pods = two separate node repos sharing one bucket, CHAIN_WORKERS=2 + DA_SHARE_EXIT=1 +
+# 2026-09-16 (two-pod mode): S21 two pods = two separate node repos sharing one bucket, CHAIN_WORKERS=2 + DA_SHARE_EXIT=1 +
 # a live prefix per pod: the pod that finishes its share first banks SHARE_DONE_w<W> and exits 0 without the sentinel; the other
 # pod finds every arm done and finalizes; each pod's live bank writes only its own prefix; both finishing orders. S22 an
 # ARM-PARTIAL no longer waits in the completion loop: the worker exits 1 at once (OWN-ARMS-INCOMPLETE) and a rerun completes.
@@ -162,6 +162,12 @@ if tool.endswith("eval_decarc.py"):
     sh = flag("--shard"); tag = ""
     if sh:
         i, n = (int(v) for v in sh.split("/")); ids = ids[i::n]; tag = f"_{i}"
+    busy_key = f"{Path(flag('--ckpt')).parent.name.replace('pretraindecarc_', '')}:{flag('--set')}:{tag.strip('_')}"
+    if os.environ.get("STUB_EVAL_BUSY", "") == busy_key and not (out / "busy_once").exists():
+        (out / "busy_once").write_text("x")
+        with open(out / f"shard{tag}.log", "a") as lg:
+            lg.write("RuntimeError: Unable to initialize backend 'tpu': FAILED_PRECONDITION: TPU initialization failed: open(/dev/vfio/3): 16: Device or resource busy\n")
+        print("staged busy-chip failure", file=sys.stderr); sys.exit(1)
     if os.environ.get("STUB_EVAL_FAIL", "") == f"{Path(flag('--ckpt')).parent.name.replace('pretraindecarc_', '')}:{flag('--set')}:{tag.strip('_')}" and not (out / "failed_once").exists():
         (out / "failed_once").write_text("x"); print("staged shard failure", file=sys.stderr); sys.exit(1)
     key = f"{Path(flag('--ckpt')).parent.name.replace('pretraindecarc_', '')}:{flag('--set')}:{tag.strip('_')}"
@@ -282,7 +288,7 @@ echo "== S6 preflight failure: D2 (optional) SKIPPED; D0 (seed) aborts the worke
 mk_sandbox; run_chain 0 1 STUB_PREFLIGHT_FAIL=D2
 grep -q "PREFLIGHT-FAILED D2 (rc=1) -> SKIPPED" "$SB/w0.log" && [ -f "$SB/gcs/decarc/D2_SKIPPED" ] && [ "$(n_ok)" = 3 ] && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && ok "S6 optional arm skipped, complete" || bad "S6a"
 mk_sandbox; run_chain 0 1 STUB_PREFLIGHT_FAIL=D0
-grep -q "PREFLIGHT-FAILED D0 (rc=1) -> the night stops here" "$SB/w0.log" && grep -q "DECARC-PREFLIGHT-ABORT" "$SB/w0.log" && ! grep -q "PRETRAIN-START" "$SB/w0.log" && ok "S6b seed arm aborts before any launch" || bad "S6b"
+grep -q "PREFLIGHT-FAILED D0 (rc=1) -> the chain stops here" "$SB/w0.log" && grep -q "DECARC-PREFLIGHT-ABORT" "$SB/w0.log" && ! grep -q "PRETRAIN-START" "$SB/w0.log" && ok "S6b seed arm aborts before any launch" || bad "S6b"
 
 echo "== S7 launch-time HBM OOM -> ONE --remat retry (N0; the DEC arms carry --remat by registry) =="
 mk_sandbox; run_chain 0 1 STUB_OOM_ARM=N0
@@ -409,6 +415,12 @@ run_chain_in "$NB" 1 2 DA_SHARE_EXIT=1 LIVE_PREFIX=gs://qhrrn2-rescue/decarc/liv
 grep -q "DECARC-SHARE-DONE worker=0 arms=\[D0 D2\]" "$SB/nodeA_w0.log" && [ -f "$SB/gcs/decarc/SHARE_DONE_w0" ] && grep -q "CHAIN-DECARC-COMPLETE worker=1" "$SB/nodeB_w1.log" && [ -f "$SB/gcs/decarc/decarc_final.tgz" ] && [ "$(n_ok)" = 4 ] && ok "S21b either order completes exactly once" || bad "S21b"
 run_chain_in "$NA" 0 2 DA_SHARE_EXIT=1 LIVE_PREFIX=gs://qhrrn2-rescue/decarc/live_w0
 grep -q "ARM-SKIP D0 (done)" "$SB/nodeA_w0.log" && grep -q "CHAIN-DECARC-COMPLETE worker=0" "$SB/nodeA_w0.log" && ! grep -q "PRETRAIN-START\|EVAL-OK" "$SB/nodeA_w0.log" && ok "S21b a relaunch of a finished pod re-runs nothing" || bad "S21b relaunch: $(grep -E 'PRETRAIN-START|EVAL-OK|COMPLETE|SHARE' "$SB/nodeA_w0.log" | head -3)"
+echo "== S23 the chip-release race: a row whose first attempt dies with a busy chip is retried once after the chips free, then banked ==" 
+mk_sandbox; run_chain 0 1 STUB_EVAL_BUSY="D0:rt48:2"
+grep -q "EVAL-CHIP-BUSY-RETRY D0_rt48" "$SB/w0.log" && grep -q "EVAL-OK D0_rt48" "$SB/w0.log" && [ "$(n_ok)" = 4 ] && grep -q "CHAIN-DECARC-COMPLETE" "$SB/w0.log" && ok "S23 the busy row retried once and completed" || bad "S23: $(grep -E 'CHIP-BUSY|SHARD-FAILED|EVAL-OK D0_rt48' "$SB/w0.log" | head -3)"
+"$REAL_PY" -c "import json; s=json.load(open('$SB/repo/runs/decarceval_D0/rt48/summary.json')); assert s['n_tasks']==48, s" && ok "S23 the retried row is complete (48 tasks, each once)" || bad "S23 n-gate"
+grep -q "EVAL-SHARD-FAILED D0_rt48" "$SB/w0.log" && bad "S23 the row was reported failed despite the retry" || ok "S23 no spurious ARM-PARTIAL"
+
 echo "== S22 an ARM-PARTIAL exits 1 at once (OWN-ARMS-INCOMPLETE; no 20-h wait); the rerun completes =="
 mk_sandbox; run_chain 0 1 STUB_EVAL_FAIL="D0:rt48:1" C1_WAIT_PASSES=600 C1_WAIT_SLEEP=120
 grep -q "ARM-PARTIAL D0" "$SB/w0.log" && grep -q "DECARC-OWN-ARMS-INCOMPLETE worker=0" "$SB/w0.log" && ! grep -q "WORKER-DONE" "$SB/w0.log" && ok "S22 the partial arm exits at once instead of waiting (C1_WAIT_PASSES 600 x 120 s would be 20 h)" || bad "S22: $(grep -E 'PARTIAL|INCOMPLETE|WORKER-DONE' "$SB/w0.log" | head -3)"
