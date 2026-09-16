@@ -46,6 +46,19 @@ grid_of () {  # ARM -> the canonical selected-grid path (from the battery's full
   fi
   echo "$ck"
 }
+grid_override () {  # ARM -> the registered grid override FILLER_CK_<ARM>="gs://.../<tgz>|<ckpt path inside it>" (2026-09-17: a grid that
+  # lives under a campaign's own prefix, not the one grid_of reads — C8's paper grid under c8x/), pulled and extracted to the ckpt path
+  local arm=$1 spec tgz ck
+  eval "spec=\${FILLER_CK_$arm:-}"; [ -n "$spec" ] || { echo ""; return 1; }
+  tgz=${spec%%|*}; ck=${spec#*|}
+  if [ ! -f "$ck" ]; then
+    mkdir -p "/tmp/filler_pull/o_$arm" && gsutil -q cp "$tgz" "/tmp/filler_pull/o_$arm.tgz" 2>/dev/null || { echo ""; return 1; }
+    tar xzf "/tmp/filler_pull/o_$arm.tgz" -C "/tmp/filler_pull/o_$arm" "$ck" 2>/dev/null
+    mkdir -p "$(dirname "$ck")" && cp "/tmp/filler_pull/o_$arm/$ck" "$ck" 2>/dev/null || { echo ""; return 1; }
+  fi
+  echo "$ck"
+}
+has_override () { local spec; eval "spec=\${FILLER_CK_$1:-}"; [ -n "$spec" ]; }
 fill_eval () {  # NAME CK OUTDIR NGATE EXTRA... — NCHIP-way sharded, merged, n-gated, banked under $FG (idempotent by marker; resumes from partials)
   local name=$1 CK=$2 O=$3 NGATE=$4; shift 4
   gsutil -q stat "$FG/${name}_OK" 2>/dev/null && { log "FILLER-SKIP $name (done)"; return 0; }
@@ -118,18 +131,20 @@ for pass in $(seq 1 "${PASSES:-400}"); do
       continue
     fi
     for arm in $FILLER_ARMS; do
-      case $job in d64full) name=d64full_$arm;; d128sub) name=d128sub_$arm;; d256sub) name=d256sub_$arm;; *) log "FILLER-BAD-JOB $job"; continue;; esac
+      case $job in d64full) name=d64full_$arm;; d128sub) name=d128sub_$arm;; d256sub) name=d256sub_$arm;; k128) name=k128_$arm;; *) log "FILLER-BAD-JOB $job"; continue;; esac
       gsutil -q stat "$FG/${name}_OK" 2>/dev/null && continue
       todo=$((todo + 1))
       gsutil -q stat "$GCS/${arm}_ARM_OK" 2>/dev/null || { log "FILLER-NOT-READY $arm"; continue; }
       claimed_elsewhere "$name" && { log "FILLER-CLAIMED $name (another worker)"; continue; }
       wait_idle
       echo "$W $(date -u +%FT%TZ)" | gsutil -q cp - "$FG/${name}_CLAIM_w$W"
-      ck=$(grid_of "$arm") || { log "FILLER-NO-GRID $arm"; continue; }
+      if has_override "$arm"; then ck=$(grid_override "$arm") || { log "FILLER-NO-GRID $arm (the registered override could not be pulled)"; continue; }
+      else ck=$(grid_of "$arm") || { log "FILLER-NO-GRID $arm"; continue; }; fi
       case $job in
         d64full) fill_eval "$name" "$ck" "runs/filler_sxeval_p${R_TAG}${arm}_full_t64" "$N_FULL" --split test --t-total 64 --ema --record-by-step && did=$((did + 1)) ;;
         d128sub) fill_eval "$name" "$ck" "runs/filler_sxeval_p${R_TAG}${arm}_sub${SUB_N}_t128" "$SUB_N" --split test --subsample "$SUB_N" --t-total 128 --ema --record-by-step && did=$((did + 1)) ;;
         d256sub) fill_eval "$name" "$ck" "runs/filler_sxeval_p${R_TAG}${arm}_sub${SUB_N}_t256" "$SUB_N" --split test --subsample "$SUB_N" --t-total 256 --ema --record-by-step && did=$((did + 1)) ;;
+        k128)    fill_eval "$name" "$ck" "runs/filler_sxscan${K_PORT}_p${R_TAG}${arm}" "$N_SCAN" --split test --subsample "$N_SCAN" --t-total 64 --k-init "$K_PORT" --ema && did=$((did + 1)) ;;   # 2026-09-17: the k128 restart scan on a banked arm (the frontier headline scan's flags; the same row the champion filler banked as k128_<arm>)
       esac
     done
   done

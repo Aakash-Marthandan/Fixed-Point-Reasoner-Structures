@@ -94,16 +94,23 @@ arm_flags () {   # one variable per arm from C0 (a later flag overrides an earli
     C6)  echo "$(champ_common) --seed 0 --dec-commit --dec-commit-tau 0.9 --dec-commit-w 0.1";;
     C7)  echo "$(champ_common) --seed 1 --dec-width 192";;   # C5's recipe at seed 1 (2026-09-13 registration)
     C8)  echo "$(champ_common) --seed 2 --dec-width 192";;   # C5's recipe at seed 2
+    # 2026-09-17 (the pending Sudoku runs; Plan_2026-09-17_Sudoku_Pending_Runs.md): TRM's cell under the FULL recipe (randomized-init + anchor rows,
+    # the field's digit augmentation its cell needs), on the champion loop and regime — X5 parameter-matched to the width-192 DEC (hidden 160:
+    # 795,906 vs 789,122), X7 width-matched (hidden 192: 895,490), X6 at the field's hidden 512 (5.04 M). A fixed 50k budget, never extended.
+    X5)  echo "$(loop_common) --cell trm --trm-hidden 160 --sudoku-digit-aug --fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25 --trm-ri-sigma 1.0 --seed 0";;
+    X6)  echo "$(loop_common) --cell trm --trm-hidden 512 --sudoku-digit-aug --fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25 --trm-ri-sigma 1.0 --seed 0";;
+    X7)  echo "$(loop_common) --cell trm --trm-hidden 192 --sudoku-digit-aug --fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25 --trm-ri-sigma 1.0 --seed 0";;
     *)   return 1;;
   esac
 }
-arm_steps ()  { case $1 in C3|C6) echo "$STEPS_LONG";; *) echo "$STEPS_X";; esac; }
+arm_steps ()  { case $1 in C3|C6|X5|X6|X7) echo "$STEPS_LONG";; *) echo "$STEPS_X";; esac; }
+fixed_budget () { case $1 in X5|X6|X7) return 0;; *) return 1;; esac; }   # 2026-09-17: the X arms' budget is the triple's 50k; the extension rule never applies
 head_ema ()   { echo "--ema"; }                  # headline weights = EMA
 alt_ema ()    { echo ""; }                       # the alt row = the raw weights
 select_key () { echo val_t16_ema; }
 second_key () { echo val_t16; }
 head_t ()     { echo 16; }
-screen_steps () { case $1 in C3|C6) echo "010000 020000 030000 040000";; *) echo "010000 020000";; esac; }
+screen_steps () { case $1 in C3|C6|X5|X6|X7) echo "010000 020000 030000 040000";; *) echo "010000 020000";; esac; }
 is_optional () { case " $OPTIONAL_ARMS " in *" $1 "*) return 0;; *) return 1;; esac; }
 is_commit ()   { [ "$1" = C6 ]; }
 worker_arms () {  # the arms THIS worker runs, in order (the sync rider is bound to the C3 worker)
@@ -240,7 +247,9 @@ run_pretrain () {  # ARM — ONE-SHOT NaN amputation; the registered EXTENSION r
     echo "PRETRAIN-NAN $arm (rc=$rc) -> amputate"; amputate "$D" || return 1
   fi
   # R-CH-EXT: the selected grid inside the last EXT_WINDOW steps of the budget -> ONE extension by EXT_STEPS
-  if [ ! -f "$D/STOPPED.txt" ] && [ ! -f "$D/EXTENDED.txt" ]; then
+  if fixed_budget "$arm"; then
+    echo "PRETRAIN-FIXED-BUDGET $arm $budget (no extension by registration: the budget is the triple's)"
+  elif [ ! -f "$D/STOPPED.txt" ] && [ ! -f "$D/EXTENDED.txt" ]; then
     sel=$(select_best "$D") && best=$(echo "$sel" | awk '{print $3}')
     if [ -n "${best:-}" ] && [ "$best" -ge $((budget - EXT_WINDOW)) ]; then
       echo "EXTENDED from $budget to $((budget + EXT_STEPS)) (peak at $best) $(date -u +%FT%TZ)" > "$D/EXTENDED.txt"
