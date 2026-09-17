@@ -1,4 +1,6 @@
-# The pending Sudoku runs for paper 1 — registration DRAFT (2026-09-17; locked at the registration commit after the PI's decisions in §6; nothing launched)
+# The pending Sudoku runs for paper 1 — REGISTRATION (2026-09-17; §3 rules and §4 credences LOCKED at the registration commit; the analyzer `tools/analyze_sudokupend.py` frozen, byte-identical to 208345d)
+
+> **THE PI'S DECISIONS (2026-09-17): "Option 3, S2 + X5, lift the freeze, go."** Decision 1 = Option 3: the old project's bucket `gs://qhrrn2-rescue` (93.2 GB, US-EAST1) mirrored server-side into `gs://qhrrn2-arc/rescue/` and the campaign run in the ARC project on the mirrored champion prefix (`GCS=gs://qhrrn2-arc/rescue/champ`; the corpus from its `sets/`; C8's grid from the mirrored `c8x/`); Decision 2 = the arms S2 + X5 (X6 / X7 not run); Decision 3 = the Sep 16 results freeze lifted for these rows; Decision 4 = the $0 Mac lenses at the PI's later word. The PI also asked for the old project's GCS to be cleaned up once we are done with it: the mirror is verified first, the deletion of the source is confirmed with the PI second (§7). Env: `tools/campaign_sudokupend.env` (the ARC project's image and labels; WALL 8.5 h with wall recycles as the ARC ops proved).
 
 **The PI (2026-09-17):** "get the pending sudoku runs ready so we can make the paper complete and strongly defensible against the reviewers." The source lists: `paper/documentation/ACCEPTANCE_PLAN_2026-09-15.md` (Tiers 1–2 and the PI's owed decisions), the paper's §4.3 ("What one seed shows, and what stays open") and §8 (Limitations), and `Report_2026-09-14_Paper_Final_Verdict.md` (R-PF-8's excursion letters).
 
@@ -49,9 +51,13 @@
 
 `tools/harness_sudokupend.sh` (Q1–Q4) · `tools/harness_champ.sh` and `tools/harness_paperfinal.sh` unchanged in outcome (the shared-tool edits are byte-neutral for their arms) · `tools/analyze_sudokupend.py --selftest` · the CPU smoke of X5's flags (`tools/pretrain.py` for two steps at batch 8 on the mon512 corpus with `--sudoku-aug 2`) · the analyzer's real run on no data exits clean. Then the registration commit (this file's §3–§4 locked; the analyzer frozen from it), the ledger entry, the launch by `tools/pod.sh` with `tools/campaign_sudokupend.env` — after Decision 1.
 
-## 6. The PI's decisions
+## 6. The PI's decisions (taken 2026-09-17; the header above)
 
 1. **The compute project** for the Sudoku pods: clear the Sudoku project's billing (the campaign runs there as designed) or move to the ARC project (the env's `PROJECT`; the cross-project bucket reads verified first).
 2. **The arms:** S2 + S4 (X5) as recommended (≈ $100–130 together); add S6 (X6, ≈ $120–160)? X7 (hidden 192, width-matched) instead of or beside X5?
 3. **The freeze:** the acceptance plan lifts the Sep 16 results freeze for these rows only, each registered before its data; the calendar lands them by Sep 19–20 and in the number pipeline by Sep 21–22 (the paper's full-text deadline Sep 25).
 4. **S7 (i)–(iii) and S8:** the Mac lenses (i) and (ii) at $0 (recommended: (ii) closes the excursion paragraph on the record the paper already has); (iii) and S8 optional.
+
+## 7. The old project's storage (the PI: "clean up the GCS from the old 'quantum-llm' project since we're done with that now")
+
+The old project holds one bucket, `gs://qhrrn2-rescue` (93.2 GB, US-EAST1; the TPU API of that project has denied reads since 2026-09-15). Order of operations: (1) the whole bucket mirrored server-side into `gs://qhrrn2-arc/rescue/` (`gcloud storage rsync -r`); (2) the mirror verified — object counts and total bytes equal on both sides, the objects the chain needs present (the champion prefix's markers and banked grids, `champ/sets/`, `c8x/C8_pretrain.tgz`, `frontier/`); (3) only then the source's deletion, on the PI's explicit confirmation of the scope (the bucket and every object in it), by `gcloud storage rm -r`; the local pulls under `runs/_*_pull/` remain the Mac's copies. The paper's provenance strings name `gs://qhrrn2-rescue/...` paths; the mirror keeps the same relative paths under `gs://qhrrn2-arc/rescue/`.
