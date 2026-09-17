@@ -50,7 +50,7 @@ PYEOF
 run_sp () {  # [VAR=val...]
   (cd "$SB/repo" && env PATH="$SB/bin:$PATH" CHAIN_PY="$SB/bin/stubpy" REAL_PY="$REAL_PY" CHAIN_WORKER=0 CHAIN_WORKERS=1 NCHIP_OVERRIDE=4 \
      C1_STEPS_X=30000 C1_STEPS_LONG=50000 C1_EXT_STEPS=20000 C1_EXT_WINDOW=4000 LIVE_NO_GUARD=1 LIVE_EVERY=1 STALL_SEC=3 WATCH_POLL=1 \
-     PASS_SLEEP=1 IDLE_POLL=1 SP_PASSES=2 FILLER_CK_C8="$SB/gcs/c8x/C8_pretrain.tgz|runs/pretrainchamp_C8/ckpt_046000.pkl" "$@" \
+     PASS_SLEEP=1 IDLE_POLL=1 SP_PASSES=2 FILLER_CK_C8="$SB/gcs/c8x/C8_pretrain.tgz,runs/pretrainchamp_C8/ckpt_046000.pkl" "$@" \
      bash tools/chain_sudokupend.sh > "$SB/sp.log" 2>&1; echo $? > "$SB/sp.rc")
 }
 line_of () { grep -n "$1" "$SB/sp.log" | head -1 | cut -d: -f1; }

@@ -46,11 +46,11 @@ grid_of () {  # ARM -> the canonical selected-grid path (from the battery's full
   fi
   echo "$ck"
 }
-grid_override () {  # ARM -> the registered grid override FILLER_CK_<ARM>="gs://.../<tgz>|<ckpt path inside it>" (2026-09-17: a grid that
+grid_override () {  # ARM -> the registered grid override FILLER_CK_<ARM>="gs://.../<tgz>,<ckpt path inside it>" (a comma: the value rides a shell command line through pod.sh) (2026-09-17: a grid that
   # lives under a campaign's own prefix, not the one grid_of reads — C8's paper grid under c8x/), pulled and extracted to the ckpt path
   local arm=$1 spec tgz ck
   eval "spec=\${FILLER_CK_$arm:-}"; [ -n "$spec" ] || { echo ""; return 1; }
-  tgz=${spec%%|*}; ck=${spec#*|}
+  tgz=${spec%%,*}; ck=${spec#*,}
   if [ ! -f "$ck" ]; then
     mkdir -p "/tmp/filler_pull/o_$arm" && gsutil -q cp "$tgz" "/tmp/filler_pull/o_$arm.tgz" 2>/dev/null || { echo ""; return 1; }
     tar xzf "/tmp/filler_pull/o_$arm.tgz" -C "/tmp/filler_pull/o_$arm" "$ck" 2>/dev/null

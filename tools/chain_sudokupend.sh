@@ -17,7 +17,7 @@ cd "$(dirname "$0")/.." || exit 1
 export PATH=$PWD/.venv/bin:$PATH PYTHONPATH=src
 export GCS=${GCS:-gs://qhrrn2-rescue/champ}
 export LIVE_PREFIX=${LIVE_PREFIX:-gs://qhrrn2-rescue/champ_pend/live}
-export FILLER_CK_C8=${FILLER_CK_C8:-gs://qhrrn2-rescue/c8x/C8_pretrain.tgz|runs/pretrainchamp_C8/ckpt_046000.pkl}
+export FILLER_CK_C8=${FILLER_CK_C8:-gs://qhrrn2-rescue/c8x/C8_pretrain.tgz,runs/pretrainchamp_C8/ckpt_046000.pkl}
 SP_ARMS=${SP_ARMS:-X5}
 SENT=${SP_SENT:-CHAIN-SUDOKUPEND}; FINAL=${FINAL_OBJ:-sudokupend_final.tgz}
 W=${CHAIN_WORKER:-0}
