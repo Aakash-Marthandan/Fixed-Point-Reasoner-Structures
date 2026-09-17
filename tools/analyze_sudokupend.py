@@ -60,6 +60,28 @@ def onset(root: PF.Root, arm: str):
     return "NOT-BY-END"
 
 
+def argv_missing(root: PF.Root, arm: str):
+    """the registered levers absent from the arm's recorded argv.
+    READER-FORMAT ADDENDUM 2026-09-17 (after the frozen run printed a false FAIL): the trainer writes config.json["argv"] as vars(args), a DICT, where the
+    frozen reader expected the token list. The dict form is read pairwise (flag -> its value), which is stricter than the registered token membership;
+    the list form is read exactly as registered. The registry, every rule and every threshold are unchanged."""
+    av = (PF.jload(root.pdir(arm) / "config.json") or {}).get("argv")
+    if not isinstance(av, dict): return [f for f in R["flags"] if f not in (av if isinstance(av, list) else [])]
+    f, miss, i = R["flags"], [], 0
+    while i < len(f):
+        key = f[i][2:].replace("-", "_")
+        if i + 1 < len(f) and not f[i + 1].startswith("--"):           # a valued lever: the recorded value equals the registered one
+            got, want = av.get(key), f[i + 1]
+            try: same = got is not None and not isinstance(got, bool) and (str(got) == want or float(got) == float(want))
+            except (TypeError, ValueError): same = False
+            if not same: miss += [f[i], want]
+            i += 2
+        else:                                                           # a switch: recorded True
+            if av.get(key) is not True: miss.append(f[i])
+            i += 1
+    return miss
+
+
 def letters(root: PF.Root, arm: str):
     L, probs = {}, []
     a16 = root.acc(root.chain(arm, "full_vsel_t16")); a64 = root.acc(root.chain(arm, "full_vsel_t64"))
@@ -68,8 +90,7 @@ def letters(root: PF.Root, arm: str):
     if s64.get("n") != 100000: probs.append(f"{arm} D64 n {s64.get('n')} != 100000")
     cks = {s.get("ckpt") for s in (s16, s64, root.summ(root.scan32(arm)) or {}) if s.get("ckpt")}
     if len(cks) > 1: probs.append(f"{arm} {len(cks)} checkpoints across its rows")
-    av = PF.argv_of(root, arm) or []
-    miss = [f for f in R["flags"] if f not in av]
+    miss = argv_missing(root, arm)
     if miss: probs.append(f"{arm} argv lacks {miss}")
     e = root.recs(root.eqr128())
     if e is None: probs.append("EqR k128 row absent")
@@ -135,7 +156,7 @@ def report(root: Path, arm: str, out: Path | None):
 
 
 # ---------- selftest: hand-built records ----------
-def _root(tmp: Path, x16, x64, tri16, tri64, x_sel=0.998, tri_sel=(0.998, 0.997, 0.998), eqr_sel=0.988, spur_x=0.004, n_params=795906, onset_drop=False, flags=True):
+def _root(tmp: Path, x16, x64, tri16, tri64, x_sel=0.998, tri_sel=(0.998, 0.997, 0.998), eqr_sel=0.988, spur_x=0.004, n_params=795906, onset_drop=False, flags=True, argv_dict=None):
     r = tmp / "runs"; rng = np.random.default_rng(0)
     def row(d, n, acc, ck):
         d.mkdir(parents=True, exist_ok=True); (d / "summary_all.json").write_text(json.dumps({"n": n, "exact_acc": acc, "ckpt": ck, "k_init": 32, "t_total": 64}))
@@ -157,6 +178,7 @@ def _root(tmp: Path, x16, x64, tri16, tri64, x_sel=0.998, tri_sel=(0.998, 0.997,
     scan(r / "filler_sxscan128_pport_eqr", 5000, 128, eqr_sel, "runs/frontier_ckpts/eqr.pkl", idx)
     p = r / "pretrainchamp_X5"; p.mkdir(parents=True, exist_ok=True)
     av = ["--cell", "trm", "--trm-hidden", "160", "--sudoku-digit-aug", "--fpa-k", "1", "--trm-ri-sigma", "1.0"] if flags else ["--cell", "dec"]
+    if argv_dict is not None: av = argv_dict                                                  # the trainer's real format: vars(args)
     (p / "config.json").write_text(json.dumps({"argv": av, "n_params_bulk": n_params, "n_params_table": 32}))
     with open(p / "metrics.jsonl", "w") as f:
         for i, st in enumerate(range(2000, 50001, 2000)):
@@ -198,6 +220,19 @@ def selftest():
         L = letters(PF.Root(r), "X5")
         chk("C fallback floor", "floor 0.54 registry" in L["R-SP-2 PARITY-16"] and L["R-SP-2 PARITY-16"].startswith("BELOW"))
         chk("C missing k128 row", "C8 k128 row absent" in L["INTEGRITY"] and "C8 NO-DATA" in L["R-SP-4 K128-TRIPLE"])
+        # case D (the reader-format addendum): the trainer's dict argv — the registered levers PASS; a wrong value, a false switch and an absent key each FAIL
+        good = {"cell": "trm", "trm_hidden": 160, "sudoku_digit_aug": True, "fpa_k": 1, "fpa_eps": 0.2, "trm_ri_sigma": 1.0, "seed": 1, "steps": 50000}
+        tri = ((0.954, 0.9595, 0.9487), (0.9905, 0.9923, 0.9887))
+        L = letters(PF.Root(_root(Path(td) / "d1", 0.930, 0.980, *tri, argv_dict=good)), "X5")
+        chk("D dict argv PASS", L["INTEGRITY"] == "PASS")
+        L = letters(PF.Root(_root(Path(td) / "d2", 0.930, 0.980, *tri, argv_dict={**good, "cell": "dec"})), "X5")
+        chk("D dict wrong cell", L["INTEGRITY"] == "FAIL: X5 argv lacks ['--cell', 'trm']")
+        L = letters(PF.Root(_root(Path(td) / "d3", 0.930, 0.980, *tri, argv_dict={**good, "sudoku_digit_aug": False, "trm_ri_sigma": 0.0})), "X5")
+        chk("D dict false switch + wrong sigma", L["INTEGRITY"] == "FAIL: X5 argv lacks ['--trm-ri-sigma', '1.0', '--sudoku-digit-aug']")
+        L = letters(PF.Root(_root(Path(td) / "d4", 0.930, 0.980, *tri, argv_dict={k: v for k, v in good.items() if k != "fpa_k"})), "X5")
+        chk("D dict absent key", L["INTEGRITY"] == "FAIL: X5 argv lacks ['--fpa-k', '1']")
+        L = letters(PF.Root(_root(Path(td) / "d5", 0.930, 0.980, *tri, argv_dict={**good, "fpa_k": True})), "X5")
+        chk("D dict bool is not 1", "'--fpa-k', '1'" in L["INTEGRITY"])
     print(f"selftest {'OK' if not bad else 'FAILED'}: {ok}/{ok + len(bad)} checks" + (f"; failed: {bad}" if bad else ""))
     return 0 if not bad else 1
 
