@@ -10,6 +10,9 @@
 #   L4 a preemption: the live prefix holds a later state -> the resume point is the live one, $SRC's tarball never extracted.
 #   L5 X5's preflight failure -> abort, INCOMPLETE.     L6 a relaunch after the pretrain is banked -> PRETRAIN-SKIP, the battery completes.
 #   L7 a budget that would break the six-digit grid names -> X5L-BAD-BUDGET rc 2.
+#   L8 a NaN death past step 100,000 -> amputated to the newest FINITE grid past 100k (never the ckpt_0* head); L9 a corrupt ckpt_latest in the
+#      live prefix with grids past 100,000 -> the restore falls back to the newest loadable grid past 100k. (The ckpt_[0-9]* fix, 2026-09-17: the
+#      first long run found amputate() and sanitize() globbing ckpt_0*, which stops matching at step 100,000.)
 set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 _HC=$(mktemp /tmp/hxl_src.XXXXXX); sed -n '1,157p' "$HERE/harness_champ.sh" > "$_HC"
@@ -122,6 +125,18 @@ run_xl STUB_PEAK_LAST_ARM=X5
 echo "== L7 a budget past the six-digit grid names is refused =="
 mk_xl; run_xl X5L_EXT_TO=1000000
 [ "$(cat "$SB/xl.rc")" = 2 ] && grep -q "X5L-BAD-BUDGET" "$SB/xl.log" && ! grep -q "XL-LANE1" "$SB/xl.log" && ok "L7 rc 2, nothing launched" || bad "L7 budget guard (rc $(cat "$SB/xl.rc"))"
+
+echo "== L8 a NaN death PAST step 100,000 -> the amputation rolls back to the newest FINITE grid past 100k, not to the ckpt_0* head (the glob fix, 2026-09-17) =="
+mk_xl; run_xl STUB_NAN_ARM=X5 STUB_PEAK_LAST_ARM=X5
+grep -q "PRETRAIN-NAN X5" "$SB/xl.log" && grep -q "AMPUTATED to ckpt_480000.pkl step 480000" "$SB/xl.log" && ! grep -q "AMPUTATED to ckpt_0" "$SB/xl.log" && grep -q "VALBEST X5 480000" "$SB/xl.log" && grep -q "CHAIN-X5LONG-COMPLETE" "$SB/xl.log" && ok "L8 amputated to ckpt_480000 (the newest finite grid), selected there, COMPLETE" || { bad "L8 amputation past 100k: $(grep 'AMPUTATED\|PRETRAIN-NAN\|VALBEST' "$SB/xl.log" | tr '\n' ' ' | cut -c1-300)"; }
+
+echo "== L9 a corrupt ckpt_latest in the live prefix with grids PAST 100,000 -> the live restore falls back to the newest loadable grid past 100k (the glob fix) =="
+mk_xl
+mkdir -p "$SB/lv9" && (cd "$SB/lv9" && mkdir -p runs && tar xzf "$SB/gcs/champ/X5_pretrain.tgz" && STUB_PEAK_LAST_ARM=X5 "$SB/bin/stubpy" tools/pretrain.py --out runs/pretrainchamp_X5 $X5FLAGS --steps 400000 > /dev/null 2>&1)
+mkdir -p "$SB/gcs/x5l/live/runs" && cp -R "$SB/lv9/runs/pretrainchamp_X5" "$SB/gcs/x5l/live/runs/" && echo "not a pickle" > "$SB/gcs/x5l/live/runs/pretrainchamp_X5/ckpt_latest.pkl"
+echo "EXTENDED from 50000 to 960000 (pre-staged by the first launch)" > "$SB/gcs/x5l/X5_EXTENDED"
+run_xl STUB_PEAK_LAST_ARM=X5
+grep -q "LIVE-RESTORE-FALLBACK .*ckpt_400000.pkl step 400000" "$SB/xl.log" && ! grep -q "LIVE-RESTORE-FALLBACK .*ckpt_0" "$SB/xl.log" && grep -q "X5L-RESUME-POINT step 400000" "$SB/xl.log" && grep -q "CHAIN-X5LONG-COMPLETE" "$SB/xl.log" && ok "L9 the fallback picked ckpt_400000 (the newest loadable grid), resume point 400000, COMPLETE" || { bad "L9 fallback past 100k: $(grep 'LIVE-RESTORE\|X5L-RESUME\|X5L-NO' "$SB/xl.log" | tr '\n' ' ' | cut -c1-300)"; }
 
 echo; echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

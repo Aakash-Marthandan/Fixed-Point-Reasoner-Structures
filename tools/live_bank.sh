@@ -62,7 +62,7 @@ sanitize () {   # every local pretrain dir: unloadable ckpt_latest -> newest loa
   for d in runs/pretrain${R_TAG}_*/; do
     d=${d%/}; [ -f "$d/ckpt_latest.pkl" ] || continue
     if st=$(verify_ckpt "$d/ckpt_latest.pkl" 2>/dev/null); then echo "LIVE-CKPT-OK $d step $st"; continue; fi
-    for g in $(ls -r "$d"/ckpt_0*.pkl 2>/dev/null); do
+    for g in $(ls -r "$d"/ckpt_[0-9]*.pkl 2>/dev/null); do   # [0-9], not 0: six-digit names past step 100,000 start with 1-9 (the X5 long run, 2026-09-17)
       if st=$(verify_ckpt "$g" 2>/dev/null); then
         cp -f "$g" "$d/ckpt_latest.pkl"; say "LIVE-RESTORE-FALLBACK $d ckpt_latest unloadable -> $(basename "$g") step $st (labeled; <= 5k steps re-run)"
         continue 2

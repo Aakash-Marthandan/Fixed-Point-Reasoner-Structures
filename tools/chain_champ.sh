@@ -150,7 +150,7 @@ def finite(tree):
             a = np.asarray(x)
             if a.dtype.kind in "fc" and not np.isfinite(a).all(): return False
     return True
-grids = sorted(d.glob("ckpt_0*.pkl")); best = None
+grids = sorted(d.glob("ckpt_[0-9]*.pkl")); best = None   # [0-9], not 0: past step 100,000 the six-digit names start with 1-9 (the X5 long run, 2026-09-17); identical for every arm under 100k
 for g in reversed(grids):
     try:
         c = pickle.load(open(g, "rb"))
@@ -272,7 +272,7 @@ run_pretrain () {  # ARM — ONE-SHOT NaN amputation; the registered EXTENSION r
 
 ensure_local_pretrain () {  # ARM — after a node change the banked grids + metrics must be local before selection
   local arm=$1 D=runs/pretrain${R_TAG}_$1
-  if [ ! -f "$D/metrics.jsonl" ] || [ -z "$(ls "$D"/ckpt_0*.pkl 2>/dev/null)" ]; then
+  if [ ! -f "$D/metrics.jsonl" ] || [ -z "$(ls "$D"/ckpt_[0-9]*.pkl 2>/dev/null)" ]; then
     if gsutil -q cp "$GCS/${arm}_pretrain.tgz" "/tmp/${arm}_pre_pull.tgz" 2>/dev/null; then
       tar xzf "/tmp/${arm}_pre_pull.tgz" 2>/dev/null && echo "PRETRAIN-RESTORE $arm (grids + metrics re-pulled from GCS)"
     fi
