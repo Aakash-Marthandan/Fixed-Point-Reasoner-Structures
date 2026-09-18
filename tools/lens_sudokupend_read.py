@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """DESCRIPTIVE reader for the pending Sudoku runs (EXPLORATORY; no registered letter is read or changed here).
 
-Three tables from the banked artifacts, beside tools/analyze_sudokupend.py's registered verdict:
+Five tables from the banked artifacts, beside tools/analyze_sudokupend.py's registered verdict:
   1. the k128 rows paired against EqR on the identical puzzles: discordant counts, the exact McNemar p, the triple's shared failures, the restart gain;
   2. the X arm's battery rows as the evaluator wrote them;
-  3. the X arm's training side against a DEC seed: the monitor curve, windowed training means, the measured pace, where the selected grid sits in the budget.
+  3. the X arm's training side against a DEC seed: the monitor curve, windowed training means, the measured pace, where the selected grid sits in the budget;
+  4. the residual selector's anatomy (residual quantiles of exact vs wrong draws, the verifier's rescue count, cold vs selected);
+  5. the final grid against the selected grid and the raw weights against the EMA, paired on the identical puzzles.
 
 usage: python3 tools/lens_sudokupend_read.py --root <stage>/runs [--arm X5] [--ref C5] [--out file.txt]
        python3 tools/lens_sudokupend_read.py --selftest
@@ -35,6 +37,23 @@ def shared_failures(rows, e):
     F = {k: set(r["idx"][~r["sel"]].tolist()) for k, r in rows.items()}
     u = set().union(*F.values()); i = set.intersection(*F.values()); ef = set(e["idx"][~e["sel"]].tolist())
     return dict(per={k: len(v) for k, v in F.items()}, union=len(u), all=len(i), union_and_eqr=len(u & ef), eqr=len(ef))
+
+
+def selector_anatomy(d: Path):
+    """the residual selector's anatomy on one k-restart row: residual quantiles of exact vs wrong draws (the selector picks the minimum
+    residual), the puzzles a verifier would rescue (verified-but-not-selected), cold vs selected, and the no-basin count."""
+    z = np.load(d / "records_all.npz"); ex = np.asarray(z["mi_exact_k"]).astype(bool); rs = np.asarray(z["mi_resid_k"]).astype(float)
+    sel, ver = PF.selected_exact(z); fin = np.isfinite(rs); r, w = ex & fin, (~ex) & fin
+    q = lambda a: (float(np.quantile(a, .1)), float(np.quantile(a, .5)), float(np.quantile(a, .9))) if a.size else (None, None, None)
+    return dict(n=int(ex.shape[0]), k=int(ex.shape[1]), cold=float(np.asarray(z["cold_exact"]).mean()), sel=float(sel.mean()), ver=float(ver.mean()),
+                spur=PF.spurious(z), per_draw=float(ex.mean()), no_basin=int((ex.sum(1) == 0).sum()), rescued=int((ver & ~sel).sum()),
+                q_exact=q(rs[r]), q_wrong=q(rs[w]), inverted=bool(r.any() and w.any() and np.median(rs[w]) < np.median(rs[r])))
+
+
+def paired_rows(a: Path, b: Path):
+    """two D16 rows paired on their common puzzles (records_all.npz with idx + cold_exact): diff = a - b, the discordant counts, p."""
+    if not (a / "records_all.npz").exists() or not (b / "records_all.npz").exists(): return None
+    return PF.paired(dict(np.load(a / "records_all.npz")), dict(np.load(b / "records_all.npz")))
 
 
 def windows(tr, width=10000, keys=("loss", "ce_in", "train_exact")):
@@ -82,8 +101,22 @@ def report(root: Path, arm: str, ref: str, out: Path | None):
         if not (root / f"pretrainchamp_{a}" / "metrics.jsonl").exists(): continue
         t = train_side(root / f"pretrainchamp_{a}")
         L.append(f"   {a}: the EMA monitor's maximum {fmt(t['best'][1])} at grid(s) {t['at']}, the budget's last grid {t['last'][0]} -> {'ONLY AT THE BUDGET EDGE' if t['at_edge'] else 'first reached inside the budget'}; EMA gain over the last 10k steps {100 * t['late_gain']:+.1f} pp; median pace {t['sps']:.1f} steps/s")
+        ema = [(m["step"], m.get("val_t16_ema") or 0) for m in t["mon"]]; top = t["best"][1]
+        L.append(f"      within 1 pp of the maximum: {[s for s, v in ema if top - v < 0.01]}; EMA at the last grid {fmt(ema[-1][1])}")
         L.append("      monitor EMA: " + " ".join(f"{m['step'] // 1000}k:{100 * (m.get('val_t16_ema') or 0):.1f}" for m in t["mon"]))
         L.append("      training:    " + " | ".join(f"{s // 1000}k loss {w['loss']:.3f} exact {100 * w['train_exact']:.1f}" for s, w in t["win"]))
+    L.append(f"\n4. the residual selector's anatomy (k-restart rows; the selector = the minimum-residual draw; spurious = wrong draws at or under the exact draws' median residual)")
+    L.append(f"   {'row':14s} {'n':>5s} {'k':>4s} {'cold':>6s} {'selected':>9s} {'verified':>9s} {'spur%':>6s} {'per-draw':>8s} {'no-basin':>8s} {'rescued':>7s} | residual p10/p50/p90  exact | wrong")
+    for a, d in ((f"{arm}", root / f"sxscan_pchamp{arm}"), (f"{arm} k128", root / f"filler_sxscan128_pchamp{arm}"), (f"{ref} k128", root / f"filler_sxscan128_pchamp{ref}")):
+        if not (d / "records_all.npz").exists(): continue
+        t = selector_anatomy(d); qe, qw = t["q_exact"], t["q_wrong"]
+        L.append(f"   {a:14s} {t['n']:>5d} {t['k']:>4d} {fmt(t['cold']):>6s} {fmt(t['sel']):>9s} {fmt(t['ver']):>9s} {100*(t['spur'] or 0):>6.2f} {fmt(t['per_draw']):>8s} {t['no_basin']:>8d} {t['rescued']:>7d} | "
+                 + (f"{qe[0]:.4f}/{qe[1]:.4f}/{qe[2]:.4f} | {qw[0]:.4f}/{qw[1]:.4f}/{qw[2]:.4f}" if qe[0] is not None and qw[0] is not None else "n/a") + ("  INVERTED (wrong draws more converged than exact ones)" if t["inverted"] else ""))
+    L.append(f"\n5. {arm}'s final grid against its selected grid, and its raw weights against its EMA, paired on the identical puzzles")
+    for name, a, b in (("final − selected", root / f"sxeval_pchamp{arm}" / "full_final_t16", root / f"sxeval_pchamp{arm}" / "full_vsel_t16"),
+                       ("raw − EMA (selected)", root / f"sxeval_pchamp{arm}" / "full_vsel_t16_alt", root / f"sxeval_pchamp{arm}" / "full_vsel_t16")):
+        pr = paired_rows(a, b)
+        L.append(f"   {name:22s} " + ("n/a" if pr is None else f"d {100*pr['diff']:+.2f} pp on {pr['n']:,}; only-first {pr['only_a']:,}, only-second {pr['only_b']:,}; p {pr['p']:.1e}"))
     text = "\n".join(L); print(text)
     if out: out.parent.mkdir(parents=True, exist_ok=True); out.write_text(text + "\n")
 
@@ -122,6 +155,22 @@ def selftest():
         with open(p / "metrics.jsonl", "a") as f: f.write(json.dumps({"monitor": {"step": 24000, "val_t16": 0.45, "val_t16_ema": 0.45}}) + "\n")
         t = train_side(p); chk("a tie with an earlier grid is not the edge", t["at"] == [20000, 24000] and not t["at_edge"] and t["best"][0] == 20000)
         chk("formatter", fmt(None) == "n/a" and fmt(0.4504) == "45.04")
+        # selector anatomy: a clean row (exact draws tiny residual) and an INVERTED row (wrong draws more converged); a verifier rescue
+        def mkrow(dd, ex_res, wr_res, bits):
+            dd.mkdir(parents=True, exist_ok=True); n = len(bits); ex = np.zeros((n, 3), bool); rs = np.full((n, 3), wr_res)
+            for i, b in enumerate(bits):
+                if b: ex[i, 2] = True; rs[i, 2] = ex_res
+            np.savez(dd / "records_all.npz", idx=np.arange(n), cold_exact=np.asarray(bits, bool), mi_exact_k=ex, mi_resid_k=rs)
+        mkrow(td / "clean", 0.002, 0.03, [1, 1, 0, 1]); mkrow(td / "inv", 0.15, 0.10, [1, 1, 0, 1])
+        c = selector_anatomy(td / "clean"); i = selector_anatomy(td / "inv")
+        chk("anatomy clean", not c["inverted"] and c["spur"] == 0.0 and c["rescued"] == 0 and abs(c["sel"] - 0.75) < 1e-9 and c["no_basin"] == 1)
+        chk("anatomy inverted", i["inverted"] and i["spur"] == 1.0 and i["rescued"] == 3 and i["sel"] == 0.0 and abs(i["ver"] - 0.75) < 1e-9)
+        # paired rows: diff = a - b on the common idx
+        (td / "pa").mkdir(); (td / "pb").mkdir()
+        np.savez(td / "pa" / "records_all.npz", idx=np.arange(6), cold_exact=np.array([1, 1, 1, 0, 0, 0], bool))
+        np.savez(td / "pb" / "records_all.npz", idx=np.arange(2, 8), cold_exact=np.array([0, 0, 1, 1, 1, 1], bool))   # common idx 2..5: a 1,0,0,0 vs b 0,0,1,1
+        pr = paired_rows(td / "pa", td / "pb"); chk("paired rows", pr["n"] == 4 and pr["only_a"] == 1 and pr["only_b"] == 2 and abs(pr["diff"] + 0.25) < 1e-9)
+        chk("paired rows absent", paired_rows(td / "pa", td / "nope") is None)
     print(f"selftest {'OK' if not bad else 'FAILED'}: {ok}/{ok + len(bad)} checks" + (f"; failed: {bad}" if bad else ""))
     return 0 if not bad else 1
 
