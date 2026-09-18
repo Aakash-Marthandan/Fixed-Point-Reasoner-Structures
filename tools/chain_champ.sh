@@ -100,11 +100,20 @@ arm_flags () {   # one variable per arm from C0 (a later flag overrides an earli
     X5)  echo "$(loop_common) --cell trm --trm-hidden 160 --sudoku-digit-aug --fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25 --trm-ri-sigma 1.0 --seed 0";;
     X6)  echo "$(loop_common) --cell trm --trm-hidden 512 --sudoku-digit-aug --fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25 --trm-ri-sigma 1.0 --seed 0";;
     X7)  echo "$(loop_common) --cell trm --trm-hidden 192 --sudoku-digit-aug --fpa-k 1 --fpa-eps 0.2 --fpa-frac 0.25 --trm-ri-sigma 1.0 --seed 0";;
+    # 2026-09-18 (THE WIDTH LADDER; Plan_2026-09-18_Width_Ladder.md): the champion recipe at seed 0 with ONE variable each — the hidden size
+    # (W128, W256; 192 and 384 exist), and OUR reimplementation of SE-RRM's mixers on this loop and recipe (SA*: self-attention over the cells
+    # with 2D rotary positions in place of the 81-cell SwiGLU, attention across the nine fields in place of the mean) at hidden 128 / 192 / 256.
+    # A FIXED 30k budget, never extended; the reduced battery (LADDER_BATTERY=1) on the identical 5,000 test puzzles.
+    W128)  echo "$(champ_common) --seed 0 --dec-width 128";;
+    W256)  echo "$(champ_common) --seed 0 --dec-width 256";;
+    SA128) echo "$(champ_common) --seed 0 --dec-width 128 --dec-token-mixer attn --dec-tok-dk 32 --dec-coupling attn --dec-attn-heads 4 --dec-attn-dk 32";;
+    SA192) echo "$(champ_common) --seed 0 --dec-width 192 --dec-token-mixer attn --dec-tok-dk 32 --dec-coupling attn --dec-attn-heads 4 --dec-attn-dk 32";;
+    SA256) echo "$(champ_common) --seed 0 --dec-width 256 --dec-token-mixer attn --dec-tok-dk 32 --dec-coupling attn --dec-attn-heads 4 --dec-attn-dk 32";;
     *)   return 1;;
   esac
 }
 arm_steps ()  { case $1 in C3|C6|X5|X6|X7) echo "$STEPS_LONG";; *) echo "$STEPS_X";; esac; }
-fixed_budget () { case $1 in X5|X6|X7) return 0;; *) return 1;; esac; }   # 2026-09-17: the X arms' budget is the triple's 50k; the extension rule never applies
+fixed_budget () { case $1 in X5|X6|X7|W128|W256|SA128|SA192|SA256) return 0;; *) return 1;; esac; }   # 2026-09-17: the X arms' budget is the triple's 50k; the extension rule never applies
 head_ema ()   { echo "--ema"; }                  # headline weights = EMA
 alt_ema ()    { echo ""; }                       # the alt row = the raw weights
 select_key () { echo val_t16_ema; }
@@ -458,6 +467,15 @@ run_arm () {  # ARM — pretrain (+ the extension rule), then the DEC-class batt
   if [ "${CHAMP_PRETRAIN_ONLY:-0}" = 1 ]; then   # the width-192 long run (2026-09-14; tools/chain_c5l.sh): train + select, no battery (unset = byte-identical)
     echo "pretrain-only: $(cat "$D/val_best.txt") $(date -u +%FT%TZ)" | gsutil -q cp - "$GCS/${arm}_ARM_OK"
     echo "ARM-OK $arm pretrain-only (CHAMP_PRETRAIN_ONLY=1: no evaluation battery) $(date -u +%H:%M)"; return 0
+  fi
+  if [ "${LADDER_BATTERY:-0}" = 1 ]; then   # the width ladder (2026-09-18; tools/chain_wladder.sh): the REDUCED battery on the identical 5,000 test puzzles (unset = byte-identical)
+    eval_sharded "l5k_${arm}_vsel_t${TH}" "$VBCK" "runs/sxeval_p${R_TAG}${arm}/sub5k_vsel_t${TH}" "$NCHIP" 5000 \
+        --split test --subsample 5000 --t-total "$TH" $HE --record-by-step
+    eval_sharded "l5k_${arm}_vsel_t64" "$VBCK" "runs/sxeval_p${R_TAG}${arm}/sub5k_vsel_t64" "$NCHIP" 5000 \
+        --split test --subsample 5000 --t-total 64 $HE --record-by-step
+    scan_dec "$arm" "$VBCK" || echo "SCAN-ABSENT $arm (labeled)"
+    echo "ladder-battery: $(cat "$D/val_best.txt") $(date -u +%FT%TZ)" | gsutil -q cp - "$GCS/${arm}_ARM_OK"
+    echo "ARM-OK $arm ladder battery (LADDER_BATTERY=1: D16 + D64 on 5,000, the k${K_SCAN_WIDE} scan) $(date -u +%H:%M)"; return 0
   fi
   local ST; ST=$(stopped_step "$arm")
   for st in $(screen_steps "$arm"); do

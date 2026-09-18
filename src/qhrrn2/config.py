@@ -152,6 +152,13 @@ class Config:
     # dec_commit_tau >= 1 = the head trains, no hardening (the forward is the plain DEC's, bit-exact);
     # dec_commit False = the head absent, bit-exact pre-existing graph.
     dec_coupling_kind: str = "mean"
+    # THE WIDTH LADDER (Plan_2026-09-18_Width_Ladder; 2026-09-18). dec_token_mixer "attn" = OUR REIMPLEMENTATION of
+    # SE-RRM's position mixer inside the DEC block: multi-head self-attention over the S cells of each field (the same
+    # weights for every field, so S9-equivariance stays exact) with 2D rotary positions (half of each head rotated by
+    # the row index, half by the column index), in place of the 81-cell token-mixing SwiGLU. Head width dec_tok_dk
+    # (heads = dec_width / dec_tok_dk). "mlp" = the pre-existing cell: the parameter tree and the graph are bit-exact.
+    dec_token_mixer: str = "mlp"
+    dec_tok_dk: int = 32
     dec_attn_heads: int = 4
     dec_attn_dk: int = 32
     dec_commit: bool = False

@@ -49,6 +49,10 @@ def init_params(key, cfg: Config, hw: int = 81):
     for i in range(cfg.trm_layers):
         b = {"mlp_t": TC._swiglu_init(ks[4 + 3 * i], S, cfg.trm_expansion),    # token mixing over the 81 cells
              "mlp": TC._swiglu_init(ks[5 + 3 * i], w, cfg.trm_expansion)}      # channel SwiGLU
+        if cfg.dec_token_mixer == "attn":                                         # the width ladder's mixer arms: attention over the cells
+            assert w % cfg.dec_tok_dk == 0 and cfg.dec_tok_dk % 4 == 0, "dec_width must divide by dec_tok_dk, dec_tok_dk by 4 (2D rotary)"
+            kq, ko = jax.random.split(jax.random.fold_in(ks[4 + 3 * i], 7))
+            del b["mlp_t"]; b["att_qkv"] = TC._linear_init(kq, w, 3 * w); b["att_o"] = TC._linear_init(ko, w, w)
         if cfg.dec_coupling:
             b["fc"] = TC._linear_init(ks[6 + 3 * i], w, w)                       # the field coupling (w, w)
             if cfg.dec_coupling_kind == "attn":                                   # C4: set attention over the fields
@@ -84,6 +88,37 @@ def z0(cfg: Config, hw: int, rng=None):
     return jnp.stack([jnp.broadcast_to(H0, (F, hw, w)), jnp.broadcast_to(L0, (F, hw, w))])
 
 
+def _rope2d(S: int, dk: int, base: float = 10000.0):
+    """cos, sin (S, dk) of the 2D rotary positions of an n x n grid (S = n * n): the first half of a head is rotated by
+    the ROW index, the second half by the COLUMN index (rotate-half pairs inside each half)."""
+    n = int(round(math.sqrt(S))); assert n * n == S, "2D rotary positions need a square grid"
+    q = dk // 4; inv = base ** (-jnp.arange(q) / q)
+    r, c = jnp.divmod(jnp.arange(S), n)
+    ang = jnp.concatenate([r[:, None] * inv[None, :], c[:, None] * inv[None, :]], axis=-1)      # (S, dk / 2): rows then columns
+    ang = jnp.concatenate([ang[:, :q], ang[:, :q], ang[:, q:], ang[:, q:]], axis=-1)            # each half = (theta, theta)
+    return jnp.cos(ang), jnp.sin(ang)
+
+
+def _rot_half2(x):
+    """rotate-half applied separately inside the row half and the column half of the last axis."""
+    a, b = jnp.split(x, 2, axis=-1)
+    def rh(u):
+        u1, u2 = jnp.split(u, 2, axis=-1); return jnp.concatenate([-u2, u1], axis=-1)
+    return jnp.concatenate([rh(a), rh(b)], axis=-1)
+
+
+def _attn_tok(p, hf, dk: int):
+    """(S, w) -> (S, w): post-norm multi-head self-attention over the S cells of ONE field with 2D rotary positions."""
+    S, w = hf.shape; nh = w // dk
+    q, k, v = jnp.split(hf @ p["att_qkv"], 3, axis=-1)
+    q, k, v = (t.reshape(S, nh, dk) for t in (q, k, v))
+    cos, sin = _rope2d(S, dk); cos, sin = cos[:, None, :], sin[:, None, :]
+    q = q * cos + _rot_half2(q) * sin; k = k * cos + _rot_half2(k) * sin
+    att = jax.nn.softmax(jnp.einsum("shd,thd->hst", q, k) / math.sqrt(dk), axis=-1)
+    out = jnp.einsum("hst,thd->shd", att, v).reshape(S, w) @ p["att_o"]
+    return TC._rms_norm(hf + out)
+
+
 def _block(p, h, cfg: Config | None = None):
     """h (F, S, w) -> (F, S, w). POST-norm as TRM: per-field token mixing over the S cells (the
     same weights for every field), the equivariant field coupling, the channel SwiGLU.
@@ -92,6 +127,8 @@ def _block(p, h, cfg: Config | None = None):
     other eight fields' tokens at that cell (heads x dk queries/keys, the self field masked, values =
     the fc map split over the heads) — uniform attention weights reproduce "mean" exactly."""
     def tok(hf):                                   # (S, w): TRM's token-mixing sub-layer
+        if "att_qkv" in p:                         # the mixer arms (cfg.dec_token_mixer "attn"): attention over the cells
+            return _attn_tok(p, hf, cfg.dec_tok_dk)
         ht = hf.T
         ht = TC._rms_norm(ht + TC._swiglu(p["mlp_t"], ht))
         return ht.T

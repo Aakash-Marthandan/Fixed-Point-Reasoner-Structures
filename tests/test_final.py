@@ -171,3 +171,34 @@ def test_dec_remat_is_numerically_equivalent():
     g1 = jax.grad(lambda p_: pair_loss(p_, cr, x, y, tau=1.0, rng=None, task_vec=tv)[0])(p)
     n0 = float(sum(jnp.sum(jnp.abs(v)) for v in jax.tree.leaves(g0["dec"]))); n1 = float(sum(jnp.sum(jnp.abs(v)) for v in jax.tree.leaves(g1["dec"])))
     assert n0 > 0 and abs(n0 - n1) / n0 < 1e-4
+
+
+# ---- THE WIDTH LADDER (Plan_2026-09-18_Width_Ladder): the attention token mixer (our reimplementation of SE-RRM's position mixer)
+DEC_ATT = Config(**{**FIELD, "T": 3}, cell_kind="dec", dec_width=16, trm_layers=1, trm_h_cycles=2, trm_l_cycles=2,
+                 dec_token_mixer="attn", dec_tok_dk=8, dec_coupling_kind="attn", dec_attn_heads=2, dec_attn_dk=8)
+
+
+def test_dec_attention_mixer_is_exactly_s9_equivariant_and_position_aware():
+    x, _ = _pair()
+    p = M.init_params(jax.random.PRNGKey(0), DEC_ATT)
+    assert "att_qkv" in p["dec"]["blocks"][0] and "mlp_t" not in p["dec"]["blocks"][0]
+    outs, _, _ = M.iterate_eq(p, DEC_ATT, x, tau=1.0, t_total=2)
+    for seed in (1, 2):
+        pi = _perm(seed)
+        outs_p, _, _ = M.iterate_eq(p, DEC_ATT, jnp.asarray(pi)[x], tau=1.0, t_total=2)
+        for o, op in zip(outs, outs_p):
+            assert np.allclose(np.asarray(op.logits)[..., pi], np.asarray(o.logits), atol=1e-4), "attention mixer: logits are not S9-equivariant"
+    # the 2D rotary positions make the mixer position-aware: the same puzzle transposed is NOT the transposed output of a position-blind map
+    cos, sin = DC._rope2d(81, 8)
+    assert cos.shape == (81, 8) and np.allclose(np.asarray(cos[0]), 1.0) and np.allclose(np.asarray(sin[0]), 0.0)
+    assert not np.allclose(np.asarray(cos[1]), np.asarray(cos[9])), "row and column rotations must differ (cell 1 = column 1, cell 9 = row 1)"
+    q = jax.random.normal(jax.random.PRNGKey(1), (81, 1, 8))
+    qr = q * cos[:, None, :] + DC._rot_half2(q) * sin[:, None, :]
+    assert np.allclose(np.linalg.norm(np.asarray(qr), axis=-1), np.linalg.norm(np.asarray(q), axis=-1), atol=1e-5), "a rotation preserves the norm"
+
+
+def test_dec_default_mixer_tree_is_unchanged():
+    p = M.init_params(jax.random.PRNGKey(0), DEC_TINY)
+    assert sorted(p["dec"]["blocks"][0].keys()) == ["fc", "mlp", "mlp_t"]
+    g = jax.grad(lambda pp: jnp.sum(M.iterate_eq(pp, DEC_ATT, _pair()[0], tau=1.0, t_total=2)[0][-1].logits ** 2) * 1e-6)(M.init_params(jax.random.PRNGKey(0), DEC_ATT))
+    assert np.isfinite(np.asarray(g["dec"]["blocks"][0]["att_qkv"])).all() and float(np.abs(np.asarray(g["dec"]["blocks"][0]["att_qkv"])).sum()) > 0

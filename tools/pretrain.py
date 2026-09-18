@@ -199,6 +199,9 @@ def parse_args():
                    help="DEC: per-field width w (256 = the A-night arm; 512 = X0's parameter count)")
     p.add_argument("--dec-coupling", default="mean", choices=["mean", "attn"],
                    help="CHAMPION NIGHT C4: the DEC's field coupling — 'mean' (DeepSets, the pre-existing cell) or 'attn' (set attention over the other eight fields per cell, SE-RRM's operator in this form)")
+    p.add_argument("--dec-token-mixer", default="mlp", choices=["mlp", "attn"],
+                   help="THE WIDTH LADDER (2026-09-18): the DEC's mixer over the cells — 'mlp' (the pre-existing 81-cell SwiGLU) or 'attn' (self-attention with 2D rotary positions: our reimplementation of SE-RRM's position mixer)")
+    p.add_argument("--dec-tok-dk", type=int, default=32)
     p.add_argument("--dec-attn-heads", type=int, default=4)
     p.add_argument("--dec-attn-dk", type=int, default=32)
     p.add_argument("--dec-commit", action="store_true",
@@ -401,6 +404,7 @@ def main():
     trm = (dict(cell_kind=a.cell, trm_hidden=a.trm_hidden, trm_layers=a.trm_layers,
                 dec_width=a.dec_width, dec_coupling=not a.no_dec_coupling,
                 dec_coupling_kind=a.dec_coupling, dec_attn_heads=a.dec_attn_heads, dec_attn_dk=a.dec_attn_dk,
+                dec_token_mixer=a.dec_token_mixer, dec_tok_dk=a.dec_tok_dk,
                 dec_commit=a.dec_commit, dec_commit_tau=a.dec_commit_tau, dec_commit_w=a.dec_commit_w, decarc_heads=a.decarc_heads,
                 trm_h_cycles=a.trm_h_cycles, trm_l_cycles=a.trm_l_cycles,
                 trm_lambda=a.trm_lambda, trm_beta=a.trm_beta, trm_ri_sigma=a.trm_ri_sigma, trm_token_mixer=a.trm_token_mixer, trm_gm_dim=a.trm_gm_dim,
