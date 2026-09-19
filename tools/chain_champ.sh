@@ -283,6 +283,16 @@ run_pretrain () {  # ARM — ONE-SHOT NaN amputation; the registered EXTENSION r
     mkdir -p "$D"; [ -f "$D/EXTENDED.txt" ] || gsutil -q cp "$GCS/${arm}_EXTENDED" "$D/EXTENDED.txt"
     budget=$((budget + EXT_STEPS)); echo "PRETRAIN-EXTENDED-BUDGET $arm $budget (a relaunch keeps the registered extension)"
   fi
+  # 2026-09-19 (the attention-arm extension; Plan_2026-09-19_SA_Extension.md): a RESUMED run continues the banked optimizer state, EMA and RNG
+  # with whatever flags it is launched with. When the wrapper staged the banked run's config ($D/config_banked.json), the exact argv below is
+  # parsed with the trainer's own parser and compared key by key; any difference but the budget refuses the arm (no file = byte-identical).
+  if [ -f "$D/config_banked.json" ]; then
+    # shellcheck disable=SC2086
+    if ! JAX_PLATFORMS=cpu ${REAL_PY:-python3} tools/resume_flags_guard.py --config "$D/config_banked.json" --allow steps -- --out "$D" $FL --steps "$budget" > "$D.guard.log" 2>&1; then
+      echo "PRETRAIN-RESUME-FLAGS-ABORT $arm (the argv differs from the banked run's beyond the budget; the arm is refused): $(tr '\n' ' ' < "$D.guard.log" | cut -c1-400)"; return 1
+    fi
+    echo "PRETRAIN-RESUME-FLAGS-OK $arm $(tail -1 "$D.guard.log")"
+  fi
   echo "PRETRAIN-START $arm $(date -u +%H:%M) prec=$ARM_PREC steps=$budget"
   pt_run "$D.log" "$arm" "$D" --out "$D" $FL --steps "$budget"; rc=$?
   if [ $rc -ne 0 ] || ! nan_check "$D"; then
