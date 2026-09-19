@@ -42,8 +42,15 @@ case "$verb" in
   get-value) [ "$prev" = account ] && echo "${FAKE_ACCOUNT:-}"; [ "$prev" = project ] && echo "${FAKE_PROJECT:-}"; exit 0 ;;
   list)  if have "${HPS_NODE}"; then printf '%s\tREADY\n' "$HPS_NODE"; fi; exit 0 ;;
   describe) if have "$name"; then case "$fmt" in *ipAddress*) echo "10.0.0.1";; *) echo READY;; esac; fi; exit 0 ;;
-  ssh)   printf 'IDLE 3\nPROGRESS ARM-OK D0 | \n'; exit 0 ;;   # the chain exited 3 (the marker); a neutral progress line
-  scp)   exit 0 ;;
+  ssh)   cmd=""; for a in "$@"; do case "$a" in --command=*) cmd=${a#--command=} ;; esac; done
+         case "$cmd" in   # 2026-09-19 (P7-P9): the bring-up's canary staging — a first ssh that fails silently, the canary's pass marker, a fresh node (NOREPO)
+           *CANARY-DIR-OK*) n=$(cat "${HPS_DIRFAIL:-/dev/null}" 2>/dev/null); if [ "${n:-0}" -gt 0 ]; then echo $((n - 1)) > "$HPS_DIRFAIL"; exit 255; fi; echo CANARY-DIR-OK; exit 0 ;;
+           *CANARY-PASS*)   echo "CANARY-PASS-fakehost"; exit 0 ;;
+           *NOREPO*)        [ -n "${HPS_NOREPO:-}" ] && { echo NOREPO; exit 0; } ;;
+         esac
+         printf 'IDLE 3\nPROGRESS ARM-OK D0 | \n'; exit 0 ;;   # the chain exited 3 (the marker); a neutral progress line
+  scp)   case "$*" in *pretrain6_d24/ckpt_latest.pkl*) n=$(cat "${HPS_SCPFAIL:-/dev/null}" 2>/dev/null); if [ "${n:-0}" -gt 0 ]; then echo $((n - 1)) > "$HPS_SCPFAIL"; exit 1; fi ;; esac
+         exit 0 ;;
   create) echo "CREATE $*" >> "$HPS_CALLS"; echo "ERROR: There is no more capacity in the zone" >&2; exit 1 ;;
   delete) echo "DELETE $zone $name" >> "$HPS_CALLS"; exit 0 ;;
 esac
@@ -141,5 +148,25 @@ scenario p6 0 0 "" 25
 ok "P6 exit 2 at the deadline, nothing created"  '[ "$(cat "$T/p6/rc.txt")" = 2 ] && grep -q "reached the watchdog deadline" "$T/p6/pod.log"'
 ok "P6 the create carries the runtime, spot and labels" 'grep -q "^CREATE compute tpus tpu-vm create qhrrn2-arc-pod --zone=us-east1-d --project=lab-shared --accelerator-type=v6e-8 --version=v2-alpha-tpuv6e --spot --labels=program=qhrrn2,owner=pi,purpose=arc" "$T/p6/calls.txt"'
 ok "P6 no delete of anything"                    '! grep -q "^DELETE" "$T/p6/calls.txt"'
+# 2026-09-19 (the width ladder's pod 1: a node torn down because the canary checkpoint's directory was made over a first ssh that failed silently)
+bringup () {   # NAME DIRFAILS SCPFAILS — a READY node answering NOREPO sends the supervisor into v_bring_up
+  echo "$2" > "$T/$1.dirfail"; echo "$3" > "$T/$1.scpfail"
+  HPS_NOREPO=1 HPS_DIRFAIL="$T/$1.dirfail" HPS_SCPFAIL="$T/$1.scpfail" CANARY_RETRY_SLEEP=0 scenario "$1" 1 0
+}
+echo "P7 a fresh READY node (NOREPO); the canary dir's first ssh fails silently, the second answers"
+bringup p7 1 0
+ok "P7 the silent first ssh is seen and retried"  'grep -q "canary dir: no answer from the node.s first ssh — retrying once" "$T/p7/pod.log" && ! grep -q "canary dir failed twice" "$T/p7/pod.log"'
+ok "P7 the canary runs and passes, the chain launches" 'grep -q "CANARY in us-east1-d" "$T/p7/pod.log" && ! grep -q "canary FAILED" "$T/p7/pod.log" && grep -q "LAUNCH chain in us-east1-d" "$T/p7/pod.log"'
+ok "P7 the order: UP, the retry, CANARY, LAUNCH"   'awk "/UP \\(bootstrap/{a=NR} /retrying once/{b=NR} /CANARY in/{c=NR} /LAUNCH chain/{d=NR} END{exit !(a&&b&&c&&d&&a<b&&b<c&&c<d)}" "$T/p7/pod.log"'
+echo "P8 the canary dir fails twice -> the bring-up fails BEFORE the canary, the node is torn down"
+bringup p8 2 0
+ok "P8 failed twice, no canary, no launch"         'grep -q "canary dir failed twice" "$T/p8/pod.log" && ! grep -q "CANARY in\|LAUNCH chain" "$T/p8/pod.log"'
+ok "P8 torn down as a failed bring-up"             'grep -q "DOWN qhrrn2-arc-pod in us-east1-d (bring-up failed)" "$T/p8/pod.log" && grep -q "^DELETE us-east1-d qhrrn2-arc-pod" "$T/p8/calls.txt"'
+echo "P9 the canary checkpoint's scp fails once -> retried, the canary runs"
+bringup p9 0 1
+ok "P9 the scp's rc is read and retried"           'grep -q "canary scp failed — retrying once" "$T/p9/pod.log" && ! grep -q "canary scp failed twice" "$T/p9/pod.log" && grep -q "CANARY in us-east1-d" "$T/p9/pod.log"'
+echo "P10 a clean bring-up prints neither retry line (the edit is silent when nothing fails)"
+bringup p10 0 0
+ok "P10 no retry lines, the canary and the launch as before" '! grep -q "retrying once\|failed twice" "$T/p10/pod.log" && grep -q "CANARY in us-east1-d" "$T/p10/pod.log" && grep -q "LAUNCH chain in us-east1-d" "$T/p10/pod.log"'
 echo "harness_pod_state: $PASS passed, $FAIL failed ($T)"
 [ "$FAIL" -eq 0 ]

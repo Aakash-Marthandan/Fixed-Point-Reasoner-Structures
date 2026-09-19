@@ -62,7 +62,34 @@ ARM_PREC=default   # the field trains/evals in bf16
 
 pin () { local c=$1; shift; TPU_CHIPS_PER_PROCESS_BOUNDS=1,1,1 TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=$c JAX_DEFAULT_MATMUL_PRECISION=$ARM_PREC "$@"; }
 
+# ---------- orphans of an earlier chain life (2026-09-19; found projecting the width ladder's wall ceiling) ----------
+# The wall kill signals the chain's process group. An eval shard launched under its own `timeout` (scan_dec exports EVAL_TIMEOUT) lives in
+# THAT timeout's group: it survives the kill and keeps its chip, and the relaunched scan then fails on a busy device (SCAN-DEADLOCK: a lost
+# row). A shard is an orphan iff its parent is a `timeout` wrapper whose own parent is no longer a shell (re-parented to init or a subreaper);
+# the shards of a LIVE chain or filler always hang under that script's bash, and an evaluator without a timeout wrapper is never touched.
+is_timeout_wrapper () { local a; a=$(ps -o args= -p "$1" 2>/dev/null) || return 1; set -- $a; [ "$(basename -- "${1:-x}")" = timeout ] || [ "$(basename -- "${2:-x}")" = timeout ]; }
+is_shell () { case "$(basename -- "$(ps -o comm= -p "$1" 2>/dev/null | sed 's/^-//')")" in bash|sh|dash|zsh) return 0;; *) return 1;; esac; }
+reap_orphans () {
+  local pid w gpar n=0 victims="" wrappers=" "
+  for pid in $(pgrep -f 'tools/(eval_sudoku_extreme|explosion_census|stall_calibration)[.]py' 2>/dev/null); do
+    # the wrapper of this match: the match ITSELF when it is the `timeout` (its arguments carry the evaluator's path, and its shard may not have
+    # started or may already be gone), else its parent
+    if is_timeout_wrapper "$pid"; then w=$pid
+    else w=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' '); [ -n "$w" ] && is_timeout_wrapper "$w" || continue; fi
+    gpar=$(ps -o ppid= -p "$w" 2>/dev/null | tr -d ' ')
+    if [ -n "$gpar" ] && is_shell "$gpar"; then continue; fi        # a live chain's or filler's shard: its wrapper hangs under that script's shell
+    case "$wrappers" in *" $w "*) ;; *) wrappers="$wrappers$w "; n=$((n + 1)) ;; esac      # one orphan = one wrapper, however many of its processes matched
+    kill "$w" "$pid" 2>/dev/null; victims="$victims $w $pid"
+  done
+  [ "$n" -gt 0 ] || return 0
+  sleep "${REAP_GRACE:-5}"
+  # shellcheck disable=SC2086
+  kill -9 $victims 2>/dev/null
+  echo "ORPHANS-REAPED $n eval shard(s) of an earlier chain life (their own timeout's process group outlives the wall kill) $(date -u +%FT%TZ)"
+}
+
 echo "=== $SENT START worker=$W/$NW chips=$NCHIP $(date -u +%FT%TZ) ==="
+reap_orphans
 mkdir -p "$(dirname "$NPZ")"
 [ -f "$NPZ" ] || gsutil -q cp "$GCS_SETS/$(basename "$NPZ")" "$NPZ" || { echo "NPZ-MISSING"; exit 2; }
 echo "NPZ-OK"

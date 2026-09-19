@@ -281,5 +281,34 @@ echo "== S11 the sync rider without A3's frontier grid -> labeled, the night pro
 NO_A3=1 mk_sandbox; run_chain 0 1
 grep -q "SYNC-AB-NOCKPT" "$SB/w0.log" && [ -f "$SB/gcs/champ/SYNC-AB" ] && grep -q "CHAIN-CHAMP-COMPLETE" "$SB/w0.log" && ok "S11 rider skipped, labeled; complete" || bad "S11"
 
+echo "== S12 ORPHANS of an earlier chain life: a timeout-wrapped eval shard re-parented away from any shell is reaped at START; a LIVE one under a shell is not (2026-09-19) =="
+mk_sandbox; mkdir -p "$SB/wrap" "$SB/orph" "$SB/live"
+# a FAITHFUL timeout wrapper (GNU timeout stays the PARENT of its command; the sandbox's exec-stub leaves no wrapper process to find)
+printf '#!/bin/bash\nshift\n"$@" & c=$!\ntrap "kill $c 2>/dev/null" TERM\nwait $c\n' > "$SB/wrap/timeout"; chmod +x "$SB/wrap/timeout"
+# ORPHANING FOR REAL: `( cd X && cmd & )` does NOT orphan cmd under bash — the backgrounded AND-list runs in a subshell that WAITS for cmd, so the
+# wrapper keeps a live shell above it and the rule (rightly) leaves it alone. The launcher below backgrounds ONE simple command (bash forks and
+# execs it directly) and exits, so the wrapper is re-parented to init.
+orphan () { ( cd "$SB/repo" && bash -c '"$@" > /dev/null 2>&1 & exit 0' _ "$@" ); }
+STUB_STALL_ARM=ZZ orphan "$SB/wrap/timeout" 600 "$SB/bin/stubpy" tools/eval_sudoku_extreme.py --out "$SB/orph/sxscan_pchampZZ" --k-init 32
+( cd "$SB/repo" && STUB_STALL_ARM=YY bash -c '"$0" 600 "$1" tools/eval_sudoku_extreme.py --out "$2/sxscan_pchampYY" --k-init 32 > /dev/null 2>&1 & wait' "$SB/wrap/timeout" "$SB/bin/stubpy" "$SB/live" ) & LIVE_SH=$!
+# a third fixture: an orphaned wrapper whose CHILD does not carry the evaluator's name (only the wrapper's own arguments do) — the rule's other branch
+printf '#!/bin/bash\nexec sleep 300\n' > "$SB/wrap/sleeper"; chmod +x "$SB/wrap/sleeper"
+orphan "$SB/wrap/timeout" 600 "$SB/wrap/sleeper" tools/eval_sudoku_extreme.py --out "$SB/orphw/sxscan_pchampWW"
+# wait for BOTH processes of each fixture (the wrapper AND its shard): the wrapper alone is visible at once, and a chain started in that window
+# meets a wrapper with no child yet (the first version of this scenario raced exactly there, and the rule then read only a match's PARENT)
+for _ in $(seq 1 20); do [ "$(pgrep -f "$SB/orph/sxscan_pchampZZ" | wc -l | tr -d ' ')" -ge 2 ] && [ "$(pgrep -f "$SB/live/sxscan_pchampYY" | wc -l | tr -d ' ')" -ge 2 ] && break; sleep 1; done
+OP=$(pgrep -f "$SB/orph/sxscan_pchampZZ" | tail -1); LP=$(pgrep -f "$SB/live/sxscan_pchampYY" | tail -1)     # the SHARDS (the later pids), not their wrappers
+[ -n "${OP:-}" ] && [ -n "${LP:-}" ] && ok "S12 fixture: an orphaned shard (pid $OP) and a live one under a shell (pid $LP) are running" || bad "S12 fixture (orphan '${OP:-}', live '${LP:-}')"
+REAP_GRACE=1 run_chain 0 1
+WP=$(pgrep -f "$SB/orphw/sxscan_pchampWW" | head -1)
+grep -q "ORPHANS-REAPED 2 eval shard" "$SB/w0.log" && ok "S12 exactly the two orphans reaped (a shard under its wrapper; a wrapper matched by its own arguments), logged at START" || bad "S12 reap line: $(grep 'ORPHANS' "$SB/w0.log")"
+[ -z "$WP" ] && ok "S12 the orphaned wrapper matched by its own arguments is dead" || { bad "S12 the wrapper-only orphan survived (pid $WP)"; pkill -f "$SB/orphw/sxscan_pchampWW" 2>/dev/null; }
+! kill -0 "$OP" 2>/dev/null && ok "S12 the orphaned shard is dead" || { bad "S12 the orphan survived"; kill -9 "$OP" 2>/dev/null; }
+kill -0 "$LP" 2>/dev/null && ok "S12 the live shard under a shell is untouched" || bad "S12 the live shard was killed"
+s=$(grep -n "START worker" "$SB/w0.log" | head -1 | cut -d: -f1); r=$(grep -n "ORPHANS-REAPED" "$SB/w0.log" | head -1 | cut -d: -f1); n=$(grep -n "NPZ-OK" "$SB/w0.log" | head -1 | cut -d: -f1)
+[ -n "$s" ] && [ -n "$r" ] && [ -n "$n" ] && [ "$s" -lt "$r" ] && [ "$r" -lt "$n" ] && grep -q "CHAIN-CHAMP-COMPLETE" "$SB/w0.log" && ok "S12 the reap runs before anything touches a chip; the night completes" || bad "S12 order / completion ($s $r $n)"
+pkill -P "$LIVE_SH" 2>/dev/null; kill "$LP" "$LIVE_SH" 2>/dev/null; pkill -f "$SB/live/sxscan_pchampYY" 2>/dev/null
+[ -f "$SB1/w0.log" ] && ! grep -q "ORPHANS-REAPED" "$SB1/w0.log" && ok "S12 a night without orphans prints no reap line (S1's log)" || bad "S12 S1's log carries a reap line"
+
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -88,6 +88,13 @@ gssh () {   # gssh ZONE CMD [WORKER]  (bounded 150 s, gcloud chatter stripped; w
   bounded 150 gcloud compute tpus tpu-vm ssh "$POD" --zone="$1" $wf --project=$PROJECT \
     --command="$2" 2>/dev/null | grep -vE "^(SSH:|Using ssh|Warning:|Updating|Existing)"
 }
+canary_dir () {  # ZONE NWORKERS [all] -> 0 iff every worker made the canary checkpoint's directory AND said so (a sentinel: gssh's rc is its grep's)
+  [ "$(gssh "$1" "mkdir -p ~/qhrrn2/$(dirname "$CANARY_CKPT") && echo CANARY-DIR-OK" "${3:-}" | grep -c CANARY-DIR-OK)" -ge "$2" ]
+}
+canary_scp () {  # ZONE [--worker=all] -> the scp's own rc
+  # shellcheck disable=SC2086
+  bounded 300 gcloud compute tpus tpu-vm scp "$CANARY_CKPT" "$POD:~/qhrrn2/$(dirname "$CANARY_CKPT")/" --zone="$1" ${2:-} --project=$PROJECT >> "$LOG" 2>&1
+}
 accel_workers () { case $1 in v6e-16) echo 4;; v6e-32) echo 8;; *) echo 1;; esac; }   # v6e-8 = 1 host x 8 chips; v6e-16 = 4 hosts x 4 chips (measured 2026-08-22); the LIVE count comes from describe
 live_accel () { cat "$AFILE" 2>/dev/null | tr -dc 'a-z0-9-' ; }
 live_workers () {  # ZONE -> worker count of the live node: describe (positive read) > file > 1
@@ -186,10 +193,14 @@ v_bring_up () { # ZONE (node exists) -> 0 = chain launched on every worker
     $PY tools/dispatcher.py up --name "$POD" --zone "$1" --accelerator "$acc" --workers "$nw" --with-data >> "$LOG" 2>&1 \
       || { say "  up failed twice"; return 1; }
   fi
-  gssh "$1" "mkdir -p ~/qhrrn2/$(dirname "$CANARY_CKPT")" "${wf:+all}" >/dev/null
-  # shellcheck disable=SC2086
-  bounded 300 gcloud compute tpus tpu-vm scp "$CANARY_CKPT" "$POD:~/qhrrn2/$(dirname "$CANARY_CKPT")/" \
-      --zone="$1" $wf --project=$PROJECT >> "$LOG" 2>&1
+  # 2026-09-19 (the width ladder's pod 1): the canary checkpoint's directory was made over the FIRST ssh to a new node with its output
+  # discarded and its rc unread (gssh's rc is its grep's, never ssh's); that ssh failed silently, the scp had no destination, and the canary
+  # died on a missing file -> a node torn down for nothing. The remote command now ANSWERS with a sentinel (one per worker), the scp's rc is
+  # read, and each step retries once before the bring-up is failed.
+  canary_dir "$1" "$nw" "${wf:+all}" || { say "  canary dir: no answer from the node's first ssh — retrying once"; sleep "${CANARY_RETRY_SLEEP:-10}"; still_ready "$1" || return 1
+                                           canary_dir "$1" "$nw" "${wf:+all}" || { say "  canary dir failed twice"; return 1; }; }
+  canary_scp "$1" "$wf" || { say "  canary scp failed — retrying once"; sleep "${CANARY_RETRY_SLEEP:-10}"; still_ready "$1" || return 1
+                             canary_scp "$1" "$wf" || { say "  canary scp failed twice"; return 1; }; }
   still_ready "$1" || return 1
   say "CANARY in $1 ($nw worker(s))"
   $PY tools/dispatcher.py canary --name "$POD" --zone "$1" --workers "$nw" >> "$LOG" 2>&1 \
