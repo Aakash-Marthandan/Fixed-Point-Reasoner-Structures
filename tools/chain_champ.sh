@@ -136,11 +136,17 @@ arm_flags () {   # one variable per arm from C0 (a later flag overrides an earli
     SA128) echo "$(champ_common) --seed 0 --dec-width 128 --dec-token-mixer attn --dec-tok-dk 32 --dec-coupling attn --dec-attn-heads 4 --dec-attn-dk 32";;
     SA192) echo "$(champ_common) --seed 0 --dec-width 192 --dec-token-mixer attn --dec-tok-dk 32 --dec-coupling attn --dec-attn-heads 4 --dec-attn-dk 32";;
     SA256) echo "$(champ_common) --seed 0 --dec-width 256 --dec-token-mixer attn --dec-tok-dk 32 --dec-coupling attn --dec-attn-heads 4 --dec-attn-dk 32";;
+    # 2026-09-19 (THE RECIPE ABLATION; Plan_2026-09-19_Recipe_Ablation.md; the PI: "Change the three things to locate the advantage we have"): SA256
+    # (SE-RRM's mixers inside our block, loop and recipe: 98.24 / 99.60 on the 5,000 against their published 93.73 / 98.22) with ONE recipe item each
+    # moved toward SE-RRM's published setup. A later flag overrides an earlier one. Fixed 30k, the reduced battery, seed 0 — SA256's own protocol.
+    SA256L) echo "$(arm_flags SA256) --trm-lambda 0 --trm-beta 0";;                 # the LOOP: TRM's exact loop — no EqR damping (.05), no path noise (.01)
+    SA256S) echo "$(arm_flags SA256) --trm-ri-sigma 0 --fpa-k 0";;                  # the START-UP levers: no randomized init (sigma 1), no anchor rows (k 1)
+    SA256O) echo "$(arm_flags SA256) --batch 272 --lr 5e-4 --lr-end 5e-4";;         # the OPTIMIZER: SE-RRM's batch and learning rate (ours 768 / 1e-4; wd 1 on both)
     *)   return 1;;
   esac
 }
 arm_steps ()  { case $1 in C3|C6|X5|X6|X7) echo "$STEPS_LONG";; *) echo "$STEPS_X";; esac; }
-fixed_budget () { case $1 in X5|X6|X7|W128|W256|SA128|SA192|SA256) return 0;; *) return 1;; esac; }   # 2026-09-17: the X arms' budget is the triple's 50k; the extension rule never applies
+fixed_budget () { case $1 in X5|X6|X7|W128|W256|SA128|SA192|SA256|SA256L|SA256S|SA256O) return 0;; *) return 1;; esac; }   # 2026-09-17: the X arms' budget is the triple's 50k; the extension rule never applies
 head_ema ()   { echo "--ema"; }                  # headline weights = EMA
 alt_ema ()    { echo ""; }                       # the alt row = the raw weights
 select_key () { echo val_t16_ema; }
