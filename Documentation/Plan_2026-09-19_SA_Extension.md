@@ -32,6 +32,9 @@ What one seed can show: whether an arm is beyond the seed floor of the width-192
 
 **My earlier ETA for this request (≈ 7 h, ≈ $140) covered option A only.** I did not say so at the time; the four filler rows are what Table 1's width-192 cells at 64 (full set), 128 and 256 iterations and its restart column are built from, so a like-for-like attention row needs them. **Recommendation: A + B** if the attention arms are to sit in Table 1 cell for cell; A alone if they stay in a comparison table with 16 iterations on the full set and 64 on 100k.
 
+## The PI's decision on page one (2026-09-19 ~19:45Z, to the ops session)
+**A + B** — the champion battery and the four filler rows (Table 1 cell for cell); ≈ 16 h wall, ≈ $320, cap $380. Launched on the registration commit's code; no file changed by the decision (the envs already carry `SE_JOBS=d64full,d128sub,d256sub,k128`).
+
 ## 2. The arms and the build (`tools/chain_saext.sh`, one arm per pod)
 
 | arm | pod | source (read-only) | fresh prefix | banked 30k state |
