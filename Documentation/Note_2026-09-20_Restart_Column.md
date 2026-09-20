@@ -33,3 +33,33 @@
 - **Every arm INSIDE the floor:** the paper's restart column gains an attention row that is *not distinguishable* from the width-192 triple at one seed. That is the honest sentence, and it is the one I expect to be able to write.
 - **An arm ABOVE the floor AND ahead of all three seeds:** the paper may state that the attention arm's restart column exceeds the width-192 triple's at one seed, with the compute ratio beside it (1.6–2.45×) and the one-seed caveat.
 - **Anything else** (ABOVE the floor but not ahead of every seed, or the reverse): report both readings, claim neither.
+
+## Outcome (2026-09-20, the frozen reader run on the banked rows; `runs/_saext_pull/analysis/restart_verdict.txt`)
+
+**INTEGRITY PASS** (six rows: k128, 64 iterations, EMA, n 5,000, identical puzzle ids, each on its registered grid).
+**The floor, from the width-192 seeds on this instrument:** selected C5 99.88 · C7 99.88 · C8 99.80 → mean 99.85, **FLOOR_SEL 0.160 pp**; verified C5 99.88 · C7 99.92 · C8 99.86 → mean 99.89, **FLOOR_VER 0.120 pp**. (The paper's "99.85 ± 0.04" is this mean and half-spread.)
+
+| arm | selected | vs the triple | R-RS-1 | verified | vs the triple | R-RS-3 | per seed (both columns) | claimable | plateau |
+|---|---|---|---|---|---|---|---|---|---|
+| SA128 | 99.96 | +0.107 | **INSIDE** | 99.96 | +0.073 | **INSIDE** | ahead of all three | NO | k 8 |
+| SA192 | 99.98 | +0.127 | **INSIDE** | 100.00 | +0.113 | **INSIDE** | ahead of all three | NO | k 16 |
+| SA256 | 99.92 | +0.067 | **INSIDE** | 99.98 | +0.093 | **INSIDE** | ahead of all three | NO | k 8 |
+
+EqR's released weights on the same 5,000: 98.84 selected and verified (a reference, not a floor).
+
+**The reading: no letter for the paper.** Every arm is INSIDE both floors, so the restart column carries no claim — although every arm is ahead of every width-192 seed pairwise on both columns (SA192 by +0.10 / +0.10 / +0.18 pp selected). Consistent direction, differences smaller than the seed spread: exactly the case this rule was registered to adjudicate. The paper's restart column keeps the width-192 triple; an attention row may be printed beside it as a one-seed row with its compute ratio, and with no claim of difference.
+**Correction this supersedes:** the verdict's §5b called the gaps "about two to three times that triple's seed half-spread", which read as more margin than the rule allows. Against the registered floor (twice the FULL spread, 0.160 pp) they are inside it. §5b now points here.
+**A property of the rule, found by mutation at registration:** the "ahead of all three seeds" clause is redundant under this floor (above the mean by more than twice the spread implies above every seed); kept for rows that might not share ids, reported for the reader, never relied on alone.
+
+| | prediction | credence | outcome |
+|---|---|---|---|
+| Q1 | FLOOR_SEL ≤ 0.20 pp | 0.75 | **held** (0.160) |
+| Q2 | every arm INSIDE FLOOR_SEL | 0.55 | **held** |
+| Q3 | at least one arm ABOVE FLOOR_SEL | 0.45 | failed |
+| Q4 | at least one arm ahead of all three seeds | 0.60 | **held** (all three are) |
+| Q5 | the arm ahead of all three is SA192 | 0.45 | **failed on wording** — every arm is ahead of all three, so "the arm" had no referent; a prediction must name the letter it is scored on (the same defect as the ablation's P5) |
+| Q6 | every arm INSIDE FLOOR_VER | 0.65 | **held** |
+| Q7 | every plateau at k ≤ 16 | 0.70 | **held** (8 / 16 / 8) |
+| Q8 | INTEGRITY PASS | 0.90 | **held** |
+
+**Brier 0.132** over the eight.
