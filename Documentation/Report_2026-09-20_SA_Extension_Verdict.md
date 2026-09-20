@@ -118,6 +118,23 @@ Accuracy by iteration on all 422,786 puzzles (the fixed start, EMA weights, the 
 
 The attention arms commit far more in the FIRST iteration (SA192 32.7 %, SA256 26.7 % against our 17.1 % and SE-RRM's 16.1 %) and stay ahead of SE-RRM's curve from iteration 4 on. Our width-192 model overtakes SA128 at 8 and 16 iterations and is passed again by 64. The raw (non-EMA) weights read 93.51 / 95.47 / 96.72 against the selected rows: the EMA is worth 2–4 points on this model class, as in every earlier campaign.
 
+### 5b. Restarts (EXPLORATORY; the PI asked, 2026-09-20; `tools/lens_saext_read.py` T3, selftest 5/5)
+
+On the identical 5,000 puzzles, 64 iterations, EMA weights, the selected grid. "selected" = the draw with the smallest residual (the paper's rule); "verified" = at least one draw exact.
+
+| arm / scan | fixed start | 1 random start | sel k4 | sel k8 | sel k32 | sel k128 | verified |
+|---|---|---|---|---|---|---|---|
+| SA128 k32 | 99.48 | 99.36 | 99.90 | 99.94 | 99.94 | — | 99.94 |
+| SA128 k128 | 99.46 | 99.42 | 99.88 | 99.92 | 99.94 | 99.96 | 99.96 |
+| SA192 k32 | 99.60 | 99.60 | 99.84 | 99.88 | 99.98 | — | 99.98 |
+| SA192 k128 | 99.60 | 99.60 | 99.84 | 99.88 | 99.98 | 99.98 | 100.00 |
+| SA256 k32 | 99.60 | 99.68 | 99.84 | 99.92 | 99.96 | — | 99.96 |
+| SA256 k128 | 99.54 | 99.62 | 99.86 | 99.94 | 99.94 | 99.92 | 99.98 |
+| our width-192 k128 triple (the paper's restart column) | | | | | | **99.85 ± 0.04** | 99.89 ± 0.03 |
+| EqR at k128 | | | | | | 98.84 | |
+
+Restarts are worth ≈ 0.4 pp over the fixed start on every arm and nearly all of it arrives by k 4–8. At k128 the arms read 99.92–99.98 selected against the triple's 99.85 ± 0.04: **+0.07 to +0.13 pp, about two to three times that triple's seed half-spread, with ≈ ±0.045 pp of binomial noise on 5,000 puzzles at this level.** There is NO registered letter for the restart column and one seed per arm, so this is suggestive only and is not proposed as a paper claim. SA192 solved all 5,000 with at least one of its 128 restarts (verified 100.00 on this sample). The selector does not degrade as restarts are added on any arm — the opposite of the recipe ablation's start-up arm, where the residual-selected accuracy FELL from k1 to k32.
+
 ## 6. What this means for the paper
 
 1. **The attention arms can now stand as full rows** (the PI's open decision D7): same budget, same selection rule, same full test set, the same battery and the same Table-1 cells as the width-192 seeds, with interior selections and CLEAN selectors at k32 and k128.
@@ -126,4 +143,4 @@ The attention arms commit far more in the FIRST iteration (SA192 32.7 %, SA256 2
 4. **One sentence the recipe ablation already licenses stays attached:** of the three recipe items tested there, only the optimizer's batch and learning rate moved accuracy, so the gap to their published numbers is not the mixer and not our damping, noise or start-up levers.
 5. **Not claimed:** that the attention arms beat our model (C2), that wider is better among them (C3), that the extension raised accuracy (C1), or anything about depth beyond 64 (C8).
 
-**Open, cheap, not run:** the final grid on the full set for SA192 and SA256 (C6; ≈ 25–40 min per arm on one pod) would settle whether the 512-puzzle selector leaves anything on the table at this budget.
+**Open, cheap, not run:** a restart column read as a LETTER would need its own registered floor (the triple's k128 half-spread is ±0.04) and ideally a second seed; as it stands §5b is descriptive. And the final grid on the full set for SA192 and SA256 (C6; ≈ 25–40 min per arm on one pod) would settle whether the 512-puzzle selector leaves anything on the table at this budget.
