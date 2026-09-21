@@ -26,6 +26,17 @@
 
 **Before the first ARC launch there (not now — the PI 2026-09-15: "Let's not test it now"):** the PI's spend envelope → a canary (create `qhrrn2-arc-pod` v6e-8 spot, bring-up from `gs://qhrrn2-arc`, read/write the bucket from the node, delete; ≈ 20 min) → the campaign's own registration and harness as usual.
 
+## ⚠ WATCHDOGS AND BACKGROUND TASKS PAUSED 2026-09-21 09:15Z (the PI's word) — RE-ARM BEFORE ANY LAUNCH
+
+**Paused:** the launchd agent `com.qhrrn2.tpuwatchdog` (`tools/tpu_watchdog.sh`, the 15-minute sweep that deletes OUR past-deadline `qhrrn2-*` nodes in both projects and refreshes `runs/arc_spend_log.txt`) — `launchctl bootout gui/$(id -u)/com.qhrrn2.tpuwatchdog`; the plist is kept at `~/Library/LaunchAgents/com.qhrrn2.tpuwatchdog.plist`. Nothing else was running: no supervisors, no ops ticks, no chains, no live banks, no harnesses, no lenses, no cron entries, no Claude scheduled tasks, no caffeinate. Verified before pausing: **fleet zero** in asia-south1-c / -b, us-east1-d, us-central1-a, us-west1-c; spend rate $0.00/h ($969.21 to date). The old `quantum-llm` project stays unreadable (billing disabled) — unchanged, and its cleanup still needs a verified copy first.
+**RE-ARM (do this BEFORE the next launch, not after):**
+```
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.qhrrn2.tpuwatchdog.plist   # or: launchctl load ~/Library/LaunchAgents/com.qhrrn2.tpuwatchdog.plist
+launchctl list | grep qhrrn2                      # expect a pid
+tail -2 runs/tpu_status_log.txt                   # expect a fresh sweep within ~15 min
+```
+**What the pause costs while it lasts:** a node created from now on has only its ON-NODE guards (the self-delete at the deadline knob and the DMS shutdown) — the Mac-side sweep that would delete a node whose supervisor died is off, and `runs/arc_spend_log.txt` stops updating, so the ticks' SPEND line goes stale. `runs/tpu_deadline.txt` (currently 2026-09-20T19:51:47Z, in the past) is inert while paused, and **must be reset before any launch** as usual.
+
 ## FOR THE PAPER SESSION — THE ATTENTION-ARM ROWS AND WORDING (2026-09-20; `Documentation/Handoff_2026-09-20_Attention_Rows_For_Paper.md` = the authority; nothing in `paper/` was touched)
 
 Every Table-1-grade cell for SA128 / SA192 / SA256 at the paper's 50k budget with its protocol string, the per-iteration curve on all 422,786 beside SE-RRM's and ours, the frozen letters with their floors (2.58 / 2.44 at 16 / 64; **0.160 / 0.120 for the k128 selected / verified columns**, computed from C5 / C7 / C8's own k128 rows), eight drop-in sentences, a six-item **what must NOT be said** list (no "beats", no width ordering, no "the extension improved them", no "SE-RRM is under-tuned", no "their model in our recipe", never quote 93.73 without the appendix's 95.4), the compute ratios to print beside any attention row (prefer the directly measured inference ratio 1.6 / 2.2 / 2.45×), and the two cheap follow-ups (a second seed is the ONLY thing that turns an INSIDE label into a claim). Provenance in the file's header: f2ebf57 / 8e1fcea / 8d95854 / 2774228 and both analyzer hashes.
