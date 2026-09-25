@@ -2,7 +2,7 @@
 
 This repository is the research record behind the manuscript (in final revision as of **2026-09-25**). It holds the implementation (JAX), the trainer, the evaluator and the diagnostic lenses, every campaign's registration, frozen analyzer and verdict report, the append-only design ledger, and the analyzers' outputs. The self-contained, anonymized code-and-evidence package that accompanies the paper (six selected checkpoints, per-puzzle records, recount scripts) is prepared separately and is not tracked here: the whole `paper/` tree is local-only by the PI's decision of 2026-09-11.
 
-The repository name, *Fixed-Point-Reasoner-Structures*, and the earlier "seven laws" summary date from the 2026-09-10 state of the program. That framing is superseded; §4 below lists what changed and where the correction is recorded. Nothing in this file is a claim the ledger does not carry.
+The repository name, *Fixed-Point-Reasoner-Structures*, dates from an earlier phase of the program and is kept for continuity; the ledger's status log records every registration, verdict and correction along the way. Nothing in this file is a claim the ledger does not carry.
 
 **Read in this order:** this file → [`Documentation/README.md`](Documentation/README.md) (the index of the records, by phase and status) → [`Documentation/Design_Ledger.md`](Documentation/Design_Ledger.md) §5 (the append-only status log: registrations, verdicts, corrections) → the newest verdict report.
 
@@ -40,22 +40,7 @@ Each item names its model and population; the ledger entry and the report are th
 6. **ARC-AGI as the boundary.** The released alphaXiv TRM (419 queries, 400 tasks, evaluation-task demonstrations seen in training) reproduces 1,295 of 1,363 demonstrations yet solves 121 of the 367 queries whose demonstrations are all reproduced. No query first becomes correct after iteration 3 through D64 (12 gains, 8 losses, 10 of 138 ever-correct queries end wrong); eight Gaussian restarts raise coverage from 134 to 136 while selection falls from 134 to 131; the union of all observed candidates covers 146 of 419 queries, leaving 273 without a correct candidate. Released FPRM weights, under a reconstructed and uncertified task-ID mapping, recover earlier answers with depth (12 / 18 / 16 correct of 40 at solver steps 16 / 32 / 64, 20 ever correct) and lose demonstration fit from 140 to 13 of 150 when task IDs are reassigned.
 7. **Conjecture, kept separate from the findings:** the manuscript's conjecture — mutually supporting errors may require coordinated revision, which retained context and communication make possible. The paper states this as a hypothesis with its discriminating tests, not as an established mechanism.
 
-## 4. What changed since the 2026-09-10 summary (the corrections)
-
-The 2026-09-19 adversarial audit (ledger §5, entry "ADVERSARIAL PAPER AUDIT") and the paper's frozen account (v4.3, local) superseded the earlier framing. The ledger entry of 2026-09-24 records this documentation pass; the dated records keep their text under a status banner.
-
-- **Naming.** "Fixed-Point Reasoner Structures", "laws" and "Decimating Equilibrium Cell (DEC)" as the name of our architecture are retired. The paper names the models by mixer and width, MLP 192 (three seeds) and Attention 128 / 192 / 256, and calls the class recursive reasoning models. The DEC name survives in historical records and in the file name `src/qhrrn2/dec_cell.py`.
-- **Commitment and calibration (former laws 1–2) are withdrawn.** Those confidence readings were a softmax read of StableMax-trained logits. Under the training normalization the first-iteration high-confidence share is 22–40 %, not 85–99 %; "decimating decoder", "confidence is a decision, not a probability", the ECE / AUC contrast and "the model knows failure but not where" are not admitted (`Documentation/Note_2026-09-19_Commitment_Validity.md`, outcome ARTIFACT).
-- **Decimation as a mechanism is not established.** Predictions remain revisable; transient solved-to-unsolved losses exist (MLP seed 1, test puzzle 218508, exact at iteration 2, wrong at 3–24, exact again at 25–64). "Once solved, always solved" and "zero regressions with depth" are narrowed to the recorded events: zero terminal losses at D64 in the attention models, and the MLP seed-0 D64 archive cannot exclude temporary losses.
-- **The selector (former law 3).** "The residual is a verifier" is narrowed to the recorded selection results in §3 item 5. Small residuals certify neither correctness nor fixed points.
-- **Performance framing.** "Leads the thousand-puzzle column at every depth" is replaced by the named SE-RRM comparison and its qualifications in §2.
-- **Compute column.** The XLA-cost TMAC figures (0.95 for width 192, 0.82 for the released models) are superseded by the dense-MAC convention in §2. `tools/mac_count.py` implements the old measure and is kept as history.
-- **Training-cost and optimizer statements.** SA256's "4.9×" training cost is corrected to about 2.45× in logged step time; the TRM-cell control matches logged training time only approximately (ratio about 0.99); our AdamW differs from official TRM's AdamATan2; the recipe ablation's "the optimizer settings explain the advantage" language is withdrawn.
-- **Width and memorization (former law 4).** The capacity clock is recipe- and budget-confounded and is not a universal width law. The width-192 long run's fixed-start decline belongs to the fixed start: Gaussian starts solve 120–127 of 128 from 14k onward.
-- **Symmetry versus augmentation (former law 6) and initialization (former law 7).** The Night-A contrasts were re-selected on the 512-puzzle validation monitor on 2026-09-15 (`Documentation/Note_2026-09-15_FinalA_Reselect.md`); the paper admits neither the "replaces the orbit" claim nor a general "init-invariance" claim, only the initialization results in §3 item 4.
-- **ARC.** The DEC-ARC night of 2026-09-15/16 is excluded from the paper; its records are internal (`Documentation/private/`, git-ignored). Its flip rates were corrected by a factor of 100 on 2026-09-17. The paper's ARC content is §3 item 6.
-
-## 5. The models and the recipe
+## 4. The models and the recipe
 
 Digit-field solvers: nine digit fields over the 81 cells, one feature vector per candidate digit and cell, parameters shared across fields so that relabeling the digits permutes the state and the scores exactly. Each block mixes positions within a field (a position MLP, or attention with two-dimensional rotary positions), exchanges information between candidate digits at each cell (a projected mean, or cross-field attention), and transforms channels. The recurrence follows TRM: three cycles of six fast-state updates and one slow-state update per outer iteration, 21 applications of a shared two-block network, both states carried between iterations; a shared linear readout of the slow state gives the digit scores.
 
@@ -70,13 +55,13 @@ Shared recipe: 1,000 base puzzles with 1,000 positional augmentations each and n
 
 Other models in the record: our TRM implementation (X0, width 512, 50k; the nested-pool study), its recipe variants (anchors only, randomized starts only, a second baseline seed), the earlier MLP 384 (C0, selected at 16k within a 30k budget), the earlier Attention 256 recipe study (30k budget, reference at 28k), the seed-0 MLP 192 lineage continued to 150k (the initialization series), the TRM-cell control (X5, 960k), and the released Sudoku ports of TRM, CGAR and EqR.
 
-## 6. Repository map
+## 5. Repository map
 
 ```
 src/qhrrn2/              the implementation (JAX)
   dec_cell.py            the digit-field cell: nine shared fields, MLP or attention mixers, cross-field messages
   trm_cell.py            the TRM / EqR two-timescale loop, randomized starts, segments, the halting head
-  decarc_cell.py         the DEC-ARC cell of the 2026-09-15/16 night (excluded from the paper)
+  decarc_cell.py         the ARC variant of the cell from the 2026-09-15/16 night (excluded from the paper)
   cell.py model.py       the original RG cell of the ARC program (2026-07 → 08; the lineage of a second paper)
   objective.py train.py  the losses (StableMax, halting, answer anchors), the training loop, data-parallel
   sudoku_extreme.py      Sudoku-Extreme data, the native9 layout, positional augmentation
@@ -108,7 +93,7 @@ data/                    Sudoku-Extreme, ARC-AGI, ConceptARC, RE-ARC (vendored, 
 paper/                   the manuscript, its frozen account and the code package (local only, git-ignored)
 ```
 
-## 7. Quickstart
+## 6. Quickstart
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
@@ -137,10 +122,10 @@ NPZ=data/sudoku_extreme/sudoku_extreme_seed0_mon512.npz
 
 The attention runs were trained on spot v6e-8 pods: 30k updates in the width-ladder night, then the extension to 50k and the full evaluation battery in about 16 h per pod (`tools/chain_wladder.sh`, `tools/chain_saext.sh`); the chains shard the full test. ARC: `git clone --depth 1 https://github.com/fchollet/ARC-AGI.git data/ARC-AGI`; the released ARC models and the ConceptARC assays are driven by the paper package's adapters and `tools/arc_suite.py`.
 
-## 8. Research discipline
+## 7. Research discipline
 
 Registration before data: every campaign's decision rules are locked verbatim in a frozen analyzer with a selftest before the run, with numeric predictions and credences; the analyzer adjudicates byte-untouched against its registration commit; lenses and physics passes are descriptive and labeled; claim-bearing contrasts need three seeds or within-run pairing on identical puzzles; every cross-system number carries its protocol and training-regime columns; kills that fire are reported. The ledger (`Documentation/Design_Ledger.md`) is append-only: corrections are new entries, never edits, and a superseded record keeps its text under a dated status banner. Since 2026-09-19 the paper additionally follows an admission rule: a statement enters the manuscript only with its sample, checkpoint, protocol and qualification, after an independent recount of the saved records; "measured on the recorded protocol" is never a proof or a license to generalize.
 
-## 9. Provenance
+## 8. Provenance
 
 The theory documents that seeded the project (December 2025 – January 2026) are catalogued in the ledger §1 with each claim's current status; the ARC program (2026-07 → 08-21) and its course corrections are the ledger's archived entries; the Sudoku campaign (2026-08-21 → 09-10), the paper's evidence runs (2026-09-13 → 09-21) and the audit are indexed in `Documentation/README.md`. GCP compute: about $3.3k through 2026-09-10, about $140 for the extensions of 2026-09-14/15, and $969 in the shared ARC project from 2026-09-15 to 09-21 (`tools/HANDOFF.md`), about $4.4k in all. Repository: https://github.com/Aakash-Marthandan/Fixed-Point-Reasoner-Structures (renamed from QHRRN; the old URL redirects).

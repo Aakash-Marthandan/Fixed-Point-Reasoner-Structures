@@ -1,6 +1,6 @@
 # The paper's final Sudoku runs — verdict (2026-09-14)
 
-> **Status (2026-09-25):** historical record, preserved verbatim; it predates the 2026-09-19 adversarial audit and the paper's frozen account (v4.3). "DEC" below names the digit-field cell; the paper calls these runs MLP 192 (seeds 0 / 1 / 2, internal names C5 / C7 / C8). The accuracy tables are the paper's MLP row. The current statement of the results is the root `README.md` §2–§4; the correction record is `Design_Ledger.md` §5 (the 2026-09-19 audit entry and the 2026-09-24 documentation entry).
+> **Status (2026-09-25):** historical record, preserved verbatim; it predates the 2026-09-19 adversarial audit and the paper's frozen account (v4.3). "DEC" below names the digit-field cell; the paper calls these runs MLP 192 (seeds 0 / 1 / 2, internal names C5 / C7 / C8). The accuracy tables are the paper's MLP row. The current statement of the results is the root `README.md` §2–§3; the correction record is `Design_Ledger.md` §5 (the 2026-09-19 audit entry and the 2026-09-24 documentation entry).
 
 **Registration:** `Documentation/Plan_2026-09-13_Paper_Final_Runs.md` (commit 7a99d9e). **Analyzer:** `tools/analyze_paperfinal.py`, 0-diff against 7a99d9e (sha256 029f9f08…), selftest 25/25, run on a staging root of symlinks (`runs/_paperfinal_pull/stage`; nothing extracted over `runs/`). **Output:** `runs/_paperfinal_pull/stage/analysis/paperfinal_verdict.{txt,json}`. **Descriptive lens (no rules):** `tools/lens_selection_seed.py` (selftest 6/6) → `stage/analysis/selection_seed.txt`.
 

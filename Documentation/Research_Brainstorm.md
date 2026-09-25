@@ -1,6 +1,6 @@
 # Research & Brainstorming — QG/Information-Theory Lens on the Architecture
 
-> **Status (2026-09-25):** historical record, preserved verbatim; it predates the 2026-09-19 adversarial audit and the paper's frozen account (v4.3). The freethinks below predate the audit; their decimation, commitment and "law" framings are not admitted claims. The current statement of the results is the root `README.md` §2–§4; the correction record is `Design_Ledger.md` §5 (the 2026-09-19 audit entry and the 2026-09-24 documentation entry).
+> **Status (2026-09-25):** historical record, preserved verbatim; it predates the 2026-09-19 adversarial audit and the paper's frozen account (v4.3). The freethinks below predate the audit; their decimation, commitment and "law" framings are not admitted claims. The current statement of the results is the root `README.md` §2–§3; the correction record is `Design_Ledger.md` §5 (the 2026-09-19 audit entry and the 2026-09-24 documentation entry).
 
 **Concision pass 2026-09-02 (PI-directed): the four earlier freethinks (the initial QG/IT survey with clusters A–H; Freethink 2026-08-08 attractor engineering; 2026-08-10 post-pivot clusters I–M; 2026-08-12 post-grid clusters N–S; 2026-08-13 consolidation clusters T–W) moved VERBATIM to `Research_Brainstorm_Archive_2026-07_to_2026-08-13.md` (pre-move state = git d25b728). This file keeps the two newest freethinks (2026-09-03, X-1…X-8 — the amalgamation; 2026-08-31, clusters X–AF) and the staged inputs the latter consumed. Lettering of clusters continues across both files.**
 

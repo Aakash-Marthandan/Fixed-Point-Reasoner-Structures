@@ -1,6 +1,6 @@
 # Documentation — what to read, in what order (index as of 2026-09-25)
 
-The science of this repository lives in dated, append-only records. Nothing in a README is a claim; every number traces to an analysis script under `runs/analysis/` and a ledger entry. The records are kept in place and verbatim, because the ledger and the reports link to them by file name; a record whose framing was superseded carries a dated status banner under its title instead of being moved or edited. The current statement of the results is the root [`README.md`](../README.md) §2–§4.
+The science of this repository lives in dated, append-only records. Nothing in a README is a claim; every number traces to an analysis script under `runs/analysis/` and a ledger entry. The records are kept in place and verbatim, because the ledger and the reports link to them by file name; a record whose framing was superseded carries a dated status banner under its title instead of being moved or edited. The current statement of the results is the root [`README.md`](../README.md) §2–§3.
 
 ## 1. The record of truth
 
@@ -46,7 +46,7 @@ The cycle is registration → run → verdict by a frozen analyzer → report; e
 
 ## 4. The Sudoku campaign (2026-08-21 → 09-10), newest first — historical
 
-These records built the digit-field cell and the instrument suite; their measured tables stand as observations of the listed runs, while the "seven laws", the DEC naming and the commitment / decimation vocabulary are superseded (root README §4).
+These records built the digit-field cell and the instrument suite; their measured tables stand as observations of the listed runs, while the "seven laws", the DEC naming and the commitment / decimation vocabulary are superseded (the ledger §5 entries of 2026-09-19 and 2026-09-24).
 
 | date | file | role |
 |---|---|---|
