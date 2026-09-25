@@ -124,4 +124,4 @@ Reading order for the paper: rows 1–7 are the field's game and we are honest a
 
 - **Verification concern: confirmed; repair = measurement + framing, not retraction.** B-M2 stands as registered (internal, named statistic); the paper reframes it as coverage and adds our numbers on the field's three statistics (two cheap riders + vote@1 already in hand).
 - **Claim inventory: 6 A-grade, 6 B-grade, 1 A−; nothing at C after the riders.** The weakest legs are all named (n=1 two-phase; post-hoc ignition rule; ARC scale-match) and each has a cheap registered fix.
-- **Calendar:** riders + d128 (+2 seeds carriers) + ARC-d96 extension fit before ~Sep 8–10; drafting window Sep 5–14 holds for the ICLR abstract Sep 18 per the standing plan.
+- **Calendar:** riders + d128 (+2 seeds carriers) + ARC-d96 extension fit before ~Sep 8–10; drafting window Sep 5–14 holds for the [venue] abstract Sep 18 per the standing plan.

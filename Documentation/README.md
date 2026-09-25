@@ -1,6 +1,6 @@
 # Documentation — what to read, in what order (index as of 2026-09-25)
 
-The science of this repository lives in dated, append-only records. Nothing in a README is a claim; every number traces to an analysis script under `runs/analysis/` and a ledger entry. The records are kept in place and verbatim, because the ledger and the reports link to them by file name; a record whose framing was superseded carries a dated status banner under its title instead of being moved or edited. The current statement of the results is the root [`README.md`](../README.md) §2–§3.
+The science of this repository lives in dated, append-only records. Nothing in a README is a claim; every number traces to an analysis script under `runs/analysis/` and a ledger entry. The records are kept in place and verbatim, because the ledger and the reports link to them by file name; a record whose framing was superseded carries a dated status banner under its title instead of being moved or edited. The current statement of the results is the set of verdict reports in §2 below and the ledger's entries of 2026-09-19 and 2026-09-24.
 
 ## 1. The record of truth
 
@@ -9,30 +9,30 @@ The science of this repository lives in dated, append-only records. Nothing in a
 | `Design_Ledger.md` | the epistemic source of truth: §0–§4 the rules, the components and the hypothesis register; §5 the append-only status-change log, newest first: one entry per registration, verdict, correction and decision. The 2026-09-19 "ADVERSARIAL PAPER AUDIT" entry and the 2026-09-24 documentation entry are the correction record behind this index |
 | `Design_Ledger_Archive_2026-07-16_to_2026-08-21.md` | §5 entries of the ARC era, moved verbatim on 2026-09-02 |
 | `Research_Brainstorm.md` · `Research_Brainstorm_Archive_2026-07_to_2026-08-13.md` | the freethinks that precede each registration; their decimation and commitment framings predate the audit and are not admitted claims |
-| `Sudoku_vs_ARC_Instrument_Map.md` | the instrument-by-instrument status on both domains as of 2026-09-10 (historical; the paper's Sudoku-versus-ARC treatment is its operational boundary, root README §3 item 6) |
+| `Sudoku_vs_ARC_Instrument_Map.md` | the instrument-by-instrument status on both domains as of 2026-09-10 (historical; the paper's Sudoku-versus-ARC treatment is its operational boundary) |
 
 ## 2. The paper's evidence runs (2026-09-13 → 09-21), newest first
 
-The cycle is registration → run → verdict by a frozen analyzer → report; each report names its analyzer, artifacts and ledger entry. The paper's Table 1 rows, its interventions and its initialization series come from these records.
+The cycle is registration → run → verdict by a frozen analyzer → report; each report names its analyzer, artifacts and ledger entry. The manuscript's benchmark rows, its interventions and its initialization series come from these records.
 
 | date | file | role |
 |---|---|---|
 | 09-20 | `Handoff_2026-09-20_Attention_Rows_For_Paper.md` | the attention-arm rows, protocol strings, floors and wording handed to the paper session (consumed) |
 | 09-20 | `Note_2026-09-20_Restart_Column.md` | the 128-restart column read as a registered letter with a seed floor: every arm inside the floor, no letter |
-| 09-20 | `Report_2026-09-20_SA_Extension_Verdict.md` · `Plan_2026-09-19_SA_Extension.md` | Attention 128 / 192 / 256 extended 30k → 50k and run through the full battery: the paper's attention rows (95.45 / 97.31 / 97.93 at D16, 99.48 / 99.62 / 99.62 at D64 on all 422,786) |
-| 09-19 | `Report_2026-09-19_Recipe_Ablation_Verdict.md` · `Plan_2026-09-19_Recipe_Ablation.md` | the Attention 256 recipe ablation at 30k: starts/anchors off, damping/noise off, batch/learning-rate changed (−12.82 / −8.10 points, the largest tested effect); audit addendum on the optimizer-identity wording |
+| 09-20 | `Report_2026-09-20_SA_Extension_Verdict.md` · `Plan_2026-09-19_SA_Extension.md` | Attention 128 / 192 / 256 extended 30k → 50k and run through the full battery: the attention rows at 16 and 64 iterations on the full test |
+| 09-19 | `Report_2026-09-19_Recipe_Ablation_Verdict.md` · `Plan_2026-09-19_Recipe_Ablation.md` | the Attention 256 recipe ablation at 30k: starts/anchors off, damping/noise off, batch/learning-rate changed (the largest tested effect); audit addendum on the optimizer-identity wording |
 | 09-19 | `Report_2026-09-19_Width_Ladder_Verdict.md` · `Plan_2026-09-18_Width_Ladder.md` · `Note_2026-09-19_Ladder_Adversarial_Pass.md` | the width ladder and the attention-mixer arms at 30k; the exploratory adversarial pass on it |
 | 09-19 | `Note_2026-09-19_Commitment_Validity.md` | is "commitment" a property of the models or of the normalization? Outcome ARTIFACT: the earlier confidence readings were a softmax read of StableMax logits; first-iteration high-confidence share 22–40 %, not 85–99 % |
 | 09-19 | `Note_2026-09-19_Corpus_Normalized.md` | the 512-puzzle, depth-32 trajectory corpus of nine checkpoints under the training normalization (the paper's correction-timing evidence) |
 | 09-19 | `Note_2026-09-19_Fast_Slow_Probe.md` | the state-reset probe on four checkpoints (the paper's original reset study, `tools/lens_fast_slow.py`) |
 | 09-19 | `Note_2026-09-19_First_Passage_Tests.md` · `Note_2026-09-19_Why_Decimation.md` | registered predictive tests on banked records; the second carries the audit addendum that retires its title mechanism |
 | 09-17 | `Note_2026-09-17_Repair_Radius_Lens.md` | the matched-error repair lens: EqR-produced grids versus count-matched random corruptions on 438 pairs, re-encoded in MLP 192 and EqR (audit addendum on its confidence columns) |
-| 09-17 | `Report_2026-09-17_X5_Long_Verdict.md` · `Plan_2026-09-17_X5_Long.md` | the TRM-cell control at MLP 192's parameter count trained to 960k: 60.26 % at D16, 62.40 % at D64 (audit addendum on training-rate arithmetic) |
+| 09-17 | `Report_2026-09-17_X5_Long_Verdict.md` · `Plan_2026-09-17_X5_Long.md` | the TRM-cell control at MLP 192's parameter count trained to 960k, far below the digit-field models at both depths (audit addendum on training-rate arithmetic) |
 | 09-17 | `Report_2026-09-17_Sudoku_Pending_Verdict.md` · `Plan_2026-09-17_Sudoku_Pending_Runs.md` | X5 at the 50k budget and the 128-restart banks of C7 / C8 / X5 |
-| 09-15 | `Report_2026-09-15_W192_Long_Verdict.md` · `Plan_2026-09-14_W192_Long.md` | the seed-0 MLP 192 lineage continued to 150k with the 38-checkpoint initialization series: the fixed-start decline belongs to the fixed start (94k: 11 vs 124 / 124 of 128) |
+| 09-15 | `Report_2026-09-15_W192_Long_Verdict.md` · `Plan_2026-09-14_W192_Long.md` | the seed-0 MLP 192 lineage continued to 150k with the 38-checkpoint initialization series: the fixed-start decline belongs to the fixed start (the fixed start fails where Gaussian starts succeed) |
 | 09-15 | `Note_2026-09-15_FinalA_Reselect.md` | the Night-A arms re-selected on the 512-puzzle validation monitor (supersedes the Night-A augmentation and width contrasts) |
 | 09-14 | `Report_2026-09-14_C8_Extension_Verdict.md` · `Plan_2026-09-14_C8_Extension.md` | the lowest MLP 192 seed extended to 50k; decision (B): the paper's MLP row is the budget-matched triple |
-| 09-14 | `Report_2026-09-14_Paper_Final_Verdict.md` · `Plan_2026-09-13_Paper_Final_Runs.md` | the paper's final Sudoku runs: the MLP 192 seed triple (95.91 / 94.82 / 95.49 and 99.16 / 98.82 / 99.18) |
+| 09-14 | `Report_2026-09-14_Paper_Final_Verdict.md` · `Plan_2026-09-13_Paper_Final_Runs.md` | the paper's final Sudoku runs: the MLP 192 seed triple |
 | 09-10 | `Plan_2026-09-10_FullSet_Evals.md` | the full-set evaluation plan (executed within the runs above) |
 
 ## 3. The audit and the corrections (2026-09-19 → 09-25)

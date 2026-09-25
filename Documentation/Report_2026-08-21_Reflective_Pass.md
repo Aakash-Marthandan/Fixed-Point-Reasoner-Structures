@@ -88,7 +88,7 @@ From 2/48 val-hard, FPRM-parity (47.5% @7M) by the freeze is not a plan, it is a
 3. **The priced-code physics** (G3): the four laws, two-profile structure, H-42's free-bits memorization — the information-theoretic reading that makes 1–2 interpretable rather than empirical.
 4. **The conversion study** (G4): candidate-supply × basin-decoding as the working converter; basin-preserving adaptation as the constraint; the honest ARC efficiency number.
 
-This is coherent at AAMAS grade with M1 + (1)(3)(4); it is ICLR-grade if M2 lands by the abstract.
+This is coherent at AAMAS grade with M1 + (1)(3)(4); it is [venue]-grade if M2 lands by the abstract.
 
 ---
 
@@ -114,18 +114,18 @@ The pre-committed rung 2 runs as a **background confirmatory**, not a quest: one
 
 ### 4.3 Calendar (deadlines verified against the CFPs today)
 
-**ICLR 2027: abstract Sep 18 AOE, full paper Sep 25 AOE. AAMAS 2027: abstract Oct 2, full Oct 9 (Hanoi, May 3–7).** Today is Aug 21 — 28 days to the ICLR abstract, 35 to full; one more week than the ledger's assumption.
+**[venue] 2027: abstract Sep 18 AOE, full paper Sep 25 AOE. AAMAS 2027: abstract Oct 2, full Oct 9 (Hanoi, May 3–7).** Today is Aug 21 — 28 days to the [venue] abstract, 35 to full; one more week than the ledger's assumption.
 
 | window | WS-A (Sudoku) | WS-B (ARC convert) | WS-C / writing |
 |---|---|---|---|
 | Aug 21–27 | A0–A3 (vendor, depth ladder, RI/NI) | B1–B2 (portfolio + new substrates) | d96 piggyback if weather allows |
 | Aug 28–Sep 3 | A4–A5; **M1 gate** | B3 branch; **eval-6 gate** | d96 analysis (half-day) |
 | Sep 4–10 | M2 climb (best config × seeds) | ARC-1-eval matched run | figures start; **Sep 10 venue checkpoint** |
-| Sep 11–18 | freeze ~Sep 15; seeds/replications | freeze | **ICLR abstract Sep 18** |
-| Sep 19–25 | — | — | full paper (ICLR) |
+| Sep 11–18 | freeze ~Sep 15; seeds/replications | freeze | **[venue] abstract Sep 18** |
+| Sep 19–25 | — | — | full paper ([venue]) |
 | (AAMAS mode) | results may run to ~Sep 26 | — | freeze Sep 28 · abstract Oct 2 · full Oct 9 |
 
-Venue rule unchanged (one-plan amendment): same science plan; the Sep-10 checkpoint reads the state; M2-by-Sep-15 ⇒ write for ICLR, else the identical cadence lands AAMAS with three extra result-weeks.
+Venue rule unchanged (one-plan amendment): same science plan; the Sep-10 checkpoint reads the state; M2-by-Sep-15 ⇒ write for [venue], else the identical cadence lands AAMAS with three extra result-weeks.
 
 ### 4.4 Budget
 
@@ -137,7 +137,7 @@ WS-A $40–80 + WS-B $60–150 + WS-C $60–90 + churn ≈ **$250–370 total** 
 
 | risk | odds | mitigation |
 |---|---|---|
-| M2 not reached by Sep 15 (ICLR miss on G1) | real — this is a climb, not a lay-up | AAMAS mode gains 11 result-days; paper stands at M1 on (G2)+(G3)+(G4); the banding is pre-registered so a partial climb is still a clean result |
+| M2 not reached by Sep 15 ([venue] miss on G1) | real — this is a climb, not a lay-up | AAMAS mode gains 11 result-days; paper stands at M1 on (G2)+(G3)+(G4); the banding is pre-registered so a partial climb is still a clean result |
 | 3-adic pooling mismatch caps Sudoku | named since the S-port launch | box-aligned pooling variant is the pre-named fix; itself a finding (RG arity must match constraint arity) |
 | ARC conversion stalls at ~2/48 even with supply mechanisms | possible | the paper's ARC section is the *mechanism study + limits*; the wall is a result we understand and state |
 | Sudoku-Extreme protocol surprises (train-set/scoring conventions) | moderate | A0 verifies before any claim; comparability honesty is already binding policy |

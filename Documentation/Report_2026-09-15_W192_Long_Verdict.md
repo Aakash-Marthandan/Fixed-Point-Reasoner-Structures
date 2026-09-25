@@ -1,6 +1,6 @@
 # The width-192 long run — verdict and what we learn (2026-09-15)
 
-> **Status (2026-09-25):** historical record, preserved verbatim; it predates the 2026-09-19 adversarial audit and the paper's frozen account (v4.3). "DEC" below names the digit-field cell (the paper's MLP 192). The fixed-start decline read here is the paper's initialization result: at 94k the fixed start solves 11 of 128 validation-pool puzzles and one shared Gaussian start solves 124; the answer is the start's, not the update's. The current statement of the results is the root `README.md` §2–§3; the correction record is `Design_Ledger.md` §5 (the 2026-09-19 audit entry and the 2026-09-24 documentation entry).
+> **Status (2026-09-25):** historical record, preserved verbatim; it predates the 2026-09-19 adversarial audit and the paper's frozen account (v4.3). "DEC" below names the digit-field cell (the paper's MLP 192). The fixed-start decline read here is the paper's initialization result: at 94k the fixed start solves 11 of 128 validation-pool puzzles and one shared Gaussian start solves 124; the answer is the start's, not the update's. The current statement of the results is the set of verdict reports indexed in `Documentation/README.md` §2; the correction record is `Design_Ledger.md` §5 (the 2026-09-19 audit entry and the 2026-09-24 documentation entry).
 
 **Registration:** `Documentation/Plan_2026-09-14_W192_Long.md` (commit 57b5656); §8 the early look at 100k (adb1310); §9 the 100k reading and two notes fixed before any instrument row existed (3b7bcad).
 

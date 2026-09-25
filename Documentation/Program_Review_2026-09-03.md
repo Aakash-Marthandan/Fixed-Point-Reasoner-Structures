@@ -21,7 +21,7 @@ The round asked four questions and answered every one, three of them against the
 - **The field's own columns, on our stack:** single random-init draw (EqR B=1) X0 92.12 @D64; verified coverage@128 99.70; Top-1-residual@128 92.48; unverified majority@128 88.87; the D16→D64 depth dividend +6.78pp with zero regressions (28,666 / 0). Ours in the same columns: b1 36.8–45.5, verified@128 50–56, t1r ≈ verified.
 - **Coverage column (ours, labeled protocol):** R0 ∪ C3X ∪ D4 verified@128 = 96.17 % (B-M3 by portfolio); B0 ∪ B1 ∪ R0 72.6; + canvas 97.7; X0 alone 99.7.
 - **Stability:** every native arm retfm 1.00 at every monitor (FPA, fourth regime); the attention dose closed on all five natives; z-norm 2/2 survived vs 0/2 without; explosion census 0 % everywhere.
-- **Spend/calendar:** $215 for the round (band $160–185; weather), program ≈ $2.6k of $3.7k; today Sep 3; freeze for champion numbers ~Sep 10–12; ICLR abstract Sep 18, full Sep 25.
+- **Spend/calendar:** $215 for the round (band $160–185; weather), program ≈ $2.6k of $3.7k; today Sep 3; freeze for champion numbers ~Sep 10–12; [venue] abstract Sep 18, full Sep 25.
 
 ### 1.3 The laws after the round (what strengthened, what was scoped, what fired)
 - **H-49 memorization (FIRED, sharpened):** memorization is not corpus-size-bound when the augmentation group is learnable — the memorization step is the same at aug 100/d96 and aug 1000/d128; the lever is weight decay (measured on R0), with lr/batch confounded inside R0; ACT on the field cell acts as an anti-memorization device (X0n memorizes, X0 does not).

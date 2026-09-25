@@ -74,7 +74,7 @@ Goal: **vote@128 @t64, full-test-grade, at ≤7 M params** vs EqR's 99.8 % @5.03
 5. **Pre-named contingency:** if rung-1 T12 funnels read below S5's 68.6 @128, a T6@20k-class arm (the S5 recipe, width-scaled) joins rung 2 — the wide-funnel insurance.
 6. Owed before launch ($0): evaluator vote_at_k list past 256; the Phase-B launch registration with locked decision rules + pre-registered predictions per rung.
 
-Cost ≈ $700–1,000 of the ≈$2,725 remaining; calendar: ICLR abstract Sep 18 / full Sep 25 — the ladder fits with margin if launched promptly.
+Cost ≈ $700–1,000 of the ≈$2,725 remaining; calendar: [venue] abstract Sep 18 / full Sep 25 — the ladder fits with margin if launched promptly.
 
 ## 6. Claim status
 

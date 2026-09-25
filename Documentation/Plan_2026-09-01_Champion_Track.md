@@ -66,7 +66,7 @@ Every component cites its law:
 - **New-operator risk** (factorized mixers): CI gates + smokes + harness before silicon; fallbacks §2.
 - **Efficiency estimate risk:** all costs INFERRED until canary; projection gate holds the launch if >1.2× band.
 - **Comparability:** the champion is a Sudoku-specialized model (precedent: TRM's MLP-mixer Sudoku variant) and its numbers DO NOT enter the law tables (different architecture class); the law corpus stays on the shared canvas models — one sentence in the paper.
-- **Calendar (freeze rule):** build Sep 1–2 → pilot night Sep 2–3 → verdict + champion registration Sep 3 → champion night Sep 3–4 → ARC-d96 extension Sep 4–6 → drafting from ~Sep 6. Champion numbers in by ~Sep 10–12 or the section ships in the AAMAS version; the ICLR paper stands on the review's structure regardless.
+- **Calendar (freeze rule):** build Sep 1–2 → pilot night Sep 2–3 → verdict + champion registration Sep 3 → champion night Sep 3–4 → ARC-d96 extension Sep 4–6 → drafting from ~Sep 6. Champion numbers in by ~Sep 10–12 or the section ships in the AAMAS version; the [venue] paper stands on the review's structure regardless.
 - **Budget:** pilot + champion + ARC ext + riders ≈ $300–480 → program lands ≈$2.6–2.8k of $3.7k; rebuttal reserve intact.
 
 ## §6. PI decisions embedded here (ratify/adjust at registration)
