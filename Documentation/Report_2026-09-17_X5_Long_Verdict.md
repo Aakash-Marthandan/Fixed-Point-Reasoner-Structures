@@ -1,5 +1,7 @@
 # The X5 long run — verdict (2026-09-17)
 
+> **Adversarial audit addendum (2026-09-19):** Audit F08 corrects the asynchronous absolute training rates; the approximately matched total logged training-time comparison survives. The independent audit reproduces the selected accuracy, restart gap and finite monitor plateau. Frozen adjudication text below is preserved. See [the audit](Report_2026-09-19_Adversarial_Writing_Audit.md).
+
 **Registration:** `Plan_2026-09-17_X5_Long.md` (§3 rules and §4 credences locked at 47c642a; page one confirmed by the PI). **Analyzer:** `tools/analyze_x5long.py`, frozen at 47c642a, run byte-untouched (its imports `analyze_sudokupend.py` and `analyze_paperfinal.py` likewise). **Data:** `runs/_x5long_pull/` (19 objects, crc32c 19/19). **Spend:** ≈ $27.7. Every number below is printed by a script; the outputs are in `runs/_x5long_pull/analysis/`.
 
 ## 0. The short version

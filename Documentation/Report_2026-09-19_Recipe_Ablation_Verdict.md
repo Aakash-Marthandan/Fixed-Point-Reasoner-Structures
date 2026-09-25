@@ -1,5 +1,7 @@
 # The recipe ablation — verdict (2026-09-19)
 
+> **Adversarial audit addendum (2026-09-19):** The saved paired accuracy and selector results reproduce. Audit F09 withdraws optimizer identity (our AdamW versus official TRM’s AdamATan2) and isolated causal/no-effect wording; F01 adds SE-RRM’s omitted 95.4% comparator. Spurious rate zero does not ensure oracle-matching selection (F10). Frozen verdict text below is preserved. See [the audit](Report_2026-09-19_Adversarial_Writing_Audit.md).
+
 **Registration:** `Plan_2026-09-19_Recipe_Ablation.md` (§2–§4 locked at 3cee53b; the PI: "Change the three things to locate the advantage we have"). **Analyzer:** `tools/analyze_sablate.py`, frozen at 3cee53b — it, its two imports and the plan verified identical BY CONTENT HASH immediately before the run (75ad164b… / bcbb66cb… / 029f9f08… / 908e9584…), selftest 25/25, run byte-untouched and FIRST. **Data:** `runs/_sablate_pull/` (18 objects, crc32c 18/18); the reference = the ladder's banked SA256 rows, read, never re-run. **Spend:** ≈ $110 (plan $120–135, cap $170). Every number below is printed by a script; outputs in `runs/_sablate_pull/analysis/` (`sablate_verdict.txt`, `frozen_stdout.keep.txt`, `descriptive_read.txt`).
 
 ## 0. The short version

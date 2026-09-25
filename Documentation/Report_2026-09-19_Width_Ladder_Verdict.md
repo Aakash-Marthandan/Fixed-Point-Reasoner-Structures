@@ -1,5 +1,7 @@
 # The width ladder and the attention-mixer arms — verdict (2026-09-19)
 
+> **Adversarial audit addendum (2026-09-19):** The saved accuracy tables reproduce, but the asynchronous pace calculation does not. Audit F08 replaces SA256’s 4.9× claim with an approximately 2.45× logged step-time estimate; it is not inference cost. Small residuals do not establish true fixed points (F14). Frozen verdict text below is preserved. See [the audit](Report_2026-09-19_Adversarial_Writing_Audit.md).
+
 **Registration:** `Plan_2026-09-18_Width_Ladder.md` (§3 rules and §4 credences locked at fd19514; page one confirmed by the PI). **Analyzer:** `tools/analyze_wladder.py`, frozen at fd19514 — verified by content hash, run byte-untouched. **Data:** `runs/_wladder_pull/` (27 objects, crc32c 27/27). **Spend:** $147.11 (cap $150). Every number below is printed by a script; the outputs are in `runs/_wladder_pull/analysis/`.
 
 ## 0. The short version

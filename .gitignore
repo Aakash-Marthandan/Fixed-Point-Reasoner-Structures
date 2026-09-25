@@ -10,6 +10,9 @@ env/
 venv/
 ENV/
 
+# Local API credentials
+.env
+
 # JAX
 .jax/
 
@@ -37,3 +40,10 @@ data/sudoku_extreme/
 
 # the paper (PI 2026-09-11): local only, never tracked
 paper/
+
+# Adversarial paper audit (2026-09-19): local only
+# Generated results and snapshots are already covered by runs/ and paper/.
+/Documentation/Report_2026-09-19_Adversarial_Writing_Audit.md
+/Documentation/Decimation_Definition_2026-09-19.md
+/tools/audit_writing_plan_20260919.py
+/tools/audit_corpus_contract_20260919.py

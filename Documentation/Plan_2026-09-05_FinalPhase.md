@@ -1,5 +1,7 @@
 # FINAL PHASE — the Decimating Equilibrium Cell (DEC): three nights from the sportC2 verdict to the ICLR freeze (DRAFT for the PI, 2026-09-05 evening; NOT registered — registration follows the PI's go, rules locked in `tools/analyze_final.py --selftest`)
 
+> **Status (2026-09-25):** historical record, preserved verbatim; it predates the 2026-09-19 adversarial audit and the paper's frozen account (v4.3). Design document of the digit-field cell. The DEC name and the decimation rationale are not used by the paper, which names the models by mixer and width (MLP 192, Attention 128 / 192 / 256). The current statement of the results is the root `README.md` §2–§4; the correction record is `Design_Ledger.md` §5 (the 2026-09-19 audit entry and the 2026-09-24 documentation entry).
+
 **Status:** plan, pre-registration. Nothing built beyond what sportC2 left; nothing launched; fleet zero; `runs/tpu_deadline.txt` in the past. Companion texts: the sportC2 verdict (`Report_2026-09-05_sportC2_Verdict.md`), the decoder lens (`runs/analysis/sportC2_ecc_20260905.*`), Freethink 2026-09-05 (evening) in `Research_Brainstorm.md` (P-0…P-6), Program Review #3, the Instrument Map.
 
 ## §0. Purpose and the thesis this phase must make true or false

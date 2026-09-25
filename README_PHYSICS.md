@@ -1,6 +1,6 @@
 # The Physics of QHRRN-2
 
-> **Status (2026-09-10).** This document is the physics background of the original RG architecture (QHRRN-2, the ARC program of 2026-07 → 08; paper 2's lineage). The measured Sudoku-Extreme program of 2026-08-21 → 09-10 runs on the Decimating Equilibrium Cell (`src/qhrrn2/dec_cell.py`: the field's two-timescale loop on a nine-field S9-exact state); its record is `Documentation/Design_Ledger.md` §5 and the reports indexed in `Documentation/README.md`. The rigor classes below still govern every physics sentence in the paper.
+> **Status (2026-09-25).** This document is the physics background of the original RG architecture (QHRRN-2, the ARC program of 2026-07 → 08; the lineage of a possible second paper). It is not the account of the Sudoku paper: the manuscript explains its results as correction behaviour measured by interventions on the learned update, keeps renormalization only as an appendix-level reference mechanism with stated limits, and does not admit decimation as an established mechanism (ledger §5, the 2026-09-19 adversarial audit entry). The Sudoku models are the digit-field cell in `src/qhrrn2/dec_cell.py` (MLP 192 and Attention 128 / 192 / 256 in the paper; their record is `Documentation/Design_Ledger.md` §5 and the reports indexed in `Documentation/README.md`). The rigor classes below still govern every physics sentence written from this repository.
 
 *The inspiration, the mathematical tools, and — importantly — the exact
 boundary between what is load-bearing mathematics and what is metaphor.

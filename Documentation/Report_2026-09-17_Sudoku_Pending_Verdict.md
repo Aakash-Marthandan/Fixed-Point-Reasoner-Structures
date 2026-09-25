@@ -1,5 +1,7 @@
 # The pending Sudoku runs for paper 1 — verdict (2026-09-17)
 
+> **Status (2026-09-25):** historical record, preserved verbatim; it predates the 2026-09-19 adversarial audit and the paper's frozen account (v4.3). "DEC" below names the digit-field cell; the paper calls these runs MLP 192 and the TRM-cell control (X5). The current statement of the results is the root `README.md` §2–§4; the correction record is `Design_Ledger.md` §5 (the 2026-09-19 audit entry and the 2026-09-24 documentation entry).
+
 **Registration:** `Plan_2026-09-17_Sudoku_Pending_Runs.md` (§3 rules and §4 credences locked at 8990ccf). **Analyzer:** `tools/analyze_sudokupend.py`, frozen at 208345d. **Data:** `runs/_sudokupend_pull/` (23 objects, CRC32C 23/23). **Spend:** ≈ $44.60. Every number below is printed by a script; the outputs are in `runs/_sudokupend_pull/analysis/`.
 
 ## 0. The short version

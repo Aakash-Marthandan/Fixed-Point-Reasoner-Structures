@@ -3,8 +3,10 @@
 # split solved/stalled, and on the STALLED puzzles read (i) the correctness of the top-k most
 # confident non-given cells (k=5; sportC1 maps: 70-72 % at mean confidence .96), (ii) the readout
 # entropy at step 1 and at t=64, (iii) the confidently-wrong cell fraction; plus the solved-set
-# control. A calibrated committer reads >= .9 at (i). Descriptive on any arm; a RULE only where a
+# control. Top-k accuracy alone is not a calibration statistic. Descriptive on any arm; a RULE only where a
 # registration names it. Mirrors the evaluator's step (EV._step; inner_k honoured; --ema).
+# Confidence uses the checkpoint's training normalization over digits 1..9.
+# This measurement does not change the evaluator's softmax/one-hot feedback.
 """
   .venv/bin/python tools/stall_calibration.py --ckpt runs/X/ckpt.pkl --npz data/sudoku_extreme/sudoku_extreme_seed0.npz \
       --out runs/sxcalib_X [--ema] [--n 512] [--t 64] [--topk 5] [--hard-feedback]
@@ -18,7 +20,43 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src")); sys.path.i
 import numpy as np, jax, jax.numpy as jnp
 from qhrrn2 import episodic as E, grid as G, model as M, sudoku as SU, sudoku_extreme as SX
 from qhrrn2.config import Config
+from qhrrn2.objective import log_stablemax
 import eval_sudoku_extreme as EV
+
+
+def digit_probabilities(logits, loss_kind):
+    """Training-normalized readout conditional on Sudoku digits, not VOID/black.
+
+    Normalize the digit logits directly: renormalizing full-vocabulary softmax
+    can underflow when a special-token logit dominates. StableMax must retain
+    the original logit origin, because it is not translation invariant.
+    """
+    digits = jnp.asarray(logits[..., 1:10], dtype=jnp.float32)
+    if loss_kind == "stablemax":
+        return jnp.exp(log_stablemax(digits))
+    if loss_kind == "softmax":
+        return jax.nn.softmax(digits, axis=-1)
+    raise ValueError(f"Unsupported checkpoint loss_kind: {loss_kind!r}")
+
+
+def topk_empty_metrics(confidence, pred, solution, empty, topk):
+    """Per-puzzle accuracy/confidence of up to topk initially empty cells.
+
+    Preserve the existing argsort tie convention. Rows without empty cells have
+    no local statistic and return NaN, excluded by the summary mean.
+    """
+    if topk < 1:
+        raise ValueError("topk must be positive")
+    conf = np.asarray(confidence).reshape(len(pred), -1)
+    mask = np.asarray(empty, dtype=bool).reshape(len(pred), -1)
+    masked = np.where(mask, conf, -1)
+    correct = (np.asarray(pred) == np.asarray(solution)).reshape(len(pred), -1)
+    accuracy, mean_conf = [], []
+    for i, ranked in enumerate(np.argsort(masked, axis=1)[:, ::-1]):
+        selected = ranked[mask[i, ranked]][:topk]
+        accuracy.append(float(correct[i, selected].mean()) if len(selected) else np.nan)
+        mean_conf.append(float(conf[i, selected].mean()) if len(selected) else np.nan)
+    return np.asarray(accuracy), np.asarray(mean_conf)
 
 
 def main():
@@ -48,26 +86,29 @@ def main():
             p = jax.nn.softmax(logits, axis=-1)
             pf = jax.nn.one_hot(jnp.argmax(logits, axis=-1), M.VOCAB) if a.hard_feedback else p
             y = y + eta * (pf.transpose(0, 3, 1, 2) - y)
-            p9 = np.asarray(EV.layout_gather(p, layout))[..., 1:10]; p9 = p9 / np.maximum(p9.sum(-1, keepdims=True), 1e-9)
+            p9 = np.asarray(digit_probabilities(EV.layout_gather(logits, layout), cfg.loss_kind))
             ent = -(p9 * np.log(p9 + 1e-12)).sum(-1) / np.log(9)
             if t == 0: e1 = (ent * ng).sum((1, 2)) / np.maximum(ng.sum((1, 2)), 1)
         pred = np.asarray(EV.layout_gather(jnp.argmax(logits, axis=-1), layout)); pred = np.where(pred == G.VOID, 0, pred)
-        solved = np.all((pred == sol9).reshape(B, -1), 1); conf = p9.max(-1); conf_m = conf.copy(); conf_m[~ng] = -1
-        top = np.argsort(conf_m.reshape(B, -1), 1)[:, ::-1][:, :a.topk]
-        topc = np.array([np.mean([(pred[i].ravel()[c] == sol9[i].ravel()[c]) for c in top[i]]) for i in range(B)])
-        mconf = np.array([conf_m.reshape(B, -1)[i, top[i]].mean() for i in range(B)])
+        solved = np.all((pred == sol9).reshape(B, -1), 1); conf = p9.max(-1)
+        topc, mconf = topk_empty_metrics(conf, pred, sol9, ng, a.topk)
         e_t = (ent * ng).sum((1, 2)) / np.maximum(ng.sum((1, 2)), 1)
         cw = (((conf > 0.9) & (pred != sol9) & ng).sum((1, 2))) / np.maximum(ng.sum((1, 2)), 1)
         tops_st += topc[~solved].tolist(); tops_sv += topc[solved].tolist(); conf_st += mconf[~solved].tolist()
         ent1 += e1.tolist(); ent_st += e_t[~solved].tolist(); ent_sv += e_t[solved].tolist(); cw_st += cw[~solved].tolist(); solved_all += solved.tolist()
-    f = lambda v: (float(np.mean(v)) if len(v) else None)
+    f = lambda v: (float(np.mean(np.asarray(v)[np.isfinite(v)])) if np.isfinite(v).any() else None)
     res = dict(ckpt=a.ckpt, ema=bool(a.ema), hard_feedback=bool(a.hard_feedback), inner_k=K, n=int(len(ids)), t=a.t, topk=a.topk,
+               confidence_normalization=cfg.loss_kind, confidence_domain="digit-conditional (1..9)",
+               normalization_source=("checkpoint.config.loss_kind" if "loss_kind" in saved["config"] else "Config default for legacy checkpoint"),
+               confidence_dtype="float32", confidence_threshold=0.9, cell_mask="initially empty",
+               feedback_normalization=("one_hot_argmax" if a.hard_feedback else "softmax"),
+               topk_scope="up to topk initially empty cells; exclude zero-empty rows from local means",
                cold=f(solved_all), n_solved=int(np.sum(solved_all)), n_stalled=int(len(solved_all) - np.sum(solved_all)),
                topk_correct_stalled=f(tops_st), topk_correct_solved=f(tops_sv), mean_conf_stalled=f(conf_st),
                entropy_step1=f(ent1), entropy_t_stalled=f(ent_st), entropy_t_solved=f(ent_sv), conf_wrong_frac_stalled=f(cw_st),
                wall_s=round(time.time() - t0, 1))
     (out / "calib.json").write_text(json.dumps(res, indent=1))
-    print(f"CALIB n={res['n']} cold {100*res['cold']:.1f}% stalled {res['n_stalled']} | top{a.topk} correct on stalled {res['topk_correct_stalled']} (conf {res['mean_conf_stalled']}) solved {res['topk_correct_solved']} | entropy step1 {res['entropy_step1']} t{a.t} stalled {res['entropy_t_stalled']} | conf-wrong stalled {res['conf_wrong_frac_stalled']} ({res['wall_s']}s)", flush=True)
+    print(f"CALIB n={res['n']} cold {100*res['cold']:.1f}% stalled {res['n_stalled']} | top{a.topk} correct on stalled {res['topk_correct_stalled']} (conf {res['mean_conf_stalled']}) solved {res['topk_correct_solved']} | entropy step1 {res['entropy_step1']} t{a.t} stalled {res['entropy_t_stalled']} | conf-wrong stalled {res['conf_wrong_frac_stalled']} ({res['wall_s']}s) | normalization {cfg.loss_kind} digit-conditional", flush=True)
     print("CALIB-DONE", flush=True)
 
 
