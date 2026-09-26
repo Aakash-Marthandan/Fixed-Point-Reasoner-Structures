@@ -1,0 +1,64 @@
+{
+  "created": "2026-09-26T04:44:44.048926+00:00",
+  "seed": 20260926,
+  "draws": 4,
+  "conditions": [
+    "consistent_random_0",
+    "consistent_random_1",
+    "consistent_random_2",
+    "consistent_random_3"
+  ],
+  "stats": {
+    "consistent_random_0_deficit_puzzles": 0,
+    "consistent_random_0_conflict_free_share": 0.5699558173784978,
+    "consistent_random_1_deficit_puzzles": 0,
+    "consistent_random_1_conflict_free_share": 0.5755522827687776,
+    "consistent_random_2_deficit_puzzles": 0,
+    "consistent_random_2_conflict_free_share": 0.5690721649484536,
+    "consistent_random_3_deficit_puzzles": 0,
+    "consistent_random_3_conflict_free_share": 0.5720176730486008,
+    "eqr_conflict_free_share_pooled": 0.544918998527246,
+    "eqr_conflict_free_share_per_puzzle_mean": 0.4943589715285369,
+    "eqr_conflict_free_share_quartiles": [
+      0.36710526315789477,
+      0.5135531135531135,
+      0.6666666666666667
+    ],
+    "uniform_0_conflict_free_share_pooled": 0.030927835051546393,
+    "uniform_0_conflict_free_share_per_puzzle_mean": 0.02384707502197145,
+    "uniform_0_conflict_free_share_quartiles": [
+      0.0,
+      0.0,
+      0.04166666666666663
+    ],
+    "legal_random_0_conflict_free_share_pooled": 0.06381934216985763,
+    "legal_random_0_conflict_free_share_per_puzzle_mean": 0.05079982302132613,
+    "legal_random_0_conflict_free_share_quartiles": [
+      0.0,
+      0.04347826086956519,
+      0.0866459627329193
+    ],
+    "guess_sa128_conflict_free_share_pooled": 0.20976906158357767,
+    "guess_sa128_conflict_free_share_per_puzzle_mean": 0.2098381207217458,
+    "guess_sa128_conflict_free_share_quartiles": [
+      0.12903225806451613,
+      0.19354838709677424,
+      0.267948717948718
+    ],
+    "guess_sa256_conflict_free_share_pooled": 0.44771674387822635,
+    "guess_sa256_conflict_free_share_per_puzzle_mean": 0.4222979583407312,
+    "guess_sa256_conflict_free_share_quartiles": [
+      0.27001039501039503,
+      0.4358974358974359,
+      0.5714285714285714
+    ],
+    "consistent_random_0_conflict_free_share_pooled": 0.5699558173784978,
+    "consistent_random_0_conflict_free_share_per_puzzle_mean": 0.5564583807727924,
+    "consistent_random_0_conflict_free_share_quartiles": [
+      0.5,
+      0.5625,
+      0.6153846153846154
+    ]
+  },
+  "sha256_p1_inputs": "dd9612fdb2f2503d79508a74a443920c94453d3b849ab08535ea29b0bea908a9"
+}
