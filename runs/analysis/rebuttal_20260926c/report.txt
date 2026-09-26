@@ -1,0 +1,7 @@
+P2b REPORT (rules registered 2026-09-26): message freeze and mean ablation on the 256 shared first states
+attention_128 messages_frozen: exact16 58 (intact 250, messages off 0) | R_m 0.232 -> EXCHANGE-NEEDED | new discoveries 0 of 198 initially incorrect (intact 192) -> NO-DISCOVERY | initial solutions lost 0 of 58
+attention_128 messages_mean: exact16 0 (intact 250, messages off 0) | R_m 0.000 -> EXCHANGE-NEEDED | new discoveries 0 of 198 initially incorrect (intact 192) -> NO-DISCOVERY | initial solutions lost 58 of 58
+attention_192 messages_frozen: exact16 100 (intact 250, messages off 0) | R_m 0.400 -> EXCHANGE-NEEDED | new discoveries 6 of 162 initially incorrect (intact 156) -> MIXED | initial solutions lost 0 of 94
+attention_192 messages_mean: exact16 0 (intact 250, messages off 0) | R_m 0.000 -> EXCHANGE-NEEDED | new discoveries 0 of 162 initially incorrect (intact 156) -> NO-DISCOVERY | initial solutions lost 94 of 94
+attention_256 messages_frozen: exact16 79 (intact 250, messages off 0) | R_m 0.316 -> EXCHANGE-NEEDED | new discoveries 0 of 177 initially incorrect (intact 171) -> NO-DISCOVERY | initial solutions lost 0 of 79
+attention_256 messages_mean: exact16 0 (intact 250, messages off 0) | R_m 0.000 -> EXCHANGE-NEEDED | new discoveries 0 of 177 initially incorrect (intact 171) -> NO-DISCOVERY | initial solutions lost 79 of 79

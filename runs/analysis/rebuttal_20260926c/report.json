@@ -1,0 +1,68 @@
+{
+ "attention_128": {
+  "intact": 250,
+  "messages_off": 0,
+  "initially_correct": 58,
+  "intact_new": 192,
+  "messages_frozen": {
+   "exact": 58,
+   "R": 0.232,
+   "letter_R": "EXCHANGE-NEEDED",
+   "new": 0,
+   "lost": 0,
+   "letter_D": "NO-DISCOVERY"
+  },
+  "messages_mean": {
+   "exact": 0,
+   "R": 0.0,
+   "letter_R": "EXCHANGE-NEEDED",
+   "new": 0,
+   "lost": 58,
+   "letter_D": "NO-DISCOVERY"
+  }
+ },
+ "attention_192": {
+  "intact": 250,
+  "messages_off": 0,
+  "initially_correct": 94,
+  "intact_new": 156,
+  "messages_frozen": {
+   "exact": 100,
+   "R": 0.4,
+   "letter_R": "EXCHANGE-NEEDED",
+   "new": 6,
+   "lost": 0,
+   "letter_D": "MIXED"
+  },
+  "messages_mean": {
+   "exact": 0,
+   "R": 0.0,
+   "letter_R": "EXCHANGE-NEEDED",
+   "new": 0,
+   "lost": 94,
+   "letter_D": "NO-DISCOVERY"
+  }
+ },
+ "attention_256": {
+  "intact": 250,
+  "messages_off": 0,
+  "initially_correct": 79,
+  "intact_new": 171,
+  "messages_frozen": {
+   "exact": 79,
+   "R": 0.316,
+   "letter_R": "EXCHANGE-NEEDED",
+   "new": 0,
+   "lost": 0,
+   "letter_D": "NO-DISCOVERY"
+  },
+  "messages_mean": {
+   "exact": 0,
+   "R": 0.0,
+   "letter_R": "EXCHANGE-NEEDED",
+   "new": 0,
+   "lost": 79,
+   "letter_D": "NO-DISCOVERY"
+  }
+ }
+}
