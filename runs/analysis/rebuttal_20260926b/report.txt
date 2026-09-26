@@ -1,0 +1,7 @@
+P1c REPORT (rule registered 2026-09-26; consistent random corruptions vs the model's own errors)
+conflict-free share of wrong digits (pooled): eqr 0.545, consistent draw 0 0.570, legal_random_0 0.064, uniform_0 0.031
+attention_128: E1 eqr 36.96 uniform 5.04 consistent 36.59 (draws [36.4, 37.2, 36.4, 36.4]) | G 0.988 -> CONSISTENCY-EXPLAINS | exact16 eqr 95.2 % consistent 94.7 %; diff -0.51 pp [-2.40, +1.48], draw0 McNemar p 1.000
+attention_192: E1 eqr 35.94 uniform 2.84 consistent 29.59 (draws [29.3, 29.9, 29.6, 29.5]) | G 0.808 -> CONSISTENCY-EXPLAINS | exact16 eqr 97.3 % consistent 97.4 %; diff +0.17 pp [-1.20, +1.66], draw0 McNemar p 0.581
+attention_256: E1 eqr 35.15 uniform 3.80 consistent 31.26 (draws [31.1, 31.0, 31.7, 31.2]) | G 0.876 -> CONSISTENCY-EXPLAINS | exact16 eqr 98.2 % consistent 97.5 %; diff -0.63 pp [-1.77, +0.51], draw0 McNemar p 0.581
+port C5: E1 eqr 41.20 (P1 run 41.20) uniform 5.91 consistent 36.58 | G 0.869 -> CONSISTENCY-EXPLAINS | exact16 eqr 94.5 % consistent 93.3 %
+port EQR: E1 eqr 37.55 (P1 run 37.55) uniform 2.44 consistent 29.75 | G 0.778 -> CONSISTENCY-EXPLAINS | exact16 eqr 85.2 % consistent 88.8 %

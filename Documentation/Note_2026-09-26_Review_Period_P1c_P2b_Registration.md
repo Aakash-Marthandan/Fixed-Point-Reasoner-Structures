@@ -35,3 +35,23 @@
 ## Labels and plan
 
 Confirmatory: G_cons, R_m and D letters. Exploratory: endpoint intervals, the consistency–error correlation, mean-versus-frozen. Plan: P1c launches first (three widths in parallel, C5 alongside, EqR after C5; about 1.5–2 h); P2b is built while P1c runs, smoked, and launched after its gates pass. No shared tool edited; `lens_repair_radius.T_TOTAL` set to 16 in-process.
+
+---
+
+## P1c Outcome (2026-09-26 06:20Z; `runs/analysis/rebuttal_20260926b/report.{txt,json}`; every gate passed; no shared tool edited)
+
+**Integrity.** Bitwise reproduction of the study's intact first step on all three widths; the port receivers reproduced their P1 references exactly (C5 E1 41.20 %, EqR 37.55 %). Pooled conflict-free share of wrong digits: EqR's own 0.545, consistent draw 0 0.570, legal random 0.064, uniform 0.031.
+
+| receiver | E1 EqR's own | E1 uniform | E1 legal (P1) | E1 consistent (4 draws) | G_cons | letter | exact-16 own / consistent |
+|---|---|---|---|---|---|---|---|
+| Attention 128 | 36.96 | 5.04 | 16.82 | 36.59 | 0.988 | CONSISTENCY-EXPLAINS | 95.2 / 94.7 % (−0.5 pp [−2.4, +1.5]) |
+| Attention 192 | 35.94 | 2.84 | 12.72 | 29.59 | 0.808 | CONSISTENCY-EXPLAINS | 97.3 / 97.4 % (+0.2 [−1.2, +1.7]) |
+| Attention 256 | 35.15 | 3.80 | 12.86 | 31.26 | 0.876 | CONSISTENCY-EXPLAINS | 98.2 / 97.5 % (−0.6 [−1.8, +0.5]) |
+| MLP 192 (C5) | 41.20 | 5.91 | 18.61 | 36.58 | 0.869 | CONSISTENCY-EXPLAINS | 94.5 / 93.3 % |
+| EqR | 37.55 | 2.44 | 13.43 | 29.75 | 0.778 | CONSISTENCY-EXPLAINS | 85.2 / 88.8 % |
+
+Random wrong digits made mutually consistent, so that each duplicates nothing correct in its row, column or box, are repaired about as slowly as the model's own errors: they close 78–99 % of the gap between uniform corruptions and model-produced errors, where legality alone closed 29–37 % (P1). Endpoint differences are within about one point on every attention receiver, intervals through zero; on EqR the consistent random errors end easier than its own (88.8 vs 85.2 %). Draw-to-draw spread is under one point everywhere. Descriptive: within the consistent draws, puzzles whose errors are more mutually consistent are repaired more slowly (correlation +0.26 on Attention 128, +0.29 on MLP 192).
+
+**Predictions scored.** CONSISTENCY-EXPLAINS (0.40) HIT on all three widths; the same letter on all three (0.5) HIT; C5 and EqR the same letter HIT; expected E1_consistent 22–32 %: HIT on 192, 256 and EqR, MISS on 128 and C5 (36.6 %, above the band).
+
+**The registered sentence that applies.** "Random corruptions whose wrong digits are mutually consistent, so that each duplicates nothing correct, are repaired about as slowly as the model's own errors: the operative property is consistency among the errors, not their model origin." This supports the conjecture's premise that coordinated errors resist local correction. It does not identify a hidden representation, and the residual model-specific difficulty is small on the digit-field receivers (G 0.81–0.99) and larger on EqR (0.78).
