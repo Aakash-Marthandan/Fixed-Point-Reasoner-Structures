@@ -42,3 +42,35 @@
 ## Gates, labels, plan
 
 Gates: (1) selftest; (2) `prepare` asserts clue preservation, exact counts, zero clue-conflict share for every legal source, EqR's 17/10,185 and the uniform draw's ≈ 63 %; (3) the tool's loop reproduces the study's intact interventions chunk 0 (128 puzzles × 16 iterations) bitwise before any new row on each width, and the shared first state is asserted bitwise per batch; (4) the null modes assert the score shift; (5) a 16-puzzle, 2-iteration smoke to a scratch directory before launch; (6) the port's references re-run in-process. Confirmatory: the G, G_loc and R letters. Exploratory: the cross-model sources, the endpoint intervals, the readout agreement, per-width comparisons. Plan: `queue.sh` runs the three widths in parallel (about 3–5 h), then C5 and EqR (about 1–2 h), then `report`. P2c (the 94k identical-grid state swaps) and the message-freeze and mean-ablation controls are registered separately before their build. No shared tool is edited; `lens_repair_radius.T_TOTAL` is set to 16 in-process.
+
+---
+
+## Outcome (2026-09-26 03:20Z; `runs/analysis/rebuttal_20260926/report.{txt,json}`; every gate passed; no shared tool edited; one reader fix after the run: the port section of `report()` indexed the eligibility mask by test ID instead of by position and crashed before writing, corrected to positional indexing with no rule touched, and the corrected report reproduces the hand-computed interim values exactly)
+
+**Integrity.** All three attention loops reproduced the paper's intact continuation bitwise (128 puzzles × 16 iterations each); the shared first state matched bitwise on every batch; the score-preserving modes shifted the 729 digit scores by at most 2e-14; the port receivers reproduced the manuscript's references exactly (C5: E1 41.20 / 5.91 %, exact 94.5 / 98.6 %; EqR: 37.55 / 2.44 %, 85.2 / 98.2 %); the attention references reproduced Table 7 (36.96 / 35.94 / 35.15 % EqR; 5.04 / 2.84 / 3.80 % uniform).
+
+**P1 letters (early error after one iteration, 438 eligible pairs).**
+
+| receiver | E1 EqR | E1 uniform | E1 legal, random cells | G | letter | E1 legal, EqR's cells | G_loc | letter |
+|---|---|---|---|---|---|---|---|---|
+| Attention 128 | 36.96 | 5.04 | 16.82 | 0.369 | MIXED | 16.21 | 0.350 | MIXED |
+| Attention 192 | 35.94 | 2.84 | 12.72 | 0.298 | CONFIGURATION-BEYOND | 15.74 | 0.390 | MIXED |
+| Attention 256 | 35.15 | 3.80 | 12.86 | 0.289 | CONFIGURATION-BEYOND | 15.58 | 0.376 | MIXED |
+| MLP 192 (C5) | 41.20 | 5.91 | 18.61 | 0.360 | MIXED | 23.39 | 0.495 | MIXED |
+| EqR | 37.55 | 2.44 | 13.43 | 0.313 | CONFIGURATION-BEYOND | 16.72 | 0.407 | MIXED |
+
+Clue refutability closes 29–37 % of the early repair gap on every receiver; the five values span 0.08 and straddle the 0.33 boundary, so the letter split between MIXED and CONFIGURATION-BEYOND is the threshold, not the receivers. Placing the legal digits at EqR's own cells closes a further 0–14 points (G_loc 0.35–0.50); the remaining half or more of the gap belongs to the digits the model chose. Exploratory cross-model sources: the attention models' own fixed-start first guesses are repaired at 40–45 % early error by every receiver (their count-matched legal corruptions at 11–22 %), so the contrast is producer-independent. Endpoints (exact at 16, legal − EqR): attention +1.0 / +1.5 (128), +0.9 / +1.1 (192), +0.7 / −0.1 (256) pp, every interval through zero; C5 +2.6–2.9 pp; EqR +5.0–7.3 pp (its own endpoint gap persists).
+
+**P2 letters (exact at 16 of 256; intact 250; slow reset 58 / 101 / 126).**
+
+| mode | 128 | R | 192 | R | 256 | R | letter |
+|---|---|---|---|---|---|---|---|
+| reencode_slow | 148 | 0.469 | 152 | 0.342 | 151 | 0.202 | BEYOND-READOUT (all) |
+| null_h0 (scores kept; invisible part := buffer's) | 109 | 0.266 | 138 | 0.248 | 122 | −0.032 | BEYOND-READOUT (all) |
+| null_random (scores kept; invisible part := matched-norm noise) | 171 | 0.589 | 212 | 0.745 | 230 | 0.839 | MIXED (all) |
+
+The two primary modes read BEYOND-READOUT on every width, but the control reverses the registered expectation: replacing the readout-invisible component by matched-norm noise is the MILDEST edit (losses 79 / 38 / 20 of 250), the buffer's component the most damaging (at width 256 as damaging as the full slow reset, with an oscillating trajectory), and re-encoding the decoded grid in between. Reading: (a) keeping every digit score does not rescue the slow reset, so the reset's damage is not the loss of the current answer; (b) a neutral erasure of the invisible content costs 8–32 pp, so the slow carry holds information beyond its scores that later corrections use, moderately and decreasingly with width; (c) most of the slow reset's damage is the injected initial-buffer signal, not discarded history. The re-encoded state's immediate readout reproduced its grid exactly (agreement 1.0).
+
+**Predictions scored.** P1 attention letter: MIXED (0.45) hit on 128 only, CONFIGURATION-BEYOND (0.25) hit on 192 and 256; E1_legal 10–25 % HIT. Same letter on all three widths (0.6): MISS (a 0.08 spread across the boundary). G_loc ≥ 0.67 (0.5): MISS (0.35–0.50). EqR's G above C5's (0.6): MISS (0.313 vs 0.360). Attention endpoint advantage inside [−2, +4] pp (0.7): HIT. P2 reencode: BEYOND-READOUT (0.25) hit. R(null_h0) ≥ R(reencode) − 0.1 (0.6): MISS. R(null_random) ≤ R(null_h0) − 0.1 (0.5): MISS, opposite direction.
+
+**The registered sentences that apply.** P1, all receivers: "Clue-legal random corruptions are still repaired far faster than the model's own errors at matched counts: refutability explains about a third of the early gap; the remainder lies in which cells and, above all, which digits are wrong." Mutually supporting errors are not thereby established. P2: "Keeping every digit score does not rescue the slow reset; erasing the readout-invisible part of the slow state neutrally costs 8–32 points; the buffer's own invisible component, not the loss of history, carries most of the reset's damage." Under every outcome: one checkpoint per model, the manuscript's populations, inference-time inputs and edits outside the training distribution, no content identified.

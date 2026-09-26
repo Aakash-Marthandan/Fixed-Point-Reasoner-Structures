@@ -1,0 +1,26 @@
+P1 / P2 REPORT (rules registered 2026-09-26; see the note)
+attention_128 legal_random: E1 eqr 36.96 uniform 5.04 legal 16.82 | G 0.369 -> MIXED | endpoint legal-eqr +1.03 pp [-0.91, +3.08] draw0 McNemar p 1.000
+attention_128 legal_at_eqr: E1 eqr 36.96 uniform 5.04 legal 16.21 | G 0.35 -> MIXED | endpoint legal-eqr +1.48 pp [-0.51, +3.60] draw0 McNemar p 0.087
+attention_128 guess_sa128 (exploratory, n 411): E1 guess 45.17 vs legal-matched 21.73; exact16 381 vs 396
+attention_128 guess_sa256 (exploratory, n 364): E1 guess 39.93 vs legal-matched 20.26; exact16 348 vs 351
+attention_128 state reencode_slow: exact16 148 (intact 250, slow reset 58) | R 0.469 -> BEYOND-READOUT | max score shift 0.00e+00
+attention_128 state null_h0: exact16 109 (intact 250, slow reset 58) | R 0.266 -> BEYOND-READOUT | max score shift 2.13e-14
+attention_128 state null_random: exact16 171 (intact 250, slow reset 58) | R 0.589 -> MIXED | max score shift 2.13e-14
+attention_192 legal_random: E1 eqr 35.94 uniform 2.84 legal 12.72 | G 0.298 -> CONFIGURATION-BEYOND | endpoint legal-eqr +0.86 pp [-0.46, +2.34] draw0 McNemar p 0.424
+attention_192 legal_at_eqr: E1 eqr 35.94 uniform 2.84 legal 15.74 | G 0.39 -> MIXED | endpoint legal-eqr +1.08 pp [-0.17, +2.51] draw0 McNemar p 0.065
+attention_192 guess_sa128 (exploratory, n 411): E1 guess 41.93 vs legal-matched 13.33; exact16 392 vs 410
+attention_192 guess_sa256 (exploratory, n 364): E1 guess 40.26 vs legal-matched 15.42; exact16 347 vs 357
+attention_192 state reencode_slow: exact16 152 (intact 250, slow reset 101) | R 0.342 -> BEYOND-READOUT | max score shift 0.00e+00
+attention_192 state null_h0: exact16 138 (intact 250, slow reset 101) | R 0.248 -> BEYOND-READOUT | max score shift 2.13e-14
+attention_192 state null_random: exact16 212 (intact 250, slow reset 101) | R 0.745 -> MIXED | max score shift 2.13e-14
+attention_256 legal_random: E1 eqr 35.15 uniform 3.80 legal 12.86 | G 0.289 -> CONFIGURATION-BEYOND | endpoint legal-eqr +0.68 pp [-0.51, +1.94] draw0 McNemar p 0.508
+attention_256 legal_at_eqr: E1 eqr 35.15 uniform 3.80 legal 15.58 | G 0.376 -> MIXED | endpoint legal-eqr -0.11 pp [-1.20, +0.97] draw0 McNemar p 0.754
+attention_256 guess_sa128 (exploratory, n 411): E1 guess 43.21 vs legal-matched 13.48; exact16 403 vs 403
+attention_256 guess_sa256 (exploratory, n 364): E1 guess 39.98 vs legal-matched 16.08; exact16 353 vs 361
+attention_256 state reencode_slow: exact16 151 (intact 250, slow reset 126) | R 0.202 -> BEYOND-READOUT | max score shift 0.00e+00
+attention_256 state null_h0: exact16 122 (intact 250, slow reset 126) | R -0.032 -> BEYOND-READOUT | max score shift 2.13e-14
+attention_256 state null_random: exact16 230 (intact 250, slow reset 126) | R 0.839 -> MIXED | max score shift 2.13e-14
+port C5 legal_random: E1 eqr 41.20 uniform 5.91 legal 18.61 | G 0.36 -> MIXED | exact16 eqr 94.5 % legal 97.4 %
+port C5 legal_at_eqr: E1 eqr 41.20 uniform 5.91 legal 23.39 | G 0.495 -> MIXED | exact16 eqr 94.5 % legal 97.1 %
+port EQR legal_random: E1 eqr 37.55 uniform 2.44 legal 13.43 | G 0.313 -> CONFIGURATION-BEYOND | exact16 eqr 85.2 % legal 92.5 %
+port EQR legal_at_eqr: E1 eqr 37.55 uniform 2.44 legal 16.72 | G 0.407 -> MIXED | exact16 eqr 85.2 % legal 90.2 %

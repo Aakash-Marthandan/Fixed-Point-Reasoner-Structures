@@ -454,7 +454,7 @@ def report(base=OUT):
     for rec in ("C5", "EQR"):
         p = base / f"port_{rec}.npz"
         if not p.exists(): lines.append(f"port {rec}: not complete"); continue
-        d = np.load(p, allow_pickle=True); srcs = list(d["sources"]); P, S = d["puzzle"], d["source"]; el = eligible[d["idx"]]
+        d = np.load(p, allow_pickle=True); srcs = list(d["sources"]); P, S = d["puzzle"], d["source"]; el = eligible[:len(d["idx"])]   # idx holds test IDs in position order; the mask is positional
         e1 = d["e"][:, 0]; ex = d["ex16"]
         def m(name, arr): k = srcs.index(name); sel = (S == k) & el[P]; return float(np.nanmean(arr[sel]))
         e_eqr, e_uni = m("eqr", e1), m("uniform_0", e1); res = dict(e1_eqr=e_eqr, e1_uniform=e_uni)
