@@ -59,3 +59,40 @@ R1: CONFIGURATION-DEPENDENT 0.35; INDEPENDENT 0.35; MIXED 0.30. R2: RECOVERS 0.5
 ## Labels and plan
 
 Confirmatory: R1 and R2 letters. Exploratory: everything else. Build after this note is committed; selftest (projection, rotation norm and orthogonality, the sham's identity, one mutant) and a 16-puzzle smoke with both gates must pass before launch; three widths in parallel under caffeinate; report by the tool; the Outcome section appended here and a ledger line written when read.
+
+---
+
+## P3 Outcome (2026-10-01 18:08Z; `runs/analysis/rebuttal_20261001/report.{txt,json}`; every gate passed; no shared tool edited)
+
+**Integrity.** On all three widths the study's intact first batch was reproduced bitwise, and the sham edit (decompose, reassemble, cast) reproduced the saved reference trajectories bitwise: on batch 0 by the gate, and in the read on all 512 puzzles at every iteration for all four families, twelve of twelve width-by-family comparisons. Every edit preserved the digit scores (largest float64 shift 1.4e-14; largest realized float32 shift 5e-5). An independent recount from the chunk files agrees with the report on every quantity entering R1 and R2. Reader-side fixes made and committed before any ladder result was read (a9bfabb, 7906ec2): the population restricted to the 438 registered source-error pairs, incomplete conditions skipped, and the registered fallback implemented (where the clue-compatible family's early-error change is below the 1-pp floor, completion losses decide with the same thresholds). The rules themselves were not changed.
+
+**R2 — one-time versus repeated (shared first states).**
+
+| receiver | `random_t2` at 16 | P2's repeated edit | intact | R₁ | `random_t4` at 16 | initial solutions lost |
+|---|---|---|---|---|---|---|
+| Attention 128 | 243 | 171 | 250 | 0.911 | 240 | 0 |
+| Attention 192 | 248 | 212 | 250 | 0.947 | 249 | 0 |
+| Attention 256 | 251 | 230 | 250 | 1.050 | 251 | 0 |
+
+**Letter: RECOVERS.** The edit dips the count at the iteration it precedes (125 → 78, 173 → 131, 165 → 149 at iteration 2) and the trajectory then repairs the setback within a few iterations; no initial solution is lost under any edit on any width. P2's loss was the accumulation of fifteen replacements, not the loss of history at one moment.
+
+**R1 — configuration dependence (`random_t2`; eligible strata S3 and S4, S2 having fewer than 20 clue-compatible puzzles on every width).**
+
+| receiver | stratum | clue-compatible ΔE / L | mutually consistent ΔE / L | ρ (basis) | EqR's own grids ΔE | L condition |
+|---|---|---|---|---|---|---|
+| Attention 128 | S3 (16–30 wrong) | +8.07 pp / 2.5 % | +11.47 pp / 3.2 % | 1.42 (ΔE) | +10.35 pp | holds |
+| Attention 128 | S4 (31+) | +2.64 pp / 4.7 % | +6.41 pp / 7.1 % | 2.43 (ΔE) | +8.76 pp | holds |
+| Attention 192 | S3 | +11.22 pp / 1.9 % | +2.08 pp / 3.4 % | 0.19 (ΔE) | −2.88 pp | holds |
+| Attention 192 | S4 | −7.33 pp / 5.4 % | −8.84 pp / 4.8 % | 0.88 (L, fallback) | −14.24 pp | fails |
+| Attention 256 | S3 | +14.79 pp / 4.3 % | +1.88 pp / 1.6 % | 0.13 (ΔE) | −2.41 pp | fails |
+| Attention 256 | S4 | +0.84 pp / 2.5 % | +0.69 pp / 4.0 % | 1.60 (L, fallback) | −0.86 pp | holds |
+
+**Letter: MIXED.** No width has every eligible stratum in one band: ρ ≥ 1.5 in 128's S4 and in 256's S4 by the fallback, ρ < 0.75 in 192's S3 and 256's S3, and 128's S3 sits at 1.42.
+
+**Both readings, as registered for MIXED.** On Attention 128 the one-time replacement costs the mutually consistent corruptions more early repair than the clue-compatible ones in both strata, and the model's own grids more still: the configuration-dependent reading. On Attention 192 and 256 the sign reverses in the middle stratum: the replacement costs the clue-compatible grids 11 and 15 points of early repair and the consistent grids 2, while EqR's own grids repair slightly faster after it (−2.9 and −2.4 pp); in the largest-error stratum on 192 the replacement lowers error for every family (−7 to −14 pp). On the two wider models the readout-invisible state after one iteration carries work that a clue-compatible repair needs and little that a difficult configuration's repair needs.
+
+**Exploratory.** *Later edit.* Before iteration 4 the replacement costs the consistent and model families 12–17 pp of early repair in S3 on every width (consistent 14.6 / 13.1 / 12.4; EqR 17.0 / 13.8 / 14.7), where before iteration 2 it cost 2–11 pp or helped; for the clue-compatible family the later edit costs about the same or less (9.4 / 9.1 / 5.2 against 8.1 / 11.2 / 14.8). The invisible state becomes load-bearing for difficult configurations once their repair is under way, not at its start. *Dose.* On 128 the early-error cost rises with the edit's size for every family in S3 (30°: 0.1 / 0.4 / 2.3 pp; 60°: 3.7 / 4.0 / 4.9; full: 8.1 / 11.5 / 10.4 for clue-compatible / consistent / EqR); on 192 and 256 rotations of the consistent and model grids often lower early error (−0.7 to −4.2 pp) and only the clue-compatible full replacement is clearly costly, so the registered monotone dose–response holds on 128 only. *Preservation.* Under every edit on every width and family, no puzzle solved before the edit is wrong at iteration 16; at most 1.9 % are wrong at some later iteration. *Endpoints.* Exact-at-16 counts move by at most eight of 438 under any edit; the effects are on the early trajectory, not the endpoint. *Completion losses* stay under 10 % except in the smallest uniform strata; *delays* are 0–1 iterations where measurable.
+
+**Predictions scored.** R1 MIXED (0.30) HIT. R2 RECOVERS (0.55) HIT. Sham neutral (0.8) HIT, exactly. Preservation ≤ 2 % wrong at 16 (0.7) HIT, at 0 %. Dose–response monotone on all widths (0.7) MISS: 128 only.
+
+**Reading, for the manuscript and the hypothesis.** The two findings this experiment was built to connect do not join in the way proposed: difficult configurations do not draw *more* on readout-invisible state at the start of repair; on two of three widths they draw less than easy ones, and their slowness is set by the displayed configuration itself, which is what the structured-corruption result (P1c) found from the other side. What the edits establish instead: (1) §4.2's dependence on state beyond the answer scores is a dependence on repair in progress, strongest for clue-compatible corruptions after one iteration and for every family after three, and a single disruption of it is recovered; the repeated replacement's loss in the manuscript is cumulative and should be described so. (2) The hypothesis clause "errors that reinforce one another internally may resist isolated correction" is not supported as a readout-invisible phenomenon at the first iteration on Attention 192 and 256: replacing the invisible state of a mutually consistent configuration does not release it and slightly helps. (3) The other session's registered reads of this day (uncommitted; `Note_2026-10-01_Rebuttal_P10_P11_Registration.md`, `…P12…`) supply the candidate explanation for the width-dependent sign: a sensitive transient two to three iterations before completion, in which small score-preserving rotations move completion earlier as often as later, and a one-time random replacement of the invisible part that helps puzzles still unsolved at 16. Under every outcome, as registered: no feature content is identified; the edits are random directions, not learned ones.
