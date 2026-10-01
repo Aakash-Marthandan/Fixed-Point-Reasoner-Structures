@@ -1,0 +1,28 @@
+{
+ "cold": true,
+ "ri": true,
+ "rifix": true,
+ "detail": {
+  "cold": {
+   "differing_flags": 0,
+   "differing_puzzles": 0,
+   "endpoint_ours": 11,
+   "endpoint_saved": 11,
+   "n": 128
+  },
+  "ri": {
+   "differing_flags": 0,
+   "differing_puzzles": 0,
+   "endpoint_ours": 124,
+   "endpoint_saved": 124,
+   "n": 128
+  },
+  "rifix": {
+   "differing_flags": 0,
+   "differing_puzzles": 0,
+   "endpoint_ours": 124,
+   "endpoint_saved": 124,
+   "n": 128
+  }
+ }
+}

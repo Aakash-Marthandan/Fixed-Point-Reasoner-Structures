@@ -33,3 +33,5 @@ Under every outcome: the 94k checkpoint stays a selected example; the series sta
 ## Labels and plan
 
 Confirmatory: the P5b letter and the P5a reproduction gate. Exploratory: the neighbouring checkpoints and 46k. Build after this note; selftest and a smoke (the gate on 16 puzzles) before the run; the run is minutes on the Mac and does not wait for P3.
+
+**Gate check before the run (2026-10-01 09:46Z; `runs/analysis/rebuttal_20261001c/gate_pre_run_s094000_n128.json`).** A 16-puzzle smoke reproduced the saved `ri` and `rifix` flags exactly but not the fixed start's. At the registered batch of 128 puzzles the fixed start, the original independent draws and the original shared draw all reproduce the saved flags with zero differing flags at every iteration (11 / 124 / 124 at the endpoint, 68 ever correct for the fixed start). The smoke difference is batch composition acting on a numerically sensitive trajectory, as the manuscript's limitations state; the gate stands as registered, at the full batch, and P5b's rows are read only against it.
