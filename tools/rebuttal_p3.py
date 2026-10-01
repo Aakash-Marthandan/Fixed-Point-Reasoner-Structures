@@ -327,15 +327,18 @@ def report(base=OUT):
         rr = res["repair"]
         if "consistent_random_0" in rr and "legal_random_0" in rr and "random_t2" in rr["consistent_random_0"]["edits"] and "random_t2" in rr["legal_random_0"]["edits"]:
             cs, ls = rr["consistent_random_0"]["edits"]["random_t2"]["strata"], rr["legal_random_0"]["edits"]["random_t2"]["strata"]
-            rho[w], Lok[w], undef[w] = {}, {}, {}
+            rho[w], Lok[w], undef[w] = {}, {}, {}; basis = {}
             for s in ("S2", "S3", "S4"):
                 if cs[s]["n"] >= MIN_STRATUM and ls[s]["n"] >= MIN_STRATUM:
-                    if ls[s]["dE"] < E_FLOOR:
-                        undef[w][s] = True; rho[w][s] = float("nan")
+                    if ls[s]["dE"] >= E_FLOOR:
+                        undef[w][s] = False; rho[w][s] = cs[s]["dE"] / ls[s]["dE"]; basis[s] = "dE"
+                    elif ls[s]["L"] > 0:                        # the registered fallback: below the 1-pp floor, L alone decides with the same thresholds
+                        undef[w][s] = False; rho[w][s] = cs[s]["L"] / ls[s]["L"]; basis[s] = "L"
                     else:
-                        undef[w][s] = False; rho[w][s] = cs[s]["dE"] / ls[s]["dE"]
+                        undef[w][s] = True; rho[w][s] = float("nan"); basis[s] = "undefined"
                     Lok[w][s] = cs[s]["L"] >= ls[s]["L"]
-            lines.append(f"attention_{w} R1 strata: " + ", ".join(f"{s} rho {rho[w][s]:.2f} L_ok {Lok[w][s]}" for s in rho[w]) + (" (none eligible)" if not rho[w] else ""))
+            lines.append(f"attention_{w} R1 strata: " + ", ".join(f"{s} rho {rho[w][s]:.2f} ({basis[s]}; dE legal {100*ls[s]['dE']:+.2f} consistent {100*cs[s]['dE']:+.2f} pp; L {100*ls[s]['L']:.1f} vs {100*cs[s]['L']:.1f} %) L_ok {Lok[w][s]}" for s in rho[w]) + (" (none eligible)" if not rho[w] else ""))
+            res["R1_basis"] = basis
             if "eqr" in rr and "random_t2" in rr["eqr"]["edits"]:
                 es = rr["eqr"]["edits"]["random_t2"]["strata"]
                 lines.append(f"attention_{w} R1 model grids beside: " + ", ".join(f"{s} rho_eqr {es[s]['dE']/ls[s]['dE']:.2f}" for s in rho[w] if ls[s]['dE'] >= E_FLOOR))
