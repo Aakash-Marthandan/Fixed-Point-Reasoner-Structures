@@ -1,0 +1,14 @@
+P4 REPORT (rules registered 2026-10-01): messages frozen from iteration t0 on the 256 shared first states
+attention_128 frozen_from_t2: exact16 58 (intact 250) | late L 192 discovered D 0 F 0.000 | solved before t0 58, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_128 frozen_from_t4: exact16 161 (intact 250) | late L 89 discovered D 0 F 0.000 | solved before t0 161, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_128 frozen_from_t6: exact16 208 (intact 250) | late L 42 discovered D 0 F 0.000 | solved before t0 208, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_128 frozen_from_t8: exact16 225 (intact 250) | late L 25 discovered D 0 F 0.000 | solved before t0 225, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_192 frozen_from_t2: exact16 100 (intact 250) | late L 156 discovered D 6 F 0.038 | solved before t0 94, lost by 16 0 | tau_intact - t0 of discoveries: [0, 0, 0, 0, 0, 0] | wrong cells before t0 of discoveries: [1, 1, 1, 3, 4, 5]
+attention_192 frozen_from_t4: exact16 196 (intact 250) | late L 54 discovered D 0 F 0.000 | solved before t0 196, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_192 frozen_from_t6: exact16 224 (intact 250) | late L 26 discovered D 0 F 0.000 | solved before t0 224, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_192 frozen_from_t8: exact16 238 (intact 250) | late L 12 discovered D 0 F 0.000 | solved before t0 238, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_256 frozen_from_t2: exact16 79 (intact 250) | late L 171 discovered D 0 F 0.000 | solved before t0 79, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_256 frozen_from_t4: exact16 208 (intact 250) | late L 42 discovered D 0 F 0.000 | solved before t0 208, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_256 frozen_from_t6: exact16 231 (intact 250) | late L 19 discovered D 0 F 0.000 | solved before t0 231, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+attention_256 frozen_from_t8: exact16 237 (intact 250) | late L 13 discovered D 0 F 0.000 | solved before t0 237, lost by 16 0 | tau_intact - t0 of discoveries: [] | wrong cells before t0 of discoveries: []
+letter: EXCHANGE-UNTIL-COMPLETION

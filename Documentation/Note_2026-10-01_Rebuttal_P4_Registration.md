@@ -36,3 +36,34 @@ Under every outcome: the frozen messages are the model's own but stale; no messa
 ## Labels and plan
 
 Confirmatory: the letter. Exploratory: the τ-relative distribution, settling, preservation counts. Build now; selftest and a 16-puzzle smoke with gates (1)–(3) before queueing; the queue waits on P3's width PIDs; three widths in parallel; report by the tool; the Outcome appended here and a ledger line written when read.
+
+---
+
+## P4 Outcome (2026-10-01 16:58Z; `runs/analysis/rebuttal_20261001b/report.{txt,json}`; every gate passed; no shared tool edited)
+
+**Integrity.** On all three widths the hook-off path reproduced the study's intact logits bitwise through 16 iterations on batch 0; t₀ = 2 reproduced P2b's `messages_frozen` chunk 0 bitwise; the iteration-3 record replayed at iteration 3 reproduced that iteration bitwise; every batch's pre-freeze iterations were asserted bitwise against the study's intact chunks. An independent recount from the chunk files agrees with the report on every cell. Deviation from the plan line, not from the design: widths 128, 256 and 192 were started by hand ahead of the PID queue once their P3 runs had finished (same tool, same output paths; the queue's later pass finds every chunk cached).
+
+| receiver | t₀ | solved before t₀ | late set L | discovered D | F | lost | exact at 16 (intact 250) |
+|---|---|---|---|---|---|---|---|
+| Attention 128 | 2 | 58 | 192 | 0 | 0.000 | 0 | 58 |
+| Attention 128 | 4 | 161 | 89 | 0 | 0.000 | 0 | 161 |
+| Attention 128 | 6 | 208 | 42 | 0 | 0.000 | 0 | 208 |
+| Attention 128 | 8 | 225 | 25 | 0 | 0.000 | 0 | 225 |
+| Attention 192 | 2 | 94 | 156 | 6 | 0.038 | 0 | 100 |
+| Attention 192 | 4 | 196 | 54 | 0 | 0.000 | 0 | 196 |
+| Attention 192 | 6 | 224 | 26 | 0 | 0.000 | 0 | 224 |
+| Attention 192 | 8 | 238 | 12 | 0 | 0.000 | 0 | 238 |
+| Attention 256 | 2 | 79 | 171 | 0 | 0.000 | 0 | 79 |
+| Attention 256 | 4 | 208 | 42 | 0 | 0.000 | 0 | 208 |
+| Attention 256 | 6 | 231 | 19 | 0 | 0.000 | 0 | 231 |
+| Attention 256 | 8 | 237 | 13 | 0 | 0.000 | 0 | 237 |
+
+**Letter: EXCHANGE-UNTIL-COMPLETION** (F = 0 for every t₀ ∈ {4, 6, 8} on every width; no cell undefined, the smallest late set being 12).
+
+**What the trajectories show.** After a freeze from any t₀, the exactness of every puzzle never changes again at any later iteration on any width: the exact-at-16 count equals intact's count after iteration t₀ − 1. The single exception is P2b's six discoveries at t₀ = 2 on Attention 192, grids with 1, 1, 1, 3, 4 and 5 wrong cells after iteration 1, which intact also completes at iteration 2 (τ_intact − t₀ = 0 for all six). Even at t₀ = 8, when 225 / 238 / 237 of 256 are already solved, none of the 25 / 12 / 13 late completions that intact still makes occurs under the frozen exchange. No solution reached before the freeze is lost at any t₀.
+
+**Predictions scored.** EXCHANGE-UNTIL-COMPLETION (0.55) HIT. F rising with t₀ on every width (0.6) MISS: F is zero at every t₀ ≥ 4. No solution lost (0.7) HIT. A majority of discoveries with τ_intact = t₀ (0.6) HIT, trivially: all six.
+
+**The registered sentence, sharpened by the record.** "Holding the exchange at its values from any iteration stops every discovery that intact continuation would still make, at whatever iteration the hold begins, while every solution already reached is kept: the messages must keep updating up to the completing iteration." The registered wording said "nearly every"; the record supports "every" beyond the six near-complete grids at t₀ = 2.
+
+**For the manuscript.** §4.1's communication finding gains its time course: discovery needs the exchange to update through the completing iteration itself, including the late completions of §3's abrupt-completion cohorts; preservation needs no update at any time (P2b's result at every freeze time). **For the hypothesis.** The clause "evolving messages may propagate useful changes" holds at every iteration of the trajectory, not only early. Under every outcome, as registered: the frozen messages are the model's own but stale; no message content is identified; the pinning reading, in which a replayed sequence holds the state at the recorded iteration's fixed point, is not separated from the communication reading, and the record is equally consistent with it.
