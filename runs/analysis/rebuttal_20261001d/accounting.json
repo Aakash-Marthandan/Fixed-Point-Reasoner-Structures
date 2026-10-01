@@ -1,0 +1,864 @@
+{
+ "created": "2026-10-01T09:41:48.073753+00:00",
+ "identity": "1 - A = (1 - U) + (U - C) + (C - A); U unmeasured where only endpoints were saved",
+ "gates": {
+  "baseline k128": true,
+  "baseline k1": true,
+  "anchors k128": true,
+  "random starts k128": true,
+  "attention 128 8->128 gained/lost": true,
+  "attention 192 8->128 gained/lost": true,
+  "attention 256 8->128 gained/lost": true,
+  "attention_256_30k_reference missed/uncovered k32 and checkpoint": true,
+  "attention_256_30k_no_random_init_or_anchors missed/uncovered k32 and checkpoint": true,
+  "attention_256_30k_optimizer missed/uncovered k32 and checkpoint": true,
+  "attention_256_30k_batch_lr missed/uncovered k32 and checkpoint": true,
+  "full-test terminal losses 0/0/0": true,
+  "full-test any-loss 0/4/7": true,
+  "mlp 94k fixed 68 ever / 11 endpoint": true,
+  "arc 138 ever / 128 endpoint": true,
+  "arc bank coverage 134/134/135/136, selection 134/133/133/131": true,
+  "arc union of fixed readouts and bank endpoints 146": true
+ },
+ "banks": {
+  "trm_baseline": {
+   "label": "Our TRM, baseline seed 0 (50k)",
+   "n": 20000,
+   "K": 128,
+   "fixed_start_endpoint": 18573,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 18425,
+     "A": 18425,
+     "missed": 0,
+     "uncovered": 1575,
+     "verifier": 19000
+    },
+    "2": {
+     "C": 19002,
+     "A": 18792,
+     "missed": 210,
+     "uncovered": 998,
+     "verifier": 19178
+    },
+    "4": {
+     "C": 19295,
+     "A": 19001,
+     "missed": 294,
+     "uncovered": 705,
+     "verifier": 19351
+    },
+    "8": {
+     "C": 19492,
+     "A": 19099,
+     "missed": 393,
+     "uncovered": 508,
+     "verifier": 19514
+    },
+    "16": {
+     "C": 19643,
+     "A": 19110,
+     "missed": 533,
+     "uncovered": 357,
+     "verifier": 19649
+    },
+    "32": {
+     "C": 19766,
+     "A": 19015,
+     "missed": 751,
+     "uncovered": 234,
+     "verifier": 19768
+    },
+    "64": {
+     "C": 19869,
+     "A": 18832,
+     "missed": 1037,
+     "uncovered": 131,
+     "verifier": 19869
+    },
+    "128": {
+     "C": 19941,
+     "A": 18496,
+     "missed": 1445,
+     "uncovered": 59,
+     "verifier": 19941
+    }
+   },
+   "record": "selection/trm_baseline.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "trm_baseline_seed1": {
+   "label": "Our TRM, baseline seed 1 (40k)",
+   "n": 20000,
+   "K": 128,
+   "fixed_start_endpoint": 18893,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 11698,
+     "A": 11698,
+     "missed": 0,
+     "uncovered": 8302,
+     "verifier": 19134
+    },
+    "2": {
+     "C": 15967,
+     "A": 12392,
+     "missed": 3575,
+     "uncovered": 4033,
+     "verifier": 19270
+    },
+    "4": {
+     "C": 18541,
+     "A": 12355,
+     "missed": 6186,
+     "uncovered": 1459,
+     "verifier": 19417
+    },
+    "8": {
+     "C": 19421,
+     "A": 12123,
+     "missed": 7298,
+     "uncovered": 579,
+     "verifier": 19557
+    },
+    "16": {
+     "C": 19647,
+     "A": 11744,
+     "missed": 7903,
+     "uncovered": 353,
+     "verifier": 19667
+    },
+    "32": {
+     "C": 19782,
+     "A": 11414,
+     "missed": 8368,
+     "uncovered": 218,
+     "verifier": 19784
+    },
+    "64": {
+     "C": 19886,
+     "A": 11081,
+     "missed": 8805,
+     "uncovered": 114,
+     "verifier": 19886
+    },
+    "128": {
+     "C": 19951,
+     "A": 10728,
+     "missed": 9223,
+     "uncovered": 49,
+     "verifier": 19951
+    }
+   },
+   "record": "selection/trm_baseline_seed1.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "trm_anchors": {
+   "label": "Our TRM, answer anchors only (42k)",
+   "n": 20000,
+   "K": 128,
+   "fixed_start_endpoint": 18805,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 10663,
+     "A": 10663,
+     "missed": 0,
+     "uncovered": 9337,
+     "verifier": 19065
+    },
+    "2": {
+     "C": 14911,
+     "A": 10571,
+     "missed": 4340,
+     "uncovered": 5089,
+     "verifier": 19222
+    },
+    "4": {
+     "C": 17871,
+     "A": 10207,
+     "missed": 7664,
+     "uncovered": 2129,
+     "verifier": 19380
+    },
+    "8": {
+     "C": 19198,
+     "A": 9634,
+     "missed": 9564,
+     "uncovered": 802,
+     "verifier": 19561
+    },
+    "16": {
+     "C": 19609,
+     "A": 9097,
+     "missed": 10512,
+     "uncovered": 391,
+     "verifier": 19706
+    },
+    "32": {
+     "C": 19803,
+     "A": 8589,
+     "missed": 11214,
+     "uncovered": 197,
+     "verifier": 19817
+    },
+    "64": {
+     "C": 19912,
+     "A": 8075,
+     "missed": 11837,
+     "uncovered": 88,
+     "verifier": 19915
+    },
+    "128": {
+     "C": 19972,
+     "A": 7645,
+     "missed": 12327,
+     "uncovered": 28,
+     "verifier": 19973
+    }
+   },
+   "record": "selection/trm_anchors.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "trm_random_init": {
+   "label": "Our TRM, random starts only (48k)",
+   "n": 20000,
+   "K": 128,
+   "fixed_start_endpoint": 18414,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 18398,
+     "A": 18398,
+     "missed": 0,
+     "uncovered": 1602,
+     "verifier": 18837
+    },
+    "2": {
+     "C": 18794,
+     "A": 18777,
+     "missed": 17,
+     "uncovered": 1206,
+     "verifier": 19005
+    },
+    "4": {
+     "C": 19048,
+     "A": 19034,
+     "missed": 14,
+     "uncovered": 952,
+     "verifier": 19147
+    },
+    "8": {
+     "C": 19237,
+     "A": 19225,
+     "missed": 12,
+     "uncovered": 763,
+     "verifier": 19283
+    },
+    "16": {
+     "C": 19392,
+     "A": 19386,
+     "missed": 6,
+     "uncovered": 608,
+     "verifier": 19420
+    },
+    "32": {
+     "C": 19517,
+     "A": 19511,
+     "missed": 6,
+     "uncovered": 483,
+     "verifier": 19531
+    },
+    "64": {
+     "C": 19603,
+     "A": 19600,
+     "missed": 3,
+     "uncovered": 397,
+     "verifier": 19611
+    },
+    "128": {
+     "C": 19663,
+     "A": 19659,
+     "missed": 4,
+     "uncovered": 337,
+     "verifier": 19664
+    }
+   },
+   "record": "selection/trm_random_init.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "attention_128_k128": {
+   "label": "Attention 128, 5,000 puzzles",
+   "n": 5000,
+   "K": 128,
+   "fixed_start_endpoint": 4973,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 4971,
+     "A": 4971,
+     "missed": 0,
+     "uncovered": 29,
+     "verifier": 4990
+    },
+    "2": {
+     "C": 4986,
+     "A": 4986,
+     "missed": 0,
+     "uncovered": 14,
+     "verifier": 4991
+    },
+    "4": {
+     "C": 4994,
+     "A": 4994,
+     "missed": 0,
+     "uncovered": 6,
+     "verifier": 4994
+    },
+    "8": {
+     "C": 4997,
+     "A": 4996,
+     "missed": 1,
+     "uncovered": 3,
+     "verifier": 4997
+    },
+    "16": {
+     "C": 4997,
+     "A": 4997,
+     "missed": 0,
+     "uncovered": 3,
+     "verifier": 4997
+    },
+    "32": {
+     "C": 4997,
+     "A": 4997,
+     "missed": 0,
+     "uncovered": 3,
+     "verifier": 4997
+    },
+    "64": {
+     "C": 4997,
+     "A": 4997,
+     "missed": 0,
+     "uncovered": 3,
+     "verifier": 4997
+    },
+    "128": {
+     "C": 4998,
+     "A": 4998,
+     "missed": 0,
+     "uncovered": 2,
+     "verifier": 4998
+    }
+   },
+   "record": "selection/attention_128_k128.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "attention_192_k128": {
+   "label": "Attention 192, 5,000 puzzles",
+   "n": 5000,
+   "K": 128,
+   "fixed_start_endpoint": 4980,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 4980,
+     "A": 4980,
+     "missed": 0,
+     "uncovered": 20,
+     "verifier": 4989
+    },
+    "2": {
+     "C": 4989,
+     "A": 4989,
+     "missed": 0,
+     "uncovered": 11,
+     "verifier": 4992
+    },
+    "4": {
+     "C": 4992,
+     "A": 4992,
+     "missed": 0,
+     "uncovered": 8,
+     "verifier": 4993
+    },
+    "8": {
+     "C": 4994,
+     "A": 4994,
+     "missed": 0,
+     "uncovered": 6,
+     "verifier": 4994
+    },
+    "16": {
+     "C": 4999,
+     "A": 4999,
+     "missed": 0,
+     "uncovered": 1,
+     "verifier": 4999
+    },
+    "32": {
+     "C": 4999,
+     "A": 4999,
+     "missed": 0,
+     "uncovered": 1,
+     "verifier": 4999
+    },
+    "64": {
+     "C": 4999,
+     "A": 4998,
+     "missed": 1,
+     "uncovered": 1,
+     "verifier": 4999
+    },
+    "128": {
+     "C": 5000,
+     "A": 4999,
+     "missed": 1,
+     "uncovered": 0,
+     "verifier": 5000
+    }
+   },
+   "record": "selection/attention_192_k128.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "attention_256_k128": {
+   "label": "Attention 256, 5,000 puzzles",
+   "n": 5000,
+   "K": 128,
+   "fixed_start_endpoint": 4977,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 4981,
+     "A": 4981,
+     "missed": 0,
+     "uncovered": 19,
+     "verifier": 4989
+    },
+    "2": {
+     "C": 4989,
+     "A": 4989,
+     "missed": 0,
+     "uncovered": 11,
+     "verifier": 4992
+    },
+    "4": {
+     "C": 4993,
+     "A": 4993,
+     "missed": 0,
+     "uncovered": 7,
+     "verifier": 4993
+    },
+    "8": {
+     "C": 4997,
+     "A": 4997,
+     "missed": 0,
+     "uncovered": 3,
+     "verifier": 4997
+    },
+    "16": {
+     "C": 4998,
+     "A": 4998,
+     "missed": 0,
+     "uncovered": 2,
+     "verifier": 4998
+    },
+    "32": {
+     "C": 4998,
+     "A": 4997,
+     "missed": 1,
+     "uncovered": 2,
+     "verifier": 4998
+    },
+    "64": {
+     "C": 4998,
+     "A": 4996,
+     "missed": 2,
+     "uncovered": 2,
+     "verifier": 4998
+    },
+    "128": {
+     "C": 4999,
+     "A": 4996,
+     "missed": 3,
+     "uncovered": 1,
+     "verifier": 4999
+    }
+   },
+   "record": "selection/attention_256_k128.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "attention_256_30k_reference": {
+   "label": "Earlier Attention 256, reference (28k)",
+   "n": 5000,
+   "K": 32,
+   "fixed_start_endpoint": 4980,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 4979,
+     "A": 4979,
+     "missed": 0,
+     "uncovered": 21,
+     "verifier": 4987
+    },
+    "2": {
+     "C": 4984,
+     "A": 4984,
+     "missed": 0,
+     "uncovered": 16,
+     "verifier": 4987
+    },
+    "4": {
+     "C": 4989,
+     "A": 4989,
+     "missed": 0,
+     "uncovered": 11,
+     "verifier": 4990
+    },
+    "8": {
+     "C": 4992,
+     "A": 4991,
+     "missed": 1,
+     "uncovered": 8,
+     "verifier": 4992
+    },
+    "16": {
+     "C": 4996,
+     "A": 4995,
+     "missed": 1,
+     "uncovered": 4,
+     "verifier": 4996
+    },
+    "32": {
+     "C": 4997,
+     "A": 4996,
+     "missed": 1,
+     "uncovered": 3,
+     "verifier": 4997
+    }
+   },
+   "record": "selection/attention_256_30k_reference.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "attention_256_30k_no_random_init_or_anchors": {
+   "label": "Earlier Attention 256, no starts or anchors (30k)",
+   "n": 5000,
+   "K": 32,
+   "fixed_start_endpoint": 4987,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 4956,
+     "A": 4956,
+     "missed": 0,
+     "uncovered": 44,
+     "verifier": 4996
+    },
+    "2": {
+     "C": 4984,
+     "A": 4961,
+     "missed": 23,
+     "uncovered": 16,
+     "verifier": 4996
+    },
+    "4": {
+     "C": 4990,
+     "A": 4969,
+     "missed": 21,
+     "uncovered": 10,
+     "verifier": 4997
+    },
+    "8": {
+     "C": 4994,
+     "A": 4965,
+     "missed": 29,
+     "uncovered": 6,
+     "verifier": 4998
+    },
+    "16": {
+     "C": 4998,
+     "A": 4949,
+     "missed": 49,
+     "uncovered": 2,
+     "verifier": 4999
+    },
+    "32": {
+     "C": 4998,
+     "A": 4929,
+     "missed": 69,
+     "uncovered": 2,
+     "verifier": 4999
+    }
+   },
+   "record": "selection/attention_256_30k_no_random_init_or_anchors.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "attention_256_30k_optimizer": {
+   "label": "Earlier Attention 256, changed batch and rate (22k)",
+   "n": 5000,
+   "K": 32,
+   "fixed_start_endpoint": 4576,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 4587,
+     "A": 4587,
+     "missed": 0,
+     "uncovered": 413,
+     "verifier": 4678
+    },
+    "2": {
+     "C": 4695,
+     "A": 4689,
+     "missed": 6,
+     "uncovered": 305,
+     "verifier": 4728
+    },
+    "4": {
+     "C": 4756,
+     "A": 4754,
+     "missed": 2,
+     "uncovered": 244,
+     "verifier": 4768
+    },
+    "8": {
+     "C": 4797,
+     "A": 4795,
+     "missed": 2,
+     "uncovered": 203,
+     "verifier": 4801
+    },
+    "16": {
+     "C": 4838,
+     "A": 4835,
+     "missed": 3,
+     "uncovered": 162,
+     "verifier": 4840
+    },
+    "32": {
+     "C": 4868,
+     "A": 4867,
+     "missed": 1,
+     "uncovered": 132,
+     "verifier": 4869
+    }
+   },
+   "record": "selection/attention_256_30k_optimizer.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  },
+  "attention_256_30k_batch_lr": {
+   "label": "Earlier Attention 256, no damping or noise (20k)",
+   "n": 5000,
+   "K": 32,
+   "fixed_start_endpoint": 4981,
+   "U": "unmeasured (endpoints only)",
+   "curve": {
+    "1": {
+     "C": 4977,
+     "A": 4977,
+     "missed": 0,
+     "uncovered": 23,
+     "verifier": 4989
+    },
+    "2": {
+     "C": 4990,
+     "A": 4990,
+     "missed": 0,
+     "uncovered": 10,
+     "verifier": 4993
+    },
+    "4": {
+     "C": 4994,
+     "A": 4994,
+     "missed": 0,
+     "uncovered": 6,
+     "verifier": 4995
+    },
+    "8": {
+     "C": 4997,
+     "A": 4997,
+     "missed": 0,
+     "uncovered": 3,
+     "verifier": 4997
+    },
+    "16": {
+     "C": 4998,
+     "A": 4998,
+     "missed": 0,
+     "uncovered": 2,
+     "verifier": 4998
+    },
+    "32": {
+     "C": 4998,
+     "A": 4998,
+     "missed": 0,
+     "uncovered": 2,
+     "verifier": 4998
+    }
+   },
+   "record": "selection/attention_256_30k_batch_lr.npz (+ .protocol.json vote_at_k = verifier selection over the fixed start and the first k draws)"
+  }
+ },
+ "fixed_start": {
+  "attention_128_fulltest_d64": {
+   "label": "Attention 128, full test, one fixed-start trajectory, depth 64",
+   "n": 422786,
+   "U": 420584,
+   "C": 420584,
+   "A": 420584,
+   "terminal_losses": 0,
+   "any_loss": 0,
+   "record": "benchmark/attention_128_d64.npz"
+  },
+  "attention_192_fulltest_d64": {
+   "label": "Attention 192, full test, one fixed-start trajectory, depth 64",
+   "n": 422786,
+   "U": 421161,
+   "C": 421161,
+   "A": 421161,
+   "terminal_losses": 0,
+   "any_loss": 4,
+   "record": "benchmark/attention_192_d64.npz"
+  },
+  "attention_256_fulltest_d64": {
+   "label": "Attention 256, full test, one fixed-start trajectory, depth 64",
+   "n": 422786,
+   "U": 421166,
+   "C": 421166,
+   "A": 421166,
+   "terminal_losses": 0,
+   "any_loss": 7,
+   "record": "benchmark/attention_256_d64.npz"
+  }
+ },
+ "mlp": {
+  "mlp192_46000_cold": {
+   "label": "MLP 192 at 46k, 128 validation puzzles, start 'cold', depth 16",
+   "n": 128,
+   "U": 126,
+   "C": 126,
+   "A": 126,
+   "terminal_losses": 0,
+   "record": "initialization/s046000.npz"
+  },
+  "mlp192_46000_ri": {
+   "label": "MLP 192 at 46k, 128 validation puzzles, start 'ri', depth 16",
+   "n": 128,
+   "U": 124,
+   "C": 124,
+   "A": 124,
+   "terminal_losses": 0,
+   "record": "initialization/s046000.npz"
+  },
+  "mlp192_46000_rifix": {
+   "label": "MLP 192 at 46k, 128 validation puzzles, start 'rifix', depth 16",
+   "n": 128,
+   "U": 127,
+   "C": 127,
+   "A": 127,
+   "terminal_losses": 0,
+   "record": "initialization/s046000.npz"
+  },
+  "mlp192_46000_sym": {
+   "label": "MLP 192 at 46k, 128 validation puzzles, start 'sym', depth 16",
+   "n": 128,
+   "U": 123,
+   "C": 123,
+   "A": 123,
+   "terminal_losses": 0,
+   "record": "initialization/s046000.npz"
+  },
+  "mlp192_46000_anchor": {
+   "label": "MLP 192 at 46k, 128 validation puzzles, start 'anchor', depth 16",
+   "n": 128,
+   "U": 128,
+   "C": 128,
+   "A": 128,
+   "terminal_losses": 0,
+   "record": "initialization/s046000.npz"
+  },
+  "mlp192_94000_cold": {
+   "label": "MLP 192 at 94k, 128 validation puzzles, start 'cold', depth 16",
+   "n": 128,
+   "U": 68,
+   "C": 11,
+   "A": 11,
+   "terminal_losses": 57,
+   "record": "initialization/s094000.npz"
+  },
+  "mlp192_94000_ri": {
+   "label": "MLP 192 at 94k, 128 validation puzzles, start 'ri', depth 16",
+   "n": 128,
+   "U": 124,
+   "C": 124,
+   "A": 124,
+   "terminal_losses": 0,
+   "record": "initialization/s094000.npz"
+  },
+  "mlp192_94000_rifix": {
+   "label": "MLP 192 at 94k, 128 validation puzzles, start 'rifix', depth 16",
+   "n": 128,
+   "U": 124,
+   "C": 124,
+   "A": 124,
+   "terminal_losses": 0,
+   "record": "initialization/s094000.npz"
+  },
+  "mlp192_94000_sym": {
+   "label": "MLP 192 at 94k, 128 validation puzzles, start 'sym', depth 16",
+   "n": 128,
+   "U": 125,
+   "C": 121,
+   "A": 121,
+   "terminal_losses": 4,
+   "record": "initialization/s094000.npz"
+  },
+  "mlp192_94000_anchor": {
+   "label": "MLP 192 at 94k, 128 validation puzzles, start 'anchor', depth 16",
+   "n": 128,
+   "U": 128,
+   "C": 128,
+   "A": 128,
+   "terminal_losses": 0,
+   "record": "initialization/s094000.npz"
+  }
+ },
+ "arc": {
+  "arc_fixed_d16": {
+   "label": "Released TRM on ARC, 419 queries, fixed start, depth 16",
+   "n": 419,
+   "U": 138,
+   "C": 128,
+   "A": 128,
+   "terminal_losses": 10,
+   "record": "arc/cold.jsonl"
+  },
+  "arc_bank_d16": {
+   "label": "Released TRM on ARC, eight Gaussian starts, depth 16 endpoints",
+   "n": 419,
+   "U": "unmeasured (endpoints)",
+   "curve": {
+    "1": {
+     "C": 134,
+     "A": 134,
+     "missed": 0,
+     "uncovered": 285
+    },
+    "2": {
+     "C": 134,
+     "A": 133,
+     "missed": 1,
+     "uncovered": 285
+    },
+    "4": {
+     "C": 135,
+     "A": 133,
+     "missed": 2,
+     "uncovered": 284
+    },
+    "8": {
+     "C": 136,
+     "A": 131,
+     "missed": 5,
+     "uncovered": 283
+    }
+   },
+   "union_with_fixed_trajectory_readouts": 146,
+   "fixed_endpoint_exact": 128,
+   "record": "arc/restarts.jsonl"
+  }
+ }
+}
