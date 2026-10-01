@@ -271,21 +271,23 @@ def letter_r2(R1s):
 def analyse_family(width, fam, edits, base):
     """Per-puzzle quantities for one family: sham reference and each edit."""
     sham = load_chunks(base / f"attention_{width}/repair/{fam}/sham_t2")
-    if sham is None: return None
     ref = load_chunks(reference_dir(width, fam), keys=("ids", "exact"))
+    if sham is None or len(sham["ids"]) != len(ref["ids"]): return None      # absent or still incomplete
     assert np.array_equal(ref["ids"], sham["ids"])
     sol, puz = sham["sol"], sham["puz"]; n = len(sham["ids"])
-    eligible = ((sham["pred"][0] != sol) | True)                   # placeholder shape
+    # the registered population: the 438 source-error pairs (the 74 puzzles EqR solved carry the solution in every family and are excluded)
+    with np.load(P1_OUT / "inputs/p1_sources.npz", allow_pickle=False) as d:
+        assert np.array_equal(d["ids"], sham["ids"]); eligible = d["wrong_count"] > 0
+    assert int(eligible.sum()) == 438, int(eligible.sum())
     e_sham = empty_error(sham["pred"], sol, puz); ex_sham = sham["exact"]; tau_sham = first_exact(ex_sham)
-    out = dict(n=n, ids=sham["ids"], sham_vs_reference_exact_identical=bool(np.array_equal(ex_sham, ref["exact"])), edits={})
-    wrong_pre = {}
+    out = dict(n=n, n_eligible=int(eligible.sum()), ids=sham["ids"], sham_vs_reference_exact_identical=bool(np.array_equal(ex_sham, ref["exact"])), edits={})
     for c in edits:
         d = load_chunks(base / f"attention_{width}/repair/{fam}/{c}")
-        if d is None: continue
+        if d is None or len(d["ids"]) != len(sham["ids"]): continue          # absent or still incomplete
         assert np.array_equal(d["ids"], sham["ids"])
         kind, theta, t0 = parse_edit(c)
         pre = ((sham["pred"][t0 - 2] != sol) & (puz == 0)).sum((1, 2)) if t0 >= 2 else None   # wrong empty cells after iteration t0-1 (sham)
-        strata = stratum_of(pre)
+        strata = stratum_of(pre); strata[~eligible] = "excluded"
         e = empty_error(d["pred"], sol, puz); ex = d["exact"]; tau = first_exact(ex)
         res = dict(t0=t0, strata={})
         for name in [s[0] for s in STRATA]:
@@ -301,8 +303,8 @@ def analyse_family(width, fam, edits, base):
         if solved.any():
             later = ~ex[t0 - 1:, solved].all(0)
             res["preservation"] = dict(n=int(solved.sum()), wrong_any_later=float(later.mean()), wrong_at_16=float((~ex[-1][solved]).mean()))
-        res["exact16"] = int(ex[-1].sum()); res["exact16_sham"] = int(ex_sham[-1].sum())
-        res["halves"] = {h: dict(exact16=int(ex[-1][sham["ids"] % 2 == h].sum()), exact16_sham=int(ex_sham[-1][sham["ids"] % 2 == h].sum())) for h in (0, 1)}
+        res["exact16"] = int(ex[-1][eligible].sum()); res["exact16_sham"] = int(ex_sham[-1][eligible].sum())
+        res["halves"] = {h: dict(exact16=int(ex[-1][eligible & (sham["ids"] % 2 == h)].sum()), exact16_sham=int(ex_sham[-1][eligible & (sham["ids"] % 2 == h)].sum())) for h in (0, 1)}
         out["edits"][c] = res
     return out
 
