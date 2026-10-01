@@ -35,3 +35,28 @@ Under every outcome: the 94k checkpoint stays a selected example; the series sta
 Confirmatory: the P5b letter and the P5a reproduction gate. Exploratory: the neighbouring checkpoints and 46k. Build after this note; selftest and a smoke (the gate on 16 puzzles) before the run; the run is minutes on the Mac and does not wait for P3.
 
 **Gate check before the run (2026-10-01 09:46Z; `runs/analysis/rebuttal_20261001c/gate_pre_run_s094000_n128.json`).** A 16-puzzle smoke reproduced the saved `ri` and `rifix` flags exactly but not the fixed start's. At the registered batch of 128 puzzles the fixed start, the original independent draws and the original shared draw all reproduce the saved flags with zero differing flags at every iteration (11 / 124 / 124 at the endpoint, 68 ever correct for the fixed start). The smoke difference is batch composition acting on a numerically sensitive trajectory, as the manuscript's limitations state; the gate stands as registered, at the full batch, and P5b's rows are read only against it.
+
+---
+
+## P5 Outcome (2026-10-01 17:48Z; `runs/analysis/rebuttal_20261001c/report.{txt,json}`; every gate passed; no shared tool edited)
+
+**Integrity.** At each of the four checkpoints the fixed start and the original seed-4242 independent and shared draws, re-run in-process at the registered batch of 128, reproduce the saved per-iteration flags with zero differing flags (the gate record inside each step file). The series gate reproduced the manuscript's 94k numbers. An independent recount from the step files agrees with the report on every count and on the letter. Deviation from the plan line only: the run was started by hand at 16:56Z once the CPU freed, ahead of the PID queue (same tool and output path; the queue's later pass skips the finished steps).
+
+**P5a, the saved series (descriptive).** Over the 25 checkpoints from 54k to 150k the fixed start returns a median of 69 answers of 128 (quartiles 38 and 114, range 11 to 125), reaches a median of 105 at some iteration, and loses 691 reached answers by iteration 16 in total; the independent Gaussian starts return a median of 124 (quartiles 123 and 125, range 120 to 127) and the shared start 124 (123 and 125, 121 to 126), with no answer lost after being reached at any checkpoint for either family. The independent-minus-fixed gap has median 56; it is at least 50 at 13 checkpoints, at least 20 at 17, and under 5 at 2. The 94k checkpoint is the lowest fixed-start count of the 25.
+
+**P5b, further draws.**
+
+| checkpoint | fixed start (ever correct) | original draws, independent / shared | new draws | new draws min / median / max | all fixed-start successes kept in every new draw | losses after success |
+|---|---|---|---|---|---|---|
+| 94k | 11 (68) | 124 / 124 | 16 | 122 / 124 / 126 | yes | 0 |
+| 90k | 12 (87) | 124 / 126 | 4 | 124 / 124.5 / 126 | yes | 0 |
+| 98k | 32 (56) | 125 / 121 | 4 | 126 / 126 / 127 | yes | 0 |
+| 46k (benchmark) | 126 (126) | 124 / 127 | 4 | 124 / 125 / 126 | no: at the near-ceiling checkpoint the draws solve a slightly different set | 0 |
+
+**Letter: ROBUST** at 94k (every one of the sixteen new draws returns at least 100 and keeps all eleven fixed-start successes).
+
+**Predictions scored.** ROBUST (0.80) HIT. P5a medians below 80 and above 120 (0.75) HIT (69 and 124). 94k the post-50k minimum (0.6) HIT.
+
+**The registered sentences.** "At 94k, sixteen further Gaussian draws, eight independent and eight shared, each return 122 to 126 of 128 against the fixed start's 11, preserving every fixed-start success: the access contrast is a property of the start family, not of two draws." With P5a: "Across the 25 checkpoints after the 50k budget, fixed starts return a median of 69 (range 11 to 125) and Gaussian starts a median of 124 (range 120 to 127); 94k is the lowest fixed-start count; the fixed start loses reached answers at most checkpoints, the Gaussian starts at none."
+
+**For the manuscript.** The 94k sentence of §5 becomes the series statement. The objection that 94k is a post-hoc minimum is conceded as a fact and answered by the series: after the budget the fixed start's failure is persistent across checkpoints and is mostly a failure to keep what it reaches (ever-correct median 105 against an endpoint median of 69), while either Gaussian start family removes both terms at every checkpoint. The 94k checkpoint stays a selected example. Cross-device validation of the Gaussian starts remains for the pod set.
