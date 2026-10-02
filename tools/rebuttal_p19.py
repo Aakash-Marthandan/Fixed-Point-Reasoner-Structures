@@ -156,7 +156,7 @@ def curves(rows, k, split, t=None):
             W = np.where((puz == 0) & (grid != sol))[0]; v0 = np.where(m & (fr == 0.0))[0][0]
             ex[0.0].append(int((Pk[v0] == sol).all()))
             for v in np.where(m & (fr > 0))[0]:
-                f = float(np.round(fr[v], 1)); cc = [int(c) for c in r["var_cells"][v] if c >= 0]; un = [c for c in W if c not in set(cc)]
+                f = round(float(fr[v]), 1); cc = [int(c) for c in r["var_cells"][v] if c >= 0]; un = [c for c in W if c not in set(cc)]       # float32 -> exact grid key
                 ex[f].append(int((Pk[v] == sol).all())); kept[f] += [int(Pk[v, c] == sol[c]) for c in cc]
                 rest[f][0].extend(int(Pk[v, c] == sol[c]) for c in un); rest[f][1].extend(int(Pk[v0, c] == sol[c]) for c in un)
     y = {f: float(np.mean(v)) if v else float("nan") for f, v in ex.items()}
