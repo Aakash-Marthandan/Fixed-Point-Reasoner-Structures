@@ -1,0 +1,86 @@
+# Note 2026-10-02 — P15, P16, P17: recovering the correction operator (registration, before any row)
+
+**Goal (page one).** A MEASUREMENT. No accuracy target; $0; the Mac's CPU; inference only on the banked checkpoints; nothing trained. The PI's direction (2026-10-02): recover an operator that predicts corrections, show how hidden state changes it, and use it to improve inference. Three stages, each with its own rule; P15 is registered in full here, P16 and P17 have their criteria fixed here and their frozen objects added by dated amendment before their confirmation data are touched. IDs P15 onward follow the coordination with session d378a5 (P7–P14 theirs). Tool: `tools/rebuttal_p15.py` (imports the P1/P2 runner unchanged; outputs `runs/analysis/rebuttal_20261002/`).
+
+## Why
+
+The discussion-period results establish that later behaviour depends on slow-state content the readout cannot see (P2, P3, P8–P12) and that difficulty is a property of the error configuration (P1c, P7). They do not say what computation that state performs. The leading hypothesis: recurrence performs inference-time credit assignment, deciding which decisions must change together, and the persistent state carries that rule. Its testable core is the response to controlled errors: given a change to the displayed answer, does the network keep it, reject it, or propagate it to the decisions that depend on it; and does the hidden state control that response.
+
+## Validation results obtained before this note (numerical only; no structural statistic computed)
+
+Run 2026-10-02 13:15–13:40Z on Attention 256, batch-128 states of the study's intact first batch (prototype scripts kept in the session scratchpad).
+
+1. **The training-time gradient stops remove every input-state derivative.** `segment` in `paper/code/src/qhrrn2/dec_cell.py` stops gradients after the first two slow cycles of every outer iteration; the release's JVP of next scores with respect to the incoming state is exactly zero. The measurement uses a copy of `segment` without the two stops.
+2. **That copy reproduces the release forward bitwise** (next state from the iteration-1 state, max |difference| 0.0).
+3. **Its derivative is correct.** In float64 the JVP agrees with central finite differences to a median relative error of 3.9e-8 at step 1e-2 (single-score pushes, one outer iteration).
+4. **The displayed scores are saturated, and the network nearly discards small changes to them.** Empty-cell digit scores have median magnitude 52 and a median top-two margin of 84 at iteration 1. A unit push to one score (through the readout direction, kernel and fast state fixed) changes the next iteration's 729 scores by a total norm of 2.0e-3 (median; on-site 3.2e-4). Float32 central differences cannot resolve such responses at small steps, which is why they disagreed with the JVP in the first prototype. At linear order the score-space operator is close to zero: K = I − C ≈ I.
+
+Consequence for the design: the operator that matters for correction acts on decision-scale changes, not infinitesimal ones. P15's primary measurements therefore use finite decision flips; the linear operator is measured descriptively.
+
+## P15 — how the network treats a changed decision, and whether the hidden state controls it
+
+**Receivers.** Attention 256 (primary), Attention 192 (replication), Attention 128 (reported, the bridge to P12). Release code through the P1/P2 runner; float32 CPU; the outer iteration as the release step, and for rollouts the gradient-stop-free copy (forward-identical).
+
+**States.** The study's 256 intervention puzzles, intact fixed-start trajectory, the state after iteration t: t = 1 for every puzzle; t = 2 and t = 3 for puzzles not exact at t. States are computed by the release step at batch 128 and must reproduce the study's logits bitwise.
+
+**Split.** A seeded permutation (`numpy.random.default_rng(20261002)`) of the 512 repair-puzzle IDs, sorted; the first 256 positions are DISCOVERY, the rest CONFIRMATION. Every state of a puzzle belongs to its puzzle's split. The rules below are evaluated on CONFIRMATION states; DISCOVERY states are reported beside them and are the only states used for exploratory analyses and for fitting P16's objects.
+
+**The flip.** At state z = (h, l) and empty cell i displaying a, a flip to digit b swaps the two readout components: the score of b takes a's score and a takes b's, so b is displayed with the old margin. Only the readout-parallel components of two field vectors at cell i change; the readout-invisible slow state, the fast state, every other cell and the puzzle input are unchanged. Gate: after the swap, the displayed grid equals the old grid with i set to b.
+
+**Flip classes** (ground truth used only to classify, never by the network):
+- **HA**: i wrong, b = its solution digit, and b is displayed by at least one peer j (necessarily wrong): a helpful flip that creates a visible duplicate with a wrong peer.
+- **HN**: i wrong, b = its solution digit, b displayed by no peer.
+- **XB**: i correct, b a wrong digit displayed by at least one peer j.
+- **XN**: i correct, b a wrong digit displayed by no peer.
+
+Per state, up to three flips per class, chosen uniformly from the eligible (cell, digit) pairs with seed `[20261002, puzzle ID, t, class code]`.
+
+**Conditions** (all within one batch per state, so the no-flip reference shares the batch): `intact_noflip`; `intact_flip` (each selected flip); `kernel_noflip` and `kernel_flip`: at the moment of the flip, every slow vector's readout-orthogonal part is replaced by a random vector orthogonal to the readout with the same norm (P2's edit, applied once, seeds `[20261002, puzzle ID, 51, t]`), scores kept exactly; `reencode_flip` (exploratory): the slow vectors at cell i are replaced by the answer embedding of the flipped grid at i, fast state kept. Each condition continues four outer iterations; the displayed grid is recorded after each.
+
+**Quantities** (k = iterations after the flip; k = 1 primary, k = 2–4 secondary). For a flip at i, c(·) = 1 if i displays its solution digit at t + k.
+- Helpful flips (HA ∪ HN): e⁺ = [P(c | flip) − P(c | no flip)] / [1 − P(c | no flip)], pooled as a ratio of means: the share of the available gain the flip realizes.
+- Harmful flips (XB ∪ XN): e⁻ = [P(c | no flip) − P(c | flip)] / P(c | no flip): the share of naturally kept correct decisions the flip destroys.
+- HA duplicates: for each peer j displaying b at t, e_j = [P(j no longer displays b | flip) − P(same | no flip)] / [1 − P(same | no flip)]: the induced change at the blamed peer. Blame accuracy: among HA flip-partner pairs where exactly one of i and j displays b at t + k, the share in which it is i.
+
+## P15 rules (confirmatory, CONFIRMATION states, k = 1)
+
+**R1 — the treatment of the displayed decision** (per receiver): DISPLAY-INERT if e⁺ ≤ 0.10 and e⁻ ≤ 0.10 (the next answer is recomputed without regard to the displayed decision); FOLLOWER if e⁺ ≥ 0.50 and e⁻ ≥ 0.50 (displayed decisions persist, helpful or not); SELECTIVE if e⁺ ≥ 0.50 and e⁻ ≤ 0.10 (helpful changes are kept and harmful ones rejected); MIXED otherwise.
+
+**R2 — hidden-state control of that treatment** (per receiver): with δ⁺ = e⁺(kernel) − e⁺(intact) and δ⁻ = e⁻(kernel) − e⁻(intact), each `kernel` quantity computed against `kernel_noflip`: KERNEL-CONTROLS if max(|δ⁺|, |δ⁻|) ≥ 0.20; KERNEL-NEUTRAL if both ≤ 0.05; MIXED otherwise.
+
+**R3 — coordinated credit assignment** (HA flips, per receiver): COORDINATES if e_j ≥ 0.30 and blame accuracy ≥ 0.75; LOCAL if e_j ≤ 0.05; MIXED otherwise. UNDEFINED if fewer than 30 HA flip-partner pairs.
+
+Letters are given for Attention 256 and 192; the same letter on both is the stated result, and different letters are reported as width-dependent. Attention 128 is reported without a letter.
+
+**Predictions and credences (before any row).** R1: SELECTIVE 0.30; DISPLAY-INERT 0.25; FOLLOWER 0.20; MIXED 0.25. R2: KERNEL-CONTROLS 0.50; KERNEL-NEUTRAL 0.20; MIXED 0.30. R3: COORDINATES 0.30; LOCAL 0.35; MIXED 0.35. Same R1 letter on 256 and 192: 0.6.
+
+**Wording under each outcome.**
+- SELECTIVE: "A change to one displayed decision, with the rest of the state untouched, is kept when it is correct and rejected when it is not: the recurrence evaluates its own displayed answer against the rest of the problem."
+- FOLLOWER: "Displayed decisions persist whether correct or not: the network builds on its current answer rather than checking it."
+- DISPLAY-INERT: "Changing a displayed decision has no effect on the next answer: the readout-parallel state is an output, and the trajectory is carried by the state the readout cannot see." Together with the validation's near-zero linear operator, this would make the readout a projection without causal role.
+- KERNEL-CONTROLS: "Replacing the readout-invisible state, with every score kept, changes how the network treats the same decision change: the hidden state controls the correction rule."
+- COORDINATES: "Making one wrong decision correct causes the network to change the wrong decision that now conflicts with it, and it blames the right one: corrections are assigned across dependent decisions."
+- LOCAL: "The conflicting peer is not changed more than it would have been anyway: correction is not propagated along the dependency the flip creates."
+Under every outcome: flips change only readout-parallel components; no feature content is identified; results hold for the tested states and checkpoints.
+
+**Exploratory (no letters).** k = 2–4; t-dependence; HA versus HN and XB versus XN; the `reencode_flip` channel; induced repairs at cells other than i and j (cascades); the linear operator on 16 DISCOVERY states per receiver (full one-iteration Jacobian on empty-cell scores: on-site, peer and non-peer response mass; correction gain along the singular directions of the occupancy-residual Jacobian A = ∂r/∂s, r the unit-digit occupancy of digit-conditional StableMax probabilities with givens one-hot, and along its null space; softmax as a sensitivity check).
+
+## P16 — transfer of the response rule (criteria fixed now; frozen objects by amendment)
+
+**Question.** The decisive test of the operator hypothesis: does transferring an identified component of the hidden state transfer the response to new errors that were not used to identify it?
+
+**Arm A (attention).** On DISCOVERY states, the readout-invisible state is replaced in one region only: at cell i, at its 20 peers, or everywhere else. The region whose own content best restores the intact e⁺, e⁻ and e_j (when the rest is replaced) is frozen, with its hash, in an amendment. On CONFIRMATION states, with the kernel replaced everywhere except the frozen region (which keeps its intact content), new flips are applied. **TRANSFERS** if each of e⁺, e⁻ and e_j recovers at least 75 % of the gap between the `kernel` and `intact` conditions; **NO-TRANSFER** if at most 25 %; MIXED otherwise; UNDEFINED if the gap is under 0.10.
+
+**Arm B (MLP 192 at 94k, P9's identical-answer pairs).** Both trajectories display the solution at t; harmful flips (XB, XN) at seeded cells measure e⁻ in the fixed-start state F, the Gaussian state G, and F with G's readout-orthogonal slow part (the component P9 identified on natural continuation, not on flips). **RULE-TRANSFERS** if e⁻(F←G) moves at least 75 % of the way from e⁻(F) to e⁻(G); **NO-TRANSFER** if at most 25 %; UNDEFINED if |e⁻(G) − e⁻(F)| < 0.10. Population: P9's 60 primary cases at 94k, with P11's 90k and 114k cases as replication.
+
+## P17 — using the operator (criteria fixed now; the method by amendment)
+
+On trajectories unsolved at iteration 16 (the full-test record's unsolved pool, Attention 128, P12's population definition, new seeded draw), an operator-guided intervention chosen from P15/P16's results, with a trigger that needs no reference answer, is compared at matched outer iterations with intact continuation, P12's random replacement, a fresh Gaussian restart, and a constraint-only baseline (the same number of iterations spent on decisions chosen by visible conflict alone). **GUIDED-HELPS** if it solves more than every comparator by 32 with McNemar p < 0.05 against the strongest; **NO-GAIN** otherwise. The method, its cost accounting and its seed are fixed by amendment before any P17 row.
+
+## Gates (P15)
+
+(1) States: the release step at batch 128 reproduces the study's intact logits bitwise at t = 1, 2, 3. (2) The gradient-stop-free outer iteration reproduces the release step bitwise from the t = 1 state of batch 0. (3) The `intact_noflip` rollout's displayed grids equal the study's at t + 1 … t + 4 for every state (batch composition may change logits in the last bits; displayed grids must match). (4) Every flip produces exactly the designed displayed grid at t. (5) The kernel replacement changes no digit score by more than 1e-2 in float64 (the realized float32 shift recorded). A failed gate stops the run.
+
+## Labels and plan
+
+Confirmatory: R1–R3 (P15), the two P16 letters, the P17 letter. Exploratory: as listed. Build `tools/rebuttal_p15.py`; selftest and a 16-puzzle smoke with gates (1)–(5), printing gate results only; commit this note and the tool; run 256, 192 and 128 (one process each, after checking the other session's load); report by the tool; the Outcome appended here and a ledger line written when read.
