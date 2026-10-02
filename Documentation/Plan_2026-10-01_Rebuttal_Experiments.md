@@ -74,3 +74,19 @@ Registration before data, with the rule, the letters, the credences and the word
     - Round 1 (our code, no new model code): SE-RRM's batch and learning rate at 30k steps, and at matched rows.
     - Round 2 (a new cell variant): the single-state recurrence; halting; dropout.
     - Round 3 (GPU, their code): their released command, and their model at our batch and budget.
+
+## 7. The two central commitments (the PI, 2026-10-02) and how the program tests them
+
+**Commitments.** (1) Identify a general computational principle: in learned recursive reasoners, retained state adaptively controls how changes propagate between dependent decisions, and a compact set of these interactions decides whether further computation coordinates useful revisions, reinforces errors or preserves a completed solution. (2) Use that principle to control reasoning predictably; control is also the strongest test of (1). Recovering a response operator alone does not establish (1): every differentiable network has one.
+
+**Four predictions, each a registered success criterion.**
+1. *Retained state changes the correction rule:* at identical current scores, changing selected hidden components predictably changes the responses to several new errors.
+2. *Compact structure:* a small, constrained description predicts held-out finite responses substantially better than current scores alone, the problem's static dependency graph, or a fixed operator.
+3. *Causal influence:* selectively editing the identified structure reproduces or prevents a substantial part of the effect of broader state interventions (P9's rescue, P12's nudge), and matched random edits do not.
+4. *Transfer:* the same identification-and-intervention procedure works across widths, architectures (MLP 192, EqR's released weights) and then ARC, with every adaptation disclosed.
+
+**The causal chain to establish first, in the benchmark Sudoku networks:** identified hidden component → predicted change in correction interactions → selective behavioural change → improved reasoning at matched compute, judged on discrete valid solutions only.
+
+**Measurement principles.** Drift and response are separate: every effect is measured against the matched unperturbed continuation, and drift is reported beside it. Interventions run in both directions (strengthen, weaken, restore) over a stated operating range, with matched random edits as controls. The behavioural tests are coordinated revision (failures that need several dependent decisions to change), preservation (damage to correct parts), counterfactual responsiveness (a changed requirement updates the affected decisions only) and compositional generalization (longer dependency chains).
+
+**Refinement from the first P15 data (interim, 2026-10-02 ~14:10Z; first chunks of Attention 128 and 192; not the verdict).** Changing a displayed decision is nearly inert: its effect shares are about 0.05. Writing the same change into the cell's slow state in the network's own answer format is kept when correct (effect share 0.25–0.42) and mostly rejected when wrong (0.06–0.08). Replacing the hidden state elsewhere roughly triples how often harmful display changes survive. Consequence for the design: the candidate the network revises lives in its hidden state, so the operator's perturbation basis is *belief edits* in that state, and display flips become the scores-only control in its strongest form.
