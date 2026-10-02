@@ -1,0 +1,16 @@
+EXPLORATORY (not registered for round 1): trajectory readings from the D64 per-iteration bits, imported unchanged from tools/analyze_attr2.py
+R-A2-6 WHERE SA256B (exact SA256B vs SA256): @1 23.18 vs 25.60 (-2.42 pp, p 5.2e-06); @2 64.72 vs 65.18 (-0.46 pp, p 0.48); @4 82.76 vs 83.76 (-1.00 pp, p 0.085); @8 92.10 vs 94.00 (-1.90 pp, p 6.7e-06); @16 96.76 vs 98.24 (-1.48 pp, p 1e-08); @32 98.64 vs 99.16 (-0.52 pp, p 0.0034); @64 99.28 vs 99.60 (-0.32 pp, p 0.0052)
+R-A2-6 FIRST-EXACT SA256B  quartiles 2 / 2 / 3 among 4964 exact at 64; late share (exact at 64, not at 16) 2.52 %
+R-A2-6 FIRST-EXACT SA256   quartiles 1 / 2 / 3 among 4980 exact at 64; late share (exact at 64, not at 16) 1.36 %
+R-A2-7 PERSISTENCE SA256B  LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256   LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256B paired: DROPPED only-SA256B 0, only-SA256 0 (p 1)
+R-A2-6 WHERE SA256BR (exact SA256BR vs SA256): @1 24.72 vs 25.60 (-0.88 pp, p 0.092); @2 67.70 vs 65.18 (+2.52 pp, p 6.7e-05); @4 84.04 vs 83.76 (+0.28 pp, p 0.64); @8 93.00 vs 94.00 (-1.00 pp, p 0.013); @16 97.12 vs 98.24 (-1.12 pp, p 9.9e-06); @32 98.84 vs 99.16 (-0.32 pp, p 0.064); @64 99.38 vs 99.60 (-0.22 pp, p 0.09)
+R-A2-6 FIRST-EXACT SA256BR quartiles 2 / 2 / 3 among 4969 exact at 64; late share (exact at 64, not at 16) 2.26 %
+R-A2-6 FIRST-EXACT SA256   quartiles 1 / 2 / 3 among 4980 exact at 64; late share (exact at 64, not at 16) 1.36 %
+R-A2-7 PERSISTENCE SA256BR LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256   LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256BR paired: DROPPED only-SA256BR 0, only-SA256 0 (p 1)
+CONSISTENCY SA256        D64 bits at 16 agree with the D16 row on 5000 of 5000
+CONSISTENCY SA256B       D64 bits at 16 agree with the D16 row on 5000 of 5000
+CONSISTENCY SA256BR      D64 bits at 16 agree with the D16 row on 5000 of 5000

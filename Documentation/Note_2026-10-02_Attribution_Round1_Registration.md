@@ -131,3 +131,53 @@ Under every outcome:
   - Watch heartbeats with `tools/ops_watch_pods.sh`.
 - **Shared-project rules.** Only `qhrrn2-*` resources are created or deleted; nothing else in the project is touched.
 - **The close.** Pull the final manifest; verify fleet zero at the source; run the analyzer FIRST, untouched; then the report, ledger and Outcome here.
+
+## Outcome (2026-10-02 19:09Z; `runs/analysis/attr1_20261002/attr1_verdict.{txt,json}`)
+
+The analyzer was the registered `bc68e1f` (sha256 b8a02604…, in `frozen_sha256.txt`), run untouched on the final manifest staged beside the ladder's SA256 rows. Fleet zero was verified at the source before the read.
+
+**Integrity: PASS.**
+- Each arm's argv differs from SA256's in exactly its registered keys, and the model configs are identical.
+- Seed 0; both budgets met, with no extension marker.
+- All rows are on SA256's 5,000 puzzle ids and on the selected grids.
+
+| arm | 16 iterations | 64 iterations | R-AB-1 at 16 | R-AB-1 at 64 |
+|---|---|---|---|---|
+| SA256 (the reference) | 98.24 | 99.60 | | |
+| SA256B (batch 272, lr 1e-4, 36,000 steps) | 96.76 | 99.28 | INSIDE (−1.48 pp; only-SA256B 47, only-SA256 121; p 1e-08) | INSIDE (−0.32; 7 vs 23; p 0.005) |
+| SA256BR (batch 272, 84,000 steps) | 97.12 | 99.38 | INSIDE (−1.12; 51 vs 107; p 1e-05) | INSIDE (−0.22; 12 vs 23; p 0.09) |
+
+- **R-AB-2,** against SE-RRM's published numbers: both arms ABOVE at 16 (+3.03 and +3.39 pp over 93.73) and WITHIN at 64 (+1.06 and +1.16 over 98.22). These are different evaluation sets, and theirs is one run.
+- **R-AB-3:** NOT-LOCATED at 16 and at 64.
+- **R-A1-5 at 16: NEITHER.**
+- **R-AB-4:** all three selectors CLEAN (spurious k32 rate 0.00 / 0.09 / 0.11 %).
+- **STABILITY.**
+  - SA256B selected 32,000 (validation maximum 97.07, end 96.48).
+  - SA256BR selected 84,000, its last grid: EDGE, so its row is a lower bound (validation maximum 97.66, end 97.27).
+  - The scan's fixed start against one random start: 99.20 vs 99.30 (SA256B) and 99.44 vs 99.32 (SA256BR); verified 99.86 for both.
+  - No non-finite loss rows.
+
+**Predictions scored.**
+
+| prediction | credence | result |
+|---|---|---|
+| SA256B @16 BELOW-BEYOND | 0.60 | no |
+| SA256B @16 INSIDE | 0.40 | yes |
+| SA256BR @16 INSIDE | 0.60 | yes |
+| R-A1-5 ROWS | 0.40 | no |
+| R-A1-5 NEITHER | 0.25 | yes |
+| Both arms INSIDE at 64 | 0.60 | yes |
+| Both selectors CLEAN | 0.85 | yes |
+
+**Reading (the registered wording for NEITHER).** "Neither SE-RRM's released optimizer setting nor its training budget moves our model beyond the floor. The gap lies in what round 1 does not change: the single-state recurrence, halting, dropout, the optimizer variant, precision, or their side's one run." Concretely: at SE-RRM's released batch size and learning rate and at SE-RRM's own budget (about 9.8M rows), our model reads 96.76 at 16 iterations, 3.03 pp above SE-RRM's published 93.73.
+
+Two qualifications, both from the rows:
+- **Both arms sit below the reference in the same direction** from iteration 8 on, by 1.1–1.5 pp at 16, with small paired p-values. One seed per arm cannot separate an effect of batch 272 this size from run-to-run variation, which spans 2.58 pp on the seeded triple; the registered rule does not let a p-value move a label. A small batch effect stays possible and unresolved.
+- **SA256BR selected its last grid.** At 84,000 steps it was still improving on validation, so its numbers are lower bounds.
+
+**Exploratory (not registered for round 1).** Round 2's descriptive readings, imported unchanged from `tools/analyze_attr2.py`, applied to these arms (`runs/analysis/attr1_20261002/exploratory_trajectory.txt`):
+- **Determinism:** each model's 64-iteration run reproduces its 16-iteration row exactly at iteration 16, on all 5,000 puzzles.
+- **Persistence:** no model loses a solved puzzle within 64 iterations (LOST 0 and DROPPED 0 for SA256, SA256B and SA256BR).
+- **Where:** batch 272 moves more puzzles into the late tail. Exact at 64 but not at 16: 2.52 % (SA256B) and 2.26 % (SA256BR), against 1.36 % for the reference. The difference at 16 has nearly closed by 64.
+
+**Next.** Round 2, the single-state arm SA256U (`Note_2026-10-02_Attribution_Round2_Registration.md`, `65973f6`), launched at 19:07Z on the same pod type as registered. The remaining structural difference is now the main suspect.

@@ -1,0 +1,19 @@
+{
+ "INTEGRITY": "PASS",
+ "R-AB-1 SA256B vs SA256 @16": "INSIDE (-1.48 pp, only-SA256B 47, only-SA256 121, n 5000, p 1e-08)",
+ "R-AB-2 SA256B vs SE-RRM @16": "ABOVE (96.76 vs the published 93.73; +3.03 pp; different evaluation sets, their one run)",
+ "R-AB-1 SA256B vs SA256 @64": "INSIDE (-0.32 pp, only-SA256B 7, only-SA256 23, n 5000, p 0.0052)",
+ "R-AB-2 SA256B vs SE-RRM @64": "WITHIN (99.28 vs the published 98.22; +1.06 pp; different evaluation sets, their one run)",
+ "R-AB-1 SA256BR vs SA256 @16": "INSIDE (-1.12 pp, only-SA256BR 51, only-SA256 107, n 5000, p 9.9e-06)",
+ "R-AB-2 SA256BR vs SE-RRM @16": "ABOVE (97.12 vs the published 93.73; +3.39 pp; different evaluation sets, their one run)",
+ "R-AB-1 SA256BR vs SA256 @64": "INSIDE (-0.22 pp, only-SA256BR 12, only-SA256 23, n 5000, p 0.09)",
+ "R-AB-2 SA256BR vs SE-RRM @64": "WITHIN (99.38 vs the published 98.22; +1.16 pp; different evaluation sets, their one run)",
+ "R-AB-3 LOCATED @16": "NOT-LOCATED (no arm of ['SA256B', 'SA256BR'] reads below SA256 beyond the floor)",
+ "R-AB-3 LOCATED @64": "NOT-LOCATED (no arm of ['SA256B', 'SA256BR'] reads below SA256 beyond the floor)",
+ "R-A1-5 PAIR @16": "NEITHER",
+ "R-AB-4 SELECTOR SA256": "CLEAN (spurious k32 0.00 %)",
+ "R-AB-4 SELECTOR SA256B": "CLEAN (spurious k32 0.09 %)",
+ "R-AB-4 SELECTOR SA256BR": "CLEAN (spurious k32 0.11 %)",
+ "STABILITY SA256B": "selected 032000; validation max 97.07, end 96.48; scan fixed start 99.20, one random start 99.30 (gap +0.10 pp), verified 99.86; non-finite loss rows 0",
+ "STABILITY SA256BR": "selected 084000 EDGE (a lower bound: the budget ended on the maximum); validation max 97.66, end 97.27; scan fixed start 99.44, one random start 99.32 (gap -0.12 pp), verified 99.86; non-finite loss rows 0"
+}
