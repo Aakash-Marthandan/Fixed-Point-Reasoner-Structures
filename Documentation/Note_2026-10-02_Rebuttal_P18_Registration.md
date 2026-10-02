@@ -42,3 +42,29 @@ Under every outcome: the edits are relabels in the network's own coordinates; gr
 ## Plan
 
 Commit this note and the tool before any row; the queue waits on P16's queue (PID-based), then runs the three widths in parallel at nice 5 and the report; the Outcome appended here and a ledger line written when read.
+
+---
+
+## P18 Outcome (2026-10-02 20:48Z; `runs/analysis/rebuttal_20261002c/report.{txt,json}`; every gate passed; no shared tool edited)
+
+**Integrity.** On all three widths: states bitwise; every closure created no duplicate when corrected; every relabel produced its designed display; every no-edit rollout reproduced the study's displayed grids. Widths 192 and 128 were started by hand at 18:39Z once their P16 runs had finished (same tool and outputs; the queue's later launch found every chunk cached). An independent recount from the raw arrays agrees with the report on e(closure), e(random) and the omitted-cell gain on every width.
+
+**Results (CONFIRMATION, k = 1).**
+
+| receiver | e closure (2–6 cells) | e random, size-matched | difference | e single cell | omitted cell completed | large closure (≥ 7) / size-matched random | full correction: e / whole grid exact | letters A / B |
+|---|---|---|---|---|---|---|---|---|
+| Attention 256 | 0.299 | 0.295 | +0.004 | 0.057 | 0.115 | 0.933 / 0.876 | 0.927 / 0.955 | INDEPENDENT / MIXED |
+| Attention 192 | 0.280 | 0.208 | +0.072 | 0.143 | 0.052 | 0.967 / 0.961 | 0.974 / 0.975 | MIXED / MIXED |
+| Attention 128 (no letter) | 0.273 | 0.273 | +0.000 | 0.316 | 0.046 | 0.565 / 0.579 | 0.604 / 0.600 | (INDEPENDENT / DOES-NOT-COMPLETE) |
+
+No-edit whole-grid completion at t + 1 for the same states: 0.47 / 0.45 / 0.31.
+
+**Letters.** A: INDEPENDENT on 256, MIXED on 192 (width-dependent letters; neither COORDINATED-REVISION). B: MIXED on both.
+
+**Predictions scored.** A: COORDINATED-REVISION (0.45) MISS; INDEPENDENT (0.25) hit on 256; MIXED (0.30) hit on 192. Same A letter on 256 and 192 (0.6) MISS. B: MIXED (0.30) HIT on both.
+
+**The registered sentence that applies.** INDEPENDENT (256): "Corrections are kept or undone regardless of whether they form a conflict-free set: the pull-back is not explained by mutual support among the errors." On 192 the closure advantage is 0.07, below the 0.20 bar. B: the network completes the omitted cell of a coordinated correction it has mostly been given only 5–12 % beyond natural repair.
+
+**Exploratory, and the reason for P19.** What the corrected cells are does not matter much; how many are corrected at once does: two to six cells are kept at 0.21–0.30 of the available gain, seven or more at 0.88–0.97 on the two wider models (0.57–0.58 on 128), and the full correction completes 96–98 % of grids on 256 and 192 but only 60 % on 128, where writing the solution cell by cell in the network's own coordinates is not a stable state. A single corrected cell is kept at 0.06–0.32.
+
+**Reading.** The collective account survives in a different form from the one registered: errors are not held by their specific conflict-free partners; they are held by the bulk of the configuration, and a correction is accepted when enough of the configuration changes together. P19 measures that dependence on the corrected share directly.
