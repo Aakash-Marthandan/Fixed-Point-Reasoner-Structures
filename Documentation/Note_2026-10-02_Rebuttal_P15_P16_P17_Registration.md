@@ -133,3 +133,27 @@ DISCOVERY states give the same picture (e⁺ 0.05–0.10, e⁻ 0.05–0.11). At 
 **Exploratory.** (1) Replacing the hidden state roughly doubles how often a harmful display change survives (e⁻ 0.05→0.10, 0.08→0.14, 0.10→0.18): the retained state helps reject displayed errors, by less than the 0.20 bar. (2) With the hidden state replaced, the resolution of the duplicates a helpful flip creates turns against the correct cell (blame 0.68→0.57, 0.58→0.38, 0.54→0.30): which of two conflicting decisions yields depends on the retained state. (3) Writing the change into the cell's slow vectors in the answer format is kept when correct and rejected when wrong (e⁺ 0.21 / 0.18 / 0.12 against e⁻ 0.05 / 0.05 / 0.07): selective, below the 0.50 bar, and the motivation for P16's belief edits. (4) Credit assignment through display flips is absent at k = 1 (e_j −0.02 to 0.08); blame among resolved duplicates rises to 0.70–0.80 by k = 2–4, mostly through the natural repair of the wrong peer.
 
 **Reading.** The operator the hypothesis needs does not act on the displayed answer. A change to the display is erased, and the network re-derives each decision from state the readout cannot see; that state also biases which of two conflicting decisions gives way. P16 measures the response where the decision is held.
+
+---
+
+## P16 Outcome (Amendment 2's rules; 2026-10-02 19:39Z; `runs/analysis/rebuttal_20261002b/report.{txt,json}`; every gate passed; no shared tool edited)
+
+**Integrity.** On all three widths: states reproduced the study's logits bitwise; the digit-relabel symmetry held (gate 6, deviation ≤ 1e-5 of the score scale); every display and slow swap produced its designed display; kernel swaps and commitment dials changed no score by more than 1e-3; every no-edit rollout reproduced the study's displayed grids. An independent recount from the raw arrays agrees with the report on every channel's e⁺ and e⁻ and on every propagation response.
+
+**A — where a decision is held (CONFIRMATION, k = 1; e⁺ for correct edits / e⁻ for wrong ones).**
+
+| receiver | display swap | kernel swap | slow swap | cell relabel (slow + fast) | letter |
+|---|---|---|---|---|---|
+| Attention 256 | 0.065 / 0.046 | 0.026 / 0.014 | 0.114 / 0.073 | 0.132 / 0.075 | NOT-LOCAL |
+| Attention 192 | 0.022 / 0.080 | −0.039 / 0.009 | 0.081 / 0.122 | 0.090 / 0.129 | NOT-LOCAL |
+| Attention 128 (no letter) | 0.070 / 0.100 | 0.123 / 0.037 | 0.300 / 0.169 | 0.283 / 0.196 | (NOT-LOCAL) |
+
+**B — propagation into the conflicting peer** (resp at the dial value against the dial alone; n = 471 / 441 / 621 helpful flips with a duplicate partner): resp(0) 0.017 / −0.020 / −0.005; resp(1.0) −0.008 / 0.016 / −0.011; resp(−0.5) −0.006 / 0.014 / 0.019; the unrelated-cell control −0.008 / 0.036 / 0.027. **NO-CONTROL** on every width.
+
+**C — compact structure** (logistic models fitted on DISCOVERY, AUC on CONFIRMATION; which cells change their display after a cell relabel): static 0.50 on every width; display features 0.689 / 0.735 / 0.692; display plus the retained-commitment index 0.691 / 0.734 / 0.694. **MIXED** on every width: the display and the problem's structure carry what predictability there is, and the hidden index adds nothing.
+
+**Predictions scored.** A: NOT-LOCAL (0.20) HIT on both lettered widths. B: NO-CONTROL (0.35) HIT. C: MIXED (0.25) HIT; the display-only model fell just short of DISPLAY-SUFFICES's 0.75 bar while the hidden gain was zero.
+
+**The registered sentences that apply.** NOT-LOCAL: "Rewriting a cell's entire state does not change its next decision: decisions are re-derived from the surrounding state, not held by the cell." Measured: rewriting the cell's slow and fast state in the network's own coordinates realizes 9–28 % of the available gain when correct and destroys 8–20 % of kept decisions when wrong, at most modestly selective. NO-CONTROL: "Retained commitment at the dependent decision does not control the propagation."
+
+**Reading.** Together with P15, the per-cell, local version of the operator hypothesis fails on these networks: neither a cell's displayed answer, nor its readout-invisible slow state, nor its whole state holds its decision, and the retained commitment of a conflicting decision does not gate whether a change propagates into it. A decision is re-derived each iteration from the configuration of the whole state. The collective version is tested by P18 (coordinated corrections) and P19 (the share of the error that must be corrected at once).
