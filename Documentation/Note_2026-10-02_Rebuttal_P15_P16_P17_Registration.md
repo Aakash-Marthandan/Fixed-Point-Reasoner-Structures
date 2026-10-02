@@ -107,3 +107,29 @@ Confirmatory: R1–R3 (P15), the two P16 letters, the P17 letter. Exploratory: a
 *Wording under each outcome.* KERNEL-HOLDS: "A cell's decision is held in the slow state the readout cannot see: exchanging only that part between two digits changes what the cell displays next, while exchanging only the displayed part does not." SLOW-HOLDS / FAST-NEEDED: the same with "the whole slow state" or "the slow and fast states together". NOT-LOCAL: "Rewriting a cell's entire state does not change its next decision: decisions are re-derived from the surrounding state, not held by the cell." CONTROLS-PROPAGATION: "How strongly a dependent decision holds its hidden commitment controls whether a change elsewhere propagates into it: weakening the commitment lets the conflicting decision change, strengthening it blocks the change, and the same edit at an unrelated cell does not." NO-CONTROL: "Retained commitment at the dependent decision does not control the propagation." COMPACT-HIDDEN: "A few relation types plus two retained-commitment numbers predict which decisions respond to a change, clearly better than the display alone." DISPLAY-SUFFICES: "The display and the problem's structure predict the responses as well; the hidden commitment index adds nothing." Under every outcome: the dial moves random-free but low-dimensional parts of the state; no feature content beyond the commitment index is identified.
 
 *Plan.* `tools/rebuttal_p16.py` (selftest and reader selftest on synthetic rows; a gates-only smoke on Attention 128 passed gates 1–6). Launch when P15's processes finish; outputs `runs/analysis/rebuttal_20261002b/`.
+
+---
+
+## P15 Outcome (2026-10-02 15:43Z; `runs/analysis/rebuttal_20261002/report.{txt,json}`; every gate passed; no shared tool edited)
+
+**Integrity.** On all three widths: the release-step states reproduced the study's logits bitwise at t = 1–3; the gradient-stop-free outer iteration equalled the release segment compiled the same way, bitwise (Amendment 1's gate 2); every intact no-flip rollout reproduced the study's displayed grids at t + 1 … t + 4; every flip produced its designed display; the hidden-state replacement changed no score by more than 1.4e-14 in float64 (realized float32 ≤ 1.9e-5). An independent recount from the raw chunk arrays agrees with the report on e⁺, e⁻, their kernel-condition values, e_j and blame on every width. States: 1,173 (CONFIRMATION 591, DISCOVERY 582) over the three widths; flips per width on CONFIRMATION: 1,706–2,509.
+
+**Results, CONFIRMATION states, k = 1.**
+
+| receiver | e⁺ helpful | e⁻ harmful | P(i correct): helpful flip / none; harmful flip / none | kernel replaced: e⁺ / e⁻ (δ⁺ / δ⁻) | e_j | blame (intact / kernel) | letters R1 / R2 / R3 |
+|---|---|---|---|---|---|---|---|
+| Attention 256 | 0.065 | 0.046 | 0.611 / 0.585; 0.891 / 0.934 | 0.129 / 0.101 (+0.065 / +0.055) | 0.070 | 0.68 / 0.57 | DISPLAY-INERT / MIXED / MIXED |
+| Attention 192 | 0.022 | 0.080 | 0.537 / 0.526; 0.847 / 0.920 | 0.049 / 0.135 (+0.026 / +0.056) | −0.024 | 0.58 / 0.38 | DISPLAY-INERT / MIXED / LOCAL |
+| Attention 128 (no letter) | 0.070 | 0.100 | 0.487 / 0.448; 0.806 / 0.895 | 0.052 / 0.182 (−0.018 / +0.082) | 0.075 | 0.54 / 0.30 | (DISPLAY-INERT / MIXED / MIXED) |
+
+DISCOVERY states give the same picture (e⁺ 0.05–0.10, e⁻ 0.05–0.11). At k = 2–4 every display effect stays within ±0.11 except where the no-flip correctness approaches 1 and the ratio becomes unstable.
+
+**Letters.** R1 **DISPLAY-INERT** on 256 and 192 (the stated result; 128 the same). R2 **MIXED** on both. R3 **MIXED** on 256 and **LOCAL** on 192: width-dependent, and in neither case coordinated.
+
+**Predictions scored.** R1 DISPLAY-INERT (0.25) HIT. Same R1 letter on 256 and 192 (0.6) HIT. R2 MIXED (0.30) HIT. R3: MIXED (0.35) HIT on 256, LOCAL (0.35) HIT on 192; COORDINATES (0.30) MISS.
+
+**The registered sentence that applies, with its measured qualification.** "Changing a displayed decision has no effect on the next answer: the readout-parallel state is an output, and the trajectory is carried by the state the readout cannot see." Measured: helpful display changes realize 2–7 % of the available gain and harmful ones destroy 5–10 % of the naturally kept decisions; within one outer iteration the network restores the decision its hidden state holds. With the validation's near-zero linear score operator, the displayed answer has almost no causal role in the next step.
+
+**Exploratory.** (1) Replacing the hidden state roughly doubles how often a harmful display change survives (e⁻ 0.05→0.10, 0.08→0.14, 0.10→0.18): the retained state helps reject displayed errors, by less than the 0.20 bar. (2) With the hidden state replaced, the resolution of the duplicates a helpful flip creates turns against the correct cell (blame 0.68→0.57, 0.58→0.38, 0.54→0.30): which of two conflicting decisions yields depends on the retained state. (3) Writing the change into the cell's slow vectors in the answer format is kept when correct and rejected when wrong (e⁺ 0.21 / 0.18 / 0.12 against e⁻ 0.05 / 0.05 / 0.07): selective, below the 0.50 bar, and the motivation for P16's belief edits. (4) Credit assignment through display flips is absent at k = 1 (e_j −0.02 to 0.08); blame among resolved duplicates rises to 0.70–0.80 by k = 2–4, mostly through the natural repair of the wrong peer.
+
+**Reading.** The operator the hypothesis needs does not act on the displayed answer. A change to the display is erased, and the network re-derives each decision from state the readout cannot see; that state also biases which of two conflicting decisions gives way. P16 measures the response where the decision is held.
