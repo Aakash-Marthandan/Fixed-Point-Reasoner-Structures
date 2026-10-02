@@ -36,3 +36,27 @@ Under every outcome: the edits use ground truth to choose digits and are relabel
 ## Plan
 
 Commit this note and the tool before any row; the queue waits on P18's queue (PID-based), then runs the three widths in parallel at nice 5 and the report; the Outcome appended here and a ledger line written when read.
+
+---
+
+## P19 Outcome (2026-10-02 21:28Z; `runs/analysis/rebuttal_20261003/report.{txt,json}`; every gate passed; no shared tool edited)
+
+**Integrity.** On all three widths: states bitwise; every relabel produced its designed display; every no-edit rollout reproduced the study's displayed grids. Widths 192 and 128 were started by hand at 19:05Z (same tool and outputs; the queue's later launch found them cached). A reader fix was committed before any outcome was read (c9169be: float32 fractions rounded to the grid keys). An independent recount of the completion curves from the raw arrays agrees with the report at every fraction on every width.
+
+**Whole-grid completion at t + 1 against the share of wrong cells corrected at once (CONFIRMATION, t = 1 and 2 pooled).**
+
+| receiver | 0 | 0.1 | 0.2 | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 | 1.0 | f10 / f50 / f90 | letter |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Attention 256 | 0.49 | 0.57 | 0.57 | 0.58 | 0.62 | 0.70 | 0.80 | 0.86 | 0.91 | 0.95 | 0.96 | 0.10 / 0.53 / 0.80 | GRADUAL |
+| Attention 192 | 0.46 | 0.48 | 0.49 | 0.55 | 0.62 | 0.72 | 0.82 | 0.90 | 0.92 | 0.96 | 0.98 | 0.25 / 0.50 / 0.81 | MIXED |
+| Attention 128 (no letter) | 0.31 | 0.34 | 0.32 | 0.34 | 0.35 | 0.47 | 0.43 | 0.48 | 0.51 | 0.56 | 0.60 | 0.34 / 0.49 / 0.94 | (MIXED) |
+
+The network's normalized repair of the wrong cells left uncorrected rises from 0.06–0.12 at f = 0.1 to 0.40–0.52 at f = 0.5, 0.72–0.82 at f = 0.7 and 0.81–0.87 at f = 0.8 on the two wider models (0.03 to 0.39 on 128). The share of edited cells still correct rises from 0.56–0.64 at f = 0.1 to 0.97–0.99 at f = 1.0.
+
+**Letters.** GRADUAL on 256, MIXED on 192 (width-dependent; neither SHARP). On 256 the span is widened by a step of 0.08 at f = 0.1; without it the rise runs from about 0.3 to 0.8 on both widths.
+
+**Predictions scored.** SHARP (0.45) MISS; MIXED (0.30) hit on 192; GRADUAL (0.25) hit on 256. f50 between 0.4 and 0.8 on both lettered widths (0.6) HIT (0.53, 0.50). The network repairs uncorrected cells at R ≥ 0.5 at f ≥ f90 (0.7) HIT (0.81–0.87 at f = 0.8). Attention 128 UNDEFINED (0.4) MISS: its range is 0.29, above the 0.20 floor.
+
+**The registered sentences that apply.** GRADUAL (256): "The more of the error is corrected at once, the more the network completes, without a critical share." MIXED (192): f10, f50 and f90 reported with both readings. Measured on both: completion and the network's own repair of the rest follow a smooth cooperative rise centred at half of the errors corrected (f50 0.50–0.53), steepest between about 0.4 and 0.8; the solution's basin in the network's own dynamics has a graded, not a sharp, boundary.
+
+**Reading.** With P15, P16 and P18: a correction written into the network's state is accepted in proportion to how much of the configuration it changes, and the network finishes the rest itself once roughly half of the errors are corrected. The acceptance is cooperative and majority-like, centred at half, and graded rather than switch-like. This is the quantitative form of the collective account: errors are held by the bulk of the configuration, and the network's correction follows the bulk.
