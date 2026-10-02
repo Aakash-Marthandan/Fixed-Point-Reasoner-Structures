@@ -143,7 +143,19 @@ class R7(P.R2):
             return jnp.stack(sc)                   # (K, S, F)
         self.roll = jax.jit(jax.vmap(rollout))
         self.outer_b = jax.jit(jax.vmap(outer))
+        self.seg_b = jax.jit(jax.vmap(lambda zH, zL, e: DC.segment(p_dec, cfg, e, zH, zL)))      # the release segment, stops kept, compiled the same way
         self.emb_b = jax.jit(jax.vmap(lambda xt: DC.embed(p_dec, cfg, xt)))
+        self.step_rel = self.EV._step(cfg, 1., 0., False)                                        # Amendment 1: rollouts through the release step itself
+        self.void = jax.nn.one_hot(jnp.full((9, 9), self.G.VOID, jnp.int32), 11).transpose(2, 0, 1)
+
+    def roll_release(self, z, x):
+        """K outer iterations through the release step (the study's loop): digit scores per iteration, (B, K, 81, 9)."""
+        jnp = self.jnp; z = jnp.asarray(z); x = jnp.asarray(x); y = jnp.broadcast_to(self.void, (x.shape[0],) + self.void.shape); sc = []
+        for _ in range(K):
+            lg_dev, zf = self.step_rel(self.params, x, y, self.tv, z)
+            sc.append(np.asarray(self.EV.layout_gather(lg_dev, self.layout), np.float32)[..., 1:10].reshape(x.shape[0], 81, 9))
+            z = z + self.eta_z * (zf - z)
+        return np.stack(sc, axis=1)
 
     def release_states(self, puz):
         """The study's loop at the given batch: per t = 1..3 the carried state z, the segment output and the logits."""
@@ -173,15 +185,16 @@ class R7(P.R2):
                 g1 = all(np.array_equal(st[t]["logits"], ref[t]) for t in range(max(TS)))
                 assert g1, "gate 1: release states differ from the study's logits"
                 emb = np.asarray(self.emb_b(x))
-                fH, fL = self.outer_b(st[0]["z"][:, 0], st[0]["z"][:, 1], emb)
-                g2 = bool(np.array_equal(np.asarray(fH), st[1]["zf"][:, 0]) and np.array_equal(np.asarray(fL), st[1]["zf"][:, 1]))
-                assert g2, "gate 2: the gradient-stop-free outer iteration differs from the release step"
+                fH, fL = self.outer_b(st[0]["z"][:, 0], st[0]["z"][:, 1], emb)                  # Amendment 1, gate 2: removing the stops changes nothing
+                gH, gL = self.seg_b(st[0]["z"][:, 0], st[0]["z"][:, 1], emb)
+                g2 = bool(np.array_equal(np.asarray(fH), np.asarray(gH)) and np.array_equal(np.asarray(fL), np.asarray(gL)))
+                assert g2, "gate 2: the gradient-stop-free outer iteration differs from the release segment compiled the same way"
                 gates[f"b{b0:04d}"] = dict(release_states_bitwise=g1, outer_bitwise=g2)
                 n = 16 if smoke else len(ids)
                 for t in (TS[:1] if smoke else TS):
                     if not smoke and self.cached_any(paths[t]): continue
                     started = time.monotonic()
-                    rec = self.flip_chunk(ids[:n], puz[:n], sol[:n], st[t - 1]["z"][:n], emb[:n], refpred[t:t + K, :n], t, disc, progress=dict(batch=b0, t=t))
+                    rec = self.flip_chunk(ids[:n], puz[:n], sol[:n], st[t - 1]["z"][:n], np.asarray(x)[:n], refpred[t:t + K, :n], t, disc, progress=dict(batch=b0, t=t))
                     rec["meta"] = json.dumps(dict(self.meta, t=t, batch_start=b0, n=n, seconds=time.monotonic() - started, created=utc(), gates=gates[f"b{b0:04d}"], smoke=smoke))
                     if smoke:
                         print(json.dumps(dict(gates=gates[f"b{b0:04d}"], **json.loads(rec["gate_summary"])))); return
@@ -197,7 +210,7 @@ class R7(P.R2):
         if not side.exists() or json.loads(side.read_text())["sha256"] != self.ATS.sha(path): raise RuntimeError(f"Incomplete or altered output: {path}")
         return True
 
-    def flip_chunk(self, ids, puz, sol, z, emb, refpred, t, disc, progress=None):
+    def flip_chunk(self, ids, puz, sol, z, xcan, refpred, t, disc, progress=None):
         """Builds every variant for every eligible state of the batch (lazily), rolls them out K iterations, checks gates 3-5."""
         jnp = self.jnp; lm = self.lm; lmu = self.lm_unit
         specs, V = [], dict(state=[], kind=[], cls=[], cell=[], frm=[], to=[], flip=[], partners=[])
@@ -248,9 +261,9 @@ class R7(P.R2):
         for c0 in range(0, len(specs), VBATCH):
             chunk = specs[c0:c0 + VBATCH]; pad = VBATCH - len(chunk)
             built = [build(sp) for sp in chunk]
-            zH = np.stack([x[0] for x in built] + [built[0][0]] * pad); zL = np.stack([x[1] for x in built] + [built[0][1]] * pad)
-            e = np.stack([emb[per[sp[0]]["b"]] for sp in chunk] + [emb[per[chunk[0][0]]["b"]]] * pad)
-            out[c0:c0 + len(chunk)] = np.asarray(self.roll(jnp.asarray(zH), jnp.asarray(zL), jnp.asarray(e)))[:len(chunk)]
+            zz = np.stack([np.stack([q[0], q[1]]) for q in built] + [np.stack([built[0][0], built[0][1]])] * pad)        # (VBATCH, 2, F, S, w)
+            xb = np.stack([xcan[per[sp[0]]["b"]] for sp in chunk] + [xcan[per[chunk[0][0]]["b"]]] * pad)
+            out[c0:c0 + len(chunk)] = self.roll_release(zz, xb)[:len(chunk)]
             if progress: self.status("running", **progress, variants_done=c0 + len(chunk), variants=len(specs))
         assert flip_gate_fail == 0, f"gate 4: {flip_gate_fail} flips did not produce the designed displayed grid"
         pred = (out.argmax(-1) + 1).astype(np.int8)                              # (V, K, S)
