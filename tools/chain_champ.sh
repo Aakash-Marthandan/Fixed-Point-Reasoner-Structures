@@ -146,11 +146,15 @@ arm_flags () {   # one variable per arm from C0 (a later flag overrides an earli
     # config-default lr 1e-4 (= ours) for about 36.8k steps. Budgets in arm_steps; fixed, never extended; the reduced battery, seed 0.
     SA256B)  echo "$(arm_flags SA256) --batch 272";;                                 # their released optimizer and budget (36,000 steps, about 9.8M rows)
     SA256BR) echo "$(arm_flags SA256) --batch 272 --monitor-every 5600 --grid-every 5600";;   # batch 272 at the reference's rows (84,000 steps, 15 grids)
+    # 2026-10-02 (SE-RRM ATTRIBUTION ROUND 2; Note_2026-10-02_Attribution_Round2_Registration.md): SE-RRM's ONE recurrent state (= TRM's own single-z
+    # variant, its Figure 4 / Table 2) inside our block, loop and recipe: one carry updated 3 x (6 + 1) = 21 times per segment with the input injected at
+    # every application, the gradient through the last 7 (SE-RRM's released loop: 3 x 6 = 18, the last 6). Fixed 30k = SA256's protocol; seed 0.
+    SA256U)  echo "$(arm_flags SA256) --dec-single-state";;                          # the single-state recurrence (dec_cell.segment; tests/test_single_state.py)
     *)   return 1;;
   esac
 }
-arm_steps ()  { case $1 in C3|C6|X5|X6|X7) echo "$STEPS_LONG";; SA256B) echo 36000;; SA256BR) echo 84000;; *) echo "$STEPS_X";; esac; }
-fixed_budget () { case $1 in X5|X6|X7|W128|W256|SA128|SA192|SA256|SA256L|SA256S|SA256O|SA256B|SA256BR) return 0;; *) return 1;; esac; }   # 2026-09-17: the X arms' budget is the triple's 50k; the extension rule never applies
+arm_steps ()  { case $1 in C3|C6|X5|X6|X7) echo "$STEPS_LONG";; SA256B) echo 36000;; SA256BR) echo 84000;; SA256U) echo 30000;; *) echo "$STEPS_X";; esac; }
+fixed_budget () { case $1 in X5|X6|X7|W128|W256|SA128|SA192|SA256|SA256L|SA256S|SA256O|SA256B|SA256BR|SA256U) return 0;; *) return 1;; esac; }   # 2026-09-17: the X arms' budget is the triple's 50k; the extension rule never applies
 head_ema ()   { echo "--ema"; }                  # headline weights = EMA
 alt_ema ()    { echo ""; }                       # the alt row = the raw weights
 select_key () { echo val_t16_ema; }

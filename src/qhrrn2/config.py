@@ -164,6 +164,13 @@ class Config:
     dec_commit: bool = False
     dec_commit_tau: float = 1.0
     dec_commit_w: float = 0.1
+    # SE-RRM ATTRIBUTION ROUND 2 (2026-10-02; Note_2026-10-02_Attribution_Round2_Registration.md). dec_single_state True =
+    # SE-RRM's single-state recurrence inside the DEC (their code: "there is only one hidden variable z, no distinction
+    # between higher and lower modules"): the slow-state slot becomes the one carry z, updated (trm_l_cycles + 1) times
+    # per H-cycle as z <- U(z, emb) — the input injected at every application, the same damping and noise — so the
+    # per-iteration count of stack applications equals the two-state loop's; the gradient through the last H-cycle;
+    # the fast slot passes through untouched. False = the pre-existing two-state graph, bit-exact.
+    dec_single_state: bool = False
     # DEC-ARC BUILD (Plan_2026-09-10_DEC-ARC_Build §1; 2026-09-10): cell_kind "decarc" = the DEC on a ten-field
     # colour state over the ARC canvas (qhrrn2.decarc_cell): attention over the cells per field with decarc_heads
     # heads (dk = dec_width / decarc_heads), the DEC's coupling and channel SwiGLU, the per-colour task code

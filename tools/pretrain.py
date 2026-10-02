@@ -208,6 +208,9 @@ def parse_args():
                    help="CHAMPION NIGHT C6: the calibrated commit head (BCE on 'this cell's argmax is correct' per segment) + selective hardening at --dec-commit-tau")
     p.add_argument("--dec-commit-tau", type=float, default=1.0, help="hardening threshold on the commit probability (>= 1 = the head trains, no hardening)")
     p.add_argument("--dec-commit-w", type=float, default=0.1, help="the commit BCE's loss weight")
+    p.add_argument("--dec-single-state", action="store_true", default=argparse.SUPPRESS,
+                   help="SE-RRM ATTRIBUTION ROUND 2 (2026-10-02): SE-RRM's single-state recurrence inside the DEC (cfg.dec_single_state; one carry updated L_cycles+1 times per H-cycle with the input injected each time; off = the two-state graph, bit-exact). "
+                        "Absent from the argv record unless given (RECORD_OMIT_AT_DEFAULT)")
     p.add_argument("--decarc-heads", type=int, default=4, help="DEC-ARC BUILD: attention heads over the cells per field (dk = dec_width / heads)")
     p.add_argument("--decarc-eval-start", default=None, choices=["buffers", "symfix", "fieldfix", "rifix"],
                    help="DEC-ARC (2026-09-15): the deterministic evaluation start the 2k monitor selects on and the evaluator's cold pass uses (cfg.decarc_eval_start; None = the Config default 'fieldfix'; a plain cell keeps its buffers)")
@@ -227,6 +230,18 @@ def parse_args():
                    help="data-parallel pmap over local devices (P11-EXT "
                         "2026-08-11); global batch preserved, grads pmean'd")
     return p.parse_args()
+
+
+# Fields added after the banked references (2026-10-02). An unflagged run leaves them out of its records (config.json's argv and config,
+# the checkpoints' config) at their default, so its records carry exactly the keys written before the field existed: the frozen
+# analyzers and tools/resume_flags_guard.py compare records key by key against banked runs. The evaluators rebuild Config from the
+# checkpoint's config, where an absent key takes its default. tests/test_single_state.py.
+RECORD_OMIT_AT_DEFAULT = {"dec_single_state": False}
+
+
+def cfg_record(cfg):
+    return {k: v for k, v in dataclasses.asdict(cfg).items()
+            if not (k in RECORD_OMIT_AT_DEFAULT and v is RECORD_OMIT_AT_DEFAULT[k])}
 
 
 def git_rev():
@@ -406,6 +421,7 @@ def main():
                 dec_coupling_kind=a.dec_coupling, dec_attn_heads=a.dec_attn_heads, dec_attn_dk=a.dec_attn_dk,
                 dec_token_mixer=a.dec_token_mixer, dec_tok_dk=a.dec_tok_dk,
                 dec_commit=a.dec_commit, dec_commit_tau=a.dec_commit_tau, dec_commit_w=a.dec_commit_w, decarc_heads=a.decarc_heads,
+                **({"dec_single_state": True} if getattr(a, "dec_single_state", False) else {}),
                 trm_h_cycles=a.trm_h_cycles, trm_l_cycles=a.trm_l_cycles,
                 trm_lambda=a.trm_lambda, trm_beta=a.trm_beta, trm_ri_sigma=a.trm_ri_sigma, trm_token_mixer=a.trm_token_mixer, trm_gm_dim=a.trm_gm_dim,
                 eta_fixed=1.0, eta_z_fixed=1.0)     # y = readout; the latent carries undamped
@@ -568,7 +584,7 @@ def main():
         print(f"INIT-FROM {a.init_from} (step 0, fresh optimizer)", flush=True)
 
     config_rec = {
-        "argv": vars(a), "config": dataclasses.asdict(cfg), "git": git_rev(),
+        "argv": vars(a), "config": cfg_record(cfg), "git": git_rev(),
         "n_tasks": n_tasks, "n_pairs": n_pairs,
         "n_params_bulk": n_bulk, "n_params_table": n_table,
         "val_tasks": [task_id for _, task_id, _ in val],
@@ -730,7 +746,7 @@ def main():
 
         if (i + 1) % a.ckpt_every == 0 or i + 1 == a.steps:
             payload = {"state": state, "opt_state": opt_state, "step": i + 1,
-                       "rng": np.asarray(rng), "config": dataclasses.asdict(cfg),
+                       "rng": np.asarray(rng), "config": cfg_record(cfg),
                        **({"state_ema": ema} if ema is not None else {})}
             E.save_ckpt(latest, payload)
             if (i + 1) % a.grid_every == 0 or i + 1 == a.steps:
@@ -868,7 +884,7 @@ def run_sot_rg(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tas
             t_block = time.time()
         if do_ck:
             payload = {"state": st1, "opt_state": os1, "step": i + 1, "rng": np.asarray(rng1),
-                       "config": dataclasses.asdict(cfg), **({"state_ema": ema1} if use_ema else {})}
+                       "config": cfg_record(cfg), **({"state_ema": ema1} if use_ema else {})}
             E.save_ckpt(latest, payload)
             if (i + 1) % a.grid_every == 0 or i + 1 == a.steps:
                 E.save_ckpt(out / f"ckpt_{i+1:06d}.pkl", payload)
@@ -1134,7 +1150,7 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
             t_block = time.time()
         if do_ck:
             payload = {"state": st1, "opt_state": os1, "step": i + 1, "rng": np.asarray(rng1),
-                       "config": dataclasses.asdict(cfg), **({"state_ema": ema1} if use_ema else {})}
+                       "config": cfg_record(cfg), **({"state_ema": ema1} if use_ema else {})}
             E.save_ckpt(latest, payload)
             if (i + 1) % a.grid_every == 0 or i + 1 == a.steps:
                 E.save_ckpt(out / f"ckpt_{i+1:06d}.pkl", payload)

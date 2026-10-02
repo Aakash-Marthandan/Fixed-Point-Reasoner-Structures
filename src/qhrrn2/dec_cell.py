@@ -223,6 +223,17 @@ def segment(p, cfg: Config, emb, zH, zL, rng=None):
         return z2
 
     k = 0
+    if getattr(cfg, "dec_single_state", False):
+        # SE-RRM ATTRIBUTION ROUND 2: ONE carry (the slow slot, which the readout and the halting head read), updated
+        # (L_cycles + 1) times per H-cycle with the input injected at every application; the same key schedule, damping
+        # and noise; the gradient through the last H-cycle; the fast slot is returned untouched.
+        z = zH
+        for c in range(cfg.trm_h_cycles):
+            for _ in range(cfg.trm_l_cycles + 1):
+                z = step(z, emb, keys[k]); k += 1
+            if c < cfg.trm_h_cycles - 1:
+                z = jax.lax.stop_gradient(z)
+        return z, zL
     for c in range(cfg.trm_h_cycles):
         for _ in range(cfg.trm_l_cycles):
             zL = step(zL, zH + emb, keys[k]); k += 1
