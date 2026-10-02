@@ -1,0 +1,31 @@
+P10 report (2026-10-01T14:12:30.226422+00:00); registration Documentation/Note_2026-10-01_Rebuttal_P10_P11_Registration.md
+
+== C5: cohort 134; gate D (intact exact at kappa on every puzzle): True; intact exact at 96: 1.000; max score shift 7.78e-07 (gate C PASS)
+   k=1 theta= 0: n 134; delayed 0.000 earlier 0.000 unchanged 1.000 |d|>=3 0.000 never 0.000; median delta 0.0; exact at kappa 1.000; exact at 96 1.000
+   k=1 theta=15: n 134; delayed 0.388 earlier 0.104 unchanged 0.507 |d|>=3 0.261 never 0.007; median delta 0.0; exact at kappa 0.612; exact at 96 0.993
+   k=1 theta=90: n 134; delayed 0.858 earlier 0.052 unchanged 0.090 |d|>=3 0.664 never 0.030; median delta 5.0; exact at kappa 0.142; exact at 96 0.970
+   k=2 theta= 0: n 119; delayed 0.000 earlier 0.000 unchanged 1.000 |d|>=3 0.000 never 0.000; median delta 0.0; exact at kappa 1.000; exact at 96 1.000
+   k=2 theta=15: n 119; delayed 0.613 earlier 0.235 unchanged 0.151 |d|>=3 0.538 never 0.025; median delta 1.0; exact at kappa 0.387; exact at 96 0.975
+   k=2 theta=90: n 119; delayed 0.605 earlier 0.311 unchanged 0.084 |d|>=3 0.588 never 0.017; median delta 2.0; exact at kappa 0.395; exact at 96 0.983
+   k=3 theta= 0: n  88; delayed 0.000 earlier 0.000 unchanged 1.000 |d|>=3 0.000 never 0.000; median delta 0.0; exact at kappa 1.000; exact at 96 1.000
+   k=3 theta=15: n  88; delayed 0.636 earlier 0.330 unchanged 0.034 |d|>=3 0.750 never 0.057; median delta 3.0; exact at kappa 0.364; exact at 96 0.943
+   k=3 theta=90: n  88; delayed 0.614 earlier 0.341 unchanged 0.045 |d|>=3 0.795 never 0.000; median delta 3.5; exact at kappa 0.386; exact at 96 1.000
+   k=1 theta=45: n 134; delayed 0.657 earlier 0.119 unchanged 0.224 |d|>=3 0.410 never 0.007; median delta 1.0; exact at kappa 0.343; exact at 96 0.993
+   k=3 theta=45: n  88; delayed 0.489 earlier 0.443 unchanged 0.068 |d|>=3 0.614 never 0.011; median delta 0.0; exact at kappa 0.511; exact at 96 0.989
+   gate A (sham unchanged >= 0.99 at every k): True; gate B (k=1, 90 deg vs P8's replacement at kappa-3: 0.142 vs 0.157): PASS
+   P10 letter: SENSITIVE-TRANSIENT  conditions {'sensitive': True, 'accumulation': False, 'recovery': False, 'idle': False}
+
+== SA128: cohort 122; gate D (intact exact at kappa on every puzzle): True; intact exact at 96: 1.000; max score shift 6.12e-07 (gate C PASS)
+   k=1 theta= 0: n 122; delayed 0.000 earlier 0.000 unchanged 1.000 |d|>=3 0.000 never 0.000; median delta 0.0; exact at kappa 1.000; exact at 96 1.000
+   k=1 theta=15: n 122; delayed 0.574 earlier 0.197 unchanged 0.230 |d|>=3 0.443 never 0.025; median delta 1.0; exact at kappa 0.426; exact at 96 0.975
+   k=1 theta=90: n 122; delayed 0.934 earlier 0.033 unchanged 0.033 |d|>=3 0.762 never 0.016; median delta 6.0; exact at kappa 0.066; exact at 96 0.984
+   k=2 theta= 0: n 110; delayed 0.000 earlier 0.000 unchanged 1.000 |d|>=3 0.000 never 0.000; median delta 0.0; exact at kappa 1.000; exact at 96 1.000
+   k=2 theta=15: n 110; delayed 0.682 earlier 0.227 unchanged 0.091 |d|>=3 0.655 never 0.027; median delta 4.0; exact at kappa 0.318; exact at 96 0.973
+   k=2 theta=90: n 110; delayed 0.664 earlier 0.245 unchanged 0.091 |d|>=3 0.618 never 0.036; median delta 3.0; exact at kappa 0.336; exact at 96 0.964
+   k=3 theta= 0: n  70; delayed 0.000 earlier 0.000 unchanged 1.000 |d|>=3 0.000 never 0.000; median delta 0.0; exact at kappa 1.000; exact at 96 1.000
+   k=3 theta=15: n  70; delayed 0.500 earlier 0.429 unchanged 0.071 |d|>=3 0.714 never 0.029; median delta 0.5; exact at kappa 0.500; exact at 96 0.971
+   k=3 theta=90: n  70; delayed 0.657 earlier 0.286 unchanged 0.057 |d|>=3 0.686 never 0.043; median delta 2.0; exact at kappa 0.343; exact at 96 0.957
+   k=1 theta=45: n 122; delayed 0.779 earlier 0.148 unchanged 0.074 |d|>=3 0.582 never 0.041; median delta 4.0; exact at kappa 0.221; exact at 96 0.959
+   k=3 theta=45: n  70; delayed 0.586 earlier 0.371 unchanged 0.043 |d|>=3 0.671 never 0.029; median delta 1.0; exact at kappa 0.414; exact at 96 0.971
+   gate A (sham unchanged >= 0.99 at every k): True; gate B (k=1, 90 deg vs P8's replacement at kappa-3: 0.066 vs 0.107): PASS
+   P10 letter: SENSITIVE-TRANSIENT  conditions {'sensitive': True, 'accumulation': False, 'recovery': False, 'idle': False}

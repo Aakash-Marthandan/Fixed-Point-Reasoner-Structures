@@ -1,0 +1,7 @@
+P9 report (2026-10-01T11:10:59.980752+00:00); gate 1 {'F': True, 'G': True}; primary 60, controls 15; max score shift {'F<-hG': 0.0, 'F<-perpG': 7.340277434764175e-07, 'F<-lG': 0.0, 'F<-zG': 0.0, 'G<-hF': 0.0, 'G<-perpF': 8.605101129433024e-07, 'G<-lF': 0.0, 'G<-zF': 0.0, 'F<-sham': 0.0}
+gate 2 (full swaps reproduce the donor at t+1): True; gate 3 (sham agreement) 1.000; gate 4 (score shift <= 1e-3): True
+rescue (F with G's component, exact at t+1): {'perp': 1.0, 'h': 1.0, 'l': 0.8833333333333333, 'z': 1.0}
+transfer (G with F's component, wrong at t+1): {'perp': 0.0, 'h': 0.11666666666666667, 'l': 0.0, 'z': 1.0}
+endpoint 16: F rescued {'perp': 1.0, 'h': 1.0, 'l': 0.8, 'z': 1.0}; G lost {'perp': 0.0, 'h': 0.2, 'l': 0.0, 'z': 0.9166666666666666}
+P9 letter: NONE
+controls (both stay correct intact): F after swap still exact {'perp': 1.0, 'h': 1.0, 'l': 1.0}; G after swap still exact {'perp': 1.0, 'h': 1.0, 'l': 1.0}

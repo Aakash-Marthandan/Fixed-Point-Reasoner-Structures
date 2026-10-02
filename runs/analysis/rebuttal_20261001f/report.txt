@@ -1,0 +1,31 @@
+P8 report (2026-10-01T10:44:17.648885+00:00); registration Documentation/Note_2026-10-01_Rebuttal_P7_P8_P9_Registration.md
+
+== C5: cohort 134; intact replay exact at kappa 1.000 (ADMISSION PASS), at 48 1.000; Sep 25 slow-reset flags reproduced: True
+   sham agreement with intact at kappa 1.000 (PASS); max score shift 8.16e-07
+   R8: perp_random at kappa: exact at kappa 0.590 -> B = 0.410 -> MIXED
+   perp_random@0: exact at kappa 0.590, exact at 48 1.000, median delay 0.0 readouts, never exact again 0
+   perp_random@-3: exact at kappa 0.157, exact at 48 0.896, median delay 4.0 readouts, never exact again 14
+   Sep 25 fast_reset@0    : exact at kappa 0.739 -> B against intact 0.261; exact at 48 1.000
+   Sep 25 fast_reset@-3   : exact at kappa 0.403 -> B against intact 0.597; exact at 48 0.903
+   Sep 25 slow_reset@0    : exact at kappa 0.067 -> B against intact 0.933; exact at 48 0.881
+   Sep 25 slow_reset@-3   : exact at kappa 0.134 -> B against intact 0.866; exact at 48 0.881
+   Sep 25 no_messages@0   : exact at kappa 0.030 -> B against intact 0.970; exact at 48 0.910
+   Sep 25 no_messages@-3  : exact at kappa 0.127 -> B against intact 0.873; exact at 48 0.910
+
+== SA128: cohort 122; intact replay exact at kappa 1.000 (ADMISSION PASS), at 48 1.000; Sep 25 slow-reset flags reproduced: True
+   sham agreement with intact at kappa 1.000 (PASS); max score shift 6.11e-07
+   R8: perp_random at kappa: exact at kappa 0.016 -> B = 0.984 -> NEEDS-HIDDEN-STATE
+   perp_random@0: exact at kappa 0.016, exact at 48 0.877, median delay 8.0 readouts, never exact again 15
+   perp_random@-3: exact at kappa 0.107, exact at 48 0.877, median delay 4.0 readouts, never exact again 15
+   Sep 25 fast_reset@0    : exact at kappa 0.680 -> B against intact 0.320; exact at 48 0.992
+   Sep 25 fast_reset@-3   : exact at kappa 0.336 -> B against intact 0.664; exact at 48 0.910
+   Sep 25 slow_reset@0    : exact at kappa 0.000 -> B against intact 1.000; exact at 48 0.820
+   Sep 25 slow_reset@-3   : exact at kappa 0.000 -> B against intact 1.000; exact at 48 0.910
+   Sep 25 no_messages@0   : exact at kappa 0.000 -> B against intact 1.000; exact at 48 0.803
+   Sep 25 no_messages@-3  : exact at kappa 0.016 -> B against intact 0.984; exact at 48 0.844
+
+== EQR: cohort 108; intact replay exact at kappa 1.000 (ADMISSION PASS), at 48 1.000; Sep 25 slow-reset flags reproduced: True
+   Sep 25 fast_reset@0    : exact at kappa 0.750 -> B against intact 0.250; exact at 48 0.981
+   Sep 25 fast_reset@-3   : exact at kappa 0.389 -> B against intact 0.611; exact at 48 0.796
+   Sep 25 slow_reset@0    : exact at kappa 0.000 -> B against intact 1.000; exact at 48 0.870
+   Sep 25 slow_reset@-3   : exact at kappa 0.046 -> B against intact 0.954; exact at 48 0.787

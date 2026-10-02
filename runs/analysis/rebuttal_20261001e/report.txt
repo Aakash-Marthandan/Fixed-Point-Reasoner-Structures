@@ -1,0 +1,22 @@
+P7 report (2026-10-01T10:08:08.452431+00:00); saved records only
+
+R7a — injected grids, first transition (pooled over the 17 families, 438 source-error puzzles, clusters = puzzles)
+  Attention 128: P(repair | refuted) 0.668 (given 0.866, peer 0.636) vs P(repair | unrefuted) 0.450 -> H 1.49 [1.45, 1.53]; n 102277 / 35700 -> MIXED
+  Attention 192: P(repair | refuted) 0.676 (given 0.918, peer 0.636) vs P(repair | unrefuted) 0.331 -> H 2.04 [1.96, 2.14]; n 102277 / 35700 -> LOCAL-REFUTATION
+  Attention 256: P(repair | refuted) 0.671 (given 0.892, peer 0.634) vs P(repair | unrefuted) 0.349 -> H 1.92 [1.85, 1.99]; n 102277 / 35700 -> MIXED
+  R7a (all three receivers): MIXED
+
+R7b / R7c — the models' own fixed-start trajectories (transitions starting before first completion)
+  A128 (study, 512 strat, 16 it): H 0.95 [0.90, 0.99] (P repair refuted 0.329 vs unrefuted 0.348; n 33423 / 10992) -> NO-ASYMMETRY; excluding the completing transition H 0.78 (0.160 vs 0.206)
+      R7c: 4828 right-to-wrong events, share at conflicted cells s 0.672 (base rate 0.597); P(break | conflicted) 0.119 vs P(repair | wrong cell duplicating a correct one) 0.334 -> q 0.36 -> MIXED
+  A192 (study, 512 strat, 16 it): H 0.88 [0.82, 0.94] (P repair refuted 0.331 vs unrefuted 0.375; n 19885 / 8754) -> NO-ASYMMETRY; excluding the completing transition H 0.87 (0.145 vs 0.168)
+      R7c: 2901 right-to-wrong events, share at conflicted cells s 0.664 (base rate 0.509); P(break | conflicted) 0.123 vs P(repair | wrong cell duplicating a correct one) 0.334 -> q 0.37 -> MIXED
+  A256 (study, 512 strat, 16 it): H 0.94 [0.89, 0.99] (P repair refuted 0.397 vs unrefuted 0.424; n 18754 / 9483) -> NO-ASYMMETRY; excluding the completing transition H 0.90 (0.179 vs 0.198)
+      R7c: 2969 right-to-wrong events, share at conflicted cells s 0.600 (base rate 0.476); P(break | conflicted) 0.121 vs P(repair | wrong cell duplicating a correct one) 0.400 -> q 0.30 -> MIXED
+  C5 (lens, 256 strat, 16 outer readouts): H 0.98 [0.91, 1.05] (P repair refuted 0.341 vs unrefuted 0.349; n 14459 / 8571) -> NO-ASYMMETRY; excluding the completing transition H 0.80 (0.190 vs 0.239)
+      R7c: 2786 right-to-wrong events, share at conflicted cells s 0.583 (base rate 0.469); P(break | conflicted) 0.141 vs P(repair | wrong cell duplicating a correct one) 0.339 -> q 0.42 -> MIXED
+  SA128 (lens, 256 strat, 16 outer readouts): H 0.90 [0.84, 0.97] (P repair refuted 0.307 vs unrefuted 0.340; n 17802 / 6079) -> NO-ASYMMETRY; excluding the completing transition H 0.77 (0.155 vs 0.200)
+      R7c: 2642 right-to-wrong events, share at conflicted cells s 0.707 (base rate 0.593); P(break | conflicted) 0.135 vs P(repair | wrong cell duplicating a correct one) 0.313 -> q 0.43 -> MIXED
+  EQR (lens, 256 strat, 16 outer readouts): H 0.96 [0.88, 1.05] (P repair refuted 0.254 vs unrefuted 0.264; n 16561 / 10114) -> NO-ASYMMETRY; excluding the completing transition H 0.92 (0.149 vs 0.161)
+      R7c: 2629 right-to-wrong events, share at conflicted cells s 0.641 (base rate 0.433); P(break | conflicted) 0.129 vs P(repair | wrong cell duplicating a correct one) 0.261 -> q 0.50 -> MIXED
+  R7b (all models with data): NO-ASYMMETRY

@@ -1,0 +1,3 @@
+40c17c04cf87841f5d69ff7dcdbe98b9f5ac45250bffdf208d19d4559b469c8c  Documentation/Note_2026-10-01_Rebuttal_P7_P8_P9_Registration.md
+53ffd697ca8fc84598b6d1c116d926f1b63cebc0518af92b5084067e3a3c5aab  tools/rebuttal_p7.py
+2026-10-01T10:08:08Z run

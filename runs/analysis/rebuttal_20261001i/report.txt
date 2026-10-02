@@ -1,0 +1,2 @@
+90000: primary 78, controls 15; gates {'g2': True, 'sham': 1.0, 'g4': True, 'ok': True}; rescue {'perp': 1.0, 'h': 1.0, 'l': 0.2948717948717949, 'z': 1.0}; transfer {'perp': 0.01282051282051282, 'h': 0.7051282051282052, 'l': 0.0, 'z': 1.0}; P9 letter FULL-SLOW-ONLY; P11 rule (ii): PATTERN-DIFFERS
+114000: primary 60, controls 12; gates {'g2': True, 'sham': 1.0, 'g4': True, 'ok': True}; rescue {'perp': 1.0, 'h': 1.0, 'l': 1.0, 'z': 1.0}; transfer {'perp': 0.0, 'h': 0.0, 'l': 0.0, 'z': 1.0}; P9 letter NONE; P11 rule (ii): PATTERN-REPLICATES

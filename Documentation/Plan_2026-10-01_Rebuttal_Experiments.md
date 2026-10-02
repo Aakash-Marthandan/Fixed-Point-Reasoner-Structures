@@ -48,3 +48,29 @@ Order: G0 → G1 (the long pole; launch first) → G3 and G2 while G1 trains. St
 ## 5. Rules carried over
 
 Registration before data, with the rule, the letters, the credences and the wording per outcome fixed in the note; bitwise gates against archived records; no shared tool edited while a run is live; PID-based waits; outputs under `runs/analysis/` (ignored) with the report files tracked; the public record names no venue, title or headline number.
+
+## 6. Addendum (2026-10-01 ~10:20Z) — the PI's decisions; P7–P9; pods reprioritized
+
+- **The thesis is finalized after the rounds below, not before.**
+- **Three more Mac experiments.** All three are registered in `Note_2026-10-01_Rebuttal_P7_P8_P9_Registration.md` and run on the Mac beside P3–P5, at lower priority:
+  - P7: cell-level repair by local evidence, from saved records; read.
+  - P8: the completing step's intact control and a score-preserving slow-state edit.
+  - P9: state swaps at identical displayed answers, at 94k.
+
+  A plateau test with edits timed to each puzzle's completion (P10) is designed after P3 reads.
+- **Pods.**
+  - G1's seed arms are deferred. The width ladder already supplies three independent initializations of one recipe, and the closest comparators report single runs.
+  - The first priority is G4, promoted: attribute the accuracy gain over SE-RRM.
+  - SE-RRM's released code (read 2026-10-01) differs from ours in:
+    - one recurrent state updated 18 times per step, with no slow/fast split;
+    - no damping;
+    - batch 272 at lr 1e-4;
+    - about 10M slot-steps of training;
+    - random 5 % halting instead of a halting head;
+    - dropout 0.2;
+    - AdamATan2;
+    - a bfloat16 forward pass.
+  - The rounds, each registered before launch:
+    - Round 1 (our code, no new model code): SE-RRM's batch and learning rate at 30k steps, and at matched rows.
+    - Round 2 (a new cell variant): the single-state recurrence; halting; dropout.
+    - Round 3 (GPU, their code): their released command, and their model at our batch and budget.

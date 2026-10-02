@@ -1,0 +1,50 @@
+{
+ "created": "2026-10-01T15:46:22.902579+00:00",
+ "gate1_sham": true,
+ "gate2_max_shift": 4.9591064453125e-05,
+ "intact_gain_16_32": 42,
+ "arms": {
+  "rot15_t17": {
+   "solved32": 53,
+   "arm_only": 22,
+   "intact_only": 11,
+   "delta": 0.10476190476190476,
+   "p": 0.08014331245794892,
+   "letter": "NEUTRAL",
+   "trapped": {
+    "n": 22,
+    "arm": 4,
+    "intact": 5
+   },
+   "transient": {
+    "n": 83,
+    "arm": 49,
+    "intact": 37
+   }
+  },
+  "random_t17": {
+   "solved32": 64,
+   "arm_only": 32,
+   "intact_only": 10,
+   "delta": 0.20952380952380953,
+   "p": 0.0009406740282429382,
+   "letter": "NUDGE-HELPS",
+   "trapped": {
+    "n": 22,
+    "arm": 5,
+    "intact": 5
+   },
+   "transient": {
+    "n": 83,
+    "arm": 59,
+    "intact": 37
+   }
+  }
+ },
+ "restart": {
+  "solved16": 43,
+  "union_with_intact32": 64,
+  "restart_only": 22,
+  "trapped": 2
+ }
+}

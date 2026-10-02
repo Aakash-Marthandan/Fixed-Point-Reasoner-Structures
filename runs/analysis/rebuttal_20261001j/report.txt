@@ -1,0 +1,9 @@
+P12 report (2026-10-01T15:46:22.902579+00:00); pool 256; unsolved at 16 on this run 105 (record said all 256); trapped labels 28
+gate 1 (sham reproduces intact flags at every iteration): True
+gate 2 (max realized score shift <= 1e-3): 4.9591064453125e-05
+intact: solved by 32 among U = 42 / 105 (0.400)
+rot15_t17: solved by 32 among U 53 vs intact 42; arm-only 22, intact-only 11; delta +0.105; McNemar p 0.0801 -> NEUTRAL
+   trapped (unsolved at 64 in the record): arm 4 vs intact 5 of 22; transient: arm 49 vs intact 37 of 83
+random_t17: solved by 32 among U 64 vs intact 42; arm-only 32, intact-only 10; delta +0.210; McNemar p 0.000941 -> NUDGE-HELPS
+   trapped (unsolved at 64 in the record): arm 5 vs intact 5 of 22; transient: arm 59 vs intact 37 of 83
+restart (fresh Gaussian start, 16 iterations): solves 43 of U (intact's extra 16 iterations solve 42); union 64; restart-only 22; trapped solved by restart 2

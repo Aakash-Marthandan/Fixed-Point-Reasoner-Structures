@@ -1,0 +1,7 @@
+69d1f9937009ccc0b4908080f4dd802d1f82f2635fac614c27715b9bdbc551c3  Documentation/Note_2026-10-01_Rebuttal_P12_Registration.md
+4d9080e8cafab63730a4c1ba3f6995b849be0a7218ff6b4369bd08489327c125  tools/rebuttal_p12.py
+9d4f31a9071244f64203bbf4bbfe9a49cb415252b17e3561cca3e030d81b529d  tools/rebuttal_p3.py
+438cc63168b9a34207db4c74cdd1e3a507b5628c8ac3e04bac7c879eb3214ac8  tools/rebuttal_p1p2.py
+2026-10-01T14:37:59Z launch
+f3532f312d95a09a8369a64eebd27d6b53f8f08640c48c06199c4b17e5492a61  tools/rebuttal_p12.py
+2026-10-01T14:38:32Z relaunch after loader-order fix (crash at model load, before any row)

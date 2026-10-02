@@ -1,0 +1,5 @@
+82cc257da03a6c83e985188b533ca5518beedd61990fcda5ceae0de76d5f818c  Documentation/Note_2026-10-01_Rebuttal_P7_P8_P9_Registration.md
+dea80c4edda4c52162f08460995d3f7fd2eec6cb5b0243f20d4f3f1a3a941318  tools/rebuttal_p9.py
+d2840f34f1a776fde8da40e70ddda130fe6a52bc08f079134256fe9daea8409c  tools/rebuttal_p5.py
+b2d25b01e922f6c844ed85fa755f8052e4c3e4b88b0679493e5b413b2e6c789e  tools/eval_sudoku_extreme.py
+2026-10-01T10:11:53Z queued behind P8 pid 19116
