@@ -40,7 +40,7 @@ P22's design, with these differences:
   - The trigger's equivalence with CPU-unsolved.
   - Every rotation changes no score by more than 1e-2.
   - Every realized angle is within 1 % of its nominal angle.
-  - A gates-only smoke on 16 puzzles of SA256U is run before launch.
+  - A gates-only smoke on the first 16 drawn puzzles of SA256U (11:13Z, after the note and tool were committed and pushed, before launch) passed every gate: the sha256 prefix, single-state at step 14000, G1 (`run_batch` bitwise), the trigger's equivalence (15 triggered, all kept), the largest rotation score shift 5.2e-7, the largest realized-angle deviation 0.0004 %, and every arm with its designed length. It printed no outcome counts. Those 16 puzzles are part of the registered population.
 
 ## Rules (per receiver; P22's, unchanged)
 
