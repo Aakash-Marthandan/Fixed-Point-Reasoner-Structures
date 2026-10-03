@@ -46,7 +46,7 @@ Trigger (no answer key): the displayed grid at iteration 16 is invalid. This is 
 - The trigger's equivalence with CPU-unsolved.
 - Every rotation changes no digit score by more than 1e-2.
 - Every rotation's realized angle, per vector, is within 1 % of its nominal angle.
-- A gates-only smoke on 16 puzzles of Attention 128 is run before launch.
+- A gates-only smoke on the first 16 drawn puzzles of Attention 128 (07:43Z, after the note and tool were committed, before launch) passed every gate: the trigger's equivalence (9 triggered), the largest rotation score shift 5.7e-7, the largest realized-angle deviation 0.002 % (including 0.1°), and every arm with its designed length. It printed no outcome counts. Those 16 puzzles are part of the registered population.
 
 ## Quantities
 
