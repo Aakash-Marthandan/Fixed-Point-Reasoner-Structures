@@ -107,32 +107,48 @@ def _rot_half2(x):
     return jnp.concatenate([rh(a), rh(b)], axis=-1)
 
 
-def _attn_tok(p, hf, dk: int):
-    """(S, w) -> (S, w): post-norm multi-head self-attention over the S cells of ONE field with 2D rotary positions."""
+def _drop(att, rate: float, key):
+    """SE-RRM ATTRIBUTION ROUND 3: inverted dropout on attention WEIGHTS (torch scaled_dot_product_attention's dropout_p, as
+    SE-RRM applies it): each weight kept with probability 1 - rate and rescaled by 1 / (1 - rate)."""
+    keep = jax.random.bernoulli(key, 1.0 - rate, att.shape)
+    return jnp.where(keep, att / (1.0 - rate), jnp.zeros_like(att))
+
+
+def _attn_tok(p, hf, dk: int, drop=None):
+    """(S, w) -> (S, w): post-norm multi-head self-attention over the S cells of ONE field with 2D rotary positions.
+    drop = (rate, key) applies dropout to the attention weights (the training forward of cfg.dec_dropout > 0 only)."""
     S, w = hf.shape; nh = w // dk
     q, k, v = jnp.split(hf @ p["att_qkv"], 3, axis=-1)
     q, k, v = (t.reshape(S, nh, dk) for t in (q, k, v))
     cos, sin = _rope2d(S, dk); cos, sin = cos[:, None, :], sin[:, None, :]
     q = q * cos + _rot_half2(q) * sin; k = k * cos + _rot_half2(k) * sin
     att = jax.nn.softmax(jnp.einsum("shd,thd->hst", q, k) / math.sqrt(dk), axis=-1)
+    if drop is not None:
+        att = _drop(att, *drop)
     out = jnp.einsum("hst,thd->shd", att, v).reshape(S, w) @ p["att_o"]
     return TC._rms_norm(hf + out)
 
 
-def _block(p, h, cfg: Config | None = None):
+def _block(p, h, cfg: Config | None = None, drop_key=None):
     """h (F, S, w) -> (F, S, w). POST-norm as TRM: per-field token mixing over the S cells (the
     same weights for every field), the equivariant field coupling, the channel SwiGLU.
     Coupling "mean": each field reads the mean of the OTHER eight fields' cell tokens through fc.
     Coupling "attn" (C4, SE-RRM's operator in this form): each field's cell token attends over the
     other eight fields' tokens at that cell (heads x dk queries/keys, the self field masked, values =
-    the fc map split over the heads) — uniform attention weights reproduce "mean" exactly."""
-    def tok(hf):                                   # (S, w): TRM's token-mixing sub-layer
+    the fc map split over the heads) — uniform attention weights reproduce "mean" exactly.
+    drop_key (round 3; the training forward of cfg.dec_dropout > 0 only): dropout on both mixers' attention weights."""
+    rate = getattr(cfg, "dec_dropout", 0.0) if cfg is not None else 0.0
+    k_tok = k_cpl = None
+    if drop_key is not None and rate > 0:
+        k_tok, k_cpl = jax.random.split(drop_key)
+
+    def tok(hf, kf=None):                          # (S, w): TRM's token-mixing sub-layer
         if "att_qkv" in p:                         # the mixer arms (cfg.dec_token_mixer "attn"): attention over the cells
-            return _attn_tok(p, hf, cfg.dec_tok_dk)
+            return _attn_tok(p, hf, cfg.dec_tok_dk, None if kf is None else (rate, kf))
         ht = hf.T
         ht = TC._rms_norm(ht + TC._swiglu(p["mlp_t"], ht))
         return ht.T
-    h = jax.vmap(tok)(h)
+    h = jax.vmap(tok)(h) if k_tok is None else jax.vmap(tok)(h, jax.random.split(k_tok, h.shape[0]))
     if "fc" in p:
         if "attn_q" in p:
             nh = cfg.dec_attn_heads; dk = cfg.dec_attn_dk; w = h.shape[-1]
@@ -141,6 +157,8 @@ def _block(p, h, cfg: Config | None = None):
             e = jnp.einsum("fshd,gshd->fgsh", q, k) / math.sqrt(dk)                 # (F, F, S, heads)
             e = jnp.where(jnp.eye(F, dtype=bool)[:, :, None, None], -1e9, e)          # the OTHER fields only
             att = jax.nn.softmax(e, axis=1)
+            if k_cpl is not None:
+                att = _drop(att, rate, k_cpl)
             msg = jnp.einsum("fgsh,gshe->fshe", att, v).reshape(h.shape)
             h = TC._rms_norm(h + msg)
         else:
@@ -149,9 +167,9 @@ def _block(p, h, cfg: Config | None = None):
     return TC._rms_norm(h + TC._swiglu(p["mlp"], h))
 
 
-def _stack(p, h, cfg: Config | None = None):
-    for b in p["blocks"]:
-        h = _block(b, h, cfg)
+def _stack(p, h, cfg: Config | None = None, drop_key=None):
+    for i, b in enumerate(p["blocks"]):
+        h = _block(b, h, cfg, None if drop_key is None else jax.random.fold_in(drop_key, i))
     return h
 
 
@@ -204,19 +222,23 @@ def embed_answer(p, cfg: Config, y_grid):
     return math.sqrt(cfg.dec_width) * p["role_emb"][jnp.where(mine, 1, 2)]
 
 
-def segment(p, cfg: Config, emb, zH, zL, rng=None):
+def segment(p, cfg: Config, emb, zH, zL, rng=None, drop_rng=None):
     """ONE outer segment = H_cycles x (L_cycles + 1) stack passes, exactly the field cell's
     (trm_cell.segment): z_L <- F(z_L + z_H + emb) L_cycles times, then z_H <- F(z_H + z_L);
-    the gradient through the LAST H-cycle only; EqR Eq. 2 damping / noise per pass."""
+    the gradient through the LAST H-cycle only; EqR Eq. 2 damping / noise per pass.
+    drop_rng (round 3): the TRAINING forward's dropout stream (cfg.dec_dropout > 0), one key per stack
+    application; None everywhere else (evaluators, monitors) = no dropout."""
     lam, beta = cfg.trm_lambda, cfg.trm_beta
     n_keys = cfg.trm_h_cycles * (cfg.trm_l_cycles + 1)
     keys = (list(jax.random.split(rng, n_keys)) if (rng is not None and beta > 0)
             else [None] * n_keys)
-    stack_c = (lambda p_, h_: _stack(p_, h_, cfg))
+    dkeys = (list(jax.random.split(drop_rng, n_keys)) if (drop_rng is not None and getattr(cfg, "dec_dropout", 0.0) > 0)
+             else [None] * n_keys)
+    stack_c = (lambda p_, h_, dk_=None: _stack(p_, h_, cfg, dk_))
     stack = jax.checkpoint(stack_c) if cfg.remat else stack_c
 
-    def step(z, inj, key):
-        Fz = stack(p, z + inj)
+    def step(z, inj, key, dkey=None):
+        Fz = stack(p, z + inj) if dkey is None else stack(p, z + inj, dkey)
         z2 = (z + (1.0 - lam) * (Fz - z)) if lam > 0 else Fz
         if key is not None:
             z2 = z2 + beta * jax.random.normal(key, z2.shape)
@@ -230,14 +252,14 @@ def segment(p, cfg: Config, emb, zH, zL, rng=None):
         z = zH
         for c in range(cfg.trm_h_cycles):
             for _ in range(cfg.trm_l_cycles + 1):
-                z = step(z, emb, keys[k]); k += 1
+                z = step(z, emb, keys[k], dkeys[k]); k += 1
             if c < cfg.trm_h_cycles - 1:
                 z = jax.lax.stop_gradient(z)
         return z, zL
     for c in range(cfg.trm_h_cycles):
         for _ in range(cfg.trm_l_cycles):
-            zL = step(zL, zH + emb, keys[k]); k += 1
-        zH = step(zH, zL, keys[k]); k += 1
+            zL = step(zL, zH + emb, keys[k], dkeys[k]); k += 1
+        zH = step(zH, zL, keys[k], dkeys[k]); k += 1
         if c < cfg.trm_h_cycles - 1:
             zH, zL = jax.lax.stop_gradient(zH), jax.lax.stop_gradient(zL)
     return zH, zL

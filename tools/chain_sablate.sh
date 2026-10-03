@@ -24,7 +24,7 @@ REQ=""; for a in $WL_ARMS; do REQ="$REQ ${a}_ARM_OK"; done
 
 echo "=== SABLATE START worker=$W arms=[$WL_ARMS] chips=$(ls /dev/vfio 2>/dev/null | grep -c '^[0-9]') gcs=$GCS live=$LIVE_PREFIX $(date -u +%FT%TZ) ==="
 gsutil -q stat "$GCS/$FINAL" 2>/dev/null && { echo "$SENT-COMPLETE worker=$W (final object present)"; exit 0; }
-for a in $WL_ARMS; do case $a in SA256L|SA256S|SA256O|SA256B|SA256BR|SA256U) ;; *) echo "AB-BAD-ARM $a (the ablation's arms are SA256L SA256S SA256O; attribution round 1 adds SA256B SA256BR; round 2 adds SA256U)"; exit 2;; esac; done
+for a in $WL_ARMS; do case $a in SA256L|SA256S|SA256O|SA256B|SA256BR|SA256U|SA256UD|SA256D) ;; *) echo "AB-BAD-ARM $a (the ablation's arms are SA256L SA256S SA256O; attribution round 1 adds SA256B SA256BR; round 2 adds SA256U; round 3 adds SA256UD SA256D)"; exit 2;; esac; done
 mkdir -p runs
 gsutil -q stat "$GCS/SYNC-AB" 2>/dev/null || echo "skipped: the recipe ablation carries no sync rider" | gsutil -q cp - "$GCS/SYNC-AB"
 gsutil -q stat "$GCS/RECIPE-DEC" 2>/dev/null || printf 'BATCHONLY' | gsutil -q cp - "$GCS/RECIPE-DEC"

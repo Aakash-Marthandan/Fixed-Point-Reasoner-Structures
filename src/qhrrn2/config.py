@@ -171,6 +171,12 @@ class Config:
     # per-iteration count of stack applications equals the two-state loop's; the gradient through the last H-cycle;
     # the fast slot passes through untouched. False = the pre-existing two-state graph, bit-exact.
     dec_single_state: bool = False
+    # SE-RRM ATTRIBUTION ROUND 3 (2026-10-03; Note_2026-10-03_Attribution_Round3_Registration.md). dec_dropout > 0 = SE-RRM's
+    # regularizer: dropout at this rate on the attention WEIGHTS of both mixers (over the cells, over the fields), where SE-RRM's
+    # released code applies it (scaled_dot_product_attention's dropout_p; arch.dropout=0.2 in its Sudoku command). Applied in
+    # the TRAINING forward only: dec_cell.segment drops only when the trainer passes drop_rng; the evaluators and the training-
+    # time monitors never pass one. 0.0 = the pre-existing graph, bit-exact.
+    dec_dropout: float = 0.0
     # DEC-ARC BUILD (Plan_2026-09-10_DEC-ARC_Build §1; 2026-09-10): cell_kind "decarc" = the DEC on a ten-field
     # colour state over the ARC canvas (qhrrn2.decarc_cell): attention over the cells per field with decarc_heads
     # heads (dk = dec_width / decarc_heads), the DEC's coupling and channel SwiGLU, the per-colour task code

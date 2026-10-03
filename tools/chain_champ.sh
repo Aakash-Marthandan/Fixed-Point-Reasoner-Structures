@@ -150,11 +150,16 @@ arm_flags () {   # one variable per arm from C0 (a later flag overrides an earli
     # variant, its Figure 4 / Table 2) inside our block, loop and recipe: one carry updated 3 x (6 + 1) = 21 times per segment with the input injected at
     # every application, the gradient through the last 7 (SE-RRM's released loop: 3 x 6 = 18, the last 6). Fixed 30k = SA256's protocol; seed 0.
     SA256U)  echo "$(arm_flags SA256) --dec-single-state";;                          # the single-state recurrence (dec_cell.segment; tests/test_single_state.py)
+    # 2026-10-03 (SE-RRM ATTRIBUTION ROUND 3; Note_2026-10-03_Attribution_Round3_Registration.md): SE-RRM's regularizer, dropout 0.2 on the attention
+    # weights of both mixers in the training forward only (dec_cell._drop; tests/test_dropout.py), on the single-state arm and on the reference: with
+    # round 2's SA256U and the banked SA256, a 2 x 2 of state structure x dropout. Fixed 30k = SA256's protocol; seed 0.
+    SA256UD) echo "$(arm_flags SA256U) --dec-dropout 0.2";;                          # one state + SE-RRM's dropout
+    SA256D)  echo "$(arm_flags SA256) --dec-dropout 0.2";;                           # two states + SE-RRM's dropout
     *)   return 1;;
   esac
 }
-arm_steps ()  { case $1 in C3|C6|X5|X6|X7) echo "$STEPS_LONG";; SA256B) echo 36000;; SA256BR) echo 84000;; SA256U) echo 30000;; *) echo "$STEPS_X";; esac; }
-fixed_budget () { case $1 in X5|X6|X7|W128|W256|SA128|SA192|SA256|SA256L|SA256S|SA256O|SA256B|SA256BR|SA256U) return 0;; *) return 1;; esac; }   # 2026-09-17: the X arms' budget is the triple's 50k; the extension rule never applies
+arm_steps ()  { case $1 in C3|C6|X5|X6|X7) echo "$STEPS_LONG";; SA256B) echo 36000;; SA256BR) echo 84000;; SA256U) echo 30000;; SA256UD|SA256D) echo 30000;; *) echo "$STEPS_X";; esac; }
+fixed_budget () { case $1 in X5|X6|X7|W128|W256|SA128|SA192|SA256|SA256L|SA256S|SA256O|SA256B|SA256BR|SA256U) return 0;; SA256UD|SA256D) return 0;; *) return 1;; esac; }   # 2026-09-17: the X arms' budget is the triple's 50k; the extension rule never applies
 head_ema ()   { echo "--ema"; }                  # headline weights = EMA
 alt_ema ()    { echo ""; }                       # the alt row = the raw weights
 select_key () { echo val_t16_ema; }

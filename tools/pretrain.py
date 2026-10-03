@@ -211,6 +211,9 @@ def parse_args():
     p.add_argument("--dec-single-state", action="store_true", default=argparse.SUPPRESS,
                    help="SE-RRM ATTRIBUTION ROUND 2 (2026-10-02): SE-RRM's single-state recurrence inside the DEC (cfg.dec_single_state; one carry updated L_cycles+1 times per H-cycle with the input injected each time; off = the two-state graph, bit-exact). "
                         "Absent from the argv record unless given (RECORD_OMIT_AT_DEFAULT)")
+    p.add_argument("--dec-dropout", type=float, default=argparse.SUPPRESS,
+                   help="SE-RRM ATTRIBUTION ROUND 3 (2026-10-03): dropout at this rate on the attention weights of both DEC mixers, in the TRAINING forward only "
+                        "(cfg.dec_dropout; SE-RRM's arch.dropout=0.2). Absent from the argv record unless given (RECORD_OMIT_AT_DEFAULT)")
     p.add_argument("--decarc-heads", type=int, default=4, help="DEC-ARC BUILD: attention heads over the cells per field (dk = dec_width / heads)")
     p.add_argument("--decarc-eval-start", default=None, choices=["buffers", "symfix", "fieldfix", "rifix"],
                    help="DEC-ARC (2026-09-15): the deterministic evaluation start the 2k monitor selects on and the evaluator's cold pass uses (cfg.decarc_eval_start; None = the Config default 'fieldfix'; a plain cell keeps its buffers)")
@@ -236,12 +239,18 @@ def parse_args():
 # the checkpoints' config) at their default, so its records carry exactly the keys written before the field existed: the frozen
 # analyzers and tools/resume_flags_guard.py compare records key by key against banked runs. The evaluators rebuild Config from the
 # checkpoint's config, where an absent key takes its default. tests/test_single_state.py.
-RECORD_OMIT_AT_DEFAULT = {"dec_single_state": False}
+RECORD_OMIT_AT_DEFAULT = {"dec_single_state": False, "dec_dropout": 0.0}
 
 
 def cfg_record(cfg):
     return {k: v for k, v in dataclasses.asdict(cfg).items()
-            if not (k in RECORD_OMIT_AT_DEFAULT and v is RECORD_OMIT_AT_DEFAULT[k])}
+            if not (k in RECORD_OMIT_AT_DEFAULT and type(v) is type(RECORD_OMIT_AT_DEFAULT[k]) and v == RECORD_OMIT_AT_DEFAULT[k])}
+
+
+def drop_kw(cfg, key):
+    """SE-RRM ATTRIBUTION ROUND 3: the TRAINING forward's dropout stream for dec_cell.segment (cfg.dec_dropout > 0 only;
+    {} otherwise, so every other path is byte-identical). A fold of the row's key: the noise keys are untouched."""
+    return {"drop_rng": jax.random.fold_in(key, 0xD0D0)} if getattr(cfg, "dec_dropout", 0.0) > 0 else {}
 
 
 def git_rev():
@@ -422,6 +431,7 @@ def main():
                 dec_token_mixer=a.dec_token_mixer, dec_tok_dk=a.dec_tok_dk,
                 dec_commit=a.dec_commit, dec_commit_tau=a.dec_commit_tau, dec_commit_w=a.dec_commit_w, decarc_heads=a.decarc_heads,
                 **({"dec_single_state": True} if getattr(a, "dec_single_state", False) else {}),
+                **({"dec_dropout": float(a.dec_dropout)} if hasattr(a, "dec_dropout") else {}),
                 trm_h_cycles=a.trm_h_cycles, trm_l_cycles=a.trm_l_cycles,
                 trm_lambda=a.trm_lambda, trm_beta=a.trm_beta, trm_ri_sigma=a.trm_ri_sigma, trm_token_mixer=a.trm_token_mixer, trm_gm_dim=a.trm_gm_dim,
                 eta_fixed=1.0, eta_z_fixed=1.0)     # y = readout; the latent carries undamped
@@ -440,6 +450,8 @@ def main():
     assert not a.sudoku_orbit_online or (a.sudoku_extreme and a.sudoku_layout == "native9" and a.cell in ("trm", "dec") and a.sot), \
         "--sudoku-orbit-online: the Sudoku-Extreme native9 field loop under --sot (the orbit acts on the segment loop's rows)"
     assert not a.dec_commit or a.cell in ("dec", "decarc"), "--dec-commit: the DEC cells only"
+    assert not hasattr(a, "dec_dropout") or (0.0 < a.dec_dropout < 1.0 and a.cell == "dec" and (a.dec_token_mixer == "attn" or a.dec_coupling == "attn")), \
+        "--dec-dropout: a rate in (0, 1) on the DEC's attention mixers (SE-RRM's placement); this cell has none, so it would silently do nothing"
     global MON_CHUNK
     MON_CHUNK = max(1, int(a.monitor_chunk))
     # --sot on the trm cell = the field's online segment loop (X0); on our cell = the sportC2
@@ -922,7 +934,7 @@ def field_fpa_loss(TCm, p, cfg, x, y, key, hw, codes=None):
         ks = jax.random.split(kk, cfg.fpa_k)
         ces = []
         for j in range(cfg.fpa_k):
-            zH, zL = TCm.segment(p, cfg, emb, zH, zL, rng=ks[j] if cfg.trm_beta > 0 else None)
+            zH, zL = TCm.segment(p, cfg, emb, zH, zL, rng=ks[j] if cfg.trm_beta > 0 else None, **drop_kw(cfg, ks[j]))
             logits, _ = TCm.readout(p, cfg, zH, xx.shape)
             logp = log_stablemax(logits) if cfg.loss_kind == "stablemax" else jax.nn.log_softmax(logits, axis=-1)
             ce_map = -jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0]
@@ -1046,7 +1058,7 @@ def run_sot(a, cfg, state, opt, opt_state, sched, start_step, rng, dev, n_tasks,
                     bce = jnp.sum(optax.sigmoid_binary_cross_entropy(cl, tgt) * fm) / jnp.maximum(jnp.sum(fm), 1.0)
                 else:
                     emb = (TCm.embed(p, cfg, xx, cc) if decarc else TCm.embed(p, cfg, xx)); bce = jnp.zeros(())
-                zH, zL = TCm.segment(p, cfg, emb, zz[0], zz[1], rng=kk if cfg.trm_beta > 0 else None)
+                zH, zL = TCm.segment(p, cfg, emb, zz[0], zz[1], rng=kk if cfg.trm_beta > 0 else None, **drop_kw(cfg, kk))
                 logits, q = TCm.readout(p, cfg, zH, xx.shape)
                 logp = log_stablemax(logits) if cfg.loss_kind == "stablemax" else jax.nn.log_softmax(logits, axis=-1)
                 ce_map = -jnp.take_along_axis(logp, yy[..., None], axis=-1)[..., 0]

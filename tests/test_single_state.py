@@ -86,7 +86,7 @@ def test_single_state_stack_count():
     cfg = Config(**TINY, dec_single_state=True); p, emb, zH, zL = _setup(cfg)
     calls = []; orig = DC._stack
     try:
-        DC._stack = lambda p_, h_, cfg_=None: (calls.append(1), orig(p_, h_, cfg_))[1]
+        DC._stack = lambda p_, h_, cfg_=None, dk_=None: (calls.append(1), orig(p_, h_, cfg_, dk_))[1]
         DC.segment(p, cfg, emb, zH, zL)
     finally:
         DC._stack = orig
@@ -120,8 +120,8 @@ def test_records_omit_the_field_when_off():
     rebuild = lambda rec: Config(**{k: type(getattr(d0, k))(v) if getattr(d0, k) is not None else v for k, v in rec.items()})
     off, on = Config(**TINY), Config(**TINY, dec_single_state=True)
     r_off, r_on = PT.cfg_record(off), PT.cfg_record(on)
-    assert "dec_single_state" not in r_off and r_off == {k: v for k, v in asdict(off).items() if k != "dec_single_state"}
-    assert r_on["dec_single_state"] is True and r_on == asdict(on)
+    assert "dec_single_state" not in r_off and r_off == {k: v for k, v in asdict(off).items() if k not in PT.RECORD_OMIT_AT_DEFAULT}
+    assert r_on["dec_single_state"] is True and r_on == {k: v for k, v in asdict(on).items() if k != "dec_dropout"}
     assert rebuild(r_off) == off and rebuild(r_on) == on
     old = sys.argv
     try:
