@@ -41,7 +41,7 @@ Strata: intact continuation to iteration 64 labels each triggered puzzle *transi
 - The mixer and the selected step are as listed in the model inventory.
 - Every rotation changes no digit score by more than 1e-2.
 - The trigger's equivalence with CPU-unsolved is asserted.
-- A smoke on 16 puzzles of seed 0 is run before launch.
+- A smoke on the first 16 drawn puzzles of seed 0 (03:49Z, after the note and tool were committed, before launch) passed every gate: the checkpoint hash equal to the manifest's, the trigger's equivalence (7 triggered), every arm with its designed length, and the largest rotation score shift 6.3e-7. It printed no outcome counts. Those 16 puzzles are part of the registered population.
 
 ## Rules
 
