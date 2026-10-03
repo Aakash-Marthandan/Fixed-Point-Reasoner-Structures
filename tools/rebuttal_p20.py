@@ -88,8 +88,8 @@ def report(base=OUT, widths=Q.WIDTHS):
     for w in widths:
         f = base / f"attention_{w}/p20.npz"
         if not f.exists(): lines.append(f"attention_{w}: not run"); continue
-        d = np.load(f, allow_pickle=False); nT = len(d["T"]); trapped = ~d["exact_A0_intact"][-1].astype(bool)
-        S = {a: d[f"exact_{a}"][15].astype(bool) for a in ARMS}; res = dict(triggered=nT, trapped=int(trapped.sum()), strata={})
+        d = np.load(f, allow_pickle=False); nT = len(d["T"]); trapped = ~d["exact_A0_intact"][R17.STEPS_LABEL - 1].astype(bool)   # registered label: iteration 64 (A0 runs on to 80; Amendment 1)
+        S = {a: d[f"exact_{a}"][15].astype(bool) for a in ARMS}; res = dict(triggered=nT, trapped=int(trapped.sum()), trapped_by_80_exploratory=int((~d["exact_A0_intact"][-1].astype(bool)).sum()), strata={})
         for name, m in (("all", np.ones(nT, bool)), ("transient", ~trapped), ("trapped", trapped)):
             res["strata"][name] = dict(solved={a: int(S[a][m].sum()) for a in ARMS}, losses={a: int((S["A0_intact"][m] & ~S[a][m]).sum()) for a in ARMS[1:]}, n=int(m.sum()))
         con = {}

@@ -156,9 +156,9 @@ def report(base=OUT, widths=Q.WIDTHS):
         f = base / f"attention_{w}/p17.npz"
         if not f.exists(): lines.append(f"attention_{w}: not run"); continue
         d = np.load(f, allow_pickle=False); nT = len(d["T"])
-        A0 = d["exact_A0_intact"]; trapped = ~A0[-1]; transient = ~trapped                     # A0 to iteration 64 (index 47); solved by 32 = index 15
+        A0 = d["exact_A0_intact"]; trapped = ~A0[STEPS_LABEL - 1]; transient = ~trapped         # registered label: solved by iteration 64 (index 47; A0 runs on to 80, Amendment 6); solved by 32 = index 15
         S = {a: d[f"exact_{a}"][15] for a in ARMS}
-        res = dict(n=int(len(d["ids"])), triggered=nT, transient=int(transient.sum()), trapped=int(trapped.sum()), strata={})
+        res = dict(n=int(len(d["ids"])), triggered=nT, transient=int(transient.sum()), trapped=int(trapped.sum()), trapped_by_80_exploratory=int((~A0[-1]).sum()), strata={})
         for name, m in (("all", np.ones(nT, bool)), ("transient", transient), ("trapped", trapped)):
             rows = {a: int(S[a][m].sum()) for a in ARMS}; losses = {a: int((S["A0_intact"][m] & ~S[a][m]).sum()) for a in ARMS if a != "A0_intact"}
             others = [a for a in ARMS if a != GUIDED]; strongest = max(others, key=lambda a: rows[a])

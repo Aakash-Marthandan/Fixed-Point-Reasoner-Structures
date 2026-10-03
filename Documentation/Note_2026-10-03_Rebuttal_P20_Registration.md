@@ -26,3 +26,7 @@ P17 (`Note_2026-10-02_Rebuttal_P15_P16_P17_Registration.md`, Amendments 4–5) r
 ## Plan
 
 Commit this note and the tool before any row (locally; pushing waits for the other session's local-only commit to clear); queued behind P17's width-256 rerun (PID-based); three widths in parallel at nice 5; report by the tool; the Outcome appended here and a ledger line written when read.
+
+---
+
+**Amendment 1 — the strata label (2026-10-03 02:10Z, before any P20 row).** P20 imports P17's runner, whose intact arm runs to iteration 80 rather than 64 (P17 Amendment 6). P20's reader now labels *transient* and *trapped* at iteration 64 as registered (index 47) and reports the iteration-80 count beside it as exploratory. The run is unchanged. No rule, arm, seed or population changed.
