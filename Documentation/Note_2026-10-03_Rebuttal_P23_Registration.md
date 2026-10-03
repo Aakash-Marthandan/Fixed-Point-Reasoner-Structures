@@ -24,7 +24,7 @@ P21 showed, exploratorily, the same pattern on MLP 192: survivors of 32 complete
 As in P22:
 - Trigger: an invalid display at iteration 16 on the CPU, asserted equivalent to CPU-unsolved.
 - Arms: A0 intact (32 iterations); eight 60° re-rolls (32 iterations); four 1° and four 0.1° re-rolls (16 iterations).
-- Gates: rotation score shift ≤ 1e-2; realized angle within 1 % of nominal; trigger equivalence. A gates-only smoke on 16 puzzles of seed 0 is run before launch.
+- Gates: rotation score shift ≤ 1e-2; realized angle within 1 % of nominal; trigger equivalence. A gates-only smoke on the first 16 drawn puzzles of seed 0 (10:02Z, after the note and tool were committed and pushed, before launch) passed every gate: the trigger's equivalence (8 triggered), the largest rotation score shift 7.2e-7, the largest realized-angle deviation 0.001 %, and every arm with its designed length. It printed no outcome counts. Those 16 puzzles are part of the registered population.
 
 ## Rules
 
