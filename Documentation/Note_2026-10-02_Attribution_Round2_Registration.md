@@ -145,3 +145,70 @@ Under every outcome:
   - Watch heartbeats with `tools/ops_watch_pods.sh tools/campaign_attr2_p0.env`.
 - **Shared-project rules.** Only `qhrrn2-*` resources are created or deleted; nothing else in the project is touched.
 - **The close.** Pull the final manifest; verify fleet zero at the source; stage SA256U with the ladder's SA256 dirs; run the analyzer FIRST, untouched; then the report, ledger and Outcome here.
+
+## Outcome (2026-10-03 00:55Z; `runs/analysis/attr2_20261003/attr2_verdict.{txt,json}`)
+
+The analyzer was the registered `65973f6` (sha256 1891a418…, in `frozen_sha256.txt`), run untouched on the final manifest staged beside the ladder's SA256 rows. Fleet zero was verified at the source before the read: no `qhrrn2` node or queued resource, the supervisor exited, the final manifest present.
+
+**Integrity: PASS.**
+- SA256U's argv and model config differ from SA256's in exactly `dec_single_state: True`.
+- Seed 0; budget 30,000 with no extension marker.
+- All rows are on SA256's 5,000 puzzle ids and on the selected grid, and both depth-64 records carry the per-iteration bits.
+
+| | 16 iterations | 64 iterations |
+|---|---|---|
+| SA256 (two states; the reference) | 98.24 | 99.60 |
+| SA256U (one state) | 89.96 | 93.08 |
+| R-AB-1 | BELOW-BEYOND (−8.28 pp; only-SA256U 27, only-SA256 441; p 1.5e-97) | BELOW-BEYOND (−6.52 pp; 4 vs 330; p 2.9e-92) |
+| **R-A2-5** | **TWO-STATE-CARRIES** | **TWO-STATE-CARRIES** |
+| R-AB-2 (SE-RRM's published 93.73 / 98.22) | BELOW (−3.77 pp) | BELOW (−5.14 pp) |
+| R-AB-3 | LOCATED: 184 % of the 4.51 pp gap to SE-RRM | LOCATED (−6.52 pp) |
+
+- **R-AB-4:** both selectors CLEAN (spurious k32 rate 0.00 %).
+- **STABILITY:**
+  - selected 14,000, not the edge (validation maximum 92.77, end 71.88);
+  - the scan's fixed start 92.88 against one random start 93.16; verified 97.12;
+  - no non-finite loss rows.
+- **The expected range was missed.** The registered range (92–98 / 97.5–99.6) missed below at both depths.
+
+**Predictions scored.**
+
+| prediction | credence | result |
+|---|---|---|
+| R-A2-5 @16 TWO-STATE-CARRIES | 0.50 | yes |
+| R-A2-5 @64 NO-STRUCTURE-EFFECT | 0.75 | no (TWO-STATE-CARRIES, 0.25) |
+| R-AB-2 @16 WITHIN / ABOVE | 0.45 / 0.50 | no (BELOW, 0.05) |
+| Selector CLEAN | 0.85 | yes |
+| EDGE selection | 0.40 | no (selected mid-run) |
+| (descriptive) the gap wider at iterations 4–16 than at 64 | 0.60 | partly: wider at 8 and 16, not at 4 |
+| (descriptive) SA256U drops at least as many as SA256 | 0.60 | yes, trivially (0 and 0) |
+
+**Reading (the registered wording for TWO-STATE-CARRIES, with the measured numbers).** "With every other part of our system unchanged, including the number of network applications per iteration, SE-RRM's single recurrent state costs 8.28 points at 16 iterations, beyond the seed floor." The separate slow state is worth more than the whole 4.51 pp gap between our attention model and SE-RRM's published number (184 %): our single-state variant lands 3.77 pp *below* SE-RRM's own single-state model. TRM's single-state penalty (−15.5 in its MLP model) carries over to our attention system at about half its size. At 64 iterations, read separately, the single state costs 6.52 points: the recurrence's long-horizon behaviour, not the SE-RRM gap.
+
+**Descriptive readings** (R-A2-6, R-A2-7, CONSISTENCY, registered as descriptive; no label moves).
+- **Where:**
+
+  | iteration | 1 | 2 | 4 | 8 | 16 | 32 | 64 |
+  |---|---|---|---|---|---|---|---|
+  | SA256U − SA256 (pp) | +16.34 | +7.46 | −0.92 (p 0.11) | −6.96 | −8.28 | −7.42 | −6.52 |
+
+  The single state solves far more puzzles in the first two iterations: 41.9 % exact after one iteration against 25.6 %. It then gains little: from iteration 4 to 64, +10.2 pp against +15.8 pp for the two-state model. First-exact quartiles are 1 / 2 / 2 against 1 / 2 / 3, and the late share (exact at 64, not at 16) is 3.12 % against 1.36 %.
+- **Persistence:** LOST 0 and DROPPED 0 for both. Neither model ever loses a solved puzzle within 64 iterations.
+- **Consistency:** each model's depth-64 run reproduces its depth-16 row exactly at iteration 16 (5,000 of 5,000).
+
+**Training dynamics** (descriptive, from the banked metrics; `runs/analysis/attr2_20261003/training_dynamics.txt`).
+- **Before its peak, the single state generalizes worse at every matched step.** On the 512-puzzle validation monitor at 16 iterations, it reads 73.4 / 82.8 / 89.1 / 89.7 / 92.8 at 6k / 8k / 10k / 12k / 14k steps, against the two-state model's 86.7 / 93.6 / 95.3 / 95.1 / 96.7.
+- **After 14k it memorizes the training puzzles.** The training rows' exact share rises from 0.41 to 0.95 and the training loss falls from 0.55 to 0.06, while validation falls to 64–72.
+- **The two-state model never does this within the budget.** Its training loss stays 0.50–0.58 and its training rows' exact share 0.25–0.35, while validation rises to 98.6.
+
+The selection rule took the single state's best checkpoint (14k), so the registered contrast compares the best of each run. The deficit has two parts: slower generalization before the peak, and memorization after it.
+
+**Qualifications.**
+- One seed. The 16-iteration difference is 3.2 times the seed floor, but a single-state run that peaks mid-budget and then memorizes may vary more across seeds than the floor's two-state triple.
+- SE-RRM trains its single state with dropout 0.2, random 5 % halting, AdamATan2 and bfloat16; we used none of these. A regularizer that blocks memorization may be what lets SE-RRM's single state reach 93.73.
+- R-A2-6 and the training dynamics describe; a claim built on them needs its own registration.
+
+**What it means.**
+- In our system, the split into a fast and a slow state carries a large share of the accuracy. The cost of removing it appears in late iterations (repair), and in training as worse generalization and memorization of the 1,000 training puzzles.
+- This is consistent with the manuscript's measurements, which locate repair information in the slow state. Whether the single state's readout-invisible part plays that role is the follow-up's question (P8's protocol on SA256U's selected checkpoint, to be registered separately).
+- **The sharpest next test** is the single state with SE-RRM's dropout: does regularization rescue it, and does it close the gap to their number?

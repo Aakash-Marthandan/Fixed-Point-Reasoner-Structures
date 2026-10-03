@@ -1,0 +1,24 @@
+SE-RRM ATTRIBUTION ROUND 2 — analyzer (frozen rules; one seed; floors 2.58 pp at 16 and 2.44 pp at 64; the reference = the ladder's SA256)
+arms present: ['SA256U']
+INTEGRITY                PASS
+  SA256   16: 98.24 (n 5000)   64: 99.60 (n 5000)
+  SA256U  16: 89.96 (n 5000)   64: 93.08 (n 5000)   [SE-RRM's single-state recurrence (= TRM's single-z): one carry, 21 applications per segment, the input injected at each]
+R-AB-1 SA256U vs SA256 @16      BELOW-BEYOND (-8.28 pp, only-SA256U 27, only-SA256 441, n 5000, p 1.5e-97)
+R-A2-5 STRUCTURE @16            TWO-STATE-CARRIES (BELOW-BEYOND, -8.28 pp)
+R-AB-2 SA256U vs SE-RRM @16     BELOW (89.96 vs the published 93.73; -3.77 pp; different evaluation sets, their one run)
+R-AB-1 SA256U vs SA256 @64      BELOW-BEYOND (-6.52 pp, only-SA256U 4, only-SA256 330, n 5000, p 2.9e-92)
+R-A2-5 STRUCTURE @64            TWO-STATE-CARRIES (BELOW-BEYOND, -6.52 pp)
+R-AB-2 SA256U vs SE-RRM @64     BELOW (93.08 vs the published 98.22; -5.14 pp; different evaluation sets, their one run)
+R-AB-3 LOCATED @16              LOCATED: SA256U (-8.28 pp = 184 % of the 4.51 pp to SE-RRM)
+R-AB-3 LOCATED @64              LOCATED: SA256U (-6.52 pp)
+R-AB-4 SELECTOR SA256           CLEAN (spurious k32 0.00 %)
+R-AB-4 SELECTOR SA256U          CLEAN (spurious k32 0.00 %)
+R-A2-6 WHERE SA256U (exact SA256U vs SA256): @1 41.94 vs 25.60 (+16.34 pp, p 1.6e-151); @2 72.64 vs 65.18 (+7.46 pp, p 4.3e-30); @4 82.84 vs 83.76 (-0.92 pp, p 0.11); @8 87.04 vs 94.00 (-6.96 pp, p 7.4e-48); @16 89.96 vs 98.24 (-8.28 pp, p 1.5e-97); @32 91.74 vs 99.16 (-7.42 pp, p 7.7e-98); @64 93.08 vs 99.60 (-6.52 pp, p 2.9e-92)
+R-A2-6 FIRST-EXACT SA256U  quartiles 1 / 2 / 2 among 4654 exact at 64; late share (exact at 64, not at 16) 3.12 %
+R-A2-6 FIRST-EXACT SA256   quartiles 1 / 2 / 3 among 4980 exact at 64; late share (exact at 64, not at 16) 1.36 %
+R-A2-7 PERSISTENCE SA256U  LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256   LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256U paired: DROPPED only-SA256U 0, only-SA256 0 (p 1)
+CONSISTENCY SA256        D64 bits at 16 agree with the D16 row on 5000 of 5000
+CONSISTENCY SA256U       D64 bits at 16 agree with the D16 row on 5000 of 5000
+STABILITY SA256U          selected 014000; validation max 92.77, end 71.88; scan fixed start 92.88, one random start 93.16 (gap +0.28 pp), verified 97.12; non-finite loss rows 0
