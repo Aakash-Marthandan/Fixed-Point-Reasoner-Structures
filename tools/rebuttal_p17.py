@@ -71,7 +71,7 @@ class R11(Q.R7):
         for t in range(steps):
             f = first and t == 0
             lg_dev, zf = (self.step_first if f else self.step_rel)(self.params, x, y, self.tv, jnp.zeros(1) if f else jnp.asarray(z))
-            z = np.asarray(zf) if f else np.asarray(jnp.asarray(z) + self.eta_z * (zf - jnp.asarray(z)))
+            z = np.array(zf) if f else np.array(jnp.asarray(z) + self.eta_z * (zf - jnp.asarray(z)))     # writable copies: the guided arm edits z in place
             d = (np.asarray(self.EV.layout_gather(lg_dev, self.layout), np.float32)[..., 1:10].reshape(x.shape[0], 81, 9).argmax(-1) + 1).astype(np.int8)
             disp.append(d)
             if hook is not None: z = hook(t, z, prev, d)
