@@ -97,3 +97,50 @@ P22's design, with these differences:
 4. Run the three receivers in parallel at nice 5.
 5. Produce the report with the tool.
 6. When it is read, append the Outcome here and write a ledger line.
+
+---
+
+## P24 Outcome (2026-10-03 14:45Z; `runs/analysis/rebuttal_20261003g/report.{txt,json}`; every gate passed; no shared tool edited during the runs)
+
+**Integrity.**
+- Every checkpoint carried its reported sha256 prefix and the expected configuration (single-state only for SA256U).
+- **G1 passed on all three receivers.** The main-repo loop reproduced `run_batch`'s exact flags bitwise.
+- On every receiver the trigger was asserted equivalent to CPU-unsolved. Triggered: 131 / 56 / 67 of 160, kept 80 / 56 / 67 (SA256U 14k / SA256 28k / SA256 14k).
+- Every rotation changed no score by more than 1e-2 (maximum 7.8e-7), and every realized angle was within 0.002 % of nominal.
+- No solved grid un-solved.
+- An independent recount agrees with the report on R, both ratios, the event counts, every letter, the frozen-step measure and the pattern.
+
+**Results.**
+
+| receiver | kept | re-roll completion within 16 / 32 | completions early / late | R [95 %] | A | D(60°) | D(1°) | D(0.1°) | D(1°)/D(60°) [95 %] | B |
+|---|---|---|---|---|---|---|---|---|---|---|
+| SA256U 14k (one state) | 80 | 0.116 / 0.181 | 74 / 42 | 1.00 [0.68, 1.40] | MEMORYLESS | 0.148 | 0.119 | 0.098 | 0.80 [0.50, 1.25] | CHAOTIC |
+| SA256 28k | 56 | 0.328 / 0.487 | 147 / 71 | 1.07 [0.82, 1.37] | MEMORYLESS | 0.301 | 0.262 | 0.295 | 0.87 [0.63, 1.20] | CHAOTIC |
+| SA256 14k | 67 | 0.297 / 0.422 | 159 / 67 | 0.86 [0.66, 1.08] | UNRESOLVED | 0.274 | 0.256 | 0.224 | 0.94 [0.68, 1.26] | CHAOTIC |
+
+**Pattern.** **SAME-TAIL**: SA256U and SA256 at 28k are both MEMORYLESS and CHAOTIC.
+
+**Borderline disclosure.** Two memory letters sit on the equivalence margin, in opposite directions:
+- SA256U's registered interval lower end is 0.680; the recount's separately seeded bootstrap gives 0.659, just outside 0.67.
+- SA256 at 14k is 0.661 against 0.677 in the recount.
+
+SA256U's chaos ratio, 0.80, is also at its threshold, with a wide interval. The letters stand by the registered bootstrap. The width reflects how rarely SA256U's stalled trajectories complete (116 completions in 640 re-rolls), not a departure from memorylessness: its point estimate is R = 1.000.
+
+**Predictions scored.**
+- SA256: MEMORYLESS (0.65) HIT at 28k, MISS at 14k (UNRESOLVED); CHAOTIC (0.65) HIT on both.
+- SA256U: MEMORYLESS (0.35) HIT; CHAOTIC (0.40) HIT.
+- Pattern: SAME-TAIL (0.35) HIT; SINGLE-STATE-DIFFERS (0.40) MISS.
+
+**The registered sentence that applies.** SAME-TAIL: "The single-state recurrence's stall is also memoryless and chaotic: the tail law does not depend on the two-state design." Measured qualification: the single state's letters are borderline, for lack of completions.
+
+**Exploratory.**
+1. *The single state's stall is a live search, not a frozen one.* On stalled intact steps, no display is frozen (0.000 / 0.000 / 0.001), and a median of 13 / 12 / 11 cells change per iteration.
+2. *What the single state lacks is completion rate, not search.* A stalled re-roll completes within 16 iterations 0.116 of the time against 0.328 (SA256 28k) and 0.297 (SA256 14k), and within 32 iterations 0.181 against 0.487 and 0.422. 44 of SA256U's 80 kept puzzles had none of eight re-rolls solved by 32, against 9 of 56 and 16 of 67. This fits round 2's finding that the single state repairs little: it keeps searching at the same character but finds far less often.
+3. *Intact continuation behaves like one more re-roll on every receiver.*
+   - Completed within 16 iterations: 11 / 21 / 20, against 9.2 / 18.4 / 19.9 expected.
+   - Within 32: 15 / 29 / 27, against memoryless predictions of 13.8 / 25.6 / 28.4.
+
+**Reading.**
+- The memoryless, chaotic character of stalled correction does not come from the slow/fast split: the one-carry recurrence has it too, at its point estimate.
+- What the two-state design buys in the stalled regime is a higher per-instance completion rate, about three times the single state's per sixteen iterations. The search is not a different kind.
+- Together with P22 and P23, the memoryless letter holds on eight of nine receivers, across two token mixers and both recurrence structures. The ninth, SA256 at 14k, is UNRESOLVED at the margin. Small-angle chaos is strong on attention and somewhat weaker on the MLP mixer.

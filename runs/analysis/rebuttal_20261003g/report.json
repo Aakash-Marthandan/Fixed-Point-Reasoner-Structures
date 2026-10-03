@@ -1,0 +1,111 @@
+{
+ "SA256U_14k": {
+  "triggered": 80,
+  "unsolve_transitions": 0,
+  "A": {
+   "hr": 1.0000000000000002,
+   "ci": [
+    0.6802221260468815,
+    1.4001464435146436
+   ],
+   "events_early": 74,
+   "events_late": 42,
+   "letter": "MEMORYLESS"
+  },
+  "B": {
+   "D_small": 0.11875,
+   "D_big": 0.14791666666666664,
+   "ratio": 0.8028169014084509,
+   "ci": [
+    0.5,
+    1.246164383561644
+   ],
+   "letter": "CHAOTIC"
+  },
+  "B_tiny_exploratory": {
+   "D_tiny": 0.09791666666666665,
+   "ratio": 0.6619718309859155
+  },
+  "exploratory": {
+   "A0_solved_16": 11,
+   "mean_reroll_q": 9.25,
+   "A0_solved_32": 15,
+   "memoryless_prediction_A0_32": 13.84375,
+   "stalled_steps_frozen_fraction": 0.0,
+   "stalled_steps_median_cells_changed": 13.0
+  }
+ },
+ "SA256_28k": {
+  "triggered": 56,
+  "unsolve_transitions": 0,
+  "A": {
+   "hr": 1.0734341252699782,
+   "ci": [
+    0.8202020202020202,
+    1.3706419868791
+   ],
+   "events_early": 147,
+   "events_late": 71,
+   "letter": "MEMORYLESS"
+  },
+  "B": {
+   "D_small": 0.26190476190476186,
+   "D_big": 0.3005952380952381,
+   "ratio": 0.8712871287128712,
+   "ci": [
+    0.6285075493612079,
+    1.1945833333333324
+   ],
+   "letter": "CHAOTIC"
+  },
+  "B_tiny_exploratory": {
+   "D_tiny": 0.29464285714285715,
+   "ratio": 0.9801980198019803
+  },
+  "exploratory": {
+   "A0_solved_16": 21,
+   "mean_reroll_q": 18.375,
+   "A0_solved_32": 29,
+   "memoryless_prediction_A0_32": 25.609375,
+   "stalled_steps_frozen_fraction": 0.0,
+   "stalled_steps_median_cells_changed": 12.0
+  }
+ },
+ "SA256_14k": {
+  "triggered": 67,
+  "unsolve_transitions": 0,
+  "A": {
+   "hr": 0.8574040219378428,
+   "ci": [
+    0.6614725433024401,
+    1.079099580923457
+   ],
+   "events_early": 159,
+   "events_late": 67,
+   "letter": "UNRESOLVED"
+  },
+  "B": {
+   "D_small": 0.2562189054726368,
+   "D_big": 0.2736318407960199,
+   "ratio": 0.9363636363636364,
+   "ci": [
+    0.6810254274123443,
+    1.2614387408568437
+   ],
+   "letter": "CHAOTIC"
+  },
+  "B_tiny_exploratory": {
+   "D_tiny": 0.22388059701492538,
+   "ratio": 0.8181818181818182
+  },
+  "exploratory": {
+   "A0_solved_16": 20,
+   "mean_reroll_q": 19.875,
+   "A0_solved_32": 27,
+   "memoryless_prediction_A0_32": 28.421875,
+   "stalled_steps_frozen_fraction": 0.0006349206349206349,
+   "stalled_steps_median_cells_changed": 11.0
+  }
+ },
+ "pattern": "SAME-TAIL"
+}
