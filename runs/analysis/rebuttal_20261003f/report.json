@@ -1,0 +1,135 @@
+{
+ "mlp_192_seed0": {
+  "triggered": 66,
+  "unsolve_transitions": 0,
+  "A": {
+   "hr": 1.1571194762684127,
+   "ci": [
+    0.9487040133779264,
+    1.3951138205392668
+   ],
+   "events_early": 207,
+   "events_late": 101,
+   "letter": "MEMORYLESS"
+  },
+  "B": {
+   "D_small": 0.2727272727272727,
+   "D_big": 0.3434343434343434,
+   "ratio": 0.7941176470588235,
+   "ci": [
+    0.593968671679198,
+    1.0560879915358847
+   ],
+   "letter": "INTERMEDIATE"
+  },
+  "B_tiny_exploratory": {
+   "D_tiny": 0.29545454545454547,
+   "ratio": 0.8602941176470589
+  },
+  "exploratory": {
+   "A0_solved_16": 32,
+   "mean_reroll_q": 25.875,
+   "A0_solved_32": 42,
+   "memoryless_prediction_A0_32": 35.421875,
+   "parallel2_at16_vs_A0_at32": {
+    "parallel": 35,
+    "sequential": 42,
+    "mcnemar": [
+     7,
+     14,
+     0.18924713134765625
+    ]
+   }
+  }
+ },
+ "mlp_192_seed1": {
+  "triggered": 84,
+  "unsolve_transitions": 0,
+  "A": {
+   "hr": 0.8626444159178437,
+   "ci": [
+    0.7121556983085313,
+    1.0226973646683017
+   ],
+   "events_early": 269,
+   "events_late": 96,
+   "letter": "MEMORYLESS"
+  },
+  "B": {
+   "D_small": 0.248015873015873,
+   "D_big": 0.3373015873015873,
+   "ratio": 0.7352941176470588,
+   "ci": [
+    0.5889483187077736,
+    0.8957117273662184
+   ],
+   "letter": "INTERMEDIATE"
+  },
+  "B_tiny_exploratory": {
+   "D_tiny": 0.23015873015873015,
+   "ratio": 0.6823529411764705
+  },
+  "exploratory": {
+   "A0_solved_16": 28,
+   "mean_reroll_q": 33.625,
+   "A0_solved_32": 47,
+   "memoryless_prediction_A0_32": 45.796875,
+   "parallel2_at16_vs_A0_at32": {
+    "parallel": 51,
+    "sequential": 47,
+    "mcnemar": [
+     11,
+     7,
+     0.480682373046875
+    ]
+   }
+  }
+ },
+ "mlp_192_seed2": {
+  "triggered": 74,
+  "unsolve_transitions": 0,
+  "A": {
+   "hr": 0.9491525423728818,
+   "ci": [
+    0.757036672908864,
+    1.1537299148879212
+   ],
+   "events_early": 273,
+   "events_late": 88,
+   "letter": "MEMORYLESS"
+  },
+  "B": {
+   "D_small": 0.22747747747747746,
+   "D_big": 0.3018018018018017,
+   "ratio": 0.7537313432835823,
+   "ci": [
+    0.5588022165387894,
+    0.9699572672688914
+   ],
+   "letter": "INTERMEDIATE"
+  },
+  "B_tiny_exploratory": {
+   "D_tiny": 0.286036036036036,
+   "ratio": 0.9477611940298509
+  },
+  "exploratory": {
+   "A0_solved_16": 31,
+   "mean_reroll_q": 34.125,
+   "A0_solved_32": 40,
+   "memoryless_prediction_A0_32": 44.265625,
+   "parallel2_at16_vs_A0_at32": {
+    "parallel": 39,
+    "sequential": 40,
+    "mcnemar": [
+     8,
+     9,
+     1.0
+    ]
+   }
+  }
+ },
+ "aggregate": {
+  "A": "MEMORYLESS",
+  "B": "INTERMEDIATE"
+ }
+}

@@ -63,3 +63,40 @@ P22's rules, unchanged, with each seed as a receiver. Each letter is confirmed w
 3. Launch the three seeds in parallel at nice 5. The other session has said the Mac's CPU is free until about 15:00Z.
 4. Produce the report with the tool.
 5. When it is read, append the Outcome here and write a ledger line.
+
+---
+
+## P23 Outcome (2026-10-03 11:00Z; `runs/analysis/rebuttal_20261003f/report.{txt,json}`; every gate passed; no shared tool edited during the runs)
+
+**Integrity.**
+- Every checkpoint's hash equalled the release manifest's.
+- On every seed the trigger was asserted equivalent to CPU-unsolved. Triggered: 66 / 84 / 74 of 160 (seeds 0 / 1 / 2).
+- Every rotation changed no score by more than 1e-2 (realized maximum 8.5e-7), and every realized angle was within 0.002 % of nominal.
+- No solved grid un-solved.
+- An independent recount agrees with the report on R, both ratios, the event counts, every letter and the aggregate. A separately written bootstrap gives R intervals of [0.949, 1.391], [0.716, 1.018] and [0.761, 1.156].
+
+**Results.**
+
+| MLP 192 | triggered | completions early / late | R [95 %] | A | D(60°) | D(1°) | D(0.1°) | D(1°)/D(60°) [95 %] | B |
+|---|---|---|---|---|---|---|---|---|---|
+| seed 0 | 66 | 207 / 101 | 1.16 [0.95, 1.40] | **MEMORYLESS** | 0.343 | 0.273 | 0.295 | 0.79 [0.59, 1.06] | INTERMEDIATE |
+| seed 1 | 84 | 269 / 96 | 0.86 [0.71, 1.02] | **MEMORYLESS** | 0.337 | 0.248 | 0.230 | 0.74 [0.59, 0.90] | INTERMEDIATE |
+| seed 2 | 74 | 273 / 88 | 0.95 [0.76, 1.15] | **MEMORYLESS** | 0.302 | 0.227 | 0.286 | 0.75 [0.56, 0.97] | INTERMEDIATE |
+
+**Letters.**
+- A: **MEMORYLESS** on every seed, so the memory law **transfers**.
+- B: **INTERMEDIATE** on every seed, so CHAOTIC is not confirmed on this mixer. A 1° rotation produces 74–79 % of the outcome disagreement that 60° does, against 82–97 % on the attention models. Every interval includes the 0.8 threshold.
+
+**Predictions scored.** MEMORYLESS (0.65): HIT. CHAOTIC (0.65): MISS. INTERMEDIATE (0.25) is the letter that holds.
+
+**The registered sentences that apply.**
+- MEMORYLESS: P22's sentence, with "in a recursive reasoner with a different token mixer, across three independent initializations" added: "For a fixed stalled state, re-rolled trajectories complete at a rate that does not change over the following thirty-two iterations. At the level of the instance, stalled correction is memoryless: restarting cannot shorten it, and the falling completion rate across puzzles reflects which puzzles are hard."
+- B, the "any other letter" sentence: "The memoryless chaotic tail found on the attention models does not transfer to the MLP mixer as an INTERMEDIATE pattern." Measured: on the MLP mixer, sixteen iterations after a 1° or 0.1° score-preserving rotation the outcome is re-rolled substantially but not fully (ratios 0.68–0.95 across the two small angles, intervals including 0.8). The stalled dynamics are strongly sensitive, somewhat less than the attention models'.
+
+**Exploratory.**
+1. Intact continuation compared with the re-rolls:
+   - completed within 16 iterations: 32 / 28 / 31, against 25.9 / 33.6 / 34.1 expected;
+   - within 32 iterations: 42 / 47 / 40, against a memoryless prediction of 35.4 / 45.8 / 44.3.
+2. Parallel against sequential at matched compute: two 16-iteration re-rolls solved 35 / 51 / 39, against 42 / 47 / 40 for 32 iterations of intact continuation (McNemar 7/14, 11/7, 8/9; none significant).
+
+**Reading.** The instance-level memorylessness of stalled correction holds on a second token mixer and three more independent initializations. Together with P22, that makes six receivers and two mixers. The degree of chaos at small angles is somewhat lower on the MLP mixer, so the robust statement across architectures is the memoryless law, with strong sensitivity to the readout-invisible state.
