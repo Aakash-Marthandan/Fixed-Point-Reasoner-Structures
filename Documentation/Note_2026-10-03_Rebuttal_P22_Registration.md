@@ -137,3 +137,54 @@ Under every outcome:
 4. Run the three widths in parallel at nice 5.
 5. Produce the report with the tool.
 6. Append the Outcome here and write a ledger line when it is read.
+
+---
+
+## P22 Outcome (2026-10-03 09:35Z; `runs/analysis/rebuttal_20261003e/report.{txt,json}`; every gate passed; no shared tool edited during the runs)
+
+**Integrity.**
+- On every width the trigger was asserted equivalent to CPU-unsolved. Triggered: 81 / 68 / 66 of 160 (Attention 256 / 192 / 128).
+- Every rotation changed no digit score by more than 1e-2 (realized maximum 8.1e-7).
+- Every realized angle was within 0.002 % of its nominal angle, including at 0.1°.
+- No solved grid un-solved in any trajectory.
+- An independent recount from the raw arrays agrees with the report on R, both disagreement ratios, the event counts, every letter and the aggregate. A separately written bootstrap gives R intervals of [0.899, 1.297], [0.754, 1.077] and [0.887, 1.278].
+
+**Results.**
+
+| receiver | triggered | completions early / late (8 re-rolls each) | R [95 %] | A | D(60°) | D(1°) | D(0.1°) | D(1°)/D(60°) [95 %] | B |
+|---|---|---|---|---|---|---|---|---|---|
+| Attention 256 | 81 | 235 / 111 | 1.08 [0.89, 1.29] | **MEMORYLESS** | 0.319 | 0.296 | 0.300 | 0.93 [0.74, 1.17] | **CHAOTIC** |
+| Attention 192 | 68 | 231 / 92 | 0.91 [0.75, 1.08] | **MEMORYLESS** | 0.353 | 0.341 | 0.343 | 0.97 [0.78, 1.21] | **CHAOTIC** |
+| Attention 128 | 66 | 256 / 105 | 1.08 [0.89, 1.31] | **MEMORYLESS** | 0.356 | 0.293 | 0.278 | 0.82 [0.61, 1.08] | **CHAOTIC** |
+
+**Letters.** A: **MEMORYLESS** on every width, so confirmed. B: **CHAOTIC** on every width, so confirmed.
+
+**Predictions scored.** MEMORYLESS (0.45): HIT. CHAOTIC (0.55): HIT.
+
+**The registered sentences that apply.**
+- MEMORYLESS: "For a fixed stalled state, re-rolled trajectories complete at a rate that does not change over the following thirty-two iterations. At the level of the instance, stalled correction is memoryless: restarting cannot shorten it, and the falling completion rate across puzzles reflects which puzzles are hard."
+- CHAOTIC: "A one-degree rotation of the readout-invisible state, with every score kept, changes the outcome sixteen iterations later about as often as a sixty-degree rotation. The stalled dynamics are chaotic."
+
+Under every outcome: re-roll directions are random; the trigger uses no answer key; the result holds for the tested checkpoints and population, at a horizon of 32 iterations after iteration 16.
+
+**Exploratory.**
+1. *Decorrelation is complete even at a tenth of a degree.* D(0.1°)/D(60°) is 0.94 / 0.97 / 0.78.
+2. *Instance rates spread over the whole range.* Puzzles by how many of their eight re-rolls completed within 16 iterations (0 … 8):
+   - 256: 20, 8, 13, 7, 10, 9, 6, 5, 3
+   - 192: 8, 12, 4, 12, 9, 7, 9, 6, 1
+   - 128: 6, 7, 7, 10, 10, 8, 7, 5, 6
+
+   The rate is a property of the instance. It predicts whether intact continuation completes within 16 iterations with AUC 0.87 / 0.68 / 0.80.
+3. *Intact continuation behaves like one more re-roll.*
+   - It completed 25 / 31 / 30 within 16 iterations, against 29.4 / 28.9 / 32.0 expected from the re-rolls.
+   - The memoryless prediction of its completions within 32 iterations, from each instance's 16-iteration rate, is 40.6 / 40.0 / 42.7; observed: 38 / 39 / 46.
+4. *Parallel against sequential at matched compute.*
+   - Two 16-iteration re-rolls with a validity check solved 40 / 38 / 40.
+   - Intact continuation for 32 iterations solved 38 / 39 / 46 (McNemar 10/8, 12/13, 10/16; none significant).
+   - One re-roll for 32 iterations solved 41 / 37 / 46.
+
+**Reading.**
+- Once correction stalls, these networks run a memoryless chaotic search. The future is so sensitive to the readout-invisible state that a 0.1° rotation, which changes no displayed score, yields an effectively independent outcome.
+- Across such re-rolls, an instance completes at its own constant rate per iteration, and intact continuation is one more draw from the same process.
+- The falling completion rate across puzzles is heterogeneity in instance difficulty.
+- This explains P17, P20 and P21. A perturbation re-rolls the trajectory without changing its rate, so neither kicks nor restarts can help on average, and parallel re-rolls equal sequential iterations at matched compute.

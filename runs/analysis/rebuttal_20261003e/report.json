@@ -1,0 +1,174 @@
+{
+ "attention_256": {
+  "triggered": 81,
+  "unsolve_transitions": 0,
+  "A": {
+   "hr": 1.0806675938803896,
+   "ci": [
+    0.8885726103938376,
+    1.2911829439572484
+   ],
+   "events_early": 235,
+   "events_late": 111,
+   "letter": "MEMORYLESS"
+  },
+  "B": {
+   "D_small": 0.2962962962962963,
+   "D_big": 0.31893004115226337,
+   "ratio": 0.9290322580645161,
+   "ci": [
+    0.7377883275261323,
+    1.1666958041958042
+   ],
+   "letter": "CHAOTIC"
+  },
+  "B_tiny_exploratory": {
+   "D_tiny": 0.3004115226337448,
+   "ratio": 0.9419354838709677
+  },
+  "exploratory": {
+   "A0_solved_16": 25,
+   "mean_reroll_q": 29.375,
+   "q_mean_A0_solved": 0.645,
+   "q_mean_A0_unsolved": 0.23660714285714285,
+   "parallel2_at16_vs_A0_at32": {
+    "parallel": 40,
+    "sequential": 38,
+    "mcnemar": [
+     10,
+     8,
+     0.8145294189453125
+    ]
+   },
+   "parallel2_at16_vs_reroll_at32": {
+    "parallel": 40,
+    "sequential": 41,
+    "mcnemar": [
+     6,
+     7,
+     1.0
+    ]
+   },
+   "A0_solved_by": {
+    "+16": 25,
+    "+32": 38
+   }
+  }
+ },
+ "attention_192": {
+  "triggered": 68,
+  "unsolve_transitions": 0,
+  "A": {
+   "hr": 0.9057665260196908,
+   "ci": [
+    0.7499522900763362,
+    1.080067381316998
+   ],
+   "events_early": 231,
+   "events_late": 92,
+   "letter": "MEMORYLESS"
+  },
+  "B": {
+   "D_small": 0.34068627450980393,
+   "D_big": 0.35294117647058826,
+   "ratio": 0.9652777777777778,
+   "ci": [
+    0.7810124793972214,
+    1.2115649606299213
+   ],
+   "letter": "CHAOTIC"
+  },
+  "B_tiny_exploratory": {
+   "D_tiny": 0.3431372549019608,
+   "ratio": 0.9722222222222222
+  },
+  "exploratory": {
+   "A0_solved_16": 31,
+   "mean_reroll_q": 28.875,
+   "q_mean_A0_solved": 0.5282258064516129,
+   "q_mean_A0_unsolved": 0.33783783783783783,
+   "parallel2_at16_vs_A0_at32": {
+    "parallel": 38,
+    "sequential": 39,
+    "mcnemar": [
+     12,
+     13,
+     1.0
+    ]
+   },
+   "parallel2_at16_vs_reroll_at32": {
+    "parallel": 38,
+    "sequential": 37,
+    "mcnemar": [
+     5,
+     4,
+     1.0
+    ]
+   },
+   "A0_solved_by": {
+    "+16": 31,
+    "+32": 39
+   }
+  }
+ },
+ "attention_128": {
+  "triggered": 66,
+  "unsolve_transitions": 0,
+  "A": {
+   "hr": 1.077712609970674,
+   "ci": [
+    0.8867136139166938,
+    1.3111790275289865
+   ],
+   "events_early": 256,
+   "events_late": 105,
+   "letter": "MEMORYLESS"
+  },
+  "B": {
+   "D_small": 0.29292929292929293,
+   "D_big": 0.3560606060606061,
+   "ratio": 0.8226950354609929,
+   "ci": [
+    0.6142857142857143,
+    1.078989813242784
+   ],
+   "letter": "CHAOTIC"
+  },
+  "B_tiny_exploratory": {
+   "D_tiny": 0.2777777777777777,
+   "ratio": 0.7801418439716309
+  },
+  "exploratory": {
+   "A0_solved_16": 30,
+   "mean_reroll_q": 32.0,
+   "q_mean_A0_solved": 0.6541666666666667,
+   "q_mean_A0_unsolved": 0.34375,
+   "parallel2_at16_vs_A0_at32": {
+    "parallel": 40,
+    "sequential": 46,
+    "mcnemar": [
+     10,
+     16,
+     0.32693958282470703
+    ]
+   },
+   "parallel2_at16_vs_reroll_at32": {
+    "parallel": 40,
+    "sequential": 46,
+    "mcnemar": [
+     4,
+     10,
+     0.1795654296875
+    ]
+   },
+   "A0_solved_by": {
+    "+16": 30,
+    "+32": 46
+   }
+  }
+ },
+ "aggregate": {
+  "A": "MEMORYLESS",
+  "B": "CHAOTIC"
+ }
+}
