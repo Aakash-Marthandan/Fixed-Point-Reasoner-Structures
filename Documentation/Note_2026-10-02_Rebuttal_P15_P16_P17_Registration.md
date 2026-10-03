@@ -193,3 +193,61 @@ DISCOVERY states give the same picture (e⁺ 0.05–0.10, e⁻ 0.05–0.11). At 
 ---
 
 **Amendment 6 — the strata label (2026-10-03 02:10Z, before any Attention 256 P17 result was seen).** Registered: A0 continues to iteration 64, and *transient* means solved by 64. As implemented, A0 runs 16 + 48 = 64 iterations after the trigger, to iteration 80, and the reader labelled the strata at A0's last iteration (80), contradicting its own comment ("index 47"). This was found while preparing the independent recount, after the partial report for Attention 128 and 192 had been read with the label at 80 (trapped 27 and 29 of 143 and 139). The reader now labels at iteration 64 as registered (index 47; trapped 36 and 34), and reports the iteration-80 count beside it as exploratory. The run itself is unchanged: iterations 17–64 are a prefix of the same deterministic continuation, and nothing in the computation reads the label. On 128 and 192 every letter is the same under either label, because the guided arm equals A1 there. No rule, arm, seed or population changed. The same correction is applied to P20's reader before any P20 row (P20 Amendment 1).
+
+---
+
+## P17 Outcome (Amendment 4's rules, Amendment 6's label; 2026-10-03 02:55Z; `runs/analysis/rebuttal_20261003b/report.{txt,json}`)
+
+**Integrity.**
+- On every width the trigger (an invalid display at iteration 16, no answer key) was asserted equivalent to CPU-unsolved. The CPU solved 241 / 245 / 228 of the 384 drawn puzzles at 16 (Attention 128 / 192 / 256); 143 / 139 / 156 triggered.
+- Every kick changed no digit score by more than 1e-2; the realized float32 maximum was 6.8e-7 / 7.9e-7 / 7.7e-7.
+- Attention 256 was rerun in full after Amendment 5's fix. Amendment 6's reader correction was made while that run was in progress; the run's code was untouched.
+- An independent recount from the raw arrays agrees with the report on every arm, stratum, contrast and letter.
+- The guided arm's repeat condition (an unchanged, still-invalid display) never occurred on 128 or 192. On 256 it occurred seven times, all in one puzzle.
+
+**Results (solved by iteration 32 among triggered puzzles; strata by intact continuation to iteration 64).**
+
+| receiver | triggered (transient / trapped) | A0 intact | A1 replace | rotate 15° | 30° | 60° | A3 conflict cells | A3b random cells | A4 guided | A5 restart |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Attention 256 | 156 (89 / 67) | 47 | 59 | 61 | 59 | **72** | 64 | 66 | 59 | 63 |
+| Attention 192 | 139 (105 / 34) | 60 | 66 | 73 | 59 | **75** | 62 | 67 | 66 | 64 |
+| Attention 128 | 143 (107 / 36) | 71 | 72 | 66 | 67 | **90** | 70 | 70 | 72 | 65 |
+| trapped solved, 256 / 192 / 128 | | 0 / 0 / 0 | 10 / 8 / 15 | 8 / 4 / 7 | 11 / 6 / 9 | 14 / 7 / 17 | 11 / 3 / 8 | 18 / 5 / 13 | 10 / 8 / 15 | 11 / 5 / 5 |
+| losses vs A0, 256 / 192 / 128 | | | 18 / 22 / 30 | 15 / 17 / 29 | 17 / 23 / 25 | 13 / 18 / 18 | 19 / 24 / 26 | 20 / 23 / 24 | 18 / 22 / 30 | 16 / 25 / 30 |
+
+Intact continuation keeps completing: solved by 32 / 48 / 64 / 80 are 47 / 77 / 89 / 98 of 156 on 256, 60 / 86 / 105 / 110 of 139 on 192, and 71 / 99 / 107 / 116 of 143 on 128.
+
+**Named contrasts** (all triggered; exact McNemar, arm-only / other-only successes; 256, 192, 128):
+- A4 vs A1: 0/0 on every width.
+- A4 vs A5: 19/23 (p 0.64), 21/19 (0.87), 34/27 (0.44).
+- A1 vs A0: 30/18 (0.11), 28/22 (0.48), 31/30 (1.0).
+- A1 vs A3: 25/30 (0.59), 25/21 (0.66), 30/28 (0.90).
+- A3 vs A3b: 22/24 (0.88), 24/29 (0.58), 27/27 (1.0).
+
+**Letters.**
+- GUIDED: **NO-GAIN** on every width; aggregate NO-GAIN.
+- RESCUE: **NO-RESCUE** on every width. The guided arm equals A1, and on 128 the 60° rotation, on 256 the random-cell replacement, solved more trapped puzzles.
+- GLOBAL: **NOT-SHOWN** on every width (A1 − A3 = +2, +4, −5 puzzles).
+
+**Predictions scored.**
+- GUIDED-HELPS (0.30): MISS. Its stratum: not applicable.
+- TRAPPED-RESCUE (0.15): MISS.
+- GLOBAL-BEATS-LOCAL (0.55): MISS.
+- A4 below A1 (0.35): MISS. They are identical: the repeat kick almost never fired.
+- Dose curve rising from 15° to replacement (0.6): MISS. The curve peaks at 60° on every width, and replacement falls below it.
+
+**The registered sentence that applies, with its measured qualification.** NO-GAIN: "Repeated kicks do not improve on one kick, continuing or restarting." Measured:
+- Repetition was effectively untested. A stalled trajectory almost never repeats its display: it keeps changing while staying invalid (Amendment 5's diagnostic).
+- One kick (A1) did not differ significantly from continuing or from restarting on any width.
+- Perturbing only the visibly conflicting cells did as well as perturbing every cell, and as well as the same number of random non-conflicting cells.
+
+**Exploratory.**
+1. The 60° rotation, which keeps every score and norm, was the strongest arm on every width: 90 / 75 / 72 solved by 32, against 71 / 60 / 47 for intact continuation. McNemar against intact: 37/18 (p 0.015), 33/18 (p 0.049), 38/13 (p 6.2e-4). It had the fewest losses (18 / 18 / 13). Against restart: 44/19 (p 0.002), 28/17 (p 0.14), 31/22 (p 0.27). P20 was registered with the 60° rotation pre-specified, before Attention 256's results were seen, so 256 is a partial check outside the selection: the same population definition, not fresh puzzles. The gain there was the largest.
+2. Every perturbation, including a restart, completes some trapped puzzles within 16 iterations: puzzles that intact continuation does not complete within 48. The 60° rotation completes 21 % / 21 % / 47 % of them (256 / 192 / 128), replacement 15 % / 24 % / 42 %, and restart 16 % / 15 % / 14 %.
+3. Where the perturbation lands does not matter: conflict cells vs random cells is 22/24, 24/29, 27/27. This matches P18, where what was corrected mattered less than how much.
+
+**Reading.**
+- Stalled trajectories are not frozen. They keep revising an invalid configuration, so a rule that waits for a stalled display cannot fire.
+- A single perturbation of the whole readout-invisible state, with every displayed score kept, releases stalled trajectories. A moderate rotation releases more of them than a full replacement and costs fewer puzzles that were about to complete.
+- Targeting the visible conflicts adds nothing, as the collective account predicts.
+- P20 tests the 60° rotation on fresh puzzles.

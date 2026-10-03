@@ -1,0 +1,567 @@
+{
+ "attention_256": {
+  "n": 384,
+  "triggered": 156,
+  "transient": 89,
+  "trapped": 67,
+  "trapped_by_80_exploratory": 58,
+  "strata": {
+   "all": {
+    "solved": {
+     "A0_intact": 47,
+     "A1_replace": 59,
+     "A2_rot15": 61,
+     "A2_rot30": 59,
+     "A2_rot60": 72,
+     "A3_local": 64,
+     "A3b_local_random": 66,
+     "A4_guided": 59,
+     "A5_restart": 63
+    },
+    "losses": {
+     "A1_replace": 18,
+     "A2_rot15": 15,
+     "A2_rot30": 17,
+     "A2_rot60": 13,
+     "A3_local": 19,
+     "A3b_local_random": 20,
+     "A4_guided": 18,
+     "A5_restart": 16
+    },
+    "strongest_other": "A2_rot60",
+    "guided_vs_strongest": [
+     16,
+     29,
+     0.07245426016254441
+    ],
+    "contrasts": {
+     "A4_guided_vs_A1_replace": [
+      0,
+      0,
+      1.0
+     ],
+     "A4_guided_vs_A5_restart": [
+      19,
+      23,
+      0.6439689563703723
+     ],
+     "A1_replace_vs_A3_local": [
+      25,
+      30,
+      0.5900533317766357
+     ],
+     "A3_local_vs_A3b_local_random": [
+      22,
+      24,
+      0.8829959121223965
+     ],
+     "A1_replace_vs_A0_intact": [
+      30,
+      18,
+      0.11140289106101875
+     ]
+    },
+    "n": 156,
+    "guided_helps": false
+   },
+   "transient": {
+    "solved": {
+     "A0_intact": 47,
+     "A1_replace": 49,
+     "A2_rot15": 53,
+     "A2_rot30": 48,
+     "A2_rot60": 58,
+     "A3_local": 53,
+     "A3b_local_random": 48,
+     "A4_guided": 49,
+     "A5_restart": 52
+    },
+    "losses": {
+     "A1_replace": 18,
+     "A2_rot15": 15,
+     "A2_rot30": 17,
+     "A2_rot60": 13,
+     "A3_local": 19,
+     "A3b_local_random": 20,
+     "A4_guided": 18,
+     "A5_restart": 16
+    },
+    "strongest_other": "A2_rot60",
+    "guided_vs_strongest": [
+     13,
+     22,
+     0.17546524899080396
+    ],
+    "contrasts": {
+     "A4_guided_vs_A1_replace": [
+      0,
+      0,
+      1.0
+     ],
+     "A4_guided_vs_A5_restart": [
+      14,
+      17,
+      0.720100131817162
+     ],
+     "A1_replace_vs_A3_local": [
+      19,
+      23,
+      0.6439689563703723
+     ],
+     "A3_local_vs_A3b_local_random": [
+      20,
+      15,
+      0.49955983320251107
+     ],
+     "A1_replace_vs_A0_intact": [
+      20,
+      18,
+      0.8714146793645341
+     ]
+    },
+    "n": 89,
+    "guided_helps": false
+   },
+   "trapped": {
+    "solved": {
+     "A0_intact": 0,
+     "A1_replace": 10,
+     "A2_rot15": 8,
+     "A2_rot30": 11,
+     "A2_rot60": 14,
+     "A3_local": 11,
+     "A3b_local_random": 18,
+     "A4_guided": 10,
+     "A5_restart": 11
+    },
+    "losses": {
+     "A1_replace": 0,
+     "A2_rot15": 0,
+     "A2_rot30": 0,
+     "A2_rot60": 0,
+     "A3_local": 0,
+     "A3b_local_random": 0,
+     "A4_guided": 0,
+     "A5_restart": 0
+    },
+    "strongest_other": "A3b_local_random",
+    "guided_vs_strongest": [
+     4,
+     12,
+     0.076812744140625
+    ],
+    "contrasts": {
+     "A4_guided_vs_A1_replace": [
+      0,
+      0,
+      1.0
+     ],
+     "A4_guided_vs_A5_restart": [
+      5,
+      6,
+      1.0
+     ],
+     "A1_replace_vs_A3_local": [
+      6,
+      7,
+      1.0
+     ],
+     "A3_local_vs_A3b_local_random": [
+      2,
+      9,
+      0.0654296875
+     ],
+     "A1_replace_vs_A0_intact": [
+      10,
+      0,
+      0.001953125
+     ]
+    },
+    "n": 67,
+    "guided_helps": false
+   }
+  },
+  "letter_guided": "NO-GAIN",
+  "letter_guided_stratum": "neither",
+  "letter_rescue": "NO-RESCUE",
+  "letter_global": "NOT-SHOWN",
+  "guided_nudges_mean": 0.04487179487179487
+ },
+ "attention_192": {
+  "n": 384,
+  "triggered": 139,
+  "transient": 105,
+  "trapped": 34,
+  "trapped_by_80_exploratory": 29,
+  "strata": {
+   "all": {
+    "solved": {
+     "A0_intact": 60,
+     "A1_replace": 66,
+     "A2_rot15": 73,
+     "A2_rot30": 59,
+     "A2_rot60": 75,
+     "A3_local": 62,
+     "A3b_local_random": 67,
+     "A4_guided": 66,
+     "A5_restart": 64
+    },
+    "losses": {
+     "A1_replace": 22,
+     "A2_rot15": 17,
+     "A2_rot30": 23,
+     "A2_rot60": 18,
+     "A3_local": 24,
+     "A3b_local_random": 23,
+     "A4_guided": 22,
+     "A5_restart": 25
+    },
+    "strongest_other": "A2_rot60",
+    "guided_vs_strongest": [
+     21,
+     30,
+     0.2624375357110438
+    ],
+    "contrasts": {
+     "A4_guided_vs_A1_replace": [
+      0,
+      0,
+      1.0
+     ],
+     "A4_guided_vs_A5_restart": [
+      21,
+      19,
+      0.8746293123804207
+     ],
+     "A1_replace_vs_A3_local": [
+      25,
+      21,
+      0.6587380770236564
+     ],
+     "A3_local_vs_A3b_local_random": [
+      24,
+      29,
+      0.5831321542611763
+     ],
+     "A1_replace_vs_A0_intact": [
+      28,
+      22,
+      0.47988766169832786
+     ]
+    },
+    "n": 139,
+    "guided_helps": false
+   },
+   "transient": {
+    "solved": {
+     "A0_intact": 60,
+     "A1_replace": 58,
+     "A2_rot15": 69,
+     "A2_rot30": 53,
+     "A2_rot60": 68,
+     "A3_local": 59,
+     "A3b_local_random": 62,
+     "A4_guided": 58,
+     "A5_restart": 59
+    },
+    "losses": {
+     "A1_replace": 22,
+     "A2_rot15": 17,
+     "A2_rot30": 23,
+     "A2_rot60": 18,
+     "A3_local": 24,
+     "A3b_local_random": 23,
+     "A4_guided": 22,
+     "A5_restart": 25
+    },
+    "strongest_other": "A2_rot15",
+    "guided_vs_strongest": [
+     16,
+     27,
+     0.12628947438543037
+    ],
+    "contrasts": {
+     "A4_guided_vs_A1_replace": [
+      0,
+      0,
+      1.0
+     ],
+     "A4_guided_vs_A5_restart": [
+      17,
+      18,
+      1.0
+     ],
+     "A1_replace_vs_A3_local": [
+      19,
+      20,
+      1.0
+     ],
+     "A3_local_vs_A3b_local_random": [
+      22,
+      25,
+      0.7708669945730264
+     ],
+     "A1_replace_vs_A0_intact": [
+      20,
+      22,
+      0.8776143287523155
+     ]
+    },
+    "n": 105,
+    "guided_helps": false
+   },
+   "trapped": {
+    "solved": {
+     "A0_intact": 0,
+     "A1_replace": 8,
+     "A2_rot15": 4,
+     "A2_rot30": 6,
+     "A2_rot60": 7,
+     "A3_local": 3,
+     "A3b_local_random": 5,
+     "A4_guided": 8,
+     "A5_restart": 5
+    },
+    "losses": {
+     "A1_replace": 0,
+     "A2_rot15": 0,
+     "A2_rot30": 0,
+     "A2_rot60": 0,
+     "A3_local": 0,
+     "A3b_local_random": 0,
+     "A4_guided": 0,
+     "A5_restart": 0
+    },
+    "strongest_other": "A1_replace",
+    "guided_vs_strongest": [
+     0,
+     0,
+     1.0
+    ],
+    "contrasts": {
+     "A4_guided_vs_A1_replace": [
+      0,
+      0,
+      1.0
+     ],
+     "A4_guided_vs_A5_restart": [
+      4,
+      1,
+      0.375
+     ],
+     "A1_replace_vs_A3_local": [
+      6,
+      1,
+      0.125
+     ],
+     "A3_local_vs_A3b_local_random": [
+      2,
+      4,
+      0.6875
+     ],
+     "A1_replace_vs_A0_intact": [
+      8,
+      0,
+      0.0078125
+     ]
+    },
+    "n": 34,
+    "guided_helps": false
+   }
+  },
+  "letter_guided": "NO-GAIN",
+  "letter_guided_stratum": "neither",
+  "letter_rescue": "NO-RESCUE",
+  "letter_global": "NOT-SHOWN",
+  "guided_nudges_mean": 0.0
+ },
+ "attention_128": {
+  "n": 384,
+  "triggered": 143,
+  "transient": 107,
+  "trapped": 36,
+  "trapped_by_80_exploratory": 27,
+  "strata": {
+   "all": {
+    "solved": {
+     "A0_intact": 71,
+     "A1_replace": 72,
+     "A2_rot15": 66,
+     "A2_rot30": 67,
+     "A2_rot60": 90,
+     "A3_local": 70,
+     "A3b_local_random": 70,
+     "A4_guided": 72,
+     "A5_restart": 65
+    },
+    "losses": {
+     "A1_replace": 30,
+     "A2_rot15": 29,
+     "A2_rot30": 25,
+     "A2_rot60": 18,
+     "A3_local": 26,
+     "A3b_local_random": 24,
+     "A4_guided": 30,
+     "A5_restart": 30
+    },
+    "strongest_other": "A2_rot60",
+    "guided_vs_strongest": [
+     24,
+     42,
+     0.03558272445223169
+    ],
+    "contrasts": {
+     "A4_guided_vs_A1_replace": [
+      0,
+      0,
+      1.0
+     ],
+     "A4_guided_vs_A5_restart": [
+      34,
+      27,
+      0.4426260049464714
+     ],
+     "A1_replace_vs_A3_local": [
+      30,
+      28,
+      0.8956832138895903
+     ],
+     "A3_local_vs_A3b_local_random": [
+      27,
+      27,
+      1.0
+     ],
+     "A1_replace_vs_A0_intact": [
+      31,
+      30,
+      1.0
+     ]
+    },
+    "n": 143,
+    "guided_helps": false
+   },
+   "transient": {
+    "solved": {
+     "A0_intact": 71,
+     "A1_replace": 57,
+     "A2_rot15": 59,
+     "A2_rot30": 58,
+     "A2_rot60": 73,
+     "A3_local": 62,
+     "A3b_local_random": 57,
+     "A4_guided": 57,
+     "A5_restart": 60
+    },
+    "losses": {
+     "A1_replace": 30,
+     "A2_rot15": 29,
+     "A2_rot30": 25,
+     "A2_rot60": 18,
+     "A3_local": 26,
+     "A3b_local_random": 24,
+     "A4_guided": 30,
+     "A5_restart": 30
+    },
+    "strongest_other": "A2_rot60",
+    "guided_vs_strongest": [
+     15,
+     31,
+     0.02589608179323477
+    ],
+    "contrasts": {
+     "A4_guided_vs_A1_replace": [
+      0,
+      0,
+      1.0
+     ],
+     "A4_guided_vs_A5_restart": [
+      22,
+      25,
+      0.7708669945730264
+     ],
+     "A1_replace_vs_A3_local": [
+      22,
+      27,
+      0.5681724128491652
+     ],
+     "A3_local_vs_A3b_local_random": [
+      24,
+      19,
+      0.542384011856484
+     ],
+     "A1_replace_vs_A0_intact": [
+      16,
+      30,
+      0.054076031858869555
+     ]
+    },
+    "n": 107,
+    "guided_helps": false
+   },
+   "trapped": {
+    "solved": {
+     "A0_intact": 0,
+     "A1_replace": 15,
+     "A2_rot15": 7,
+     "A2_rot30": 9,
+     "A2_rot60": 17,
+     "A3_local": 8,
+     "A3b_local_random": 13,
+     "A4_guided": 15,
+     "A5_restart": 5
+    },
+    "losses": {
+     "A1_replace": 0,
+     "A2_rot15": 0,
+     "A2_rot30": 0,
+     "A2_rot60": 0,
+     "A3_local": 0,
+     "A3b_local_random": 0,
+     "A4_guided": 0,
+     "A5_restart": 0
+    },
+    "strongest_other": "A2_rot60",
+    "guided_vs_strongest": [
+     9,
+     11,
+     0.8238029479980469
+    ],
+    "contrasts": {
+     "A4_guided_vs_A1_replace": [
+      0,
+      0,
+      1.0
+     ],
+     "A4_guided_vs_A5_restart": [
+      12,
+      2,
+      0.012939453125
+     ],
+     "A1_replace_vs_A3_local": [
+      8,
+      1,
+      0.0390625
+     ],
+     "A3_local_vs_A3b_local_random": [
+      3,
+      8,
+      0.2265625
+     ],
+     "A1_replace_vs_A0_intact": [
+      15,
+      0,
+      6.103515625e-05
+     ]
+    },
+    "n": 36,
+    "guided_helps": false
+   }
+  },
+  "letter_guided": "NO-GAIN",
+  "letter_guided_stratum": "neither",
+  "letter_rescue": "NO-RESCUE",
+  "letter_global": "NOT-SHOWN",
+  "guided_nudges_mean": 0.0
+ },
+ "aggregate_guided": "NO-GAIN"
+}
