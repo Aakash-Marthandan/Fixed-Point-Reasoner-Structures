@@ -1,0 +1,335 @@
+{
+ "mlp_192_seed0": {
+  "triggered": 163,
+  "trapped": 73,
+  "strata": {
+   "all": {
+    "solved": {
+     "A0_intact": 59,
+     "R45": 51,
+     "R60": 58,
+     "R75": 63,
+     "A5_restart": 67
+    },
+    "losses": {
+     "R45": 27,
+     "R60": 22,
+     "R75": 21,
+     "A5_restart": 22
+    },
+    "n": 163
+   },
+   "transient": {
+    "solved": {
+     "A0_intact": 59,
+     "R45": 43,
+     "R60": 47,
+     "R75": 52,
+     "A5_restart": 51
+    },
+    "losses": {
+     "R45": 27,
+     "R60": 22,
+     "R75": 21,
+     "A5_restart": 22
+    },
+    "n": 90
+   },
+   "trapped": {
+    "solved": {
+     "A0_intact": 0,
+     "R45": 8,
+     "R60": 11,
+     "R75": 11,
+     "A5_restart": 16
+    },
+    "losses": {
+     "R45": 0,
+     "R60": 0,
+     "R75": 0,
+     "A5_restart": 0
+    },
+    "n": 73
+   }
+  },
+  "contrasts": {
+   "R60_vs_A0_intact": [
+    21,
+    22,
+    1.0
+   ],
+   "R60_vs_A5_restart": [
+    25,
+    34,
+    0.2975952082844287
+   ],
+   "R45_vs_A0_intact": [
+    19,
+    27,
+    0.3019956131896606
+   ],
+   "R75_vs_A0_intact": [
+    25,
+    21,
+    0.6587380770236564
+   ]
+  },
+  "letter_helps": "NO-DIFFERENCE",
+  "letter_restart": "NOT-SHOWN",
+  "rescue_rate": 0.1506849315068493,
+  "long_horizon_exploratory": {
+   "32": {
+    "R60": 58,
+    "A0": 59,
+    "mcnemar": [
+     21,
+     22,
+     1.0
+    ]
+   },
+   "48": {
+    "R60": 85,
+    "A0": 78,
+    "mcnemar": [
+     22,
+     15,
+     0.3240086000878364
+    ]
+   },
+   "64": {
+    "R60": 97,
+    "A0": 90,
+    "mcnemar": [
+     20,
+     13,
+     0.296206368599087
+    ]
+   },
+   "A0_reaches_R60_at_32_by_iteration": 32
+  }
+ },
+ "mlp_192_seed1": {
+  "triggered": 191,
+  "trapped": 63,
+  "strata": {
+   "all": {
+    "solved": {
+     "A0_intact": 72,
+     "R45": 79,
+     "R60": 78,
+     "R75": 76,
+     "A5_restart": 67
+    },
+    "losses": {
+     "R45": 24,
+     "R60": 32,
+     "R75": 31,
+     "A5_restart": 34
+    },
+    "n": 191
+   },
+   "transient": {
+    "solved": {
+     "A0_intact": 72,
+     "R45": 70,
+     "R60": 70,
+     "R75": 66,
+     "A5_restart": 58
+    },
+    "losses": {
+     "R45": 24,
+     "R60": 32,
+     "R75": 31,
+     "A5_restart": 34
+    },
+    "n": 128
+   },
+   "trapped": {
+    "solved": {
+     "A0_intact": 0,
+     "R45": 9,
+     "R60": 8,
+     "R75": 10,
+     "A5_restart": 9
+    },
+    "losses": {
+     "R45": 0,
+     "R60": 0,
+     "R75": 0,
+     "A5_restart": 0
+    },
+    "n": 63
+   }
+  },
+  "contrasts": {
+   "R60_vs_A0_intact": [
+    38,
+    32,
+    0.5504125118224712
+   ],
+   "R60_vs_A5_restart": [
+    39,
+    28,
+    0.22154872964481115
+   ],
+   "R45_vs_A0_intact": [
+    31,
+    24,
+    0.41875418826901556
+   ],
+   "R75_vs_A0_intact": [
+    35,
+    31,
+    0.7122308826373508
+   ]
+  },
+  "letter_helps": "NO-DIFFERENCE",
+  "letter_restart": "NOT-SHOWN",
+  "rescue_rate": 0.12698412698412698,
+  "long_horizon_exploratory": {
+   "32": {
+    "R60": 78,
+    "A0": 72,
+    "mcnemar": [
+     38,
+     32,
+     0.5504125118224712
+    ]
+   },
+   "48": {
+    "R60": 107,
+    "A0": 108,
+    "mcnemar": [
+     28,
+     29,
+     1.0
+    ]
+   },
+   "64": {
+    "R60": 116,
+    "A0": 128,
+    "mcnemar": [
+     15,
+     27,
+     0.08842954698775429
+    ]
+   },
+   "A0_reaches_R60_at_32_by_iteration": 34
+  }
+ },
+ "mlp_192_seed2": {
+  "triggered": 168,
+  "trapped": 49,
+  "strata": {
+   "all": {
+    "solved": {
+     "A0_intact": 76,
+     "R45": 67,
+     "R60": 70,
+     "R75": 69,
+     "A5_restart": 63
+    },
+    "losses": {
+     "R45": 30,
+     "R60": 29,
+     "R75": 33,
+     "A5_restart": 38
+    },
+    "n": 168
+   },
+   "transient": {
+    "solved": {
+     "A0_intact": 76,
+     "R45": 59,
+     "R60": 61,
+     "R75": 58,
+     "A5_restart": 55
+    },
+    "losses": {
+     "R45": 30,
+     "R60": 29,
+     "R75": 33,
+     "A5_restart": 38
+    },
+    "n": 119
+   },
+   "trapped": {
+    "solved": {
+     "A0_intact": 0,
+     "R45": 8,
+     "R60": 9,
+     "R75": 11,
+     "A5_restart": 8
+    },
+    "losses": {
+     "R45": 0,
+     "R60": 0,
+     "R75": 0,
+     "A5_restart": 0
+    },
+    "n": 49
+   }
+  },
+  "contrasts": {
+   "R60_vs_A0_intact": [
+    23,
+    29,
+    0.48845566937989204
+   ],
+   "R60_vs_A5_restart": [
+    33,
+    26,
+    0.4349928051221534
+   ],
+   "R45_vs_A0_intact": [
+    21,
+    30,
+    0.2624375357110438
+   ],
+   "R75_vs_A0_intact": [
+    26,
+    33,
+    0.4349928051221534
+   ]
+  },
+  "letter_helps": "NO-DIFFERENCE",
+  "letter_restart": "NOT-SHOWN",
+  "rescue_rate": 0.1836734693877551,
+  "long_horizon_exploratory": {
+   "32": {
+    "R60": 70,
+    "A0": 76,
+    "mcnemar": [
+     23,
+     29,
+     0.48845566937989204
+    ]
+   },
+   "48": {
+    "R60": 94,
+    "A0": 102,
+    "mcnemar": [
+     23,
+     31,
+     0.34089094122009733
+    ]
+   },
+   "64": {
+    "R60": 114,
+    "A0": 119,
+    "mcnemar": [
+     18,
+     23,
+     0.5327092552361137
+    ]
+   },
+   "A0_reaches_R60_at_32_by_iteration": 32
+  }
+ },
+ "aggregate": {
+  "TRANSFERS": false,
+  "BEATS_RESTART": false,
+  "TRAPPED_RESCUE": true,
+  "R60_AHEAD_AT_64_exploratory": 1
+ }
+}

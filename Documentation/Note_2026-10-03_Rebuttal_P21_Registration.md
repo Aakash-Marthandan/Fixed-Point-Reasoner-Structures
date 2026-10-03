@@ -81,3 +81,58 @@ All rules count puzzles solved by iteration 32 among triggered puzzles, using ex
 3. Run the three seeds in parallel at nice 5.
 4. Produce the report with the tool.
 5. When it is read, append the Outcome here and write a ledger line.
+
+---
+
+## P21 Outcome (2026-10-03 07:55Z; `runs/analysis/rebuttal_20261003d/report.{txt,json}`; every gate passed; no shared tool edited during the runs)
+
+**Integrity.**
+- Every checkpoint's hash equalled the release manifest's (rechecked from each output's metadata by the recount).
+- On every seed the trigger was asserted equivalent to CPU-unsolved. Triggered: 163 / 191 / 168 of 384 (seeds 0 / 1 / 2).
+- Every rotation changed no digit score by more than 1e-2; the realized maximum was 7.9e-7 / 8.0e-7 / 7.5e-7.
+- No solved grid un-solved in any arm.
+- An independent recount from the raw arrays agrees with the report on every arm, stratum, loss count, letter, the long horizon and the aggregate.
+
+**Results (solved by iteration 32 among triggered puzzles).**
+
+| MLP 192 | triggered (transient / trapped) | A0 intact | R45 | R60 | R75 | A5 restart | R60 vs intact | R60 vs restart | trapped solved by R60 |
+|---|---|---|---|---|---|---|---|---|---|
+| seed 0 | 163 (90 / 73) | 59 | 51 | 58 | 63 | 67 | 21/22, p 1.0 | 25/34, p 0.30 | 11 (0.15) |
+| seed 1 | 191 (128 / 63) | 72 | 79 | 78 | 76 | 67 | 38/32, p 0.55 | 39/28, p 0.22 | 8 (0.13) |
+| seed 2 | 168 (119 / 49) | 76 | 67 | 70 | 69 | 63 | 23/29, p 0.49 | 33/26, p 0.44 | 9 (0.18) |
+
+Losses against A0, seeds 0 / 1 / 2:
+- R45: 27 / 24 / 30
+- R60: 22 / 32 / 29
+- R75: 21 / 31 / 33
+- restart: 22 / 34 / 38
+
+Trapped puzzles solved by the restart: 16 / 9 / 8.
+
+**Letters.**
+- **NO-DIFFERENCE** on every seed, so TRANSFERS does not hold.
+- BEATS-RESTART: not shown on any seed.
+- **TRAPPED-RESCUE holds** (0.15 / 0.13 / 0.18).
+
+**Predictions scored.**
+- TRANSFERS (0.45): MISS.
+- BEATS-RESTART (0.40): MISS.
+- TRAPPED-RESCUE (0.55): HIT.
+- R60 ahead of A0 at 64 on at least two seeds (0.45): MISS (one of three).
+
+**The registered sentence that applies, with its qualification.** NO-DIFFERENCE: "The rotation's benefit does not transfer to the MLP mixer." P20, read after this registration, found no benefit on the attention models either, so there was no benefit to transfer. What transfers is the behaviour P20 found: across a different token mixer and three independent initializations, the rotation re-rolls stalled trajectories without improving them.
+
+**Exploratory.**
+1. *The long horizon.* The rotated trajectory tracks intact continuation through iteration 64.
+
+   | | seed 0 | seed 1 | seed 2 |
+   |---|---|---|---|
+   | solved by 48, rotated / intact | 85 / 78 | 107 / 108 | 94 / 102 |
+   | solved by 64, rotated / intact | 97 / 90 | 116 / 128 | 114 / 119 |
+   | McNemar at 64 (rotated-only / intact-only) | 20/13, p 0.30 | 15/27, p 0.09 | 18/23, p 0.53 |
+
+   The two arms' per-16-iteration completion rates follow the same falling curve (seed 0: 0.36 / 0.26 / 0.15 rotated against 0.36 / 0.18 / 0.14 intact).
+2. *Survivors behave like fresh re-rolls.* On the puzzles intact continuation had not solved by 32 (315 pooled), its completion rate over iterations 33–48 is 0.257. The same puzzles' re-roll rate (16 iterations after the kick at 16, four perturbed arms) is 0.256. This is the memoryless pattern P22 tests directly.
+3. *Parallel against sequential at matched compute (48 iterations).* Puzzles solved by at least one of three perturbed 16-iteration runs: 99 / 122 / 111. Intact continuation for 48 iterations: 90 / 128 / 119.
+
+**Reading.** On a second architecture and three more initializations, an answer-preserving perturbation of the hidden state neither helps nor hurts stalled trajectories at any horizon up to iteration 64. It resamples them. The stalled phase behaves like a memoryless chaotic search on both mixers. P22 tests the memoryless law directly on the attention models.
