@@ -30,3 +30,65 @@ Commit this note and the tool before any row (locally; pushing waits for the oth
 ---
 
 **Amendment 1 — the strata label (2026-10-03 02:10Z, before any P20 row).** P20 imports P17's runner, whose intact arm runs to iteration 80 rather than 64 (P17 Amendment 6). P20's reader now labels *transient* and *trapped* at iteration 64 as registered (index 47) and reports the iteration-80 count beside it as exploratory. The run is unchanged. No rule, arm, seed or population changed.
+
+---
+
+## P20 Outcome (2026-10-03 05:55Z; `runs/analysis/rebuttal_20261003c/report.{txt,json}`; every gate passed; no shared tool edited during the runs)
+
+**Integrity.**
+- On every width the trigger was asserted equivalent to CPU-unsolved. Triggered: 160 / 155 / 145 of 384 (Attention 256 / 192 / 128).
+- Every rotation changed no digit score by more than 1e-2; the realized maximum was 7.2e-7 / 8.3e-7 / 6.0e-7.
+- Strata use the registered label at iteration 64 (Amendment 1).
+- An independent recount from the raw arrays agrees with the report on every arm, stratum, loss count, letter and the aggregate.
+
+**Results (solved by iteration 32 among triggered puzzles).**
+
+| receiver | triggered (transient / trapped) | A0 intact | R45 | R60 | R75 | A5 restart | R60 vs intact | R60 vs restart | trapped solved by R60 |
+|---|---|---|---|---|---|---|---|---|---|
+| Attention 256 | 160 (111 / 49) | 67 | 73 | 68 | 60 | 64 | 27/26, p 1.0 | 26/22, p 0.67 | 8 (0.16) |
+| Attention 192 | 155 (119 / 36) | 83 | 75 | 80 | 71 | 63 | 23/26, p 0.78 | 38/21, p 0.036 | 6 (0.17) |
+| Attention 128 | 145 (116 / 29) | 75 | 76 | 71 | 67 | 71 | 22/26, p 0.67 | 25/25, p 1.0 | 4 (0.14) |
+
+Losses against A0 (solved by intact continuation at 32, not under the arm), 256 / 192 / 128:
+- R45: 23 / 30 / 27
+- R60: 26 / 26 / 26
+- R75: 26 / 31 / 31
+- restart: 29 / 37 / 27
+
+Trapped puzzles solved by the restart: 9 / 5 / 6.
+
+**Letters.**
+- ROTATION-HELPS: **NO-DIFFERENCE** on every width; not confirmed.
+- BEATS-RESTART: on Attention 192 only; not confirmed.
+- **TRAPPED-RESCUE: holds** (R60 solves 16 % / 17 % / 14 % of the trapped puzzles).
+
+**Predictions scored.**
+- ROTATION-HELPS confirmed (0.55): MISS.
+- BEATS-RESTART confirmed (0.50): MISS.
+- TRAPPED-RESCUE (0.55): HIT.
+- R60 the best angle on at least two receivers (0.40): MISS. The best angle was 45° on 256 and 128 and 60° on 192.
+
+**The registered sentence that applies.** NO-DIFFERENCE: "The gain seen in the exploratory arms does not replicate on fresh puzzles."
+
+TRAPPED-RESCUE's registered wording extends the ROTATION-HELPS sentence, which failed, so it is stated here on its own, with its cost: the rotation completes 14–17 % of the puzzles that continuing does not complete within 48 more iterations; it loses as many puzzles that continuing completes; and a fresh restart completes about as many trapped puzzles.
+
+Under every outcome: the rotation's direction is random; the trigger uses no answer key; the angle was chosen from P17's exploratory arms.
+
+**Exploratory.**
+1. *Why P17 looked different.*
+   - P17's intact continuation solved fewer of its triggered puzzles by 32 than P20's did: pooled over widths, 178 / 438 (0.41) against 225 / 460 (0.49), z = 2.5.
+   - The 60° arm's own rate barely moved (0.54 against 0.48).
+   - On P17's Attention 256 draw, every perturbed arm beat intact continuation.
+   - With the 60° arm selected as the best of eight, a weak intact draw is enough to produce P17's exploratory result. The two populations are uniform draws from the same pool, through identical code paths for the intact arm (checked).
+2. *Sensitive, without direction.* About a third of stalled puzzles change outcome by 32 under a rotation that keeps every displayed score (53 / 49 / 48 discordant of 160 / 155 / 145), equally often in each direction. Each perturbed arm's 16-iteration solve rate (0.38–0.52) matches intact continuation's rate over iterations 17–32 (0.42–0.54).
+3. *Re-rolls in parallel equal continuing.*
+   - Puzzles solved by 32 under at least one of the four perturbed arms (four times 16 iterations): 112 / 121 / 120.
+   - Puzzles solved by intact continuation to iteration 80 (64 iterations): 116 / 124 / 120.
+   - Intact continuation's per-16-iteration solve rate falls over time: 256: 0.42, 0.35, 0.18, 0.10; 192: 0.54, 0.31, 0.28, 0.14; 128: 0.52, 0.44, 0.26, 0.14.
+   - Since fresh perturbed runs do no better than continuing, the falling rate is consistent with heterogeneous puzzle difficulty rather than individual trajectories getting stuck. This reading is untested by a late kick.
+
+**Reading.**
+- One answer-preserving perturbation of the hidden state does not improve stalled trajectories on fresh puzzles at any tested angle. Control by a single global kick is not established.
+- What the data show is a property of the dynamics: a stalled trajectory is highly sensitive to its readout-invisible state, but a perturbation re-rolls its outcome rather than improving it.
+- Together with P17's finding that stalled displays never freeze, stalled correction behaves like a chaotic search whose tail reflects which puzzles are hard.
+- P21, registered before this result, runs as registered on the MLP seeds.

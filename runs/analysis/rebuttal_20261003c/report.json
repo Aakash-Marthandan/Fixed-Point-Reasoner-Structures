@@ -1,0 +1,247 @@
+{
+ "attention_256": {
+  "triggered": 160,
+  "trapped": 49,
+  "trapped_by_80_exploratory": 44,
+  "strata": {
+   "all": {
+    "solved": {
+     "A0_intact": 67,
+     "R45": 73,
+     "R60": 68,
+     "R75": 60,
+     "A5_restart": 64
+    },
+    "losses": {
+     "R45": 23,
+     "R60": 26,
+     "R75": 26,
+     "A5_restart": 29
+    },
+    "n": 160
+   },
+   "transient": {
+    "solved": {
+     "A0_intact": 67,
+     "R45": 63,
+     "R60": 60,
+     "R75": 55,
+     "A5_restart": 55
+    },
+    "losses": {
+     "R45": 23,
+     "R60": 26,
+     "R75": 26,
+     "A5_restart": 29
+    },
+    "n": 111
+   },
+   "trapped": {
+    "solved": {
+     "A0_intact": 0,
+     "R45": 10,
+     "R60": 8,
+     "R75": 5,
+     "A5_restart": 9
+    },
+    "losses": {
+     "R45": 0,
+     "R60": 0,
+     "R75": 0,
+     "A5_restart": 0
+    },
+    "n": 49
+   }
+  },
+  "contrasts": {
+   "R60_vs_A0_intact": [
+    27,
+    26,
+    1.0
+   ],
+   "R60_vs_A5_restart": [
+    26,
+    22,
+    0.6654658120766186
+   ],
+   "R45_vs_A0_intact": [
+    29,
+    23,
+    0.48845566937989204
+   ],
+   "R75_vs_A0_intact": [
+    19,
+    26,
+    0.3712980344710104
+   ]
+  },
+  "letter_helps": "NO-DIFFERENCE",
+  "letter_restart": "NOT-SHOWN",
+  "rescue_rate": 0.16326530612244897
+ },
+ "attention_192": {
+  "triggered": 155,
+  "trapped": 36,
+  "trapped_by_80_exploratory": 31,
+  "strata": {
+   "all": {
+    "solved": {
+     "A0_intact": 83,
+     "R45": 75,
+     "R60": 80,
+     "R75": 71,
+     "A5_restart": 63
+    },
+    "losses": {
+     "R45": 30,
+     "R60": 26,
+     "R75": 31,
+     "A5_restart": 37
+    },
+    "n": 155
+   },
+   "transient": {
+    "solved": {
+     "A0_intact": 83,
+     "R45": 69,
+     "R60": 74,
+     "R75": 63,
+     "A5_restart": 58
+    },
+    "losses": {
+     "R45": 30,
+     "R60": 26,
+     "R75": 31,
+     "A5_restart": 37
+    },
+    "n": 119
+   },
+   "trapped": {
+    "solved": {
+     "A0_intact": 0,
+     "R45": 6,
+     "R60": 6,
+     "R75": 8,
+     "A5_restart": 5
+    },
+    "losses": {
+     "R45": 0,
+     "R60": 0,
+     "R75": 0,
+     "A5_restart": 0
+    },
+    "n": 36
+   }
+  },
+  "contrasts": {
+   "R60_vs_A0_intact": [
+    23,
+    26,
+    0.7754496546815659
+   ],
+   "R60_vs_A5_restart": [
+    38,
+    21,
+    0.036343179957053884
+   ],
+   "R45_vs_A0_intact": [
+    22,
+    30,
+    0.3317497633694906
+   ],
+   "R75_vs_A0_intact": [
+    19,
+    31,
+    0.11892045255943628
+   ]
+  },
+  "letter_helps": "NO-DIFFERENCE",
+  "letter_restart": "BEATS-RESTART",
+  "rescue_rate": 0.16666666666666666
+ },
+ "attention_128": {
+  "triggered": 145,
+  "trapped": 29,
+  "trapped_by_80_exploratory": 25,
+  "strata": {
+   "all": {
+    "solved": {
+     "A0_intact": 75,
+     "R45": 76,
+     "R60": 71,
+     "R75": 67,
+     "A5_restart": 71
+    },
+    "losses": {
+     "R45": 27,
+     "R60": 26,
+     "R75": 31,
+     "A5_restart": 27
+    },
+    "n": 145
+   },
+   "transient": {
+    "solved": {
+     "A0_intact": 75,
+     "R45": 69,
+     "R60": 67,
+     "R75": 63,
+     "A5_restart": 65
+    },
+    "losses": {
+     "R45": 27,
+     "R60": 26,
+     "R75": 31,
+     "A5_restart": 27
+    },
+    "n": 116
+   },
+   "trapped": {
+    "solved": {
+     "A0_intact": 0,
+     "R45": 7,
+     "R60": 4,
+     "R75": 4,
+     "A5_restart": 6
+    },
+    "losses": {
+     "R45": 0,
+     "R60": 0,
+     "R75": 0,
+     "A5_restart": 0
+    },
+    "n": 29
+   }
+  },
+  "contrasts": {
+   "R60_vs_A0_intact": [
+    22,
+    26,
+    0.6654658120766186
+   ],
+   "R60_vs_A5_restart": [
+    25,
+    25,
+    1.0
+   ],
+   "R45_vs_A0_intact": [
+    28,
+    27,
+    1.0
+   ],
+   "R75_vs_A0_intact": [
+    23,
+    31,
+    0.34089094122009733
+   ]
+  },
+  "letter_helps": "NO-DIFFERENCE",
+  "letter_restart": "NOT-SHOWN",
+  "rescue_rate": 0.13793103448275862
+ },
+ "aggregate": {
+  "ROTATION_HELPS": false,
+  "BEATS_RESTART": false,
+  "TRAPPED_RESCUE": true
+ }
+}
