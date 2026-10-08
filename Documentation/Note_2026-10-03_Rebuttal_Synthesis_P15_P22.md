@@ -42,7 +42,10 @@ The experiments materially strengthen the empirical paper, and they change the m
   - P8 and session d378a5's P13: a score-preserving replacement at the completing iteration blocks completion on 78/78 single-state cases and 77/94 and 55/79 two-state cases, while 1° controls block 6/78, 5/94 and 0/79.
   - P4: freezing messages from iteration 4, 6 or 8 produces zero new completions.
   - P3: one replacement largely recovers, but repeated replacements do not.
-  - P9/P11: transferring a successful trajectory's readout-invisible slow component rescues the next step on every selected primary case. A control-accounting error was found in the P9 runner: 11 of 15 controls were also primary cases intervened at a different time, so the full control sample does not stand. Reported to session d378a5 for correction.
+  - P9/P11: transferring a successful trajectory's readout-invisible slow component rescues the next step on every selected primary case. A control-accounting error in the shared runner was corrected by session d378a5 (its correction is uncommitted).
+    - Controls that were also primary cases had been intervened at the primary time: 11/15 at 94k, 11/15 at 90k and 3/12 at 114k.
+    - Recomputed on clean controls only, no swap in either direction breaks a stable answer: 4/4, 4/4 and 9/9.
+    - P11's "0.73 of controls" figure is withdrawn. The registered letters and every primary-case number are unaffected.
 
 ## 3. Learned recurrence and regularization (SE-RRM attribution rounds, session d378a5)
 
@@ -122,7 +125,7 @@ The originally proposed transfer of a correction *response* between states of th
 ## 8. Open items
 
 - The decisive test above: a registration draft for the PI's review.
-- Corrections owed: P9/P11 control accounting (session d378a5).
+- P9/P11 control accounting: corrected by session d378a5; its correction, P13's Outcome and round 3's Outcome await the PI's clearance to commit.
 - Reproduce the K ≈ BA fit before citing it.
 - Parallel against sequential compute at benchmark scale. Under the window-level model this needs the transient accounted for. A pod would need the PI's go.
 - ARC.
