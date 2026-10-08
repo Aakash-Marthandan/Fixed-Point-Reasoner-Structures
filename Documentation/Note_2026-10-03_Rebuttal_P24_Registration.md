@@ -144,3 +144,27 @@ SA256U's chaos ratio, 0.80, is also at its threshold, with a wide interval. The 
 - The memoryless, chaotic character of stalled correction does not come from the slow/fast split: the one-carry recurrence has it too, at its point estimate.
 - What the two-state design buys in the stalled regime is a higher per-instance completion rate, about three times the single state's per sixteen iterations. The search is not a different kind.
 - Together with P22 and P23, the memoryless letter holds on eight of nine receivers, across two token mixers and both recurrence structures. The ninth, SA256 at 14k, is UNRESOLVED at the margin. Small-angle chaos is strong on attention and somewhat weaker on the MLP mixer.
+
+---
+
+**Addendum — two corrections (2026-10-08, after an external review; checked from the saved arrays and round 2/3's depth-64 records, no new run).**
+
+1. *The architecture comparison in Exploratory item 2 is withdrawn as stated.* The single-state cohort and the two-state cohorts share **zero** kept puzzles: SA256U's pool came from its own record, SA256's from the 46k record. So "a stalled re-roll completes 0.116 of the time against 0.328", and the Reading's "about three times", compare different puzzle populations and cannot attribute the difference to the recurrence.
+
+   The paired evidence comes from round 2's and round 3's depth-64 records on the identical 5,000 puzzles (an exploratory count, reproduced):
+   - Among the puzzles both no-dropout models leave unsolved at iteration 16 (61), the two-state model completes **44** by 64 and the single-state model **10**.
+   - With dropout on both (43 shared failures): **34** against **20**.
+
+   The direction holds and survives the pairing, but the size of the effect belongs to that paired comparison, not to P24.
+2. *SA256U's MEMORYLESS letter is not robust across window scales.* By the same unbiased ratio at shorter equal windows:
+
+   | window length | SA256U | SA256 28k | SA256 14k |
+   |---|---|---|---|
+   | 2 iterations | 0.27 | 1.53 | 1.52 |
+   | 4 iterations | 0.70 | 0.87 | 1.16 |
+   | 8 iterations | 0.65 | 1.29 | 0.90 |
+   | 16 iterations (registered) | 1.00 | 1.07 | 0.86 |
+
+   SA256U shows a burst of completions right after the rotation and then fewer, with few events (25 then 6 at two iterations). The registered pattern stands by its registered rule, but SAME-TAIL's sentence is narrowed to: *at the sixteen-iteration window, the single-state recurrence's stall shows the same window-level completion statistics and the same sensitivity; at shorter windows its time course differs.*
+
+   Exploratory item 1 is unaffected: the single state's stall never freezes.

@@ -100,3 +100,18 @@ P22's rules, unchanged, with each seed as a receiver. Each letter is confirmed w
 2. Parallel against sequential at matched compute: two 16-iteration re-rolls solved 35 / 51 / 39, against 42 / 47 / 40 for 32 iterations of intact continuation (McNemar 7/14, 11/7, 8/9; none significant).
 
 **Reading.** The instance-level memorylessness of stalled correction holds on a second token mixer and three more independent initializations. Together with P22, that makes six receivers and two mixers. The degree of chaos at small angles is somewhat lower on the MLP mixer, so the robust statement across architectures is the memoryless law, with strong sensitivity to the readout-invisible state.
+
+---
+
+**Addendum — scope (2026-10-08, after an external review; exploratory, from the saved arrays).** The same qualifications as P22's addendum apply: MEMORYLESS is a window-level statement, and the chaos letter measures outcome sensitivity.
+
+On the MLP seeds the short-window ratios show a clear transient after the rotation, with elevated completion after the first two iterations:
+
+| window length | seed 0 | seed 1 | seed 2 |
+|---|---|---|---|
+| 2 iterations | 1.56 | 1.78 | 2.62 |
+| 4 iterations | 1.09 | 1.57 | 1.33 |
+| 8 iterations | 1.06 | 1.04 | 1.11 |
+| 16 iterations (registered) | 1.16 | 0.86 | 0.95 |
+
+The window-level geometric model holds from about eight iterations up.

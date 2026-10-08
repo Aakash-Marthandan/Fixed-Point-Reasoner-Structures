@@ -251,3 +251,20 @@ Intact continuation keeps completing: solved by 32 / 48 / 64 / 80 are 47 / 77 / 
 - A single perturbation of the whole readout-invisible state, with every displayed score kept, releases stalled trajectories. A moderate rotation releases more of them than a full replacement and costs fewer puzzles that were about to complete.
 - Targeting the visible conflicts adds nothing, as the collective account predicts.
 - P20 tests the 60° rotation on fresh puzzles.
+
+---
+
+**Amendment 7 — a correction to Amendment 3 (2026-10-08, after an external review; checked from the saved linear-layer arrays and the study's intact records).**
+
+Amendment 3 said that "states that complete at the very next iteration are frozen". That holds on Attention 192, but not uniformly on Attention 256.
+
+| receiver | states completing at the next iteration | frozen (response norm per unit score push < 1e-2) | next-iteration completers that are frozen |
+|---|---|---|---|
+| Attention 192 | 9 of 16 | 9 of 16 | 9 of 9 |
+| Attention 256 | 9 of 16 | 4 of 16 | 4 of 9 |
+
+On Attention 256 the other five next-iteration completers have norms of 0.08–2.2. On both receivers, every frozen state completes at the next iteration.
+
+Corrected statement: *every state found frozen to small score pushes was one iteration from completion; on Attention 192 every state one iteration from completion was frozen, but on Attention 256 only four of nine were.*
+
+The behavioural version of the claim does not rest on this layer. It is session d378a5's P13: a 1° rotation at the completing iteration blocks 0–6 % of completions.

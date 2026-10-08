@@ -1,125 +1,134 @@
-# Note 2026-10-03 — What the discussion-period operator program found (P15–P24): collective acceptance, then a memoryless search
+# Note 2026-10-03 (revised 2026-10-08) — What the discussion-period experiments established: distributed correction, learned recurrence, and sensitivity without control
 
 **Purpose.** A synthesis for the PI's decision on the rebuttal narrative. Every claim cites a registered outcome; exploratory observations are marked. Nothing here edits the manuscript.
 
-*Updated 2026-10-03 ~15:00Z with P23 (the memory and chaos rules on the MLP mixer) and P24 (the same on the single-state recurrence and its two-state control). The file name is kept so that earlier references still resolve.*
+*Revision 2026-10-08.* This revision follows an external review that rechecked the results. Its factual claims were reproduced from the saved arrays before this revision. Four corrections:
+- P24's architecture-rate comparison was unpaired (P24 Addendum).
+- Amendment 3's "frozen one step before completion" holds on Attention 192 only (P15 Amendment 7).
+- "Memoryless" is a 16-iteration-window statement with short-window transients (P22–P24 addenda).
+- "Chaotic" is operational sensitivity, not a dynamical measurement.
 
-## 1. What was asked
+It also adds SE-RRM attribution round 3 (session d378a5) and the paired shared-failure analysis. The file name is kept so that earlier references resolve.
 
-Plan §7 (the PI, 2026-10-02) set two commitments:
-1. Identify a general principle: retained state adaptively controls how changes propagate between dependent decisions, through a compact set of interactions.
-2. Use it to control reasoning predictably.
+## 1. The short answer
 
-Four predictions were registered as success criteria:
-- retained state changes the correction rule;
-- compact structure;
-- selective edits reproduce broad interventions and matched random edits do not;
-- transfer.
+The experiments materially strengthen the empirical paper, and they change the mechanism we should argue for:
+- **Established:** correction is distributed and causally coupled.
+- **Established:** the architecture and its regularization determine how much further recursion pays.
+- **Established:** hidden-state perturbations strongly change *which* trajectory occurs without changing *whether* it succeeds.
+- **Not recovered:** a compact correction operator.
+- **Not shown:** a reliable intervention that improves reasoning at inference time.
 
-## 2. What the data refute
+## 2. Distributed, causally coupled correction
 
-**Local control of decisions.**
-- **P15, display-inert.** Changing a displayed decision is undone within one iteration.
-- **P16.** Three letters:
-  - NOT-LOCAL: rewriting a cell's entire state keeps at most 9–28 % of the available gain.
-  - NO-CONTROL: a conflicting peer's retained commitment does not gate propagation.
-  - MIXED compact structure: display features predict responses with AUC of about 0.7, and the hidden commitment index adds nothing.
-- **P18, independent.** Correcting a conflict-free set of errors is kept no better than correcting a random set of the same size.
-- **P17.** Perturbing the visibly conflicting cells equals perturbing random cells.
+- **Local handles are weak.**
+  - P15: helpful display-only flips realize 2–7 % of the available next-step gain.
+  - P16: whole-cell edits act more strongly but do not reliably install the intended decision. The commitment dial fails, and its hidden index changes predictive AUC by −0.001 to +0.002.
+  - P18: Sudoku dependency closures are no better than size-matched random corrections.
+  - P17: perturbing conflict cells equals perturbing random cells.
+  - An external review's exploratory fit of the measured score-space operator to a residual-correction factorization (K ≈ BA) leaves a median 59–66 % irreducible squared residual. It is reported by that review and not yet reproduced here. The measured operator should not be presented as a recovered residual-correction rule.
+- **Sufficiently distributed correction induces repair elsewhere (P19, the strongest positive result here).**
 
-**Control by perturbing the hidden state.** One answer-preserving perturbation does not improve stalled trajectories:
-- **P17:** an exploratory 60° rotation looked strong.
-- **P20:** on fresh attention puzzles, NO-DIFFERENCE on every width, at any angle from 45° to 75°.
-- **P21:** NO-DIFFERENCE on all three MLP seeds, at every horizon to iteration 64.
+  | receiver | completion at the next iteration: no intervention | half of the wrong cells corrected | 80 % corrected |
+  |---|---|---|---|
+  | Attention 256 | 48.6 % | 69.6 % | 90.9 % |
+  | Attention 192 | 46.4 % | 72.0 % | 92.0 % |
+  | Attention 128 | 31.5 % | 46.9 % | 51.2 % |
 
-**The four predictions.**
-1. *Retained state changes the correction rule:* only partly, and only in exploratory data. In P15, replacing the hidden state shifts which of two conflicting decisions yields.
-2. *Compact structure:* not found.
-3. *Selective edits:* refuted (P17, P18).
-4. *Transfer:* the program's positive result transfers instead: the memoryless law (§3c).
+  On the two wider models, correcting half the wrong cells also closes about 40–52 % of the remaining repair gap on the cells that were *not* edited. The response is gradual, or mixed, rather than a sharp threshold. Two qualifications:
+  - These are oracle-guided diagnostic interventions, not a deployable improvement.
+  - "Centred near half" describes the normalized population improvement, not a per-puzzle 50 % threshold.
+- **Completion needs information beyond the scores and needs evolving communication.**
+  - P8 and session d378a5's P13: a score-preserving replacement at the completing iteration blocks completion on 78/78 single-state cases and 77/94 and 55/79 two-state cases, while 1° controls block 6/78, 5/94 and 0/79.
+  - P4: freezing messages from iteration 4, 6 or 8 produces zero new completions.
+  - P3: one replacement largely recovers, but repeated replacements do not.
+  - P9/P11: transferring a successful trajectory's readout-invisible slow component rescues the next step on every selected primary case. A control-accounting error was found in the P9 runner: 11 of 15 controls were also primary cases intervened at a different time, so the full control sample does not stand. Reported to session d378a5 for correction.
 
-## 3. What the data support: two regimes
+## 3. Learned recurrence and regularization (SE-RRM attribution rounds, session d378a5)
 
-**(a) Decisions are re-derived each iteration from the whole configuration.** No cell holds its own decision (P15, P16).
+On the identical 5,000 test puzzles:
 
-**(b) The cooperative regime.** Corrections are accepted collectively:
-- whole-grid completion rises smoothly with the share of errors corrected at once, centred at half (P19 GRADUAL; f50 0.53 / 0.50);
-- what is corrected matters far less than how much (P18).
+| recurrent organization | training dropout | depth 16 | depth 64 |
+|---|---:|---:|---:|
+| two states | none | 98.24 % | 99.60 % |
+| one state | none | 89.96 % | 93.08 % |
+| two states | 0.2 | 97.98 % | 99.82 % |
+| one state | 0.2 | 95.78 % | 98.04 % |
 
-One step from completion, states are frozen to small pushes but need their hidden content:
-- the linear sensitivity of about-to-complete states is near zero (P15 Amendment 3);
-- in session d378a5's P13 (registered fecbec9; its Outcome reported by message, commit pending), replacing the readout-invisible state at the completing iteration blocks completion (B = 1.00 / 0.82 / 0.70 on SA256U / SA256 28k / SA256 14k), while a 1° rotation blocks 0–6 %. The content matters, not mere sensitivity, on both recurrence structures.
+- Dropout shrinks the two-state advantage from 8.28 to 2.20 points at depth 16, and from 6.52 to 1.78 at depth 64.
+- It also prevents the single-state run's late validation collapse. Validation goes from a maximum of 92.77 to 71.88 at the end without dropout, against 97.27 to 96.68 with it.
+- The registered label is REGULARIZATION-REPLACES; scientifically, "regularization substantially substitutes for the architectural advantage". The remaining differences are clear on these checkpoints, and there is one seed per arm.
+- **Early versus late.** The single-state models solve more puzzles at the first iterations, yet the two-state models finish ahead.
+- **Paired shared failures** (exploratory, reproduced). Among puzzles both models leave unsolved at iteration 16, the two-state model completes more by 64:
+  - 44 against 10 of 61 without dropout;
+  - 34 against 20 of 43 with dropout.
 
-**(c) The stalled regime is a memoryless search, strongly sensitive to the readout-invisible state.** Measured on nine receivers.
+  The architecture advantage includes greater success from continued computation on the same failures, even after dropout narrows the gap. P24's cohort comparison is withdrawn in favour of this paired count.
 
-*Memoryless.* For a fixed stalled state, re-rolls that survive sixteen iterations complete in the next sixteen at the rate the instance's first window predicts. MEMORYLESS on eight of nine receivers:
+## 4. Sensitivity without control
 
-| experiment | receivers | R | letter |
-|---|---|---|---|
-| P22 | three attention widths | 1.08 / 0.91 / 1.08 | confirmed |
-| P23 | three MLP 192 seeds | 1.16 / 0.86 / 0.95 | confirmed, transfers |
-| P24 | SA256U (single state) | 1.00 | MEMORYLESS |
-| P24 | SA256 28k | 1.07 | MEMORYLESS |
-| P24 | SA256 14k | 0.86 | UNRESOLVED (interval lower end 0.661 against 0.67) |
+- **The confirmation sequence.**
+  - P12: a pilot gain from one random hidden-state replacement.
+  - P17: a 60° rotation looked strong across widths.
+  - P20: on fresh puzzles, the rotation matched intact continuation: 71 / 80 / 68 against 75 / 83 / 67.
+  - P21: no benefit on three MLP seeds at any horizon to 64.
 
-SA256U's letter is also at the margin: a separately seeded bootstrap gives a lower end of 0.659.
+  P17's repeated-kick policy was effectively untested: unsuccessful trajectories keep changing their displays, so its trigger almost never fired.
+- **The distinction to carry forward.** About a third of stalled outcomes change under a perturbation that keeps every score, with gains and losses balanced. *Controlling which trajectory occurs is much easier than controlling whether it succeeds.* A convincing controller must predict a beneficial direction before seeing the outcome.
+- **A window-level statistical description of difficult continuations (P22–P24).** For a fixed stalled state, completion over the second sixteen iterations is what the first sixteen predict. The survivors-over-predicted ratio R is near 1:
+  - attention: 1.08 / 0.91 / 1.08;
+  - MLP: 1.16 / 0.86 / 0.95;
+  - SA pair: 1.00 / 1.07, and 0.86 on the stage-matched checkpoint, which is UNRESOLVED.
 
-*Sensitive, chaotic on attention.* A 1° (even 0.1°) rotation that changes no displayed score re-rolls the outcome sixteen iterations later:
-- as fully as 60° on the attention models and the SA pair: D(1°)/D(60°) 0.80–0.97, CHAOTIC on all six;
-- substantially but not fully on the MLP mixer: 0.74–0.79, INTERMEDIATE on all three (P23).
+  This supports a coarse model, P(complete within n windows) ≈ 1 − (1 − p_x)^n, with a per-puzzle window probability p_x. Two limits:
+  - Shorter windows show transients after the perturbation. On most two-state receivers R is 1.36–2.62 at two iterations. The single-state model differs at short windows (0.27 / 0.70 / 0.65 at 2 / 4 / 8 iterations).
+  - Comparable outcome disagreement at 1° and 60° establishes strong sensitivity, not exponential divergence or mixing.
 
-*Further properties:*
-- Intact continuation is one more draw: the law predicts its completions (exploratory; P22–P24).
-- Instance rates span the whole range: the falling completion rate across puzzles is difficulty heterogeneity, not trajectories getting stuck.
-- Stalled trajectories never freeze. They keep revising an invalid configuration (P17), and in P24 0 % of stalled steps are frozen, with about 12 cells changing per iteration, on both recurrence structures.
+  So this is *not* evidence for a memoryless internal algorithm or for chaos, and it should not be presented as either.
 
-**(d) What the two-state design buys in the tail** (P24, exploratory, with SE-RRM attribution round 2). The single-state recurrence's stall is the same kind of search: live, memoryless, sensitive (pattern SAME-TAIL). It completes about a third as often:
-- a stalled re-roll completes within 16 iterations 0.116 of the time, against 0.328 and 0.297 for the two-state SA256;
-- 44 of 80 single-state puzzles had no re-roll solved by 32.
+## 5. Status of the original proposal (plan §7)
 
-Round 2 found the two-state design carries the accuracy advantage. P24 locates part of it: in the stalled regime, the slow/fast split raises the per-instance completion rate; it does not change what kind of search runs.
+| requirement | status |
+|---|---|
+| Hidden state causally changes behaviour beyond the current scores | Established (P8/P13, P9, P15–P16, P3–P4) |
+| A compact identified structure predicts finite correction responses | Not established; the tested commitment index fails (P16) |
+| Editing that structure selectively produces the predicted response | Not established (P16–P18) |
+| The intervention improves success at matched compute on fresh cases | Not established; the rotation confirmation is negative (P20, P21) |
+| The identification-and-control procedure transfers to ARC | Untested |
 
-**(e) Consequences, observed before the law was registered and confirmed after it.**
-- Perturbations and restarts re-roll a trajectory without changing its rate, so they cannot help on average (P20, P21).
-- Parallel re-rolls with a validity check that needs no answer key equal sequential iterations at matched compute (exploratory in P20–P24).
+This is not a reason to retreat to "memory matters". It locates the remaining step: **identify what changes the probability of productive completion, not merely what changes the trajectory.**
 
-## 4. The principle, stated for the rebuttal
+## 6. Recommendations for the paper
 
-> In these learned recursive reasoners, test-time iteration runs in two regimes.
->
-> In the **cooperative regime** the configuration moves toward the solution as a whole, and a correction sticks once enough of the configuration agrees with it, about half the errors. One step from completion the state is frozen to small pushes and carries content the completion needs.
->
-> If the configuration does not complete, it enters a **stalled regime**: a search so sensitive to the state the readout cannot see that each stretch of iterations is effectively a fresh attempt, completing at a rate set by the instance and by the architecture.
->
-> In the tail, test-time compute buys independent attempts, not accumulated progress. The two-state design buys a higher rate of success per attempt.
+1. **Centre three additions:**
+   - the architecture × dropout factorial with the early-versus-late crossover and the paired shared-failure count;
+   - the distributed-correction intervention (P19's induced repair of unedited cells), with P15/P16/P18 as constraints on its interpretation;
+   - the confirmation sequence for hidden-state perturbations, followed by the window-level completion model as an emerging explanation for why changed trajectories need not improve aggregate performance.
+2. **Use the supporting results** to strengthen existing claims: P3–P5, P8/P13, and P9/P11 once its control accounting is corrected. The detailed campaign belongs in the appendix; the main argument should follow the questions these experiments resolved.
+3. **Keep** the distinction between reaching, preserving and selecting answers, and keep ARC as a boundary test. The Sudoku evidence does not justify a universal mechanism across tasks.
+4. **Do not claim** a recovered compact operator, control through hidden-state edits, memoryless dynamics or chaos.
 
-**Why it is general rather than Sudoku-specific.**
-- It is a statement about iterative refinement read out from a high-dimensional state, not about puzzle rules.
-- The memoryless letter holds on eight of nine receivers, spanning three independent initializations per family, two token mixers and both recurrence structures.
-- How chaotic the search is at small angles varies by mixer.
-- It falls within classic restart theory for randomized search (Luby, Sinclair and Zuckerman 1993, "Optimal speedup of Las Vegas algorithms"; Gomes, Selman, Crato and Kautz 2000, heavy-tailed run-time distributions in combinatorial search). Restarting cannot shorten waiting times when an instance's run-time distribution is memoryless (a constant hazard). It helps when the hazard falls (heavy tails) and hurts when it rises. These networks' hazard per instance is constant, which predicts, and the data show, that restarts and kicks do not help.
+## 7. The next decisive test
 
-**What it predicts that can be checked.** The effect of any restart, perturbation or parallelization policy, from each instance's rate. Example: k parallel 16-iteration attempts should match 16k sequential iterations.
+The target quantity is q_B(z) = P(completion within budget B | a fixed score-preserving perturbation distribution around state z). P22–P24 already estimate it from eight re-rolls per state.
 
-## 5. Recommendations for the rebuttal
+The decisive experiment has three steps:
+1. On discovery puzzles, find a compact state feature that predicts q_B.
+2. Make a score-preserving intervention along that feature.
+3. Show that it raises q_B on held-out puzzles, against random-direction, opposite-direction and restoration controls.
 
-1. Do not claim local operators, compact interaction structure, or control by hidden-state edits. The registered tests reject them, and saying so is a strength.
-2. Claim the two-regime account, with its registered evidence:
-   - collective, graded acceptance (P19, P18);
-   - frozen near completion with needed content (Amendment 3; P13, once committed);
-   - the memoryless tail on eight of nine receivers (P22, P23, P24) and its consequences (P20, P21);
-   - chaos strongest on attention.
-3. Use it to answer the manuscript's question of what test-time compute buys. In the cooperative regime, iterations buy convergence. In the tail they buy attempts at an instance-specific rate, so the waiting time per stalled instance is geometric and the long tail measures difficulty.
-4. Tie it to the SE-RRM attribution. The two-state advantage is, in the tail, a higher success rate per attempt rather than a different search (P24 with round 2). This gives a mechanistic reading of an accuracy comparison.
+The originally proposed transfer of a correction *response* between states of the same puzzle, left incomplete by the revised P16, remains a direct test of transferring a computational rule rather than rescuing one continuation.
 
-## 6. Open items
+## 8. Open items
 
-- **The parallel–sequential equivalence as a confirmatory, benchmark-scale test.** A uniform test sample with a validity check, at matched compute, on a pod. The PI decides after round 3's analysis.
-- **What sets an instance's rate.** Exploratory correlates such as puzzle rating and violations at iteration 16. Also, which part of the slow/fast split raises the rate (P24's open question).
-- **ARC, next week.** Do both regimes and the memoryless tail hold there?
+- The decisive test above: a registration draft for the PI's review.
+- Corrections owed: P9/P11 control accounting (session d378a5).
+- Reproduce the K ≈ BA fit before citing it.
+- Parallel against sequential compute at benchmark scale. Under the window-level model this needs the transient accounted for. A pod would need the PI's go.
+- ARC.
 - Manuscript changes only on the PI's instruction.
 
 *Sources:*
-- the Outcome sections of `Note_2026-10-02_Rebuttal_P15_P16_P17_Registration.md`, `Note_2026-10-02_Rebuttal_P18_Registration.md`, `Note_2026-10-03_Rebuttal_P19_Registration.md`, `Note_2026-10-03_Rebuttal_P20_Registration.md`, `Note_2026-10-03_Rebuttal_P21_Registration.md`, `Note_2026-10-03_Rebuttal_P22_Registration.md`, `Note_2026-10-03_Rebuttal_P23_Registration.md` and `Note_2026-10-03_Rebuttal_P24_Registration.md`;
-- session d378a5's `Note_2026-10-03_Rebuttal_P13_Registration.md` (Outcome pending) and SE-RRM attribution round 2 (`Note_2026-10-02_Attribution_Round2_Registration.md`);
-- the ledger lines of the same dates.
+- the Outcome sections and addenda of the P15–P17, P18, P19, P20, P21, P22, P23 and P24 registration notes;
+- session d378a5's P3–P13 notes and the SE-RRM attribution rounds 1–3 (`runs/analysis/attr3_20261003/attr3_verdict.txt`);
+- the ledger lines of 2026-10-02 to 2026-10-08.

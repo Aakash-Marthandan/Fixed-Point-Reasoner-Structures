@@ -188,3 +188,22 @@ Under every outcome: re-roll directions are random; the trigger uses no answer k
 - Across such re-rolls, an instance completes at its own constant rate per iteration, and intact continuation is one more draw from the same process.
 - The falling completion rate across puzzles is heterogeneity in instance difficulty.
 - This explains P17, P20 and P21. A perturbation re-rolls the trajectory without changing its rate, so neither kicks nor restarts can help on average, and parallel re-rolls equal sequential iterations at matched compute.
+
+---
+
+**Addendum — the scope of the two letters (2026-10-08, after an external review; exploratory, from the saved arrays, no new run).**
+
+1. *MEMORYLESS is a window-level statement.* R compares two 16-iteration windows. It does not test whether the completion rate is constant within a window. The same unbiased ratio at shorter equal windows shows a transient after the rotation, with survivors completing more often in the second short window than the first predicts:
+
+   | window length | 256 | 192 | 128 |
+   |---|---|---|---|
+   | 2 iterations | 1.50 | 1.36 | 0.99 |
+   | 4 iterations | 1.00 | 1.02 | 1.27 |
+   | 8 iterations | 1.10 | 0.95 | 0.94 |
+   | 16 iterations (registered) | 1.08 | 0.91 | 1.08 |
+
+   These short-window values involve multiple comparisons and few events, and are exploratory. The registered sentence's "a rate that does not change over the following thirty-two iterations" is narrowed to: *completion over the second sixteen iterations is what the first sixteen predict*.
+
+   This supports a coarse window-level model, P(complete within n windows) ≈ 1 − (1 − p_x)^n, not a constant per-iteration rate or a memoryless internal algorithm.
+
+2. *CHAOTIC is operational.* Comparable outcome disagreement after 1° and 60° rotations establishes strong sensitivity of the sixteen-iteration outcome to the readout-invisible state. It does not measure exponential divergence or temporal mixing. In text, "strongly sensitive" is the accurate word, and "chaotic" is the letter's name.
