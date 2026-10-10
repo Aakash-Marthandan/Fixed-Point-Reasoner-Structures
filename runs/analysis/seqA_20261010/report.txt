@@ -1,0 +1,28 @@
+SEQUENCE A (exploratory; plan Note_2026-10-10_SeqA_Explanation_Comparison_Plan.md written before any fit)
+attention_256 A1 k1: rows 38698 (175 puzzles, 265 states), base rate 0.623 | M0 logloss 0.5079 AUC 0.808 | M1 logloss 0.4865 AUC 0.831 | M2 logloss 0.4860 AUC 0.831 | M3 logloss 0.4841 AUC 0.833
+   gains: M1 over M0: +0.0214 [+0.0148, +0.0280] AUC +0.023 | M2 over M1: +0.0005 [+0.0000, +0.0011] AUC +0.001 | M3 over M2: +0.0018 [-0.0003, +0.0040] AUC +0.002
+   identity (paired, discordant cells 4441, concordant share 0.770): AUC 0.529 [0.515, 0.543]
+   aggregate r on U (mean 9.3 cells per set): share of variance between draws 0.457, by fraction 0.082
+attention_256 A1 k4: rows 38698 (175 puzzles, 265 states), base rate 0.864 | M0 logloss 0.3297 AUC 0.796 | M1 logloss 0.3256 AUC 0.802 | M2 logloss 0.3255 AUC 0.803 | M3 logloss 0.3246 AUC 0.803
+   gains: M1 over M0: +0.0041 [+0.0010, +0.0075] AUC +0.007 | M2 over M1: +0.0001 [-0.0002, +0.0004] AUC +0.000 | M3 over M2: +0.0009 [-0.0007, +0.0026] AUC +0.001
+   identity (paired, discordant cells 3068, concordant share 0.841): AUC 0.491 [0.473, 0.509]
+   aggregate r on U (mean 9.3 cells per set): share of variance between draws 0.681, by fraction 0.018
+attention_256 A2: single cell kept alone 0.660 vs with partners 0.696 (no edit 0.611; pairs 303; only-with-partners 31 vs only-alone 20, p 0.161) | partial cells: only in closure 43 vs only in partial 40 (pairs 673, p 0.826)
+attention_192 A1 k1: rows 34540 (159 puzzles, 242 states), base rate 0.556 | M0 logloss 0.5346 AUC 0.792 | M1 logloss 0.4875 AUC 0.842 | M2 logloss 0.4875 AUC 0.842 | M3 logloss 0.4816 AUC 0.846
+   gains: M1 over M0: +0.0471 [+0.0361, +0.0594] AUC +0.050 | M2 over M1: -0.0000 [-0.0006, +0.0005] AUC +0.000 | M3 over M2: +0.0059 [+0.0023, +0.0092] AUC +0.004
+   identity (paired, discordant cells 3587, concordant share 0.792): AUC 0.545 [0.527, 0.563]
+   aggregate r on U (mean 9.3 cells per set): share of variance between draws 0.354, by fraction 0.135
+attention_192 A1 k4: rows 34540 (159 puzzles, 242 states), base rate 0.812 | M0 logloss 0.3995 AUC 0.784 | M1 logloss 0.3835 AUC 0.808 | M2 logloss 0.3835 AUC 0.808 | M3 logloss 0.3815 AUC 0.811
+   gains: M1 over M0: +0.0160 [+0.0092, +0.0233] AUC +0.023 | M2 over M1: +0.0000 [-0.0004, +0.0004] AUC +0.000 | M3 over M2: +0.0020 [-0.0012, +0.0046] AUC +0.004
+   identity (paired, discordant cells 3193, concordant share 0.815): AUC 0.502 [0.483, 0.521]
+   aggregate r on U (mean 9.3 cells per set): share of variance between draws 0.551, by fraction 0.049
+attention_192 A2: single cell kept alone 0.617 vs with partners 0.682 (no edit 0.538; pairs 264; only-with-partners 31 vs only-alone 14, p 0.0161) | partial cells: only in closure 40 vs only in partial 29 (pairs 530, p 0.228)
+attention_128 A1 k1: rows 50840 (198 puzzles, 327 states), base rate 0.425 | M0 logloss 0.5062 AUC 0.817 | M1 logloss 0.5023 AUC 0.824 | M2 logloss 0.5021 AUC 0.825 | M3 logloss 0.4950 AUC 0.833
+   gains: M1 over M0: +0.0039 [+0.0017, +0.0060] AUC +0.007 | M2 over M1: +0.0002 [-0.0001, +0.0005] AUC +0.000 | M3 over M2: +0.0071 [+0.0050, +0.0092] AUC +0.008
+   identity (paired, discordant cells 5857, concordant share 0.770): AUC 0.527 [0.512, 0.540]
+   aggregate r on U (mean 9.8 cells per set): share of variance between draws 0.434, by fraction 0.018
+attention_128 A1 k4: rows 50840 (198 puzzles, 327 states), base rate 0.744 | M0 logloss 0.5009 AUC 0.739 | M1 logloss 0.5010 AUC 0.738 | M2 logloss 0.5010 AUC 0.738 | M3 logloss 0.4977 AUC 0.744
+   gains: M1 over M0: -0.0001 [-0.0010, +0.0006] AUC -0.000 | M2 over M1: +0.0000 [-0.0003, +0.0003] AUC +0.000 | M3 over M2: +0.0033 [+0.0007, +0.0056] AUC +0.006
+   identity (paired, discordant cells 6131, concordant share 0.759): AUC 0.497 [0.482, 0.509]
+   aggregate r on U (mean 9.8 cells per set): share of variance between draws 0.585, by fraction 0.006
+attention_128 A2: single cell kept alone 0.604 vs with partners 0.606 (no edit 0.444; pairs 502; only-with-partners 52 vs only-alone 51, p 1) | partial cells: only in closure 72 vs only in partial 102 (pairs 1078, p 0.0276)

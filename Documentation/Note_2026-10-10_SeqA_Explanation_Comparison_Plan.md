@@ -66,3 +66,45 @@ Exact McNemar on the pairs; no-edit retention reported beside.
   - hidden adds: pursue a compact state-dependent coupling, sequence B's transfer target;
   - nothing generalizes: these coordinates and this level of description are insufficient, so do not relabel a flexible fit as a theory.
 - Everything here has been seen before in summary form. Its findings choose the next registration; they do not stand as confirmed results.
+
+---
+
+## Results (2026-10-10; `runs/analysis/seqA_20261010/report.{txt,json}`; exploratory)
+
+The tool was run once after the plan and the tool were committed (f521ad2). One fix was needed before any output: at f = 1.0, P19 saved a single draw and has no unedited cell, so that fraction is skipped.
+
+**A1, k = 1.** Rows are (variant, cell neither draw edits) pairs: 38,698 / 34,540 / 50,840 on 175 / 159 / 198 puzzles. Held-out log-loss gain of each tier over the previous, with its 95 % puzzle-bootstrap interval and the AUC gain:
+
+| receiver | M1 amount over M0 | M2 configuration over M1 | M3 hidden over M2 | paired identity AUC | same-cell agreement between draws |
+|---|---|---|---|---|---|
+| Attention 256 | +0.021 [+0.015, +0.028], AUC +0.023 | +0.0005 [0.000, +0.001], AUC +0.001 | +0.002 [−0.000, +0.004], AUC +0.002 | 0.53 [0.52, 0.54] | 0.77 |
+| Attention 192 | +0.047 [+0.036, +0.059], AUC +0.050 | −0.000 [−0.001, +0.001], AUC +0.000 | +0.006 [+0.002, +0.009], AUC +0.004 | 0.55 [0.53, 0.56] | 0.79 |
+| Attention 128 | +0.004 [+0.002, +0.006], AUC +0.007 | +0.000 [−0.000, +0.001], AUC +0.000 | +0.007 [+0.005, +0.009], AUC +0.008 | 0.53 [0.51, 0.54] | 0.77 |
+
+The full models reach AUC 0.83 / 0.85 / 0.83. Most of that comes from the cell's own no-edit outcome; M0 alone has AUC 0.81 / 0.79 / 0.82. At k = 4 the amount gain shrinks (+0.004, +0.016, −0.000), and configuration still adds nothing.
+
+**The shape of the amount effect** (descriptive). Among untouched wrong cells that the no-edit continuation does *not* repair, the share repaired one iteration after the edit, by corrected fraction:
+
+| fraction | 0.1 | 0.3 | 0.5 | 0.7 | 0.9 |
+|---|---|---|---|---|---|
+| Attention 256 | 0.22 | 0.33 | 0.50 | 0.76 | 0.92 |
+| Attention 192 | 0.19 | 0.28 | 0.59 | 0.83 | 0.94 |
+| Attention 128 | 0.15 | 0.20 | 0.30 | 0.39 | 0.62 |
+
+Among cells the no-edit continuation *does* repair, 14–18 % are lost after a small correction elsewhere (256 and 192, f = 0.1–0.3). More are kept after a large one (0.96–1.00 at f ≥ 0.7).
+
+**A2 (P18).** A closure's single cell kept alone vs with its partners, at k = 1:
+
+| receiver | alone | with partners | no edit | McNemar (only-with-partners / only-alone) |
+|---|---|---|---|---|
+| Attention 256 | 0.660 | 0.696 | 0.611 | 31 / 20, p 0.16 |
+| Attention 192 | 0.617 | 0.682 | 0.538 | 31 / 14, p 0.016 |
+| Attention 128 | 0.604 | 0.606 | 0.444 | 52 / 51, p 1.0 |
+
+Partial against full closure, on the same cells: no difference on 256 and 192, and the partial slightly ahead on 128 (p 0.028).
+
+**Reading by the rules fixed above.**
+- **Independent local correction is rejected through A1.** On both primary receivers, the amount of correction elsewhere improves prediction at cells that were not edited, with intervals excluding 0, while the cells' local relations to the edited set (M2) add nothing. A2 alone shows cooperation only on 192.
+- **Visible configuration does not add** (M2 ≈ M1; paired identity AUC 0.53–0.55, below 0.60). Which equally sized set is corrected does not predict which untouched cells repair beyond the amount. About 21–23 % of the same untouched cells nevertheless change outcome between two same-size draws. That variation is real, but neither the configuration features nor the state-level hidden quantities predict it. Predicting it would need features of the post-edit state, i.e. replay.
+- **Hidden quantities** (margin, commitment index) add a small, significant amount on 192 and 128, but AUC +0.004 to +0.008 is below the 0.02 bar. They do not add by the rule.
+- **Direction for the next experiment: collective reconstruction.** Untouched cells are repaired in proportion to how much of the configuration is corrected at once, on top of each cell's own propensity, not through which cells are corrected. The open question for sequence B becomes whether *retained state sets this law's parameters*. For a fixed displayed configuration and a fixed correction, do different hidden histories of the same puzzle give different dose–response curves? That would be a state-dependent collective law, transferable as a parameter, rather than a compact coupling operator between particular decisions.

@@ -98,7 +98,8 @@ def a1_rows(width, k):
             v0 = [v for v in vs if fr[v] == 0.0]; assert len(v0) == 1; pred0 = d["pred"][v0[0], k - 1].astype(int)
             margin, commit = feat[(sid, t)]
             for fv in sorted(set(fr[vs]) - {0.0}):
-                dv = {int(d["var_draw"][v]): v for v in vs if fr[v] == fv}; assert set(dv) == {0, 1}
+                dv = {int(d["var_draw"][v]): v for v in vs if fr[v] == fv}
+                if set(dv) != {0, 1}: assert fv == 1.0, (fv, set(dv)); continue          # f = 1.0 has one draw (every wrong cell) and no unedited cell
                 E = {dr: set(int(c) for c in d["var_cells"][v] if c >= 0) for dr, v in dv.items()}
                 U = [int(c) for c in W if c not in E[0] and c not in E[1]]
                 for dr, v in dv.items():

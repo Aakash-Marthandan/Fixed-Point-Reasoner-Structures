@@ -1,0 +1,653 @@
+{
+ "attention_256": {
+  "A1": {
+   "k1": {
+    "rows": 38698,
+    "puzzles": 175,
+    "states": 265,
+    "base_rate": 0.6231588195772392,
+    "M0": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t"
+     ],
+     "logloss": 0.507917712548631,
+     "auc": 0.8078451559476894
+    },
+    "M1": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed"
+     ],
+     "logloss": 0.4864806903914777,
+     "auc": 0.8305505805892014
+    },
+    "M2": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem"
+     ],
+     "logloss": 0.48596102458086593,
+     "auc": 0.8311537385953318
+    },
+    "M3": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem",
+      "margin",
+      "commit",
+      "commit_ed_peers"
+     ],
+     "logloss": 0.4841245160873954,
+     "auc": 0.8331211608346137
+    },
+    "M1_vs_M0": {
+     "logloss_gain": 0.021437022157153353,
+     "ci": [
+      0.014791980341078929,
+      0.027967047433310212
+     ],
+     "auc_gain": 0.02270542464151204
+    },
+    "M2_vs_M1": {
+     "logloss_gain": 0.00051966581061176,
+     "ci": [
+      1.7535533454922875e-05,
+      0.0010668875056722086
+     ],
+     "auc_gain": 0.000603158006130422
+    },
+    "M3_vs_M2": {
+     "logloss_gain": 0.0018365084934705267,
+     "ci": [
+      -0.0002830936533206242,
+      0.0040025489478202544
+     ],
+     "auc_gain": 0.001967422239281924
+    },
+    "identity_paired": {
+     "discordant_cells": 4441,
+     "concordant_share": 0.7704790945268489,
+     "auc": 0.5285910783739632,
+     "ci": [
+      0.5146713306569626,
+      0.5433358828089532
+     ]
+    },
+    "aggregate": {
+     "cells_per_set_mean": 9.28900624099856,
+     "var_total": 0.1396077104212293,
+     "share_between_draws": 0.4571736667843436,
+     "share_fraction": 0.08231537915420185
+    }
+   },
+   "k4": {
+    "rows": 38698,
+    "puzzles": 175,
+    "states": 265,
+    "base_rate": 0.8635071579926611,
+    "M0": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t"
+     ],
+     "logloss": 0.3297264739034445,
+     "auc": 0.7956262146514281
+    },
+    "M1": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed"
+     ],
+     "logloss": 0.32564315752789713,
+     "auc": 0.8022319433869887
+    },
+    "M2": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem"
+     ],
+     "logloss": 0.32553412291475037,
+     "auc": 0.8026524992346886
+    },
+    "M3": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem",
+      "margin",
+      "commit",
+      "commit_ed_peers"
+     ],
+     "logloss": 0.3246130566841326,
+     "auc": 0.8033741117560446
+    },
+    "M1_vs_M0": {
+     "logloss_gain": 0.004083316375547422,
+     "ci": [
+      0.0009686481733517943,
+      0.0075441275896302225
+     ],
+     "auc_gain": 0.006605728735560534
+    },
+    "M2_vs_M1": {
+     "logloss_gain": 0.00010903461314672511,
+     "ci": [
+      -0.00021017602886535083,
+      0.0004178460294652019
+     ],
+     "auc_gain": 0.0004205558476999549
+    },
+    "M3_vs_M2": {
+     "logloss_gain": 0.0009210662306177917,
+     "ci": [
+      -0.0006735672240135002,
+      0.0025993931296919488
+     ],
+     "auc_gain": 0.000721612521355941
+    },
+    "identity_paired": {
+     "discordant_cells": 3068,
+     "concordant_share": 0.8414388340482712,
+     "auc": 0.49064177003139614,
+     "ci": [
+      0.47253663695025855,
+      0.5092094218834328
+     ]
+    },
+    "aggregate": {
+     "cells_per_set_mean": 9.28900624099856,
+     "var_total": 0.06457426827064569,
+     "share_between_draws": 0.6806452078753327,
+     "share_fraction": 0.017706709490743554
+    }
+   }
+  },
+  "A2": {
+   "single": {
+    "pairs": 303,
+    "kept_alone": 0.6600660066006601,
+    "kept_with_partners": 0.6963696369636964,
+    "noedit_correct": 0.6105610561056105,
+    "only_with_partners": 31,
+    "only_alone": 20,
+    "p": 0.16077960181198847
+   },
+   "partial": {
+    "cell_pairs": 673,
+    "only_in_closure": 43,
+    "only_in_partial": 40,
+    "p": 0.8264047244491933
+   }
+  }
+ },
+ "attention_192": {
+  "A1": {
+   "k1": {
+    "rows": 34540,
+    "puzzles": 159,
+    "states": 242,
+    "base_rate": 0.5556745801968732,
+    "M0": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t"
+     ],
+     "logloss": 0.5345690746959914,
+     "auc": 0.7921693723512139
+    },
+    "M1": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed"
+     ],
+     "logloss": 0.4874907325378846,
+     "auc": 0.8419398411714464
+    },
+    "M2": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem"
+     ],
+     "logloss": 0.48750885695945856,
+     "auc": 0.8419472421668959
+    },
+    "M3": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem",
+      "margin",
+      "commit",
+      "commit_ed_peers"
+     ],
+     "logloss": 0.48164261240550016,
+     "auc": 0.8464015533453686
+    },
+    "M1_vs_M0": {
+     "logloss_gain": 0.047078342158106815,
+     "ci": [
+      0.03608576766914758,
+      0.05941643671272266
+     ],
+     "auc_gain": 0.049770468820232505
+    },
+    "M2_vs_M1": {
+     "logloss_gain": -1.8124421573955545e-05,
+     "ci": [
+      -0.0005762217776725708,
+      0.0004797815553965771
+     ],
+     "auc_gain": 7.400995449491354e-06
+    },
+    "M3_vs_M2": {
+     "logloss_gain": 0.005866244553958371,
+     "ci": [
+      0.002319793890975104,
+      0.009173990324711312
+     ],
+     "auc_gain": 0.004454311178472725
+    },
+    "identity_paired": {
+     "discordant_cells": 3587,
+     "concordant_share": 0.7922987840185293,
+     "auc": 0.545381911836792,
+     "ci": [
+      0.5271986777436525,
+      0.5634674348359768
+     ]
+    },
+    "aggregate": {
+     "cells_per_set_mean": 9.289940828402367,
+     "var_total": 0.15461544761603463,
+     "share_between_draws": 0.35379746067669104,
+     "share_fraction": 0.13530951037050765
+    }
+   },
+   "k4": {
+    "rows": 34540,
+    "puzzles": 159,
+    "states": 242,
+    "base_rate": 0.8117834394904458,
+    "M0": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t"
+     ],
+     "logloss": 0.3995003432694219,
+     "auc": 0.784151825160967
+    },
+    "M1": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed"
+     ],
+     "logloss": 0.38350791810090035,
+     "auc": 0.8076416915703131
+    },
+    "M2": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem"
+     ],
+     "logloss": 0.3835043140767155,
+     "auc": 0.8076854864605899
+    },
+    "M3": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem",
+      "margin",
+      "commit",
+      "commit_ed_peers"
+     ],
+     "logloss": 0.38146966654634307,
+     "auc": 0.8113306745780767
+    },
+    "M1_vs_M0": {
+     "logloss_gain": 0.01599242516852151,
+     "ci": [
+      0.00920405389231407,
+      0.023299269020494916
+     ],
+     "auc_gain": 0.023489866409346027
+    },
+    "M2_vs_M1": {
+     "logloss_gain": 3.6040241848453027e-06,
+     "ci": [
+      -0.00036584353085715866,
+      0.00035010305818621745
+     ],
+     "auc_gain": 4.379489027683814e-05
+    },
+    "M3_vs_M2": {
+     "logloss_gain": 0.00203464753037244,
+     "ci": [
+      -0.0011985040943447902,
+      0.004614606074251401
+     ],
+     "auc_gain": 0.0036451881174868195
+    },
+    "identity_paired": {
+     "discordant_cells": 3193,
+     "concordant_share": 0.8151129125651418,
+     "auc": 0.5024735541034848,
+     "ci": [
+      0.48315209319169206,
+      0.5212933470087593
+     ]
+    },
+    "aggregate": {
+     "cells_per_set_mean": 9.289940828402367,
+     "var_total": 0.07873562019588516,
+     "share_between_draws": 0.5511485028921626,
+     "share_fraction": 0.04906411100684696
+    }
+   }
+  },
+  "A2": {
+   "single": {
+    "pairs": 264,
+    "kept_alone": 0.6174242424242424,
+    "kept_with_partners": 0.6818181818181818,
+    "noedit_correct": 0.5378787878787878,
+    "only_with_partners": 31,
+    "only_alone": 14,
+    "p": 0.016094360031274846
+   },
+   "partial": {
+    "cell_pairs": 530,
+    "only_in_closure": 40,
+    "only_in_partial": 29,
+    "p": 0.22840022535329696
+   }
+  }
+ },
+ "attention_128": {
+  "A1": {
+   "k1": {
+    "rows": 50840,
+    "puzzles": 198,
+    "states": 327,
+    "base_rate": 0.42488198269079464,
+    "M0": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t"
+     ],
+     "logloss": 0.5062100813898103,
+     "auc": 0.8172261800634761
+    },
+    "M1": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed"
+     ],
+     "logloss": 0.5022897552779787,
+     "auc": 0.8244932126151847
+    },
+    "M2": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem"
+     ],
+     "logloss": 0.5020901865465927,
+     "auc": 0.8247758857681775
+    },
+    "M3": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem",
+      "margin",
+      "commit",
+      "commit_ed_peers"
+     ],
+     "logloss": 0.4949988929618097,
+     "auc": 0.8326338848193651
+    },
+    "M1_vs_M0": {
+     "logloss_gain": 0.003920326111831515,
+     "ci": [
+      0.0016667761567741328,
+      0.0059826406996586505
+     ],
+     "auc_gain": 0.007267032551708574
+    },
+    "M2_vs_M1": {
+     "logloss_gain": 0.00019956873138612225,
+     "ci": [
+      -8.080958758147949e-05,
+      0.0004965731134452498
+     ],
+     "auc_gain": 0.00028267315299279616
+    },
+    "M3_vs_M2": {
+     "logloss_gain": 0.007091293584782829,
+     "ci": [
+      0.0049557360465466525,
+      0.009164836027423951
+     ],
+     "auc_gain": 0.007857999051187559
+    },
+    "identity_paired": {
+     "discordant_cells": 5857,
+     "concordant_share": 0.7695908733280881,
+     "auc": 0.5266963769043485,
+     "ci": [
+      0.5124768006208436,
+      0.5402379672039602
+     ]
+    },
+    "aggregate": {
+     "cells_per_set_mean": 9.807098765432098,
+     "var_total": 0.1848898221299678,
+     "share_between_draws": 0.4343061590984385,
+     "share_fraction": 0.018123186537876503
+    }
+   },
+   "k4": {
+    "rows": 50840,
+    "puzzles": 198,
+    "states": 327,
+    "base_rate": 0.7439221085759244,
+    "M0": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t"
+     ],
+     "logloss": 0.5008990218094884,
+     "auc": 0.7385169309113253
+    },
+    "M1": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed"
+     ],
+     "logloss": 0.5010409794240616,
+     "auc": 0.7380357793228718
+    },
+    "M2": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem"
+     ],
+     "logloss": 0.5010352530420847,
+     "auc": 0.7380585183379621
+    },
+    "M3": {
+     "features": [
+      "y0",
+      "nwrong",
+      "t",
+      "f",
+      "n_ed",
+      "n_ed_peers",
+      "n_conf",
+      "n_unblock",
+      "n_wrong_rem",
+      "margin",
+      "commit",
+      "commit_ed_peers"
+     ],
+     "logloss": 0.49771546488427987,
+     "auc": 0.7436119792531228
+    },
+    "M1_vs_M0": {
+     "logloss_gain": -0.00014195761457313008,
+     "ci": [
+      -0.0010011436378693586,
+      0.0006364514347240866
+     ],
+     "auc_gain": -0.00048115158845352113
+    },
+    "M2_vs_M1": {
+     "logloss_gain": 5.726381976738251e-06,
+     "ci": [
+      -0.00025759393828741226,
+      0.00026563715174465443
+     ],
+     "auc_gain": 2.273901509031173e-05
+    },
+    "M3_vs_M2": {
+     "logloss_gain": 0.003319788157804943,
+     "ci": [
+      0.0006973565677864438,
+      0.005633959171925212
+     ],
+     "auc_gain": 0.005553460915160735
+    },
+    "identity_paired": {
+     "discordant_cells": 6131,
+     "concordant_share": 0.7588119590873328,
+     "auc": 0.4965913844153106,
+     "ci": [
+      0.4824594365037535,
+      0.509319676395606
+     ]
+    },
+    "aggregate": {
+     "cells_per_set_mean": 9.807098765432098,
+     "var_total": 0.13989331521978124,
+     "share_between_draws": 0.5847067832943305,
+     "share_fraction": 0.006038918298833079
+    }
+   }
+  },
+  "A2": {
+   "single": {
+    "pairs": 502,
+    "kept_alone": 0.603585657370518,
+    "kept_with_partners": 0.6055776892430279,
+    "noedit_correct": 0.4442231075697211,
+    "only_with_partners": 52,
+    "only_alone": 51,
+    "p": 1.0
+   },
+   "partial": {
+    "cell_pairs": 1078,
+    "only_in_closure": 72,
+    "only_in_partial": 102,
+    "p": 0.027626051149794977
+   }
+  }
+ }
+}
