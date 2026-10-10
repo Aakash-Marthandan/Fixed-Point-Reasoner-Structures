@@ -265,12 +265,12 @@ Brier score: 0.288. The two central letters were under-predicted.
 - P25's narrowed reading, "the excess comes mostly through the baseline term", came from unaligned cells and masks. It does not describe the aligned measurement.
 
 **Exploratory additions** (after the frozen report; same bootstrap, 2,000 draws; 1,000 for the horizon):
-- **The common subspace carries broad response transfer on both receivers.** R1 for the common basis is +0.126 [+0.052, +0.198] on 192 and +0.100 [+0.025, +0.166] on 256. That is about 62 % and 97 % of the full transfer's point estimates.
-- **On 192 the challenge-specific part lies outside the common subspace.** Full minus the common-basis transfer on R2 is +0.155 [+0.056, +0.265]. On 256 it is +0.009 [−0.088, +0.109].
+- **The common subspace carries broad response transfer on both receivers** (relative to its own random-subspace control; see the scope addendum on that control). R1 for the common basis is +0.126 [+0.052, +0.198] on 192 and +0.100 [+0.025, +0.166] on 256. That is about 62 % and 97 % of the full transfer's point estimates.
+- **[Withdrawn in the scope addendum: this compares two effects with different controls and does not localize the effect.]** ~~On 192 the challenge-specific part lies outside the common subspace.~~ Full minus the common-basis transfer on R2 is +0.155 [+0.056, +0.265]. On 256 it is +0.009 [−0.088, +0.109].
   - On 192 the per-pair top-k subspace carries none of it either: −0.006 [−0.096, +0.075].
   - On 256 the per-pair subspace carries +0.112 [+0.024, +0.201].
   - Neither adaptive half-test is resolved.
-  - On 192, then, the specific response sits in the low-energy remainder of the difference: about 30 % of its energy, in directions shared by neither the pooled nor the pair's own leading subspace.
+  - **[Withdrawn in the scope addendum.]** ~~On 192, then, the specific response sits in the low-energy remainder of the difference~~: about 30 % of its energy, in directions shared by neither the pooled nor the pair's own leading subspace.
 - **Horizon** (full − random; k = iterations after the change):
 
   | receiver | rule | k = 1 | k = 2 | k = 3 | k = 4 |
@@ -281,9 +281,73 @@ Brier score: 0.288. The two central letters were under-predicted.
   | 256 | R2 | +0.102 | +0.040 | +0.088 | +0.070 |
 
   - On 192, R1 is resolved at every k. On 256 it is resolved at k = 1 only.
-  - R2 is resolved at k = 1 only on both receivers. At this power the challenge-specific effect is a one-iteration effect; the broad response transfer persists on 192.
+  - R2 is resolved at k = 1 only on both receivers. Persistence of the challenge-specific effect beyond one iteration is unresolved (corrected in the scope addendum); the broad response transfer persists on 192.
 
 **For the program.**
 - The second link of the target sentence ("an identified hidden component changes that requirement") now has its response form: the readout-invisible slow part carries correction responses, specifically and beyond matched random change.
-- "Identified" means the whole readout-invisible difference. It is not a compact shared subspace: on 256 a common subspace carries most of it; on 192 the specific part does not live there.
+- "Identified" means the whole readout-invisible difference. Compactness is not established (corrected in the scope addendum: on 192 the control comparison does not localize the effect).
 - P27 (control) should therefore manipulate the full readout-invisible part, with the common subspace as a secondary arm on 256. Its readout should be at k = 1 first.
+
+## P26 SCOPE ADDENDUM after an external review (2026-10-10 ~15:40Z; every number reproduced from the saved arrays; exploratory; `runs/analysis/rebuttal_20261012/review_check.py`, `pred_variants.py`)
+
+**What stands.** The registered letters and their wording stand: RESPONSE-TRANSFER and CHALLENGE-SPECIFIC on both receivers; BASELINE-TRANSFER on 192 only; the registered COMPACT event fails. The test on particular, equally sized corrections cancels the no-edit baseline inside each contrast and holds the amount of correction fixed. So the transfer cannot be described as a change of the unedited continuation alone.
+
+**Withdrawn: the localization of the specific transfer on 192.** The Outcome's exploratory reading ("on 192 the specific response sits in the low-energy remainder"; "full minus the common-basis transfer +0.155") compared two effects measured against *different* controls. Each transplant's own donor coefficient (R2 contrasts, relative to intact) shows this:
+
+| condition (confirmation) | 192 | 256 |
+|---|---|---|
+| full | 0.191 | 0.105 |
+| full_random (its control) | 0.053 | 0.003 |
+| common-basis component (global) | 0.156 | 0.115 |
+| global_rand (its control) | 0.173 | 0.022 |
+| adaptive / adaptive_rand | 0.156 / 0.163 | 0.119 / 0.007 |
+
+- **The direct contrast does not resolve.** Full minus the common-basis component is +0.035 [−0.041, +0.117] on 192 and −0.010 [−0.070, +0.047] on 256.
+- **The two controls differ.** global_rand minus full_random is +0.120 [+0.046, +0.200] on 192 and +0.019 [−0.058, +0.094] on 256.
+- **Why the compact control tracks the donor (the construction).**
+  - It is the *same* difference Δ projected onto random channel directions and rescaled: ×2.38 on average on 192 (range 2.01–2.80), ×2.50 on 256.
+  - One linear map is applied to every (field, cell) row, so the control keeps the difference's field-by-cell pattern.
+  - On 192 it produces donor-associated responses about as strongly as the transplant itself. By contrast, the full transfer's control randomizes each row's direction independently.
+- **So the effect has not been localized to the discarded component.** That component might matter alone, through interaction with the retained component, or the contrast may depend on control geometry. A remainder-only intervention with row-independent controls is needed (P27 draft).
+
+**Compactness, revised reading.**
+- On 256 the common-basis component reproduces the full transfer (direct difference −0.010 [−0.070, +0.047]) and beats its control (+0.093 [+0.015, +0.171]). "At least half" is unresolved because the registered test differences two noisy contrasts.
+- On 192 the registered control comparison is uninformative.
+- Leading singular directions preserve the largest variations in state; they do not directly identify the directions that matter for correction. The failure of this extraction does not rule out a compact mechanism.
+
+**Persistence: unresolved, not "a one-iteration effect."** The specific transfer is resolved at k = 1. The later intervals include zero, and some later 256 estimates remain appreciable (+0.088 at k = 3).
+
+**Sensitivity to the mask summary.** Centering all four masks within each state and dose, instead of the two registered contrasts, gives:
+- +0.108 [+0.031, +0.179] on 192;
+- +0.050 [−0.010, +0.110] on 256.
+
+The registered two-contrast results stand. The sharper 256 effect deserves a fresh confirmation that uses all four masks jointly.
+
+**Predictive value (fit on discovery puzzles, scored on confirmation puzzles; out-of-sample MSE reduction from adding the donor term).**
+
+| target | 192 | 256 |
+|---|---|---|
+| the sharp contrast target (d_full − d_random on d_R) | +0.99 % [−0.28, +2.47] | +0.58 % [−0.12, +1.27] |
+| the transfer-specific differential of the response curves | +1.9 % [−1.3, +4.8] | +1.1 % [+0.1, +2.1] |
+| the baseline-conditioned response itself | +11.5 % | +4.2 % |
+
+- The sharp-target figures reproduce the review's.
+- The last row includes generic similarity between two histories of the same puzzle, so it is not transfer-specific.
+- P26 identifies a reproducible causal influence. It is not yet a useful individual-level predictor.
+
+**No performance gain from indiscriminate transplantation.** Full transplantation minus intact repair on the untouched cells (k = 1):
+
+| arms | 192 | 256 |
+|---|---|---|
+| corrected arms | −1.9 pp [−4.3, +0.2] | −2.8 pp [−6.1, +0.5] |
+| no-edit arms | −2.8 pp [−7.8, +2.5] | −7.2 pp [−15.1, 0.0] |
+
+Transferring correction preferences and selecting beneficial ones are separate achievements.
+
+**Revised mechanism reading: history-dependent configuration of correction responses.**
+- The update has fixed weights, but retained state helps set how a change elsewhere affects an untouched decision, and part of that response structure follows the donor state when transplanted.
+- "Learned relaxation with memory" now has a concrete meaning: memory configures how corrections propagate through the next update.
+- P25 supplied collective, non-additive reconstruction; P26 shows a history-specific component of the response can be moved between histories.
+- No claim is made of recovered constraints, the complete algorithm, or a small operator.
+
+**Candidate manuscript wording (the PI decides):** "Score-preserving transplantation of retained state transfers history-specific responses to correction interventions, including differential responses to equally sized corrections, beyond matched random perturbations."
