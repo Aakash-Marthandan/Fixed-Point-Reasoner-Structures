@@ -201,3 +201,89 @@ This is ≈ 4.3 h sequentially, or ≈ 3 h with each stage's two receivers runni
 - each stage is shorter than the threshold;
 - a pod would need a JAX inference port, the PI's spend envelope and setup longer than the overrun;
 - CPU keeps P26's states of the same kind as P25's: CPU and accelerator trajectories differ per puzzle.
+
+## P26 Outcome (2026-10-10 14:44Z; `runs/analysis/rebuttal_20261012/report.{txt,json}`; every gate passed on all four runs; no tool edited during the runs)
+
+**Run.**
+- Eligible pairs: 208 on 192 and 166 on 256, split 104 / 104 and 83 / 83 into discovery and confirmation.
+- Variants: 8,112 and 18,928 on 192; 6,474 and 15,106 on 256 (stage D and stage C).
+- Exact restoration reproduced every intact rollout bitwise.
+- The bases were frozen before stage C: `tools/p26_basis_192.json` (sha256 d2a5e489…) and `tools/p26_basis_256.json` (sha256 420752a5…). They came from 104 of 208 and 83 of 166 discovery pair-directions.
+- The Mac slept twice mid-run (lid closed; once on a drained battery). The processes paused and resumed intact.
+
+**The registered letters (confirmation stages; 95 % puzzle-bootstrap intervals).**
+
+| rule | Attention 192 (104 puzzles) | Attention 256 (83 puzzles) | both receivers |
+|---|---|---|---|
+| BASELINE: full − random slope | +0.194 [+0.040, +0.368] BASELINE-TRANSFER | +0.070 [−0.079, +0.201] not resolved | no |
+| R1: β_D(full) − β_D(random) | +0.202 [+0.132, +0.266] RESPONSE-TRANSFER | +0.103 [+0.042, +0.166] RESPONSE-TRANSFER | **yes** |
+| R2: coefficient on d_D | +0.139 [+0.052, +0.227] CHALLENGE-SPECIFIC | +0.102 [+0.030, +0.168] CHALLENGE-SPECIFIC | **yes** |
+| R3: E_compact (common basis − scaled random) | −0.017 [−0.112, +0.081] | +0.093 [+0.015, +0.171] | |
+| R3: E_compact − ½ E_full | −0.086 [−0.182, −0.002] | +0.042 [−0.035, +0.121] | |
+| R3 letter | NOT-COMPACT | COMPACT-PARTIAL | the registered COMPACT event: **no** |
+
+Secondary quantities, as registered:
+- Retained energy ‖proj Δ‖² / ‖Δ‖²: the common k = w/8 basis keeps 0.705 (192) and 0.780 (256); the per-pair adaptive basis 0.742 and 0.817; an equal-rank random subspace 0.125 on both (= k/w).
+- Adaptive − adaptive_rand on R2: −0.006 (192) and +0.112 (256).
+- R1 for the common basis: +0.126 and +0.100.
+
+The discovery stages are exploratory:
+
+| rule | 192 | 256 |
+|---|---|---|
+| BASELINE | +0.146 [−0.007, +0.314] | +0.139 [+0.020, +0.253] |
+| R1 | +0.271 [+0.191, +0.335] | +0.103 [+0.036, +0.170] |
+| R2 | +0.164 [+0.081, +0.256] | +0.082 [−0.015, +0.171] |
+
+**Recount.** Independent code reproduces every point estimate exactly. It has its own unit tables, QR least squares, contrasts, selection score and SVD.
+- The npz hashes are verified.
+- Both bases re-derive from their stage-D files: the selected states are identical and the subspaces differ by about 1e-13.
+- The stored retained energies recompute exactly.
+- An independent resampler gives intervals within about 0.01 of the report's. The one borderline is 192's half-test upper bound: −0.002 in the registered bootstrap and +0.005 in the recount's.
+- 192's NOT-COMPACT letter rests on E_compact's interval, which includes zero in both. No claim is made that the compact part carries resolvably *less* than half.
+
+**Predictions.**
+
+| event | credence | outcome |
+|---|---|---|
+| BASELINE-TRANSFER on both | 0.65 | no |
+| RESPONSE-TRANSFER | 0.40 | yes |
+| CHALLENGE-SPECIFIC | 0.25 | yes |
+| a compact component carrying at least half, given R1 | 0.30 | no (192 fails) |
+| COMPACT as registered | ≈ 0.06 | no |
+
+Brier score: 0.288. The two central letters were under-predicted.
+
+**Wording (registered).**
+- RESPONSE-TRANSFER and CHALLENGE-SPECIFIC hold on both receivers: "Transferring a history's readout-invisible slow component carries that history's response to the same corrections, beyond its effect on the unedited continuation, beyond the registered nuisance terms and beyond matched random change, including its response to particular corrections, within dose, pair and direction."
+- Magnitude: the full transfer carries about 0.10–0.14 of the donor's challenge-specific response, on a scale where 1 = the recipient responds as the donor does.
+- COMPACT is not established. On 256 alone, "a common k = w/8 subspace learned on other puzzles carries a resolved part of it, but at least half is not resolved."
+- Scope under every outcome: oracle-guided diagnostic corrections; constructed hybrids; one checkpoint per receiver; attention receivers; four evaluation cells per state.
+
+**What changes against P25.**
+- On aligned cells, the response transfer is resolved on both receivers, while the baseline transfer is resolved on 192 only.
+- P25's narrowed reading, "the excess comes mostly through the baseline term", came from unaligned cells and masks. It does not describe the aligned measurement.
+
+**Exploratory additions** (after the frozen report; same bootstrap, 2,000 draws; 1,000 for the horizon):
+- **The common subspace carries broad response transfer on both receivers.** R1 for the common basis is +0.126 [+0.052, +0.198] on 192 and +0.100 [+0.025, +0.166] on 256. That is about 62 % and 97 % of the full transfer's point estimates.
+- **On 192 the challenge-specific part lies outside the common subspace.** Full minus the common-basis transfer on R2 is +0.155 [+0.056, +0.265]. On 256 it is +0.009 [−0.088, +0.109].
+  - On 192 the per-pair top-k subspace carries none of it either: −0.006 [−0.096, +0.075].
+  - On 256 the per-pair subspace carries +0.112 [+0.024, +0.201].
+  - Neither adaptive half-test is resolved.
+  - On 192, then, the specific response sits in the low-energy remainder of the difference: about 30 % of its energy, in directions shared by neither the pooled nor the pair's own leading subspace.
+- **Horizon** (full − random; k = iterations after the change):
+
+  | receiver | rule | k = 1 | k = 2 | k = 3 | k = 4 |
+  |---|---|---|---|---|---|
+  | 192 | R1 | +0.202 | +0.130 | +0.101 | +0.096 |
+  | 256 | R1 | +0.103 | +0.067 | +0.059 | −0.019 |
+  | 192 | R2 | +0.139 | +0.020 | +0.018 | +0.015 |
+  | 256 | R2 | +0.102 | +0.040 | +0.088 | +0.070 |
+
+  - On 192, R1 is resolved at every k. On 256 it is resolved at k = 1 only.
+  - R2 is resolved at k = 1 only on both receivers. At this power the challenge-specific effect is a one-iteration effect; the broad response transfer persists on 192.
+
+**For the program.**
+- The second link of the target sentence ("an identified hidden component changes that requirement") now has its response form: the readout-invisible slow part carries correction responses, specifically and beyond matched random change.
+- "Identified" means the whole readout-invisible difference. It is not a compact shared subspace: on 256 a common subspace carries most of it; on 192 the specific part does not live there.
+- P27 (control) should therefore manipulate the full readout-invisible part, with the common subspace as a secondary arm on 256. Its readout should be at k = 1 first.
