@@ -106,3 +106,54 @@ Under every outcome:
 - this CPU's trajectories, whose first exact iteration can differ from the accelerator's;
 - random directions, not learned ones;
 - no feature content is identified.
+
+## Outcome (2026-10-03 12:46Z; `runs/analysis/p13_20261003/report.{txt,json}`)
+
+The tool's sha256 equals the registered `fecbec9`'s (066648ed…; `frozen_sha256.txt`). The run ended with exit 0, 11:50–12:46Z at nice 10.
+
+**Gates: all PASS on all three receivers.**
+- G1: the loop is bitwise equal to `run_batch`.
+- G2: repeated runs are identical.
+- G3: every edit's score change is ≤ 1e-3.
+- G4: every edit keeps vector norms within 1e-5.
+- G5: the sham's carry is bitwise unchanged, and its flags equal intact's.
+- Every cohort is ≥ 40.
+
+| receiver | cohort | R13a: B = 1 − P(exact at κ \| `perp_random`@κ) | R13b: S1 = 1 − P(exact at κ \| `rot1`@κ) |
+|---|---|---|---|
+| SA256U14 (one state, 14k) | 78 | **1.000** (78/78 blocked): **NEEDS-HIDDEN-STATE** | 0.077 (6/78): **CONTENT** |
+| SA256_28 (two states, 28k) | 94 | **0.819** (77/94): **NEEDS-HIDDEN-STATE** | 0.053 (5/94): **CONTENT** |
+| SA256_14 (two states, 14k; exploratory) | 79 | 0.696 (55/79): NEEDS-HIDDEN-STATE | 0.000 (0/79): CONTENT |
+
+**Descriptive.** Per condition: exact at κ, exact at iteration 20, and the median delay to the first exact iteration.
+
+| receiver | `perp_random`@κ | `perp_random`@κ−3 | `rot1`@κ | `hidden_all`@κ |
+|---|---|---|---|---|
+| SA256U14 | 0.000 / 0.615 / 4.5 | 0.295 / 0.795 / 1.0 | 0.923 / 0.974 / 0 | n/a |
+| SA256_28 | 0.181 / 0.840 / 3.0 | 0.500 / 0.851 / 0 | 0.947 / 0.989 / 0 | 0.032 / 0.862 / 3.0 |
+| SA256_14 | 0.304 / 0.785 / 1.5 | n/a | 1.000 / 1.000 / 0 | n/a |
+
+**Hardware.** This CPU's first exact iteration equals the accelerator record's on only 5.5–6.2 % of each pool. That is consistent with the accelerator's default matmul precision against the CPU's float32. Each cohort was defined on the CPU's own trajectories, as registered, so the letters are internally valid. The exact completing iteration, however, is not reproducible across hardware.
+
+**Predictions scored.**
+
+| prediction | credence | result |
+|---|---|---|
+| All gates pass | 0.80 | yes |
+| SA256_28 NEEDS-HIDDEN-STATE | 0.80 | yes |
+| SA256U14 NEEDS-HIDDEN-STATE | 0.40 | yes |
+| CONTENT where NEEDS-HIDDEN-STATE holds | 0.55 | yes, on all three |
+
+**Reading (the registered wording for SA256U14 NEEDS-HIDDEN-STATE (CONTENT), as SA256_28).** "A single-state model also completes from state its readout cannot see. Using hidden state at completion is a property of the recurrence, not of the two-state split; the split's advantage lies elsewhere (repair, generalization: round 2)."
+
+The 1° qualifier makes it content, not sensitivity, in both structures. A one-degree rotation of the same readout-orthogonal part at κ leaves 92–100 % of completions intact, while replacing it blocks 70–100 %.
+
+**Descriptive observations,** consistent with round 2's repair reading but not registered claims:
+- **One state, everything replaced:** in the one-state model the edit replaces all of its hidden state, and it blocks every completion. After it, the model recovers less (61.5 % exact by iteration 20, median delay 4.5) than the two-state model after either edit. That holds for the slow-state-only edit (84.0 %, delay 3.0) and for the edit that also replaces the fast state (86.2 %).
+- **One state is not just a younger model:** at the same training stage (14k) the two-state model is blocked less (0.696) and recovers more (78.5 %).
+
+Under every outcome:
+- one checkpoint per receiver;
+- this CPU's trajectories;
+- random directions, not learned ones;
+- no feature content is identified.

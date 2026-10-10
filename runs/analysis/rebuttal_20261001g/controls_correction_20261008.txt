@@ -1,0 +1,9 @@
+P9 94k (runs/analysis/rebuttal_20261001g/p9.npz): primary 60, controls 15; controls that are also primary cases 11 (at a different time 11); clean controls 4
+  reported exact at t+1: F<-perpG 15/15, F<-hG 15/15, F<-lG 15/15, G<-perpF 15/15, G<-hF 15/15, G<-lF 15/15
+  clean    exact at t+1: F<-perpG 4/4, F<-hG 4/4, F<-lG 4/4, G<-perpF 4/4, G<-hF 4/4, G<-lF 4/4
+P11 90k (runs/analysis/rebuttal_20261001i/s090000/p9.npz): primary 78, controls 15; controls that are also primary cases 11 (at a different time 11); clean controls 4
+  reported exact at t+1: F<-perpG 15/15, F<-hG 15/15, F<-lG 11/15, G<-perpF 13/15, G<-hF 11/15, G<-lF 15/15
+  clean    exact at t+1: F<-perpG 4/4, F<-hG 4/4, F<-lG 4/4, G<-perpF 4/4, G<-hF 4/4, G<-lF 4/4
+P11 114k (runs/analysis/rebuttal_20261001i/s114000/p9.npz): primary 60, controls 12; controls that are also primary cases 3 (at a different time 3); clean controls 9
+  reported exact at t+1: F<-perpG 12/12, F<-hG 12/12, F<-lG 12/12, G<-perpF 12/12, G<-hF 12/12, G<-lF 12/12
+  clean    exact at t+1: F<-perpG 9/9, F<-hG 9/9, F<-lG 9/9, G<-perpF 9/9, G<-hF 9/9, G<-lF 9/9

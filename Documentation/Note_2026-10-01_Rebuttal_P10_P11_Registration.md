@@ -197,6 +197,11 @@ The run log's gate line says "94k" because the label is hard-coded in P9's tool.
 
 Controls: at 114k no swap breaks a stable answer. At 90k, the fast-state swap into F leaves 0.73 of controls exact, and the full-slow-state swap into G leaves 0.73.
 
+> **CORRECTION 2026-10-08** (the same overlap as P9's, whose tool P11 reuses; `tools/verify_p9_controls.py`).
+> - **The overlap:** controls that are also primary cases at a different time number 11 of 15 at 90k and 3 of 12 at 114k.
+> - **Corrected:** on the clean controls (4 at 90k, 9 at 114k), no swap in either direction breaks a stable answer. The 0.73 figures at 90k came from primary-time interventions read at control times and are withdrawn.
+> - **Unaffected:** the registered letters and every primary-case number.
+
 **Predictions scored.**
 - PATTERN-REPLICATES at 90k (0.6): MISS.
 - PATTERN-REPLICATES at 114k (0.5): HIT.

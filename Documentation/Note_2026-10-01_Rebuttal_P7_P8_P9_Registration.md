@@ -330,6 +330,11 @@ There are 60 primary cases, the manuscript's selection population, and 15 contro
 
 **Controls.** On the 15 puzzles where both trajectories stay exact intact, no swap in either direction breaks the answer at t+1.
 
+> **CORRECTION 2026-10-08** (found by an external review, confirmed from the saved arrays; `tools/verify_p9_controls.py`, output in `runs/analysis/rebuttal_20261001g/controls_correction_20261008.txt`).
+> - **What went wrong:** the runner hooks each puzzle once, with the primary time winning (`tools/rebuttal_p9.py` line 100), but the report reads every control at its control time. 11 of these 15 controls are also primary cases at a different time, so their control readings are not swaps at the control time.
+> - **Corrected:** on the 4 clean controls, no swap in either direction breaks the answer at t+1 (4/4 for every swap). The statement holds, on 4 puzzles, not 15.
+> - **Unaffected:** the registered letter and every primary-case number, which use primary cases only.
+
 **Registered letter: NONE.** STATE-CARRIES needed rescue and transfer both ≥ 0.6 for the orthogonal-part swap; FULL-SLOW-ONLY and FAST-CARRIES the same for theirs. Transfer is 0.00 / 0.12 / 0.00, so all fail.
 
 **Predictions scored.** Gates pass (0.85): HIT. NONE (0.20): HIT. STATE-CARRIES (0.40): MISS.

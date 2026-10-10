@@ -1,0 +1,53 @@
+SE-RRM ATTRIBUTION ROUND 3 — analyzer (frozen rules; one seed per arm; floors 2.58 pp at 16 and 2.44 pp at 64; the references = the ladder's SA256 and round 2's SA256U)
+arms present: ['SA256UD', 'SA256D']
+INTEGRITY                PASS
+  SA256   16: 98.24 (n 5000)   64: 99.60 (n 5000)
+  SA256U  16: 89.96 (n 5000)   64: 93.08 (n 5000)
+  SA256UD 16: 95.78 (n 5000)   64: 98.04 (n 5000)   [one state + SE-RRM's dropout 0.2 on the attention weights (training only)]
+  SA256D  16: 97.98 (n 5000)   64: 99.82 (n 5000)   [two states + SE-RRM's dropout 0.2 on the attention weights (training only)]
+R-AB-1 SA256UD vs SA256 @16                INSIDE (-2.46 pp, only-SA256UD 48, only-SA256 171, n 5000, p 2.2e-17)
+R-AB-1 SA256UD vs SA256 @64                INSIDE (-1.56 pp, only-SA256UD 7, only-SA256 85, n 5000, p 3.8e-18)
+R-AB-1 SA256D vs SA256 @16                 INSIDE (-0.26 pp, only-SA256D 56, only-SA256 69, n 5000, p 0.28)
+R-AB-1 SA256D vs SA256 @64                 INSIDE (+0.22 pp, only-SA256D 15, only-SA256 4, n 5000, p 0.019)
+R-A3-1 STRUCTURE UNDER DROPOUT @16         INSIDE (-2.20 pp, only-SA256UD 58, only-SA256D 168, n 5000, p 1.3e-13)
+R-A3-1 STRUCTURE UNDER DROPOUT @64         INSIDE (-1.78 pp, only-SA256UD 3, only-SA256D 92, n 5000, p 7.2e-24)
+R-A3-2 DROPOUT ON ONE STATE @16            ABOVE-BEYOND (+5.82 pp, only-SA256UD 362, only-SA256U 71, n 5000, p 4.7e-48)
+R-A3-2 DROPOUT ON ONE STATE @64            ABOVE-BEYOND (+4.96 pp, only-SA256UD 278, only-SA256U 30, n 5000, p 1.7e-51)
+R-A3-3 DROPOUT ON TWO STATES @16           INSIDE (-0.26 pp, only-SA256D 56, only-SA256 69, n 5000, p 0.28)
+R-A3-3 DROPOUT ON TWO STATES @64           INSIDE (+0.22 pp, only-SA256D 15, only-SA256 4, n 5000, p 0.019)
+R-A3-4 REGULARIZED ONE STATE vs REF @16    INSIDE (-2.46 pp, only-SA256UD 48, only-SA256 171, n 5000, p 2.2e-17)
+R-A3-4 REGULARIZED ONE STATE vs REF @64    INSIDE (-1.56 pp, only-SA256UD 7, only-SA256 85, n 5000, p 3.8e-18)
+R-AB-2 SA256UD vs SE-RRM @16               WITHIN (95.78 vs the published 93.73; +2.05 pp; different evaluation sets, their one run)
+R-AB-2 SA256UD vs SE-RRM @64               WITHIN (98.04 vs the published 98.22; -0.18 pp; different evaluation sets, their one run)
+R-AB-2 SA256D vs SE-RRM @16                ABOVE (97.98 vs the published 93.73; +4.25 pp; different evaluation sets, their one run)
+R-AB-2 SA256D vs SE-RRM @64                WITHIN (99.82 vs the published 98.22; +1.60 pp; different evaluation sets, their one run)
+R-A3-5 SETTLEMENT @16                      REGULARIZATION-REPLACES
+INTERACTION @16 (descriptive)              the structure effect -8.28 pp without dropout, -2.20 pp with it (difference +6.08 pp; descriptive)
+R-A3-5 SETTLEMENT @64 (descriptive)        REGULARIZATION-REPLACES
+INTERACTION @64 (descriptive)              the structure effect -6.52 pp without dropout, -1.78 pp with it (difference +4.74 pp; descriptive)
+R-AB-4 SELECTOR SA256                      CLEAN (spurious k32 0.00 %)
+R-AB-4 SELECTOR SA256U                     CLEAN (spurious k32 0.00 %)
+R-AB-4 SELECTOR SA256UD                    CLEAN (spurious k32 0.16 %)
+R-AB-4 SELECTOR SA256D                     CLEAN (spurious k32 0.00 %)
+DESCRIPTIVE (round 2's readings, imported unchanged; each new arm against SA256):
+R-A2-6 WHERE SA256UD (exact SA256UD vs SA256): @1 50.58 vs 25.60 (+24.98 pp, p 1.4e-296); @2 76.20 vs 65.18 (+11.02 pp, p 7.5e-65); @4 87.20 vs 83.76 (+3.44 pp, p 3.8e-10); @8 93.18 vs 94.00 (-0.82 pp, p 0.043); @16 95.78 vs 98.24 (-2.46 pp, p 2.2e-17); @32 97.26 vs 99.16 (-1.90 pp, p 1.1e-17); @64 98.04 vs 99.60 (-1.56 pp, p 3.8e-18)
+R-A2-6 FIRST-EXACT SA256UD quartiles 1 / 1 / 2 among 4902 exact at 64; late share (exact at 64, not at 16) 2.26 %
+R-A2-6 FIRST-EXACT SA256   quartiles 1 / 2 / 3 among 4980 exact at 64; late share (exact at 64, not at 16) 1.36 %
+R-A2-7 PERSISTENCE SA256UD LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256   LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256UD paired: DROPPED only-SA256UD 0, only-SA256 0 (p 1)
+R-A2-6 WHERE SA256D (exact SA256D vs SA256): @1 37.12 vs 25.60 (+11.52 pp, p 2.3e-79); @2 68.96 vs 65.18 (+3.78 pp, p 3.6e-09); @4 83.70 vs 83.76 (-0.06 pp, p 0.94); @8 93.28 vs 94.00 (-0.72 pp, p 0.083); @16 97.98 vs 98.24 (-0.26 pp, p 0.28); @32 99.42 vs 99.16 (+0.26 pp, p 0.092); @64 99.82 vs 99.60 (+0.22 pp, p 0.019)
+R-A2-6 FIRST-EXACT SA256D  quartiles 1 / 2 / 3 among 4991 exact at 64; late share (exact at 64, not at 16) 1.84 %
+R-A2-6 FIRST-EXACT SA256   quartiles 1 / 2 / 3 among 4980 exact at 64; late share (exact at 64, not at 16) 1.36 %
+R-A2-7 PERSISTENCE SA256D  LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256   LOST 0, DROPPED 0 (recovered by 64: 0) of 5000
+R-A2-7 PERSISTENCE SA256D paired: DROPPED only-SA256D 0, only-SA256 0 (p 1)
+CONSISTENCY SA256        D64 bits at 16 agree with the D16 row on 5000 of 5000
+CONSISTENCY SA256UD      D64 bits at 16 agree with the D16 row on 5000 of 5000
+CONSISTENCY SA256D       D64 bits at 16 agree with the D16 row on 5000 of 5000
+MEMORIZATION SA256   (descriptive)   validation max 98.63, end 97.85 (end - max -0.78 pp); training rows' exact share at the selected step 0.342, at the end 0.316
+MEMORIZATION SA256U  (descriptive)   validation max 92.77, end 71.88 (end - max -20.90 pp); training rows' exact share at the selected step 0.405, at the end 0.954
+MEMORIZATION SA256UD (descriptive)   validation max 97.27, end 96.68 (end - max -0.59 pp); training rows' exact share at the selected step 0.306, at the end 0.422
+MEMORIZATION SA256D  (descriptive)   validation max 99.22, end 97.66 (end - max -1.56 pp); training rows' exact share at the selected step 0.275, at the end 0.294
+STABILITY SA256UD         selected 026000; validation max 97.27, end 96.68; scan fixed start 97.86, one random start 98.06 (gap +0.20 pp), verified 99.54; non-finite loss rows 0
+STABILITY SA256D          selected 028000; validation max 99.22, end 97.66; scan fixed start 99.84, one random start 99.90 (gap +0.06 pp), verified 99.96; non-finite loss rows 0

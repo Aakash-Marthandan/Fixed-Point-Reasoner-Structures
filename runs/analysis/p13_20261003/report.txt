@@ -1,0 +1,22 @@
+P13 — does a single recurrent state need its readout-invisible part to complete? (P8's completion edit; registered rules)
+SA256U14 [one state (SA256U), selected 14k; ckpt step 14000]: eligible 78, cohort 78; gates G1 run_batch bitwise PASS, G2 determinism PASS, G5 sham bitwise (carry) PASS, G3 perp_random score <= 0.001 PASS, G4 perp_random norm <= 1e-05 PASS, G3 perp_random_m3 score <= 0.001 PASS, G4 perp_random_m3 norm <= 1e-05 PASS, G3 rot1 score <= 0.001 PASS, G4 rot1 norm <= 1e-05 PASS, G5 sham flags = intact PASS
+  R13a: B = 1 - P(exact at kappa | perp_random@kappa) = 1.000 (78/78 blocked) -> NEEDS-HIDDEN-STATE
+  R13b: S1 = 1 - P(exact at kappa | rot1@kappa) = 0.077 (6/78) -> CONTENT
+  (descriptive) perp_random@kappa: exact at kappa 0.000, exact at 20 0.615, median delay 4.5 (n 48)
+  (descriptive) perp_random_m3@kappa-3: exact at kappa 0.295, exact at 20 0.795, median delay 1.0 (n 62)
+  (descriptive) rot1@kappa: exact at kappa 0.923, exact at 20 0.974, median delay 0.0 (n 76)
+  (descriptive) the CPU first-exact iteration equals the accelerator record's on 6.2 % of the pool (209)
+SA256_28 [two states (SA256), selected 28k; ckpt step 28000]: eligible 94, cohort 94; gates G1 run_batch bitwise PASS, G2 determinism PASS, G5 sham bitwise (carry) PASS, G3 perp_random score <= 0.001 PASS, G4 perp_random norm <= 1e-05 PASS, G3 perp_random_m3 score <= 0.001 PASS, G4 perp_random_m3 norm <= 1e-05 PASS, G3 rot1 score <= 0.001 PASS, G4 rot1 norm <= 1e-05 PASS, G3 hidden_all score <= 0.001 PASS, G4 hidden_all norm <= 1e-05 PASS, G5 sham flags = intact PASS
+  R13a: B = 1 - P(exact at kappa | perp_random@kappa) = 0.819 (77/94 blocked) -> NEEDS-HIDDEN-STATE
+  R13b: S1 = 1 - P(exact at kappa | rot1@kappa) = 0.053 (5/94) -> CONTENT
+  (descriptive) perp_random@kappa: exact at kappa 0.181, exact at 20 0.840, median delay 3.0 (n 79)
+  (descriptive) perp_random_m3@kappa-3: exact at kappa 0.500, exact at 20 0.851, median delay 0.0 (n 80)
+  (descriptive) rot1@kappa: exact at kappa 0.947, exact at 20 0.989, median delay 0.0 (n 93)
+  (descriptive) hidden_all@kappa: exact at kappa 0.032, exact at 20 0.862, median delay 3.0 (n 81)
+  (descriptive) the CPU first-exact iteration equals the accelerator record's on 5.5 % of the pool (256)
+SA256_14 [two states (SA256), 14k (exploratory: SA256U's stage); ckpt step 14000]: eligible 79, cohort 79; gates G1 run_batch bitwise PASS, G2 determinism PASS, G5 sham bitwise (carry) PASS, G3 perp_random score <= 0.001 PASS, G4 perp_random norm <= 1e-05 PASS, G3 rot1 score <= 0.001 PASS, G4 rot1 norm <= 1e-05 PASS, G5 sham flags = intact PASS
+  R13a: B = 1 - P(exact at kappa | perp_random@kappa) = 0.696 (55/79 blocked) -> NEEDS-HIDDEN-STATE
+  R13b: S1 = 1 - P(exact at kappa | rot1@kappa) = 0.000 (0/79) -> CONTENT
+  (descriptive) perp_random@kappa: exact at kappa 0.304, exact at 20 0.785, median delay 1.5 (n 62)
+  (descriptive) rot1@kappa: exact at kappa 1.000, exact at 20 1.000, median delay 0.0 (n 79)
+  (descriptive) the CPU first-exact iteration equals the accelerator record's on 6.2 % of the pool (256)

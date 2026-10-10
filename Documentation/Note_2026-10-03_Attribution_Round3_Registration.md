@@ -148,3 +148,52 @@ Under every outcome:
   - Watch heartbeats every 15 minutes with `tools/ops_watch_pods.sh tools/campaign_attr3_p0.env`.
 - **Shared-project rules.** Only `qhrrn2-*` resources are created or deleted; nothing else in the project is touched.
 - **The close.** Pull the final manifest; verify fleet zero at the source; stage both arms with the ladder's SA256 and round 2's SA256U dirs; run the analyzer FIRST, untouched; then the report, ledger and Outcome here.
+
+## Outcome (2026-10-03 23:35Z; `runs/analysis/attr3_20261003/attr3_verdict.{txt,json}`)
+
+The analyzer was the registered `c8e1bf7` (sha256 bb970304…, in `frozen_sha256.txt`), run untouched on the final manifest staged beside the ladder's SA256 rows and round 2's SA256U rows. Fleet zero was verified at the source before the read: no `qhrrn2` node or queued resource, the supervisor exited, the final manifest present.
+
+**Integrity: PASS.** Both new arms differ from SA256 in exactly their registered keys; seed 0; budgets met; all rows on SA256's 5,000 ids, on the selected grids (SA256UD 26k, SA256D 28k; neither at the edge), with the per-iteration bits.
+
+| on the same 5,000 | 16 iterations | 64 iterations |
+|---|---|---|
+| two states, no dropout (SA256) | 98.24 | 99.60 |
+| two states + dropout (SA256D) | 97.98 | 99.82 |
+| one state, no dropout (SA256U) | 89.96 | 93.08 |
+| one state + dropout (SA256UD) | 95.78 | 98.04 |
+
+| reading | at 16 | at 64 |
+|---|---|---|
+| R-A3-1, the structure under dropout (SA256UD vs SA256D) | INSIDE (−2.20 pp; only-SA256UD 58, only-SA256D 168; p 1e-13) | INSIDE (−1.78; 3 vs 92) |
+| R-A3-2, dropout on one state (SA256UD vs SA256U) | ABOVE-BEYOND (+5.82) | ABOVE-BEYOND (+4.96) |
+| R-A3-3, dropout on two states (SA256D vs SA256) | INSIDE (−0.26; p 0.28) | INSIDE (+0.22) |
+| R-A3-4, the regularized one state vs the reference (SA256UD vs SA256) | INSIDE (−2.46) | INSIDE (−1.56) |
+| **R-A3-5, the settlement** | **REGULARIZATION-REPLACES** | REGULARIZATION-REPLACES (descriptive) |
+
+- **R-AB-2:** SA256UD WITHIN SE-RRM's published numbers at both depths (+2.05 / −0.18 pp); SA256D ABOVE at 16 (+4.25) and WITHIN at 64.
+- **R-AB-4:** all four selectors CLEAN (spurious k32 rate ≤ 0.16 %).
+- **The interaction (descriptive):** the structure effect is −8.28 pp without dropout and −2.20 with it at 16 (−6.52 and −1.78 at 64). Dropout accounts for about 73 % at both depths.
+- **Memorization (descriptive):** the training rows' exact share at the end is 0.42 for SA256UD against 0.95 for SA256U; it is 0.29 for SA256D and 0.32 for SA256. With dropout, the single state no longer collapses on validation (maximum 97.27, end 96.68).
+- **Where (descriptive):** SA256UD solves more puzzles early (+25 pp at iteration 1) and falls behind from iteration 8. No model loses a solved puzzle. Each depth-64 run reproduces its depth-16 row exactly.
+
+**Predictions scored.**
+
+| prediction | credence | result |
+|---|---|---|
+| R-A3-5 STRUCTURE-SPECIFIC | 0.65 | no |
+| R-A3-5 REGULARIZATION-REPLACES | 0.15 | yes |
+| R-A3-2 ABOVE-BEYOND | 0.45 | yes |
+| R-A3-3 INSIDE | 0.75 | yes |
+| SA256UD's training rows end below 0.95 | 0.75 | yes |
+| Both selectors CLEAN | 0.85 | yes |
+
+**Reading (the registered wording for REGULARIZATION-REPLACES).** "With SE-RRM's dropout, the single state matches both two-state models within the floor. In our system, the two-state structure's advantage is equivalent to regularization against memorizing the 1,000 training puzzles, which our two-state model obtains without dropout." The answer is "a structure that regularizes", not "a structure that does something regularization cannot".
+
+**Two qualifications, both from the rows.**
+- **The residual.** Under equal dropout the single state stays 2.20 pp below the two-state model at 16, in a consistent direction (168 against 58 discordant puzzles). One seed per arm cannot separate an effect of that size from run-to-run variation (the floor is 2.58 pp); the registered rule does not let a p-value move a label. A small structure effect beyond regularization stays possible and unresolved.
+- **SE-RRM.** SE-RRM's own design, a single state with dropout, placed in our system lands within the floor of SE-RRM's published accuracy. The gap between our attention model and SE-RRM is thus accounted for, at this resolution, by the recurrence's built-in regularization plus differences each inside the floor.
+
+**Ops.**
+- A spot preemption at 11:14Z was recovered from the live bank's step-3,000 checkpoint at 11:31Z, and the deadline was extended to 03:30Z.
+- The planned wall recycle at 19:59Z resumed SA256D from its local checkpoint.
+- COMPLETE at 23:20Z; node deleted at 23:24Z. About $107 of the $140 cap.
