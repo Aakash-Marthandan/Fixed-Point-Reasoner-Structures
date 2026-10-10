@@ -179,3 +179,18 @@ Historical: P19 on Attention 256 ran 5,360 four-iteration variants in about 37 m
 3. Launch the three receivers.
 4. Produce the report with the tool's frozen reader.
 5. When it is read, append the Outcome here and write a ledger line.
+
+---
+
+**Amendment 1 — a pre-launch fix and the smoke (2026-10-10, before any row of the registered population was analysed).**
+- The first smoke stopped immediately on a name clash. The tool's method `roll` was shadowed by the instance attribute `self.roll`, which the P15 base class binds to its jitted rollout. The method is renamed `roll_variants`; no logic changed.
+- The gates-only smoke on the first 4 puzzles of Attention 256 then passed every gate:
+  - 6 Part-1 states and 168 variants; 4 Part-2 recipients and 140 variants;
+  - no display failures, and no evaluation cell edited;
+  - largest score shift 5.5e-7;
+  - self-transfer bitwise equal to intact;
+  - restoration within 3.0e-8;
+  - rotation angle and norm within 1.5e-8 and 1.0e-8.
+
+  It took 3.5 minutes. It printed no outcome counts.
+- The frozen reader was run once on the smoke file with its output suppressed, to check that it completes; it did. No values were viewed. Those 4 puzzles are part of the registered population.

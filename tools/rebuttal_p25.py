@@ -174,7 +174,7 @@ class R19(Q.R7):
             p = jax.nn.softmax(lg_dev, axis=-1).transpose(0, 3, 1, 2); y = y + self.eta * (p - y)
         return np.asarray(z)
 
-    def roll(self, specs, xcan, sol81, build, tag, counter):
+    def roll_variants(self, specs, xcan, sol81, build, tag, counter):          # not `roll`: R7.__init__ binds self.roll to its jitted rollout
         """specs: list of variant dicts; build(spec) -> (h, l). Returns scores (V, K, 81, 9) at float32 via roll_release in padded chunks."""
         out = np.zeros((len(specs), K, 81, 9), np.float32)
         for c0 in range(0, len(specs), VB):
@@ -227,7 +227,7 @@ class R19(Q.R7):
                 want = s_["grid"].astype(int).copy(); want[cells] = s_["sol"][cells]
                 if not np.array_equal(np.einsum("fsw,w->sf", h, self.lm32).argmax(1) + 1, want): gates["display"] += 1
                 return h, l
-            cnt = [0]; sc1 = self.roll(V1, xcan, None, build1, "part1", cnt)
+            cnt = [0]; sc1 = self.roll_variants(V1, xcan, None, build1, "part1", cnt)
             # ---- Part 2 (t = 1 recipients; donor = the same puzzle's Gaussian-start history at iteration 1) ----
             z0 = np.stack([self.EV.mi_z0(SEED, int(pid), 7, Z[1].shape[1:], 1.0, "gauss") for pid in ids]).astype(np.float32); Zd = []
             for b0 in range(0, len(ids), VB):
@@ -272,7 +272,7 @@ class R19(Q.R7):
                 want = H["grid"].astype(int).copy(); want[cells] = H["sol"][cells]
                 if not np.array_equal(np.einsum("fsw,w->sf", h, self.lm32).argmax(1) + 1, want): gates["display"] += 1
                 return h, l
-            sc2 = self.roll(V2, xcan, None, build2, "part2", cnt)
+            sc2 = self.roll_variants(V2, xcan, None, build2, "part2", cnt)
             assert gates["display"] == 0 and gates["e_edited"] == 0, f"gate: {gates}"
             assert gates["score_shift"] < 1e-3 and gates["self_bitwise"] == 0 and gates["restore_dev"] < 1e-4, f"gate: {gates}"
             assert gates["angle_dev"] < 0.01 and gates["norm_dev"] < 0.01, f"gate: {gates}"
