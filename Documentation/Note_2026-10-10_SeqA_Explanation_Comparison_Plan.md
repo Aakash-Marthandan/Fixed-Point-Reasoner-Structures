@@ -108,3 +108,28 @@ Partial against full closure, on the same cells: no difference on 256 and 192, a
 - **Visible configuration does not add** (M2 ≈ M1; paired identity AUC 0.53–0.55, below 0.60). Which equally sized set is corrected does not predict which untouched cells repair beyond the amount. About 21–23 % of the same untouched cells nevertheless change outcome between two same-size draws. That variation is real, but neither the configuration features nor the state-level hidden quantities predict it. Predicting it would need features of the post-edit state, i.e. replay.
 - **Hidden quantities** (margin, commitment index) add a small, significant amount on 192 and 128, but AUC +0.004 to +0.008 is below the 0.02 bar. They do not add by the rule.
 - **Direction for the next experiment: collective reconstruction.** Untouched cells are repaired in proportion to how much of the configuration is corrected at once, on top of each cell's own propensity, not through which cells are corrected. The open question for sequence B becomes whether *retained state sets this law's parameters*. For a fixed displayed configuration and a fixed correction, do different hidden histories of the same puzzle give different dose–response curves? That would be a state-dependent collective law, transferable as a parameter, rather than a compact coupling operator between particular decisions.
+
+---
+
+**Addendum — corrections and a narrower reading (2026-10-10, after an external review; the quantities were rechecked from the code and the arrays).**
+
+1. *Variance decomposition.* A pair's contribution to the population variance is (r₁ − r₂)² / 4, not / 2. The exact between-draw shares at k = 1 are **0.229 / 0.177 / 0.217**, not 0.457 / 0.354 / 0.434; at k = 4 they are 0.340 / 0.276 / 0.292. The regression results are unaffected.
+2. *A2 clustering.* Pairs repeat within puzzles: two closures, two iterations. Puzzle-bootstrap 95 % intervals for the paired retention difference, with partners minus alone:
+
+   | receiver | single cell | partial vs closure |
+   |---|---|---|
+   | Attention 256 | +0.036 [−0.016, +0.090] | +0.004 [−0.029, +0.040] |
+   | Attention 192 | **+0.064 [+0.012, +0.117]** | +0.021 [−0.012, +0.056] |
+   | Attention 128 | +0.002 [−0.044, +0.041] | −0.028 [−0.058, +0.000] |
+
+   Positive on 192; unresolved on 256 and 128. The 128 partial result is not significant once clustering is respected.
+3. *The dose curve mixes dose with population.* The cells neither draw edits thin out as the fraction rises. On Attention 256 the evaluation set is 263 states and 11,000 cell-draw observations at f = 0.1, 263 and 3,336 at f = 0.5, and **73 and 160 at f = 0.9**. Only 76 of those 160 are among cells the no-edit continuation does not repair. The plotted averages are therefore not a clean within-state response law: states with few wrong cells drop out at high doses.
+4. *y0 is information from the future.* The strongest feature, y0, is whether the cell is correct after the *unedited continuation*. The models are conditional ones (given the no-edit continuation), not predictions from the present state alone. They also use ground truth (which cells are wrong), so they are diagnostic, not deployable.
+5. *The narrower reading, which supersedes "independent local correction is rejected" and the chat summary's "which cells doesn't matter":*
+
+   > Across the tested interventions, the amount of correction predicts repair at untouched cells. The particular local configuration features and the hidden summaries tested add little predictive information.
+
+   - Set identity matters causally: changing the corrected set changes about 21–23 % of the same untouched cells' outcomes. The tested features predict those differences poorly. A useful statistical law averaged over correction sets is still possible.
+   - What is rejected is the strict claim that correction elsewhere has no effect. Many separate additive contributions whose sum crosses a decision boundary are not excluded; that needs the A / B / A+B design, with additivity tested on the score scale.
+   - Hidden coupling was not tested broadly. M3 held margins, the previously unsuccessful commitment index and its average.
+   - Collective reconstruction and hidden coupling are compatible: hidden interactions could implement the collective law.

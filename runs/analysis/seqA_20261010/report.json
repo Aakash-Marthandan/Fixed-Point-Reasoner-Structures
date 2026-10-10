@@ -95,8 +95,55 @@
     "aggregate": {
      "cells_per_set_mean": 9.28900624099856,
      "var_total": 0.1396077104212293,
-     "share_between_draws": 0.4571736667843436,
+     "share_between_draws": 0.2285868333921718,
      "share_fraction": 0.08231537915420185
+    },
+    "dose_population": {
+     "0.1": {
+      "states": 263,
+      "observations": 11000,
+      "not_repaired_without_edit": 5072
+     },
+     "0.2": {
+      "states": 265,
+      "observations": 8662,
+      "not_repaired_without_edit": 4064
+     },
+     "0.3": {
+      "states": 263,
+      "observations": 6680,
+      "not_repaired_without_edit": 3106
+     },
+     "0.4": {
+      "states": 265,
+      "observations": 4866,
+      "not_repaired_without_edit": 2244
+     },
+     "0.5": {
+      "states": 263,
+      "observations": 3336,
+      "not_repaired_without_edit": 1562
+     },
+     "0.6": {
+      "states": 259,
+      "observations": 2222,
+      "not_repaired_without_edit": 1034
+     },
+     "0.7": {
+      "states": 240,
+      "observations": 1188,
+      "not_repaired_without_edit": 556
+     },
+     "0.8": {
+      "states": 192,
+      "observations": 584,
+      "not_repaired_without_edit": 236
+     },
+     "0.9": {
+      "states": 73,
+      "observations": 160,
+      "not_repaired_without_edit": 76
+     }
     }
    },
    "k4": {
@@ -193,26 +240,84 @@
     "aggregate": {
      "cells_per_set_mean": 9.28900624099856,
      "var_total": 0.06457426827064569,
-     "share_between_draws": 0.6806452078753327,
+     "share_between_draws": 0.34032260393766633,
      "share_fraction": 0.017706709490743554
+    },
+    "dose_population": {
+     "0.1": {
+      "states": 263,
+      "observations": 11000,
+      "not_repaired_without_edit": 1834
+     },
+     "0.2": {
+      "states": 265,
+      "observations": 8662,
+      "not_repaired_without_edit": 1450
+     },
+     "0.3": {
+      "states": 263,
+      "observations": 6680,
+      "not_repaired_without_edit": 1098
+     },
+     "0.4": {
+      "states": 265,
+      "observations": 4866,
+      "not_repaired_without_edit": 766
+     },
+     "0.5": {
+      "states": 263,
+      "observations": 3336,
+      "not_repaired_without_edit": 580
+     },
+     "0.6": {
+      "states": 259,
+      "observations": 2222,
+      "not_repaired_without_edit": 350
+     },
+     "0.7": {
+      "states": 240,
+      "observations": 1188,
+      "not_repaired_without_edit": 208
+     },
+     "0.8": {
+      "states": 192,
+      "observations": 584,
+      "not_repaired_without_edit": 96
+     },
+     "0.9": {
+      "states": 73,
+      "observations": 160,
+      "not_repaired_without_edit": 32
+     }
     }
    }
   },
   "A2": {
    "single": {
     "pairs": 303,
+    "puzzles": 132,
     "kept_alone": 0.6600660066006601,
     "kept_with_partners": 0.6963696369636964,
     "noedit_correct": 0.6105610561056105,
     "only_with_partners": 31,
     "only_alone": 20,
-    "p": 0.16077960181198847
+    "p": 0.16077960181198847,
+    "diff": 0.036303630363036306,
+    "diff_ci_puzzle_bootstrap": [
+     -0.015878119736640637,
+     0.08971599684440937
+    ]
    },
    "partial": {
     "cell_pairs": 673,
     "only_in_closure": 43,
     "only_in_partial": 40,
-    "p": 0.8264047244491933
+    "p": 0.8264047244491933,
+    "diff": 0.004457652303120356,
+    "diff_ci_puzzle_bootstrap": [
+     -0.029258093820908285,
+     0.03983072140966878
+    ]
    }
   }
  },
@@ -312,8 +417,55 @@
     "aggregate": {
      "cells_per_set_mean": 9.289940828402367,
      "var_total": 0.15461544761603463,
-     "share_between_draws": 0.35379746067669104,
+     "share_between_draws": 0.17689873033834552,
      "share_fraction": 0.13530951037050765
+    },
+    "dose_population": {
+     "0.1": {
+      "states": 241,
+      "observations": 9794,
+      "not_repaired_without_edit": 5828
+     },
+     "0.2": {
+      "states": 241,
+      "observations": 7740,
+      "not_repaired_without_edit": 4576
+     },
+     "0.3": {
+      "states": 241,
+      "observations": 5984,
+      "not_repaired_without_edit": 3506
+     },
+     "0.4": {
+      "states": 239,
+      "observations": 4378,
+      "not_repaired_without_edit": 2600
+     },
+     "0.5": {
+      "states": 234,
+      "observations": 2982,
+      "not_repaired_without_edit": 1740
+     },
+     "0.6": {
+      "states": 234,
+      "observations": 1986,
+      "not_repaired_without_edit": 1184
+     },
+     "0.7": {
+      "states": 221,
+      "observations": 1076,
+      "not_repaired_without_edit": 654
+     },
+     "0.8": {
+      "states": 158,
+      "observations": 498,
+      "not_repaired_without_edit": 296
+     },
+     "0.9": {
+      "states": 50,
+      "observations": 102,
+      "not_repaired_without_edit": 54
+     }
     }
    },
    "k4": {
@@ -410,26 +562,84 @@
     "aggregate": {
      "cells_per_set_mean": 9.289940828402367,
      "var_total": 0.07873562019588516,
-     "share_between_draws": 0.5511485028921626,
+     "share_between_draws": 0.2755742514460813,
      "share_fraction": 0.04906411100684696
+    },
+    "dose_population": {
+     "0.1": {
+      "states": 241,
+      "observations": 9794,
+      "not_repaired_without_edit": 2336
+     },
+     "0.2": {
+      "states": 241,
+      "observations": 7740,
+      "not_repaired_without_edit": 1840
+     },
+     "0.3": {
+      "states": 241,
+      "observations": 5984,
+      "not_repaired_without_edit": 1410
+     },
+     "0.4": {
+      "states": 239,
+      "observations": 4378,
+      "not_repaired_without_edit": 1006
+     },
+     "0.5": {
+      "states": 234,
+      "observations": 2982,
+      "not_repaired_without_edit": 720
+     },
+     "0.6": {
+      "states": 234,
+      "observations": 1986,
+      "not_repaired_without_edit": 448
+     },
+     "0.7": {
+      "states": 221,
+      "observations": 1076,
+      "not_repaired_without_edit": 256
+     },
+     "0.8": {
+      "states": 158,
+      "observations": 498,
+      "not_repaired_without_edit": 126
+     },
+     "0.9": {
+      "states": 50,
+      "observations": 102,
+      "not_repaired_without_edit": 24
+     }
     }
    }
   },
   "A2": {
    "single": {
     "pairs": 264,
+    "puzzles": 115,
     "kept_alone": 0.6174242424242424,
     "kept_with_partners": 0.6818181818181818,
     "noedit_correct": 0.5378787878787878,
     "only_with_partners": 31,
     "only_alone": 14,
-    "p": 0.016094360031274846
+    "p": 0.016094360031274846,
+    "diff": 0.06439393939393939,
+    "diff_ci_puzzle_bootstrap": [
+     0.011760163524869407,
+     0.11656899601946039
+    ]
    },
    "partial": {
     "cell_pairs": 530,
     "only_in_closure": 40,
     "only_in_partial": 29,
-    "p": 0.22840022535329696
+    "p": 0.22840022535329696,
+    "diff": 0.020754716981132074,
+    "diff_ci_puzzle_bootstrap": [
+     -0.012200161257810925,
+     0.055566996155958254
+    ]
    }
   }
  },
@@ -529,8 +739,55 @@
     "aggregate": {
      "cells_per_set_mean": 9.807098765432098,
      "var_total": 0.1848898221299678,
-     "share_between_draws": 0.4343061590984385,
+     "share_between_draws": 0.21715307954921925,
      "share_fraction": 0.018123186537876503
+    },
+    "dose_population": {
+     "0.1": {
+      "states": 327,
+      "observations": 14520,
+      "not_repaired_without_edit": 8936
+     },
+     "0.2": {
+      "states": 327,
+      "observations": 11406,
+      "not_repaired_without_edit": 7044
+     },
+     "0.3": {
+      "states": 327,
+      "observations": 8766,
+      "not_repaired_without_edit": 5408
+     },
+     "0.4": {
+      "states": 327,
+      "observations": 6414,
+      "not_repaired_without_edit": 3962
+     },
+     "0.5": {
+      "states": 325,
+      "observations": 4498,
+      "not_repaired_without_edit": 2824
+     },
+     "0.6": {
+      "states": 324,
+      "observations": 2790,
+      "not_repaired_without_edit": 1746
+     },
+     "0.7": {
+      "states": 313,
+      "observations": 1588,
+      "not_repaired_without_edit": 974
+     },
+     "0.8": {
+      "states": 231,
+      "observations": 666,
+      "not_repaired_without_edit": 424
+     },
+     "0.9": {
+      "states": 91,
+      "observations": 192,
+      "not_repaired_without_edit": 114
+     }
     }
    },
    "k4": {
@@ -627,26 +884,84 @@
     "aggregate": {
      "cells_per_set_mean": 9.807098765432098,
      "var_total": 0.13989331521978124,
-     "share_between_draws": 0.5847067832943305,
+     "share_between_draws": 0.29235339164716523,
      "share_fraction": 0.006038918298833079
+    },
+    "dose_population": {
+     "0.1": {
+      "states": 327,
+      "observations": 14520,
+      "not_repaired_without_edit": 3514
+     },
+     "0.2": {
+      "states": 327,
+      "observations": 11406,
+      "not_repaired_without_edit": 2736
+     },
+     "0.3": {
+      "states": 327,
+      "observations": 8766,
+      "not_repaired_without_edit": 2104
+     },
+     "0.4": {
+      "states": 327,
+      "observations": 6414,
+      "not_repaired_without_edit": 1566
+     },
+     "0.5": {
+      "states": 325,
+      "observations": 4498,
+      "not_repaired_without_edit": 1090
+     },
+     "0.6": {
+      "states": 324,
+      "observations": 2790,
+      "not_repaired_without_edit": 710
+     },
+     "0.7": {
+      "states": 313,
+      "observations": 1588,
+      "not_repaired_without_edit": 380
+     },
+     "0.8": {
+      "states": 231,
+      "observations": 666,
+      "not_repaired_without_edit": 180
+     },
+     "0.9": {
+      "states": 91,
+      "observations": 192,
+      "not_repaired_without_edit": 40
+     }
     }
    }
   },
   "A2": {
    "single": {
     "pairs": 502,
+    "puzzles": 186,
     "kept_alone": 0.603585657370518,
     "kept_with_partners": 0.6055776892430279,
     "noedit_correct": 0.4442231075697211,
     "only_with_partners": 52,
     "only_alone": 51,
-    "p": 1.0
+    "p": 1.0,
+    "diff": 0.00199203187250996,
+    "diff_ci_puzzle_bootstrap": [
+     -0.0437375745526839,
+     0.04107626444917757
+    ]
    },
    "partial": {
     "cell_pairs": 1078,
     "only_in_closure": 72,
     "only_in_partial": 102,
-    "p": 0.027626051149794977
+    "p": 0.027626051149794977,
+    "diff": -0.027829313543599257,
+    "diff_ci_puzzle_bootstrap": [
+     -0.05787106235936998,
+     0.0
+    ]
    }
   }
  }

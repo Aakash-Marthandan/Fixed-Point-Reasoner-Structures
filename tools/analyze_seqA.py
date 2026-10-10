@@ -145,38 +145,44 @@ def analyze_a1(width, k):
     R = [(s_, f_, np.mean(v[0]), np.mean(v[1])) for (s1, s2, f_), v in agg.items() if 0 in v and 1 in v for s_ in [(s1, s2)]]
     if R:
         r = np.array([[x[2], x[3]] for x in R]); fvals = np.array([x[1] for x in R]); tot = r.var()
-        within = float(np.mean((r[:, 0] - r[:, 1]) ** 2 / 2)); mf = {fv: r[fvals == fv].mean() for fv in set(fvals)}
+        within = float(np.mean((r[:, 0] - r[:, 1]) ** 2 / 4)); mf = {fv: r[fvals == fv].mean() for fv in set(fvals)}   # exact: a pair's contribution to the population variance is (r1 - r2)^2 / 4 (corrected 2026-10-10)
         between_f = float(np.var([mf[fv] for fv in fvals for _ in range(2)]))
         res["aggregate"] = dict(cells_per_set_mean=float(np.mean([len(v[0]) for v in agg.values() if 0 in v])), var_total=float(tot), share_between_draws=within / tot if tot else float("nan"),
                                 share_fraction=between_f / tot if tot else float("nan"))
+    fcol = X[:, ci["f"]]; y0col = X[:, ci["y0"]]                                          # the evaluation population thins with dose (added 2026-10-10)
+    res["dose_population"] = {f"{fv:.1f}": dict(states=int(len(set(map(tuple, meta[np.isclose(fcol, fv)][:, :2].astype(int).tolist())))), observations=int(np.isclose(fcol, fv).sum()),
+                                                not_repaired_without_edit=int((np.isclose(fcol, fv) & (y0col == 0)).sum())) for fv in np.round(np.arange(0.1, 1.0, 0.1), 1)}
     return res
 
 
 def analyze_a2(width, k=1):
-    """P18: a closure's single cell alone vs within the closure; partial cells vs the same cells in the closure."""
-    single_b = single_c = 0; part_b = part_c = 0; n_single = n_part = 0; base_single = []
+    """P18: a closure's single cell alone vs within the closure; partial cells vs the same cells in the closure. Exact McNemar on the pairs and,
+    because pairs repeat within a puzzle (two closures, two iterations), a puzzle-bootstrap 95 % interval of the paired retention difference."""
+    S, Pt = [], []                                                    # (puzzle, kept alone, kept with partners, no-edit correct) / (puzzle, kept in partial, kept in closure)
     for f in sorted(glob.glob(str(ROOT / f"runs/analysis/rebuttal_20261002c/attention_{width}/moves/*.npz"))):
         if "smoke" in f: continue
         d = np.load(f, allow_pickle=False); kind = d["var_kind"]; move = d["var_move"]
         for s in range(len(d["state_ids"])):
-            sol = d["state_sol"][s].astype(int); vs = np.where(d["var_state"] == s)[0]
+            pid = int(d["state_ids"][s]); sol = d["state_sol"][s].astype(int); vs = np.where(d["var_state"] == s)[0]
             v0 = [v for v in vs if kind[v] == 0]; pred0 = d["pred"][v0[0], k - 1].astype(int) if v0 else None
             for mv in (0, 1):
                 vc = [v for v in vs if kind[v] == 1 and move[v] == mv]; vsn = [v for v in vs if kind[v] == 4 and move[v] == mv]; vp = [v for v in vs if kind[v] == 5 and move[v] == mv]
                 if not vc: continue
                 pc = d["pred"][vc[0], k - 1].astype(int)
-                if vsn:
+                if vsn and pred0 is not None:
                     c = int([x for x in d["var_cells"][vsn[0]] if x >= 0][0]); ps = d["pred"][vsn[0], k - 1].astype(int)
-                    a_, b_ = ps[c] == sol[c], pc[c] == sol[c]; n_single += 1; single_b += int(b_ and not a_); single_c += int(a_ and not b_)
-                    if pred0 is not None: base_single.append((int(a_), int(b_), int(pred0[c] == sol[c])))
+                    S.append((pid, int(ps[c] == sol[c]), int(pc[c] == sol[c]), int(pred0[c] == sol[c])))
                 if vp:
                     pp = d["pred"][vp[0], k - 1].astype(int)
-                    for c in [int(x) for x in d["var_cells"][vp[0]] if x >= 0]:
-                        a_, b_ = pp[c] == sol[c], pc[c] == sol[c]; n_part += 1; part_b += int(b_ and not a_); part_c += int(a_ and not b_)
-    bs = np.array(base_single) if base_single else np.zeros((0, 3))
-    return dict(single=dict(pairs=n_single, kept_alone=float(bs[:, 0].mean()) if len(bs) else None, kept_with_partners=float(bs[:, 1].mean()) if len(bs) else None,
-                            noedit_correct=float(bs[:, 2].mean()) if len(bs) else None, only_with_partners=single_b, only_alone=single_c, p=mcnemar(single_b, single_c)),
-                partial=dict(cell_pairs=n_part, only_in_closure=part_b, only_in_partial=part_c, p=mcnemar(part_b, part_c)))
+                    for c in [int(x) for x in d["var_cells"][vp[0]] if x >= 0]: Pt.append((pid, int(pp[c] == sol[c]), int(pc[c] == sol[c])))
+    S, Pt = np.array(S), np.array(Pt)
+    def paired(arr):
+        a, b = arr[:, 1], arr[:, 2]; bb, cc = int(((b == 1) & (a == 0)).sum()), int(((a == 1) & (b == 0)).sum())
+        lo, hi = boot_diff((b - a).astype(float), arr[:, 0]); return bb, cc, mcnemar(bb, cc), float((b - a).mean()), (lo, hi)
+    sb, sc, sp, sd, sci = paired(S); pb, pc_, pp_, pd, pci = paired(Pt)
+    return dict(single=dict(pairs=int(len(S)), puzzles=int(len(np.unique(S[:, 0]))), kept_alone=float(S[:, 1].mean()), kept_with_partners=float(S[:, 2].mean()), noedit_correct=float(S[:, 3].mean()),
+                            only_with_partners=sb, only_alone=sc, p=sp, diff=sd, diff_ci_puzzle_bootstrap=sci),
+                partial=dict(cell_pairs=int(len(Pt)), only_in_closure=pb, only_in_partial=pc_, p=pp_, diff=pd, diff_ci_puzzle_bootstrap=pci))
 
 
 def report(out=OUT, widths=WIDTHS):
@@ -192,9 +198,11 @@ def report(out=OUT, widths=WIDTHS):
                 ip = a["identity_paired"]; lines.append(f"   identity (paired, discordant cells {ip['discordant_cells']}, concordant share {ip['concordant_share']:.3f}): AUC {ip['auc']:.3f} [{ip['ci'][0]:.3f}, {ip['ci'][1]:.3f}]")
             if "aggregate" in a:
                 ag = a["aggregate"]; lines.append(f"   aggregate r on U (mean {ag['cells_per_set_mean']:.1f} cells per set): share of variance between draws {ag['share_between_draws']:.3f}, by fraction {ag['share_fraction']:.3f}")
+            dp = a["dose_population"]; lines.append("   evaluation population by dose (states / observations / not repaired without the edit): " + " ".join(f"{fv} {v['states']}/{v['observations']}/{v['not_repaired_without_edit']}" for fv, v in dp.items()))
         s, p_ = r["A2"]["single"], r["A2"]["partial"]
-        lines.append(f"attention_{w} A2: single cell kept alone {s['kept_alone']:.3f} vs with partners {s['kept_with_partners']:.3f} (no edit {s['noedit_correct']:.3f}; pairs {s['pairs']}; "
-                     f"only-with-partners {s['only_with_partners']} vs only-alone {s['only_alone']}, p {s['p']:.3g}) | partial cells: only in closure {p_['only_in_closure']} vs only in partial {p_['only_in_partial']} (pairs {p_['cell_pairs']}, p {p_['p']:.3g})")
+        lines.append(f"attention_{w} A2: single cell kept alone {s['kept_alone']:.3f} vs with partners {s['kept_with_partners']:.3f} (no edit {s['noedit_correct']:.3f}; pairs {s['pairs']} on {s['puzzles']} puzzles; "
+                     f"only-with-partners {s['only_with_partners']} vs only-alone {s['only_alone']}, p {s['p']:.3g}; difference {s['diff']:+.3f}, puzzle-bootstrap [{s['diff_ci_puzzle_bootstrap'][0]:+.3f}, {s['diff_ci_puzzle_bootstrap'][1]:+.3f}]) | "
+                     f"partial cells: only in closure {p_['only_in_closure']} vs only in partial {p_['only_in_partial']} (pairs {p_['cell_pairs']}, p {p_['p']:.3g}; difference {p_['diff']:+.3f} [{p_['diff_ci_puzzle_bootstrap'][0]:+.3f}, {p_['diff_ci_puzzle_bootstrap'][1]:+.3f}])")
     (out / "report.txt").write_text("\n".join(lines) + "\n"); (out / "report.json").write_text(json.dumps(js, indent=1, default=float)); print("\n".join(lines))
 
 
