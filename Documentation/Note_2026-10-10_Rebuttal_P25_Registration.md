@@ -194,3 +194,64 @@ Historical: P19 on Attention 256 ran 5,360 four-iteration variants in about 37 m
 
   It took 3.5 minutes. It printed no outcome counts.
 - The frozen reader was run once on the smoke file with its output suppressed, to check that it completes; it did. No values were viewed. Those 4 puzzles are part of the registered population.
+
+---
+
+## P25 Outcome (2026-10-10 09:30Z; `runs/analysis/rebuttal_20261011/report.{txt,json}`; every gate passed; no shared tool edited during the runs)
+
+**Integrity.**
+- On every width: no display failure; no evaluation cell edited in any arm; largest score shift from a transfer, restoration or rotation 7.3e-7; self-transfer bitwise equal to intact; restoration within 3.0e-8; rotation angle and norm within 6.5e-8.
+- The release states reproduced bitwise.
+- Part 1: 129 / 121 / 164 states (Attention 256 / 192 / 128). Part 2: 118 / 142 / 202 recipients.
+- An independent recount agrees exactly on every law gain, calibration error, correlation, margin interaction and transfer slope. A separately implemented B-vs-D comparison (its own optimizer and folds) gives −0.002 / −0.0002 / +0.0002, also ≈ 0.
+
+**Part 1 — the frozen collective law predicts fresh, fixed cells.**
+
+| receiver | L_c gain over B_c [95 %], AUC (baseline) | L_p gain over B_p [95 %], AUC (baseline) | P1a letters (L_c / L_p) | per-state ρ, L_c / L_p | P1b | margin interaction I [95 %] (δ) | P1c |
+|---|---|---|---|---|---|---|---|
+| Attention 256 | +0.074 [+0.053, +0.095], 0.843 (0.770) | +0.062 [+0.043, +0.079], 0.785 (0.684) | CALIBRATED / CALIBRATED | 0.80 / 0.59 | STATE-PREDICTED (both) | +9.4 [+3.2, +15.4] (4.8) | **SUPER-ADDITIVE** |
+| Attention 192 | +0.118 [+0.087, +0.149], 0.898 (0.801) | +0.110 [+0.085, +0.134], 0.851 (0.730) | CALIBRATED / CALIBRATED | 0.83 / 0.68 | STATE-PREDICTED (both) | +6.0 [+0.4, +11.4] (3.5) | **SUPER-ADDITIVE** |
+| Attention 128 | +0.017 [+0.008, +0.027], 0.822 (0.807) | +0.016 [+0.004, +0.026], 0.718 (0.703) | CALIBRATED / CALIBRATED | 0.79 / 0.56 | STATE-PREDICTED (both) | +1.9 [−1.7, +5.6] (3.2) | UNRESOLVED |
+
+- Calibration error by dose was ≤ 0.05 at at least 4 of 5 doses for every law and width. The exceptions are L_p at dose 0.1 on 256 (0.080) and dose 0.9 on 128 (0.062 / 0.053).
+- *Beside P1c.* For binary correctness in A ∪ B, the additive-threshold model is at least as accurate as L_c: 0.758 vs 0.734, 0.811 vs 0.768 and 0.785 vs 0.764, with paired intervals including or touching 0. That model uses the measured single-set margin changes at the same cells, which the law does not see.
+
+**Part 2 — retained state and the response to correction.**
+- **B against D:** the D-over-B held-out gain is −0.0005 [−0.0018, +0.0008] / −0.0000 [−0.0010, +0.0009] / +0.0005 [−0.0012, +0.0022]. The letter is **BASELINE-ONLY**: allowing transfer or rotation, as a condition, to change the dose response adds no predictive value beyond each condition's own baseline.
+- **TRANSFER-CARRIES**, as the transfer slope [95 %] against the random slope, with the interval for transfer minus random:
+
+  | receiver | transfer | random | transfer minus random | letter |
+  |---|---|---|---|---|
+  | Attention 256 | +0.572 [+0.474, +0.662] | +0.384 | [+0.073, +0.289] | **TRANSFER-CARRIES** |
+  | Attention 192 | +0.561 [+0.456, +0.663] | +0.231 | [+0.190, +0.480] | **TRANSFER-CARRIES** |
+  | Attention 128 | +0.546 | +0.502 | [−0.066, +0.180] | NOT-SHOWN |
+
+- *Descriptive.* Pooled induced repair by dose is nearly identical across conditions (intact, transfer, random: 0.21 / 0.16 / 0.22 at dose 0.1 and 0.95 / 0.90 / 0.95 at 0.9 on Attention 256). This matches BASELINE-ONLY: the movement is pair-specific, not a common shift.
+
+**Predictions scored.**
+- P1a L_c CALIBRATED (0.50): HIT. P1a L_p CALIBRATED (0.25): HIT.
+- P1b STATE-PREDICTED (0.50): HIT.
+- P1c SUPER-ADDITIVE (0.45): HIT on 256 and 192.
+- Part 2 STATE-SETS-RESPONSE (0.35): MISS; BASELINE-ONLY (0.40): HIT.
+- TRANSFER-CARRIES (0.30): HIT on 256 and 192.
+
+**Exploratory (after the read).** A split-half check of TRANSFER-CARRIES addresses the shared-noise concern. The recipient's measured intact response enters both axes of the registered regression, which biases any re-rolled condition toward a positive slope. Using disjoint evaluation cells and disjoint mask sets on the two axes:
+
+| receiver | transfer | random | transfer minus random |
+|---|---|---|---|
+| Attention 256 | +0.33 [+0.21, +0.44] | +0.18 [+0.09, +0.26] | [+0.05, +0.25] |
+| Attention 192 | +0.39 [+0.26, +0.50] | +0.14 [+0.03, +0.22] | [+0.12, +0.38] |
+| Attention 128 | +0.31 | +0.27 | [−0.05, +0.16] |
+
+The donor-specific excess survives on both primary receivers. The random rotation keeps a smaller positive slope, consistent with a re-rolled trajectory moving toward typical behaviour. That generic part is what the registered comparison removes.
+
+**The registered sentences, read plainly.**
+- *Part 1:* "A collective law fitted on earlier interventions predicts, on fresh puzzles and fixed never-edited cells, how often untouched errors are repaired as more of the configuration is corrected, and which states repair more — also from the present state alone. Joint corrections are super-additive in the network's own margins on the two wider models. The interaction is not only thresholded additive score changes."
+- *Part 2:* "The readout-invisible slow state does not shift the law as a whole, but a same-puzzle donor's readout-invisible part carries part of that donor's specific response to correction into the recipient, beyond an exactly angle- and norm-matched random change, on the two wider models."
+- *Under every outcome:* the corrections are oracle-guided diagnostic edits; the hybrids are constructed states; one checkpoint per receiver; random directions; the measured horizon is one iteration.
+
+**Reading.**
+- The collective repair law is predictive, not only descriptive.
+- Retained state carries transferable, state-specific information about how the configuration will take up a correction. It is a pair-specific "parameter" of the response rather than a uniform change of the law.
+- This satisfies the first two links of the target chain: present-state prediction of the needed correction, and a transferable hidden component that changes the response.
+- P26 (compactness) is the next registration. Can a component at most 1/8 of the slow part's dimension carry at least half of this donor-specific transfer, against equally sized random components, confirmed on fresh puzzles and new masks?
