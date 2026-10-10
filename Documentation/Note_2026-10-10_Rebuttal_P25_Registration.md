@@ -255,3 +255,36 @@ The donor-specific excess survives on both primary receivers. The random rotatio
 - Retained state carries transferable, state-specific information about how the configuration will take up a correction. It is a pair-specific "parameter" of the response rather than a uniform change of the law.
 - This satisfies the first two links of the target chain: present-state prediction of the needed correction, and a transferable hidden component that changes the response.
 - P26 (compactness) is the next registration. Can a component at most 1/8 of the slow part's dimension carry at least half of this donor-specific transfer, against equally sized random components, confirmed on fresh puzzles and new masks?
+
+---
+
+**Addendum — scope and a narrower reading (2026-10-10, after an external review; every number below was reproduced from the saved arrays; exploratory).**
+
+1. *The predictive result stands, with two stronger checks.*
+   - **Correction amount adds beyond a richer present-state baseline.** That baseline is fitted on P19 with all of L_p's features except f and f². L_p's held-out gain over it on P25 is +0.054 [+0.038, +0.070] on 256 and +0.102 [+0.070, +0.128] on 192; unresolved on 128 (+0.005 [−0.003, +0.012]).
+   - **Responsiveness is predicted on the wider models.** Within each state, L_p's predicted gain from the lowest to the highest nominal dose correlates with the observed gain: r = 0.37 [0.20, 0.53] on 256 and 0.61 [0.49, 0.72] on 192 (Spearman 0.37 and 0.57). On 128 it is about zero (r = −0.14, Spearman −0.07).
+   - **Scope.** "Present-state" is not answer-free: the wrong-cell count and wrong peers use the solution, so L_p is a predictive diagnostic model. The nominal doses are fractions of the editable pool after the four evaluation cells are reserved; the highest dose corrects about 75 % of all wrong cells (0.754 / 0.755 / 0.758), not 90 %.
+   - **No hidden feature is identified.** Dropping the commitment index from L_p changes AUC by less than 0.001.
+2. *Cooperation survives a full score-vector check.* The margin is nonlinear, because the strongest competitor can change, so a non-additive margin alone does not establish non-additive scores. With the additive reconstruction s_add = s_A + s_B − s_0 on the untouched cells:
+
+   | receiver | actual joint correction, correct | additive-score prediction, correct | difference |
+   |---|---|---|---|
+   | Attention 256 | 0.626 | 0.566 | **+0.060 [+0.028, +0.093]** |
+   | Attention 192 | 0.654 | 0.617 | **+0.037 [+0.007, +0.072]** |
+   | Attention 128 | 0.457 | 0.466 | −0.008 [−0.041, +0.023] |
+
+   On the wider models, applying both corrections produces additional correct decisions elsewhere beyond what their separate score effects add up to. Exact additivity is rejected. The additive model nevertheless stays competitive at classifying individual joint outcomes, so the collective law is not shown to dominate every predictor.
+3. *TRANSFER-CARRIES, decomposed.* The registered statistic measures edited repair minus unedited repair.
+   - **Most of the excess comes through the baseline term.** Its transfer-minus-random excess splits into an edited term and a subtracted-baseline term: 0.188 = 0.022 + 0.166 on 256, 0.330 = 0.089 + 0.241 on 192, 0.045 = 0.025 + 0.020 on 128. So the donor's component mostly shifts the recipient's unedited continuation.
+   - **Adjusting for each condition's baseline and headroom** (induced repair among the cells that condition's own continuation does not repair), an excess remains: +0.23 [+0.10, +0.39] on 256 and +0.29 [+0.10, +0.46] on 192, but not on 128 (+0.04 [−0.05, +0.14]).
+   - **Separating resemblance to the donor from dependence on the recipient**, in this note's specification, the donor coefficient exceeds the random rotation's on 256 ([+0.06, +0.39]) and 192 ([+0.09, +0.45]). The external review's specification found 192 clear and 256's interval including 0. The 256 evidence is therefore specification-sensitive.
+   - **The comparison was not like-for-like.** Donor and recipient responses were measured on different evaluation cells and masks: P25 compares aggregate response profiles, not responses to identical challenges.
+   - **Narrower reading:** *the donor's hidden component influences the recipient's response in a way that matched random perturbations do not fully explain; evidence that it specifically transfers the donor's correction behaviour is strongest on Attention 192.*
+4. *BASELINE-ONLY* is compatible with pair-specific movement. But the condition-level model's failure to improve prediction does not prove that every effect is baseline-only.
+5. *Restoration over several steps.* Restoration differs from intact by about 3 × 10⁻⁸ per element. Through the sensitive dynamics, 12.5–15.6 % of restoration arms' displays differ from intact by iteration 4. This is negligible at the primary one-iteration horizon. Any future multistep restoration control must restore the saved tensor exactly.
+6. *The revised reading, which replaces "satisfies the first two links".* **Predictive cooperative reconstruction:**
+   - A law fitted on earlier interventions predicts repair at untouched cells on fresh puzzles, including, on the wider models, which states respond more to added correction.
+   - Joint corrections there produce beneficial responses beyond the sum of their separate score effects.
+   - Manipulating readout-invisible state changes the response, with evidence of donor-dependent influence.
+
+   The predictive link is established within the diagnostic setting. The transferable-mechanism link has supporting evidence that still needs isolation. The evidence is strongest on the two wider models: width 128's successful average predictions do not extend to differential responsiveness, cooperation or transfer.
