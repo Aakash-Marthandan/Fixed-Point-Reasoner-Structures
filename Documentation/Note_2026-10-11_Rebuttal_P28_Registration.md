@@ -188,7 +188,7 @@ Its results:
   - 256: 128 eligible of 896 (14.3 %), likewise one extra chunk.
 - Arms: four processes, 3 h 50 min. Summed block time was 6.2 h (192) and 7.7 h (256). Transplant construction overhead was 12 s and 15 s in total.
 - Gates:
-  - score shift ≤ 8e-14;
+  - score shift ≤ 8e-14 (measured on the float64 construction, before the float32 cast; the executed float32 tolerance is in the scope addendum);
   - control norm and inner-product matches ≤ 1.3e-13;
   - verification versus reference mismatches 0;
   - restoration bitwise in all 8 blocks.
@@ -223,7 +223,7 @@ The four short unchanged continuations cover 0.430 (192) and 0.391 (256).
 - The frozen basis captures 0.783 (192) and 0.858 (256) of the iteration-16 donor–recipient difference: more than after iteration 1 in P27 (0.70 / 0.78).
 - Transplant magnitudes: ‖L‖ / ‖h‖ = 0.33 / 0.35 and ‖Δ‖ / ‖h‖ = 0.37 / 0.38.
 
-**Discovery and preservation.** Every verified success in every arm was still verified at its window's final iteration. There were no losses.
+**Discovery and preservation.** Every verified success in every arm was still verified at its window's final iteration: there were no *terminal* losses. The saved fields (first success, final correctness) cannot exclude a temporary loss followed by recovery (corrected in the scope addendum).
 
 **Recount.** Independent code reproduces every registered point estimate exactly. It has its own dense tables from the raw rows, its own budget curves, paired differences and resampler.
 - The eligible lists re-derive from the chunk files in the frozen order.
@@ -244,7 +244,7 @@ The four short unchanged continuations cover 0.430 (192) and 0.391 (256).
 Brier score over the 10 events: 0.097.
 
 **Exploratory additions** (after the frozen report; `explore.py`):
-- **Every strategy behaves like an independent re-roll.** Per-rollout success within a 16-iteration window:
+- **[Withdrawn wording, scope addendum: similar marginal rates do not establish independence.] The tested strategies have comparable aggregate completion rates over these windows.** Per-rollout success within a 16-iteration window:
 
   | strategy | 192 | 256 |
   |---|---|---|
@@ -275,6 +275,76 @@ Scope under every outcome:
 This does not reverse P27's early response-transfer finding. The frozen basis, identified on early histories, captures even more of the late difference, but transplanting it did not help completion here.
 
 **For the program.**
-- P26–P27 showed that retained state carries transferable, history-specific correction responses. P28 shows that exploiting this by exhaustive transplanting between unsuccessful histories does not complete puzzles better than generic re-rolls.
-- All strategies complete at about the per-window rate of the approximate continuation model (P22–P24).
+- P26–P27 showed that retained state carries transferable, history-specific correction responses. P28 shows that exploiting this by exhaustive transplanting between unsuccessful histories did not complete more puzzles than matched random changes, fresh restarts or continued computation at equal model work (wording corrected in the scope addendum).
+- The tested strategies have comparable aggregate completion rates over these windows.
 - **P30** (a solution-free selector of transplant pairs) is justified by the registered rule on 192. The generic headroom means it would have to beat selection among restarts too. On this evidence, the PI may prefer **P29** (task generality on ARC) as the next priority.
+
+## P28 SCOPE ADDENDUM after an external review (2026-10-11 ~19:10Z; every number reproduced; exploratory; `runs/analysis/rebuttal_20261014/review_check.py`, `float32_check.py`)
+
+**What stands.** The registered decisions stand. The reviewer repeated the principal intervals with 20,000 draws. The equal-work comparison is decisive (puzzles solved of 128, after 192 additional iterations of work, conditional on the bank):
+
+| strategy | 192 | 256 |
+|---|---|---|
+| leading transplants | 89 (69.5 %) | 82 (64.1 %) |
+| matched random controls | 86 | 83 |
+| full transplants | 88 | 75 |
+| full-transplant controls | 87 | 76 |
+| fresh restarts | 89 (69.5 %) | 87 (68.0 %) |
+| extended originals | 87 | 77 |
+
+- Leading minus its control: +2.3 pp [−5.5, +10.2] (192) and −0.8 pp [−7.8, +5.5] (256).
+- Full minus restarts on 256: −9.4 pp [−18.0, −1.6].
+- These are failures to show an advantage, not equivalence tests. The 192 pilot still permits a modest benefit, but there is no consistent positive pattern that would support a performance claim.
+
+**"Adds solutions", with its comparison attached.**
+- Against the four short unchanged continuations, the leading bank solves 40 more puzzles and misses 6 (192), or 38 and 6 (256). It spends three times their computation.
+- Against equal-work restarts:
+  - 192: 17 transplant-only and 17 restart-only successes;
+  - 256: 12 and 17.
+- Transplantation changes *which* puzzles complete without a net benefit.
+
+**Timing** (exploratory, equal work at 48 additional iterations; puzzles solved):
+
+| strategy | 192 | 256 |
+|---|---|---|
+| 12 leading transplants × 4 iterations | 48 | 42 |
+| their random controls | 52 | 53 |
+| 12 fresh restarts × 4 iterations | 21 | 33 |
+| 4 originals × 12 iterations | 48 | 46 |
+
+- Transplants produce answers sooner than fresh starts. The same advantage appears with matched random changes, and it disappears against continued computation.
+- This is consistent with retaining useful computation from the existing histories. It is no evidence that the donor's specific information supplies the benefit.
+- Similar final success rates hide these differences in the timing of completion.
+
+**The mechanism distinction.**
+- P26–P27 identified coordinates that carry part of a history's correction response. P28 did not identify which values of those coordinates make a stalled computation more productive.
+- The frozen subspace captures 78 % (192) and 86 % (256) of the iteration-16 difference, so the negative result is not explained by little captured variation.
+- Capturing variation, transferring a response and identifying a beneficial change are separate achievements.
+- P28 changes the state population: early histories in P27, against four-history failures at iteration 16. It neither reverses P27 nor establishes that response transfer remains effective in these late states. It tests the usefulness of applying the frozen intervention there.
+
+**"Selection opportunity", narrowed.**
+- The reader's "best budget-1 alternative" is a *per-puzzle maximum* over three strategies (restart, extended, one transplant): itself an oracle choice, not the best fixed strategy.
+- The registered headroom (+0.273 / +0.312) and the exploratory one (a per-puzzle maximum over six strategies) therefore use different comparators. Against the same six-strategy baseline, headroom is:
+
+  | candidate set | 192 | 256 |
+  |---|---|---|
+  | transplants | +0.148 | +0.148 |
+  | restarts | +0.148 | +0.188 |
+
+- The opportunity is generic to candidate selection. A perfect selector can exploit successes scattered among twelve candidates; that does not show observable features can identify them before running.
+- Nothing here makes transplant selection especially promising.
+
+**Wording corrected.**
+- **Withdrawn:** "every strategy behaves like an independent re-roll", "a generic re-roll" (Outcome, ledger). Similar marginal success rates do not establish independence, memorylessness or chaos. The supported statement: the tested strategies have comparable aggregate completion rates over these windows.
+- **"No losses" means "no terminal losses."** The saved fields (first success, final correctness) cannot exclude a temporary loss followed by recovery.
+- **Score preservation.** The ≤ 8e-14 figure was the float64 construction. The executed float32 states, rebuilt exactly as the runner builds them for two eligible puzzles per receiver (12 pairs × 4 arms), change the displayed scores by at most 7.4e-7 (192) and 6.9e-7 (256), with no displayed-digit flips.
+
+**Candidate manuscript wording (the PI decides):** "A subspace identified on separate puzzles supports transfer of history-specific correction responses. Applying the corresponding transplant between unsuccessful histories produces additional completions, but does not establish improved success over matched random perturbations, fresh restarts or extended continuation at equal model work." This shows where the causal finding stops. It is not an inference improvement, and the selection label must not be presented as one.
+
+**Next (the review's priority).**
+- **P29**, the cross-task test of response transfer on ARC, directly addresses the generalizable mechanism.
+- **P30** only as a bounded exploratory analysis:
+  - target the incremental benefit of a choice *within the same puzzle*, using information available before continuation;
+  - compete with equally informed selection among controls and restarts;
+  - keep all candidates of a puzzle together in evaluation;
+  - first establish that a signal exists, before any large selection experiment.
