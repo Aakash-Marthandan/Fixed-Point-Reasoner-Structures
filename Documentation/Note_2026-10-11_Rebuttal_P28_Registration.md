@@ -179,3 +179,102 @@ Its results:
 - Screening: about 11 chunks on 192 and 8 on 256 to reach 128 eligible, about 1.2 h.
 - Arms: 4 blocks of 32 per receiver, about 21 batches each, about 4 h.
 - About 5–5.5 h in total.
+
+## P28 Outcome (2026-10-11 16:42Z; `runs/analysis/rebuttal_20261014/report.{txt,json}`; every gate passed; no tool edited during the run)
+
+**Run.**
+- Screening finished at 12:52Z:
+  - 192: 128 eligible of 1,024 screened (yield 12.5 %), with one extra chunk screened in parallel;
+  - 256: 128 eligible of 896 (14.3 %), likewise one extra chunk.
+- Arms: four processes, 3 h 50 min. Summed block time was 6.2 h (192) and 7.7 h (256). Transplant construction overhead was 12 s and 15 s in total.
+- Gates:
+  - score shift ≤ 8e-14;
+  - control norm and inner-product matches ≤ 1.3e-13;
+  - verification versus reference mismatches 0;
+  - restoration bitwise in all 8 blocks.
+
+**The registered letters (95 % puzzle-bootstrap intervals).**
+
+| quantity | 192, leading (primary) | 256, leading (replication) |
+|---|---|---|
+| additional coverage vs the short unchanged continuation | **+0.312 [+0.234, +0.391]** ADDS-SOLUTIONS (reverse losses 0.047) | **+0.297 [+0.219, +0.375]** ADDS-SOLUTIONS (0.047) |
+| per-rollout improvement (paired) | +0.017 [−0.018, +0.052] advantage unresolved | −0.019 [−0.059, +0.020] unresolved |
+| bank vs matched random bank | +0.023 [−0.055, +0.102] (25 discordant) unresolved | −0.008 [−0.078, +0.055] (19) unresolved |
+| bank vs fresh restarts | +0.000 [−0.094, +0.086] | −0.039 [−0.125, +0.039] |
+| bank vs extended continuation | +0.016 [−0.055, +0.094] | +0.039 [−0.047, +0.125] |
+| EFFICIENT-BANK | no | no |
+| oracle headroom over the best budget-1 alternative | **+0.273 [+0.188, +0.359]** SELECTION-OPPORTUNITY | **+0.312 [+0.227, +0.406]** SELECTION-OPPORTUNITY |
+| unique coverage (vs restarts and extended) | +0.055 [+0.016, +0.094] | +0.039 [+0.008, +0.078] |
+
+**Coverage at budgets 1 / 2 / 4 / 8 / 12** (equal model work per budget):
+
+| strategy | 192 | 256 |
+|---|---|---|
+| leading | 0.180 / 0.289 / 0.414 / 0.633 / 0.695 | 0.148 / 0.250 / 0.430 / 0.578 / 0.641 |
+| its control | 0.211 / 0.297 / 0.453 / 0.594 / 0.672 | 0.180 / 0.258 / 0.445 / 0.562 / 0.648 |
+| restarts | 0.180 / 0.328 / 0.500 / 0.625 / 0.695 | 0.188 / 0.289 / 0.430 / 0.586 / 0.680 |
+| extended | 0.203 / 0.297 / 0.430 / 0.617 / 0.680 | 0.109 / 0.250 / 0.391 / 0.531 / 0.602 |
+
+The four short unchanged continuations cover 0.430 (192) and 0.391 (256).
+
+**Secondary (full transplant).** The letters are the same on both receivers. On 256, restarts beat the full bank: −0.094 [−0.180, −0.016].
+
+**Generalization descriptives (stalled states).**
+- The frozen basis captures 0.783 (192) and 0.858 (256) of the iteration-16 donor–recipient difference: more than after iteration 1 in P27 (0.70 / 0.78).
+- Transplant magnitudes: ‖L‖ / ‖h‖ = 0.33 / 0.35 and ‖Δ‖ / ‖h‖ = 0.37 / 0.38.
+
+**Discovery and preservation.** Every verified success in every arm was still verified at its window's final iteration. There were no losses.
+
+**Recount.** Independent code reproduces every registered point estimate exactly. It has its own dense tables from the raw rows, its own budget curves, paired differences and resampler.
+- The eligible lists re-derive from the chunk files in the frozen order.
+- Every block's restoration flag is set, and the mismatch count is 0.
+- Regenerated banks of two eligible puzzles per receiver show no verified readout.
+- Own intervals are within about 0.01 of the report's.
+
+**Predictions.**
+
+| event | 192 credence | 192 outcome | 256 credence | 256 outcome |
+|---|---|---|---|---|
+| ADDS-SOLUTIONS | 0.70 | yes | 0.60 | yes |
+| PER-ROLLOUT-GAIN | 0.20 | no | 0.15 | no |
+| DONOR-SPECIFIC-COVERAGE | 0.15 | no | 0.10 | no |
+| EFFICIENT-BANK | 0.10 | no | 0.08 | no |
+| SELECTION-OPPORTUNITY | 0.50 | yes | 0.40 | yes |
+
+Brier score over the 10 events: 0.097.
+
+**Exploratory additions** (after the frozen report; `explore.py`):
+- **Every strategy behaves like an independent re-roll.** Per-rollout success within a 16-iteration window:
+
+  | strategy | 192 | 256 |
+  |---|---|---|
+  | leading | 0.193 | 0.169 |
+  | its control | 0.189 | 0.195 |
+  | full | 0.184 | 0.166 |
+  | full control | 0.199 | 0.159 |
+  | restart | 0.172 | 0.162 |
+  | unchanged | 0.176 | 0.188 |
+
+- **The selection opportunity is not transplant-specific.** The oracle headroom over the best budget-1 strategy is similar for every candidate set (0.09–0.19). Fresh restarts have the largest unique coverage (0.062 on both receivers).
+- **Union coverage.** All six strategies together cover 0.867 (192) and 0.844 (256); 17 and 20 puzzles are solved by none.
+- **Rollout level.** Leading minus its control is +0.004 [−0.019, +0.026] (192) and −0.027 [−0.053, −0.001] (256).
+
+**Wording (registered).**
+- ADDS-SOLUTIONS holds without any advantage: "Transplants re-roll stuck trajectories into some new completions, without a net advantage."
+- At equal model work, given an existing bank, the leading transplant did not complete more puzzles than matched random changes, fresh restarts or continued computation, on either receiver. The intervals are reported above. The full transplant did no better.
+- SELECTION-OPPORTUNITY holds as registered: a perfect selector over the 12 transplants would beat any single budget-1 alternative.
+- The exploratory comparison shows this headroom is generic to any set of re-rolls, not specific to transplants.
+
+Scope under every outcome:
+- one checkpoint per receiver; attention receivers;
+- a four-history bank;
+- 128 eligible puzzles per receiver;
+- verification-based success;
+- a comparison conditional on the bank.
+
+This does not reverse P27's early response-transfer finding. The frozen basis, identified on early histories, captures even more of the late difference, but transplanting it did not help completion here.
+
+**For the program.**
+- P26–P27 showed that retained state carries transferable, history-specific correction responses. P28 shows that exploiting this by exhaustive transplanting between unsuccessful histories does not complete puzzles better than generic re-rolls.
+- All strategies complete at about the per-window rate of the approximate continuation model (P22–P24).
+- **P30** (a solution-free selector of transplant pairs) is justified by the registered rule on 192. The generic headroom means it would have to beat selection among restarts too. On this evidence, the PI may prefer **P29** (task generality on ARC) as the next priority.

@@ -1,0 +1,23 @@
+P28 REPORT (rules registered before any row; primary = Attention 192, leading transplant; 256 = replication; full = secondary)
+attention_192: eligible 128 of 1024 screened (yield 0.12) | gates {'score_shift': 7.105427357601002e-14, 'ctrl_norm_dev': 3.552713678800501e-15, 'ctrl_ip_dev': 1.1368683772161603e-13, 'verify_exact_mismatch': 0}
+   coverage at budgets (1, 2, 4, 8, 12): lead 0.180/0.289/0.414/0.633/0.695 | lead_ctrl 0.211/0.297/0.453/0.594/0.672 | full 0.164/0.312/0.469/0.625/0.688 | full_ctrl 0.188/0.312/0.484/0.594/0.680 | restart 0.180/0.328/0.500/0.625/0.695 | extended 0.203/0.297/0.430/0.617/0.680 | unchanged short 0.430
+   lead: additional +0.312 [+0.234, +0.391] (reverse losses 0.047) | per-rollout +0.017 [-0.018, +0.052]
+   lead_ctrl: additional +0.258 [+0.188, +0.336] (reverse losses 0.016) | per-rollout +0.013 [-0.022, +0.048]
+   full: additional +0.312 [+0.234, +0.391] (reverse losses 0.055) | per-rollout +0.008 [-0.028, +0.044]
+   full_ctrl: additional +0.266 [+0.188, +0.344] (reverse losses 0.016) | per-rollout +0.023 [-0.012, +0.055]
+   lead bank vs lead_ctrl +0.023 [-0.055, +0.102] (discordant 25) | vs restart +0.000 [-0.094, +0.086] | vs extended +0.016 [-0.055, +0.094] | headroom +0.273 [+0.188, +0.359] | unique +0.055 [+0.016, +0.094]
+   full bank vs full_ctrl +0.008 [-0.070, +0.078] (discordant 23) | vs restart -0.008 [-0.094, +0.070] | vs extended +0.008 [-0.062, +0.086] | headroom +0.305 [+0.219, +0.391] | unique +0.039 [+0.008, +0.078]
+   LETTERS (leading): {'ADDS_SOLUTIONS': True, 'PER_ROLLOUT_GAIN': False, 'DONOR_SPECIFIC_COVERAGE': False, 'EFFICIENT_BANK': False, 'SELECTION_OPPORTUNITY': True}
+   secondary (full): {'ADDS_SOLUTIONS': True, 'PER_ROLLOUT_GAIN': False, 'DONOR_SPECIFIC_COVERAGE': False, 'EFFICIENT_BANK': False, 'SELECTION_OPPORTUNITY': True}
+   late-state descriptives {'energy_lead': 0.7834508004872577, 'mag_lead': 0.32977244604651434, 'mag_full': 0.3719387193577221} | preservation {'lead': {'successes': 296, 'kept_at_end': 296}, 'lead_ctrl': {'successes': 290, 'kept_at_end': 290}, 'full': {'successes': 283, 'kept_at_end': 283}, 'full_ctrl': {'successes': 305, 'kept_at_end': 305}, 'restart': {'successes': 264, 'kept_at_end': 264}, 'extended': {'successes': 212, 'kept_at_end': 212}}
+attention_256: eligible 128 of 896 screened (yield 0.14) | gates {'score_shift': 7.815970093361102e-14, 'ctrl_norm_dev': 3.552713678800501e-15, 'ctrl_ip_dev': 1.2789769243681803e-13, 'verify_exact_mismatch': 0}
+   coverage at budgets (1, 2, 4, 8, 12): lead 0.148/0.250/0.430/0.578/0.641 | lead_ctrl 0.180/0.258/0.445/0.562/0.648 | full 0.164/0.266/0.414/0.523/0.586 | full_ctrl 0.156/0.320/0.453/0.539/0.594 | restart 0.188/0.289/0.430/0.586/0.680 | extended 0.109/0.250/0.391/0.531/0.602 | unchanged short 0.391
+   lead: additional +0.297 [+0.219, +0.375] (reverse losses 0.047) | per-rollout -0.019 [-0.059, +0.020]
+   lead_ctrl: additional +0.289 [+0.211, +0.367] (reverse losses 0.031) | per-rollout +0.008 [-0.025, +0.041]
+   full: additional +0.250 [+0.172, +0.328] (reverse losses 0.055) | per-rollout -0.021 [-0.057, +0.014]
+   full_ctrl: additional +0.273 [+0.195, +0.352] (reverse losses 0.070) | per-rollout -0.029 [-0.063, +0.005]
+   lead bank vs lead_ctrl -0.008 [-0.078, +0.055] (discordant 19) | vs restart -0.039 [-0.125, +0.039] | vs extended +0.039 [-0.047, +0.125] | headroom +0.312 [+0.227, +0.406] | unique +0.039 [+0.008, +0.078]
+   full bank vs full_ctrl -0.008 [-0.078, +0.070] (discordant 23) | vs restart -0.094 [-0.180, -0.016] | vs extended -0.016 [-0.094, +0.062] | headroom +0.234 [+0.156, +0.320] | unique +0.031 [+0.008, +0.062]
+   LETTERS (leading): {'ADDS_SOLUTIONS': True, 'PER_ROLLOUT_GAIN': False, 'DONOR_SPECIFIC_COVERAGE': False, 'EFFICIENT_BANK': False, 'SELECTION_OPPORTUNITY': True}
+   secondary (full): {'ADDS_SOLUTIONS': True, 'PER_ROLLOUT_GAIN': False, 'DONOR_SPECIFIC_COVERAGE': False, 'EFFICIENT_BANK': False, 'SELECTION_OPPORTUNITY': True}
+   late-state descriptives {'energy_lead': 0.858485677520639, 'mag_lead': 0.35200395641245713, 'mag_full': 0.3793487254566588} | preservation {'lead': {'successes': 259, 'kept_at_end': 259}, 'lead_ctrl': {'successes': 300, 'kept_at_end': 300}, 'full': {'successes': 255, 'kept_at_end': 255}, 'full_ctrl': {'successes': 244, 'kept_at_end': 244}, 'restart': {'successes': 249, 'kept_at_end': 249}, 'extended': {'successes': 182, 'kept_at_end': 182}}
