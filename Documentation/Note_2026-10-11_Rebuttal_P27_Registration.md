@@ -171,3 +171,101 @@ Variants: 8 conditions × 13 arms + 4 restoration variants = 108 per state, givi
 Measured on the smoke with both receivers concurrent: 44–49 s (192) and 61–66 s (256) per 128-variant chunk (47.5 s for 256 alone). That projects to ≈ 5 h on the Mac.
 - This is over the ~3 h threshold; the PI chose 384 puzzles per receiver.
 - AC power and an open lid are needed for the run: closing the lid sleeps the Mac and pauses the run.
+
+## P27 Outcome (2026-10-11 08:47Z; `runs/analysis/rebuttal_20261013/report.{txt,json}`; every gate passed on both receivers; no tool edited during the run)
+
+**Run.**
+- Eligible pairs: 192 on Attention 192 (384 states, 39,936 variants) and 155 on Attention 256 (310 states, 32,240 variants).
+- Exact restoration was bitwise.
+- L + M = Δ to 4e-16. Subspace memberships ≤ 2.3e-14. Norm and inner-product matches of the controls ≤ 7e-15. Resulting row norms matched to ≤ 4e-15. No degenerate rows.
+- Retained energy: L holds 0.703 (192) and 0.775 (256) of ‖Δ‖²; M holds the remaining 0.297 and 0.225.
+
+**Per-condition donor coefficients** (all-four-mask statistic; relative to intact):
+
+| condition | 192 | 256 |
+|---|---|---|
+| full | 0.234 | 0.110 |
+| full_random | 0.057 | 0.025 |
+| lead | 0.233 | 0.053 |
+| lead_ctrl | 0.042 | −0.011 |
+| rem | 0.065 | 0.048 |
+| rem_ctrl | 0.020 | 0.023 |
+| comb_ctrl | 0.067 | 0.002 |
+
+**The registered rules (95 % puzzle-bootstrap intervals).**
+
+| rule | Attention 192 | Attention 256 | both receivers |
+|---|---|---|---|
+| S: full − P26's control | +0.177 [+0.119, +0.244] REPLICATES | +0.085 [+0.036, +0.140] REPLICATES | **yes** |
+| (two-contrast, secondary) | +0.189 [+0.122, +0.256] | +0.100 [+0.036, +0.166] | |
+| E_total: full − combined control | +0.167 [+0.104, +0.237] | +0.108 [+0.050, +0.164] | resolved on both |
+| E_L: lead − lead_ctrl | +0.191 [+0.126, +0.254] LEADING-CARRIES | +0.063 [+0.001, +0.127] LEADING-CARRIES | **yes** |
+| E_M: rem − rem_ctrl | +0.045 [+0.007, +0.082] REMAINDER-CARRIES | +0.025 [−0.016, +0.068] | 192 only |
+| E_L − ½ E_total | +0.108 [+0.054, +0.164] LEADING-HALF | +0.010 [−0.047, +0.066] | 192 only |
+| E_M − ½ E_total | −0.039 [−0.088, +0.008] | −0.029 [−0.079, +0.022] | no |
+| direct: full − lead | +0.001 [−0.044, +0.046] | +0.057 [+0.013, +0.103] | |
+| direct: full − rem | +0.169 [+0.111, +0.228] | +0.062 [+0.009, +0.122] | |
+| I_signal | −0.064 [−0.121, −0.007] | +0.009 [−0.053, +0.072] | |
+| I_control | +0.005 [−0.060, +0.068] | −0.010 [−0.067, +0.043] | |
+| interaction difference | −0.069 [−0.143, +0.007] | +0.019 [−0.058, +0.099] | UNRESOLVED on both |
+
+Secondary, as registered:
+- BASELINE (P26's): +0.223 [+0.110, +0.333] on 192 and +0.147 [+0.040, +0.251] on 256.
+- R1 (P26's): +0.255 [+0.198, +0.314] and +0.133 [+0.073, +0.192].
+
+**Recount.** Independent code reproduces every registered point estimate exactly. It has its own unit tables, whole-array four-mask centering, QR least squares and donor mapping.
+- The npz hashes are verified.
+- An independent resampler gives intervals within about 0.01 of the report's.
+- Regenerated pairs' leading energies match the stored values exactly.
+- Borderlines, resolved in both resamplers:
+  - 256's E_L lower bound: +0.001 registered, +0.005 in the recount;
+  - 192's E_M lower bound: +0.007 and +0.009.
+- 192's interaction difference stays unresolved in both: [−0.143, +0.007] and [−0.145, +0.010].
+
+**Predictions.**
+
+| event | credence | outcome |
+|---|---|---|
+| S on both | 0.50 | yes |
+| TOTAL on both | 0.50 | yes |
+| LEADING-CARRIES 192 / 256 / both | 0.55 / 0.60 / 0.40 | yes / yes / yes |
+| REMAINDER-CARRIES 192 / 256 | 0.30 / 0.20 | yes / no |
+| LEADING-HALF 192 / 256 | 0.35 / 0.45 | yes / no |
+| REMAINDER-HALF 192 / 256 | 0.15 / 0.10 | no / no |
+| positive interaction, each receiver | 0.15 | no / no |
+
+Brier score over the 13 events: 0.189.
+
+**Wording (registered).**
+- **S, both receivers:** "On fresh puzzles, using all four equal-sized corrections jointly, the transplant again transfers the donor's differential responses beyond a matched random change." P26's sharp result is confirmed with the stronger statistic, including on 256, where P26's exploratory check had been sensitive to the mask summary.
+- **LEADING-CARRIES, both receivers:** "The leading component alone transfers part of the donor's differential responses beyond a control matched in each row's magnitude and angle to the recipient." The leading component is the projection onto a common subspace of one eighth of the channels, learned on other puzzles in P26.
+  - On 192: LEADING-HALF; the direct difference full − leading is +0.001 [−0.044, +0.046].
+  - On 256: the lower bound sits at zero, and the full transfer exceeds the leading part alone (+0.057 [+0.013, +0.103]).
+- **REMAINDER-CARRIES, 192 only:** a small resolved part (+0.045), not half.
+- **Interaction:** unresolved on both receivers against the random interaction. On 192 the signal interaction alone is negative (−0.064 [−0.121, −0.007]): the two parts' effects overlap rather than add. Against the random interaction this is not resolved.
+- **On 256, the exact description:**
+  - the leading component carries a resolved part (lower bound at zero);
+  - the full transfer exceeds each part alone;
+  - the remainder's own effect and the interaction are unresolved.
+
+  This does *not* establish that both parts are necessary.
+
+Scope under every outcome:
+- oracle-guided diagnostic corrections;
+- constructed hybrids;
+- one checkpoint per receiver; attention receivers;
+- a one-iteration horizon;
+- four evaluation cells.
+
+The controls keep row magnitudes and angles; they do not remove all spatial structure.
+
+**What changes against P26.**
+- P26's exploratory reading that the specific transfer on 192 sat in the remainder was withdrawn in its addendum. P27 resolves the question the other way: with controls matched per row in magnitude and angle, P26's frozen common subspace carries the specific transfer on both receivers, and on 192 it reproduces the full transfer.
+- The row-independent controls track the donor little (0.042 / 0.020 / 0.067 on 192). This is consistent with the addendum's explanation of P26's projected control (0.173). It is not a test of that explanation: geometry localization was registered as not tested.
+
+**For the program.**
+- **A reusable compact component.** A common, low-dimensional component, learned on other puzzles, now carries a transferable, challenge-specific correction response on both receivers. On 192 it carries at least half.
+  - This is the first compact candidate: 24 / 32 of 192 / 256 channels.
+  - It is reusable across puzzles, as the selection experiment (P28) needs.
+- **What it is not.** It is not yet a predictor of which corrections become productive, and not a performance gain. P26's addendum showed indiscriminate transplantation does not raise repair.
+- **P28 can use the leading component as a candidate intervention** beside the full transplant (on both receivers, not on 256 alone as staged).

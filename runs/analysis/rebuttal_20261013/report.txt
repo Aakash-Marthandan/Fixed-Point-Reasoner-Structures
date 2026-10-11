@@ -1,0 +1,25 @@
+P27 REPORT (rules registered before any row; primary = the all-four-mask centered donor coefficient at k = 1)
+attention_192: pairs 192 (states 384) | gates {'display': 0, 'e_edited': 0, 'outside_shared': 0, 'score_shift': 8.029500122574973e-07, 'restore_tensor': 0, 'restore_rollout': 0, 'restore_maxdev': 0.0, 'split_dev': 4.440892098500626e-16, 'rem_in_U': 1.703406117783377e-14, 'rem_in_lm': 6.0645932720149176e-15, 'xiM_in_U': 9.487917789806764e-15, 'xiM_in_lm': 2.1649348980190553e-15, 'xiL_out_U': 4.440892098500626e-15, 'norm_dev': 4.410719829442228e-16, 'ip_dev': 6.983837483284169e-15, 'rownorm_dev': 2.0507790015471905e-15, 'deg_rows': 0}
+   per-condition donor coefficients: full +0.234, full_random +0.057, lead +0.233, lead_ctrl +0.042, rem +0.065, rem_ctrl +0.020, comb_ctrl +0.067
+   S (full vs P26's control, four masks) +0.177 [+0.119, +0.244] -> CHALLENGE-SPECIFIC-REPLICATES | two-contrast +0.189 [+0.122, +0.256]
+   E_L +0.191 [+0.126, +0.254] | E_M +0.045 [+0.007, +0.082] | E_total (vs combined control) +0.167 [+0.104, +0.237]
+   half: E_L - E_total/2 +0.108 [+0.054, +0.164] | E_M - E_total/2 -0.039 [-0.088, +0.008]
+   direct: full - L +0.001 [-0.044, +0.046] | full - M +0.169 [+0.111, +0.228]
+   interaction: I_signal -0.064 [-0.121, -0.007] | I_control +0.005 [-0.060, +0.068] | difference -0.069 [-0.143, +0.007]
+   flags {'TOTAL': 'TOTAL-RESOLVED', 'LEADING_CARRIES': True, 'REMAINDER_CARRIES': True, 'LEADING_HALF': True, 'REMAINDER_HALF': False, 'INTERACTION': 'UNRESOLVED'}
+   secondary: BASELINE +0.223 [+0.110, +0.333] | R1 +0.255 [+0.198, +0.314] | energy {'lead': 0.7027747065266059, 'rem': 0.29722529347339427}
+attention_256: pairs 155 (states 310) | gates {'display': 0, 'e_edited': 0, 'outside_shared': 0, 'score_shift': 8.564446787318047e-07, 'restore_tensor': 0, 'restore_rollout': 0, 'restore_maxdev': 0.0, 'split_dev': 4.440892098500626e-16, 'rem_in_U': 2.307547922992109e-14, 'rem_in_lm': 5.981326545168031e-15, 'xiM_in_U': 1.2915037949221969e-14, 'xiM_in_lm': 2.248201624865942e-15, 'xiL_out_U': 4.440892098500626e-15, 'norm_dev': 4.403640267751087e-16, 'ip_dev': 2.7116224668237462e-15, 'rownorm_dev': 4.1715744304879405e-15, 'deg_rows': 0}
+   per-condition donor coefficients: full +0.110, full_random +0.025, lead +0.053, lead_ctrl -0.011, rem +0.048, rem_ctrl +0.023, comb_ctrl +0.002
+   S (full vs P26's control, four masks) +0.085 [+0.036, +0.140] -> CHALLENGE-SPECIFIC-REPLICATES | two-contrast +0.100 [+0.036, +0.166]
+   E_L +0.063 [+0.001, +0.127] | E_M +0.025 [-0.016, +0.068] | E_total (vs combined control) +0.108 [+0.050, +0.164]
+   half: E_L - E_total/2 +0.010 [-0.047, +0.066] | E_M - E_total/2 -0.029 [-0.079, +0.022]
+   direct: full - L +0.057 [+0.013, +0.103] | full - M +0.062 [+0.009, +0.122]
+   interaction: I_signal +0.009 [-0.053, +0.072] | I_control -0.010 [-0.067, +0.043] | difference +0.019 [-0.058, +0.099]
+   flags {'TOTAL': 'TOTAL-RESOLVED', 'LEADING_CARRIES': True, 'REMAINDER_CARRIES': False, 'LEADING_HALF': False, 'REMAINDER_HALF': False, 'INTERACTION': 'UNRESOLVED'}
+   secondary: BASELINE +0.147 [+0.040, +0.251] | R1 +0.133 [+0.073, +0.192] | energy {'lead': 0.7751565433343643, 'rem': 0.22484345666563588}
+CHALLENGE-SPECIFIC-REPLICATES on both receivers: True
+LEADING_CARRIES on both receivers: True
+REMAINDER_CARRIES on both receivers: False
+LEADING_HALF on both receivers: False
+REMAINDER_HALF on both receivers: False
+INTERACTION: 192: UNRESOLVED, 256: UNRESOLVED
