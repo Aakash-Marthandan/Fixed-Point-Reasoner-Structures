@@ -260,7 +260,7 @@ Scope under every outcome:
 The controls keep row magnitudes and angles; they do not remove all spatial structure.
 
 **What changes against P26.**
-- P26's exploratory reading that the specific transfer on 192 sat in the remainder was withdrawn in its addendum. P27 resolves the question the other way: with controls matched per row in magnitude and angle, P26's frozen common subspace carries the specific transfer on both receivers, and on 192 it reproduces the full transfer.
+- P26's exploratory reading that the specific transfer on 192 sat in the remainder was withdrawn in its addendum. P27 resolves the question the other way: with controls matched per row in magnitude and angle, P26's frozen common subspace carries the specific transfer on both receivers, and on 192 its donor coefficient has a near-identical point estimate to the full transfer's, with no resolved difference (equivalence not established; wording corrected in the scope addendum).
 - The row-independent controls track the donor little (0.042 / 0.020 / 0.067 on 192). This is consistent with the addendum's explanation of P26's projected control (0.173). It is not a test of that explanation: geometry localization was registered as not tested.
 
 **For the program.**
@@ -269,3 +269,59 @@ The controls keep row magnitudes and angles; they do not remove all spatial stru
   - It is reusable across puzzles, as the selection experiment (P28) needs.
 - **What it is not.** It is not yet a predictor of which corrections become productive, and not a performance gain. P26's addendum showed indiscriminate transplantation does not raise repair.
 - **P28 can use the leading component as a candidate intervention** beside the full transplant (on both receivers, not on 256 alone as staged).
+
+## P27 SCOPE ADDENDUM after an external review (2026-10-11 ~09:40Z; every number reproduced; exploratory; `runs/analysis/rebuttal_20261013/review_check.py`)
+
+**What stands.** The registered decisions stand. The reviewer reran the main intervals with 20,000 draws.
+
+**Wording corrected.**
+- On 192 the leading component "has a near-identical point estimate to the full transfer, with no resolved difference" (+0.001 [−0.044, +0.046]). It does not "reproduce" it: equivalence was not established.
+- The registered half-strength result (+0.108 [+0.054, +0.164]) is the defensible claim.
+
+**The two widths are not equally strong.**
+- 192: strong component evidence.
+- 256: a smaller, nominally positive leading effect at the statistical boundary. The lower bound of E_L is:
+  - +0.001 in the registered bootstrap;
+  - +0.005 in the recount's resampler;
+  - −0.002 with another 2,000-draw seed;
+  - +0.0002 with 20,000 draws.
+- On 256 the full transfer exceeds the leading part (+0.057 [+0.013, +0.103]) and the remainder part. This supports partial compression only. It does not show that both parts are necessary, or that their combination is synergistic.
+
+**The intervention, stated as an operator.** For each (field, cell) hidden vector, h′_r = h_r + (h_d − h_r) U Uᵀ, with U the frozen basis learned on other puzzles.
+- It replaces the recipient's coordinates along U with the donor's and leaves the complement intact.
+- U is readout-orthogonal, so the current answer scores are kept.
+- "Compact" means 24 or 32 channel directions *per field–cell vector*: a spatially distributed representation, not a 24-parameter description of the reasoning.
+- P27 shows this frozen subspace works. It does not show these directions are uniquely important, minimal, or better than every other subspace of the same rank.
+
+**No contradiction with P25.** The unresolved component interaction does not bear on P25's cooperative reconstruction: P25 tested interactions between corrections to the answer, while P27 tests interactions between two components of retained state.
+
+**Horizon** (exploratory; four-mask statistic; k = iterations after the change):
+
+| receiver | contrast | k = 1 | k = 2 | k = 3 | k = 4 |
+|---|---|---|---|---|---|
+| 192 | S (full vs P26's control) | +0.177 | +0.071 [+0.015, +0.127] | not resolved | not resolved |
+| 192 | E_L | +0.191 | +0.046 | +0.028 | +0.026 |
+| 256 | S | +0.085 | +0.003 | −0.025 | −0.008 |
+| 256 | E_L | +0.063 | −0.013 | −0.045 | −0.040 |
+
+- On 192, E_L at k = 2–4 is unresolved.
+- On 256, E_total at k = 3 is −0.065 [−0.130, −0.001], one exploratory interval among many.
+- There is no evidence yet for a persistent compact controller.
+
+**No repair gain** (untouched evaluation cells, corrected arms, k = 1):
+
+| transplant | 192 | 256 |
+|---|---|---|
+| leading − intact | +1.1 pp [−0.4, +2.6] | −1.9 pp [−4.2, +0.7] |
+| full − intact | +1.0 pp [−0.5, +2.6] | −2.1 pp [−4.5, +0.5] |
+
+These are four cells, not whole-puzzle completion. P27 establishes an ability to transfer correction responses, not to choose a more useful configuration.
+
+**Revised mechanism reading.**
+- Retained state helps configure the effective correction computation performed by the next recursive update.
+- An intervention that changes that computation is identified.
+- The semantic content of the coordinates and a complete predictive update rule are not.
+
+**Candidate manuscript wording (the PI decides):** "A readout-orthogonal subspace learned from separate puzzles supports transfer of history-specific correction responses while preserving current answer scores. Transplanting its donor coordinates changes responses to equally sized corrections beyond controls matched in per-vector magnitude and angle. The leading component carries at least half of the controlled transfer effect in Attention 192, with a smaller effect in Attention 256."
+
+The transferable scientific claim is the role of retained state in configuring correction responses. The particular Sudoku basis has not been shown to transfer across architectures or tasks.
