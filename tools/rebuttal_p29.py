@@ -28,6 +28,7 @@ CKPT = ASSETS / "ckpts/trm_arc1/step_259320_arc_ag1_attn_type_h3l4"
 ADAPTER = ROOT / "paper/code/adapters/arc"
 OUT = ROOT / "runs/analysis/rebuttal_20261015"
 SEED = 20261015
+SPLIT_SEED = 20261015                      # the pilot / confirmation task split: fixed for every study on this population (P29, P31)
 N_PILOT_TASKS = 48
 D_INT, K_MAX = 1, 4
 DOSES, MASKS = (0.25, 0.5, 0.75), 4
@@ -55,7 +56,7 @@ def sha(p):
 # ---------------- pure helpers (selftested) ----------------
 def task_split(tasks):
     """Frozen seeded order of the task names; the first N_PILOT_TASKS are the feasibility pilot, never used for confirmation."""
-    t = sorted(set(tasks)); perm = np.random.default_rng([SEED, 29, 0]).permutation(len(t)); o = [t[i] for i in perm]
+    t = sorted(set(tasks)); perm = np.random.default_rng([SPLIT_SEED, 29, 0]).permutation(len(t)); o = [t[i] for i in perm]
     return o[:N_PILOT_TASKS], o[N_PILOT_TASKS:]
 
 
@@ -73,10 +74,11 @@ def structural_errors(disp, labels):
     return int((colour(labels) & ~colour(disp)).sum()), int((~colour(labels) & colour(disp)).sum())
 
 
-def draw_challenges(qi, W, e_excl, e_eval):
+def draw_challenges(qi, W, e_excl, e_eval, seed=None):
     """E = the first e_eval tokens of a seeded permutation of W (never edited); masks from W minus its first e_excl tokens (e_excl >= max e_eval)."""
-    perm = np.random.default_rng([SEED, int(qi), 1]).permutation(np.asarray(W)); Ex = perm[:e_excl]; R = np.array(sorted(set(W.tolist()) - set(Ex.tolist())))
-    masks = [(i, m, np.sort(np.random.default_rng([SEED, int(qi), 2, i, m]).choice(R, max(1, int(round(f * len(R)))), replace=False)))
+    seed = SEED if seed is None else seed
+    perm = np.random.default_rng([seed, int(qi), 1]).permutation(np.asarray(W)); Ex = perm[:e_excl]; R = np.array(sorted(set(W.tolist()) - set(Ex.tolist())))
+    masks = [(i, m, np.sort(np.random.default_rng([seed, int(qi), 2, i, m]).choice(R, max(1, int(round(f * len(R)))), replace=False)))
              for i, f in enumerate(DOSES) for m in range(MASKS)]
     return perm[:e_eval], masks
 
@@ -246,8 +248,9 @@ def eligibility_interval(screen, e, n_conf_q, n_boot=4000):
 
 # ---------------- the runner (torch; the TRM environment) ----------------
 class Runner:
-    def __init__(self, out, threads):
+    def __init__(self, out, threads, seed=SEED):
         import torch
+        self.seed = seed                                   # histories, challenges and controls (P29: 20261015; P31: 20261016)
         self.torch = torch; torch.set_num_threads(threads); self.threads = threads
         os.environ["RR_ARC_ASSETS"] = str(ASSETS); sys.path.insert(0, str(ADAPTER))
         import field_models_arc as FA
@@ -279,7 +282,7 @@ class Runner:
         with self.torch.inference_mode(): return self.inner.lm_head(zH)[..., P_PREFIX:, :]
 
     def gauss(self, qi):
-        z = np.random.default_rng([SEED, int(qi), 7]).standard_normal((2, P_PREFIX + NPOS, HID)).astype(np.float32); return self.torch.from_numpy(z[0]), self.torch.from_numpy(z[1])
+        z = np.random.default_rng([self.seed, int(qi), 7]).standard_normal((2, P_PREFIX + NPOS, HID)).astype(np.float32); return self.torch.from_numpy(z[0]), self.torch.from_numpy(z[1])
 
     # -- gates --
     def native_gate(self, qis, states):
@@ -332,16 +335,20 @@ class Runner:
                        acc=(float((dA == lab)[colour(lab)].mean()), float((dB == lab)[colour(lab)].mean())), shape_ok=(crop(dA).shape == gt.shape, crop(dB).shape == gt.shape))
             info_all["screen"].append(rec)
             if solA or solB or len(W) < e_excl + R_MIN: continue
-            Etok, masks = draw_challenges(qi, W, e_excl, e_eval_max)
+            Etok, masks = draw_challenges(qi, W, e_excl, e_eval_max, self.seed)
             hs = [(aH[j], aL[j], dA), (bH[j], bL[j], dB)]; built = []
             for di in (0, 1):                                    # direction 0: recipient A, donor B; 1: recipient B, donor A
                 r, d = (0, 1) if di == 0 else (1, 0); hr32, lr32, dr = hs[r]; hd32 = hs[d][0]
                 hr, hd = hr32.double().numpy(), hd32.double().numpy()
-                full, ctrl, tinfo = transplant_states(hr, hd, self.N, P, np.random.default_rng([SEED, int(qi), 6, di]))
+                full, ctrl, tinfo = transplant_states(hr, hd, self.N, P, np.random.default_rng([self.seed, int(qi), 6, di]))
                 cs = dict(intact=hr32, full=T.from_numpy(full.astype(np.float32)), full_ctrl=T.from_numpy(ctrl.astype(np.float32)))
                 if "ctrl_b" in conds:                              # the calibration's independent second draw of the same control construction
-                    ctrl2, _, tinfo2 = (lambda x: (x[1], None, x[2]))(transplant_states(hr, hd, self.N, P, np.random.default_rng([SEED, int(qi), 16, di])))
+                    ctrl2, _, tinfo2 = (lambda x: (x[1], None, x[2]))(transplant_states(hr, hd, self.N, P, np.random.default_rng([self.seed, int(qi), 16, di])))
                     cs["ctrl_b"] = T.from_numpy(ctrl2.astype(np.float32)); tinfo = dict(tinfo, **{k_: max(tinfo[k_], tinfo2[k_]) for k_ in ("ctrl_norm_dev", "ctrl_change_dev", "ctrl_in_null")})
+                for c in conds:                                     # P31: independent matched controls ctrl_j<j>, seeds [seed, query, 6, direction, j]
+                    if c.startswith("ctrl_j"):
+                        cj = transplant_states(hr, hd, self.N, P, np.random.default_rng([self.seed, int(qi), 6, di, int(c[6:])]))
+                        cs[c] = T.from_numpy(cj[1].astype(np.float32)); tinfo = dict(tinfo, **{k_: max(tinfo[k_], cj[2][k_]) for k_ in ("ctrl_norm_dev", "ctrl_change_dev", "ctrl_in_null")})
                 TC = [c for c in cs if c != "intact"]
                 L0 = self.logits32(hr32); nflip = sum(int((self.logits32(cs[c]).argmax(-1) != L0.argmax(-1)).sum()) for c in TC)
                 built.append((di, r, d, hr32, lr32, dr, hd32, hr, cs, tinfo, L0, nflip))
@@ -415,7 +422,7 @@ class Runner:
                 gates["batch_invariant"] = bool(T.equal(z1, zb)); gates["batch_maxdev"] = float((z1 - zb).abs().max())
             states, V, disp, elog = self.block(qis, conds, e_excl, e_eval_max, gates, info, t, exclude_flips); t["wall"] = time.time() - t0
             ok = gates["crop_mismatch"] == 0 and gates["restore_tensor"] == 0 and gates["restore_rollout"] == 0 and gates["corr_display"] == 0 and gates["corr_other_changed"] == 0 \
-                and gates["full_flips"] == 0 and gates["full_ctrl_flips"] == 0 and gates.get("ctrl_b_flips", 0) == 0 and gates["full_prefix_not_donor"] == 0 \
+                and all(v == 0 for k_, v in gates.items() if k_.endswith("_flips")) and gates["full_prefix_not_donor"] == 0 \
                 and all(g_["bitwise"] for g_ in gates.get("native", [dict(bitwise=True)])) and gates.get("batch_invariant", True) \
                 and gates["ctrl_norm_dev"] < 1e-9 and gates["ctrl_change_dev"] < 1e-9 and gates["ctrl_in_null"] < 1e-9
             if tol is not None:                                   # the registered executed-float32 tolerances
