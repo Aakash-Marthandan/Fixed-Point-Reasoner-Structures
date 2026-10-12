@@ -319,6 +319,70 @@ This is the failure mode the PI predicted: small intact scales amplify large int
 - **Only β(full) resolved:** "donor-aligned but not beyond a matched random change". On this checkpoint, random changes can do that too.
 - **Neither resolved:** "not resolved at this precision (single-coefficient MDE ≈ 0.15 at the realized size)". This does not say ARC lacks the property.
 
+## P29 Outcome (2026-10-12; `runs/analysis/rebuttal_20261015/report_conf.{txt,json}`; every gate passed; recount exact)
+
+**Run.** Launched 06:30Z (12:00 IST) by the system clock; the registration entry's "~09:10Z" label was wrong, see below. Three processes; 13,731 s of rollout time; 10,148 variants.
+- All 370 confirmation queries were screened; 254 were unsolved after one update from both starts.
+- **118 queries were eligible, one per task (118 tasks, 236 pair-directions).** That is inside the projection interval [92, 193], below the central 143.
+- Gates in all 47 blocks:
+  - the native recurrence and batch invariance were bitwise, and restoration was bitwise over four updates;
+  - zero displayed-token changes under transplants or controls, and no query excluded;
+  - executed logit deviation ≤ 2.2e-3 for transplants and controls (cap 3e-3) and ≤ 1.19e-3 for corrections (cap 1.5e-3); the smallest top-two gap was 2.7e-4;
+  - no small-scale exclusions, and no unidentified bootstrap draws.
+- **Two reader-side fixes after the run; neither touches a rollout or a statistic.**
+  1. `merge` now drops empty blocks before concatenation. Block 35 had no eligible query, and its placeholder evaluation-token array was 16 wide instead of 4. The earlier merged files' hashes are unchanged.
+  2. `load` now reads every array into memory once. The lazy npz access re-decompressed the display array on every variant access, and the first reader run, which also lacked `caffeinate` while the Mac idle-slept on battery, stalled for hours.
+
+  The independent recount (`recount.py`, own code) reproduces every number below.
+
+**The registered result (standardized margin, |E| = 4, k = 1; 20,000 task-clustered draws).**
+
+| quantity | estimate | 95 % interval |
+|---|---|---|
+| β(full), donor-aligned | **+0.354** | [+0.251, +0.488] |
+| β(full_ctrl), the matched control | +0.171 | [+0.073, +0.276] |
+| β(full) − β(full_ctrl), beyond the control | **+0.183** | [+0.017, +0.389] |
+
+**→ S-ARC.** Both lower bounds are above zero. The second lower bound is thin.
+- In four other 20,000-draw seeds it reads +0.015 to +0.018, with 1.4–1.7 % of draws at or below zero (`seed_check.py`, exploratory).
+- The recount's own resampler gives [+0.018, +0.388].
+
+**Task influence (registered).**
+- The information is spread: all 118 tasks carry residual donor information, effectively 110.4 tasks. The top task (a934301b) holds 0.014.
+- Without that task the result still reads S-ARC: β(full) +0.358 [+0.252, +0.493], difference +0.182 [+0.012, +0.391].
+- Leave-one-task-out ranges: β(full) [+0.305, +0.370]; difference [+0.108, +0.225].
+
+**Secondary (registered, no letters).**
+- BASELINE (full − control slope): +0.318 [+0.126, +0.781]. R1: +0.309 [+0.129, +0.470].
+- **Raw margin:** β(full) +0.136 [+0.035, +0.371], control +0.117; difference **+0.019 [−0.060, +0.182], not resolved**. The logit-scale-weighted average, dominated by the few tasks with very large logit responses, shows no transfer beyond the control. The standardized result lives in the typical query.
+- **Token correctness:** β(full) +0.142 [+0.042, +0.280], control +0.037; difference **+0.105 [+0.007, +0.248]**. This is resolved at k = 1, but it is a secondary, and most groups do not vary. It needs its own replication before any claim that transfer extends to which answers get corrected.
+- **Horizons, standardized margin, difference from the control:** k = 2 +0.194 [+0.058, +0.255]; k = 3 +0.146 [+0.018, +0.288]; k = 4 +0.085 [−0.060, +0.271], not resolved. The raw margin and correctness are unresolved at k = 2–4.
+- The decoded shape is correct for 85.6 % of variants at k = 1 in every condition. Exact answers are ≤ 0.8 %.
+- Magnitudes: transplant ‖Δ‖/‖h‖ 0.29 at answer positions and 0.55 at the prefix. The correction ‖δ‖/‖h‖ is 0.73 in both histories.
+
+**Predictions.**
+
+| event | credence | outcome |
+|---|---|---|
+| S-ARC | 0.20 | yes |
+| β(full) resolved > 0 | 0.40 | yes |
+| difference resolved > 0 | 0.25 | yes |
+| S-ARC survives omitting the top-information task | 0.50 | yes |
+
+Brier score 0.453. The transfer was under-predicted, as on Sudoku P26.
+
+**Reading.**
+- **Registered wording:** "On ARC, at fixed current answer scores, transplanting a history's retained slow state transfers part of its correction-induced logit-margin responses beyond a matched random change."
+- It is spread across tasks, not carried by one, and persists for two to three updates on the standardized margin.
+- It is **not** transfer of corrected answers: correctness is only a resolved secondary. It is **not** transfer of calibrated confidence.
+- **What limits it.**
+  - A random retained-state change of the same geometry already moves responses toward the donor's (+0.171). The donor-specific part is the difference, +0.18, whose lower bound sits near zero.
+  - The weighting matters: under the raw logit scale the transfer beyond the control is not resolved.
+  - The confirmation drew one control per pair-direction. The calibration showed two draws can differ, so part of the interval's width is control-draw noise.
+- **With Sudoku P26/P27:** the same property, that retained state carries a transferable, history-specific response to subsequent corrections, now appears on a second task and a second architecture (TRM on ARC-AGI-1). This holds for the response measure registered here; Sudoku's basis or coordinates were not used.
+
+**Clock correction.** The ledger entry for this registration is labelled "2026-10-12 ~09:10Z". The commit is 18c010d at 06:30Z (12:00 IST); my time labels ran about three hours ahead.
+
 ## Scope (under every outcome)
 
 - Oracle-guided diagnostic corrections through the readout's pseudoinverse: not a validated semantic inverse.

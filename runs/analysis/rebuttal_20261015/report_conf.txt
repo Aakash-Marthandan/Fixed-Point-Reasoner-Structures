@@ -1,0 +1,19 @@
+P29 REPORT (registered before any confirmation row; measure margin_std, |E| = 4, k = 1 primary; 20000 task-clustered draws)
+screened 370 queries; eligible 118 queries (236 pair-directions) from 118 tasks
+  PRIMARY margin_std k=1: beta(full) +0.354 [+0.251, +0.488] | beta(full_ctrl) +0.171 [+0.073, +0.276] | full - ctrl +0.183 [+0.017, +0.389]
+     -> S-ARC | secondary BASELINE (full - ctrl slope) +0.318 [+0.126, +0.781] | R1 +0.309 [+0.129, +0.470]
+     task influence: without the top-information task (0.014 of it): beta(full) +0.358 [+0.252, +0.493], full - ctrl +0.182 [+0.012, +0.391] -> S-ARC; leave-one-task-out ranges beta(full) [+0.305, +0.370], full - ctrl [+0.108, +0.225]; information: tasks with any 118, effective 110.4
+  margin k=1: beta(full) +0.136 [+0.035, +0.371] | beta(full_ctrl) +0.117 [+0.056, +0.235] | full - ctrl +0.019 [-0.060, +0.182]
+  correct k=1: beta(full) +0.142 [+0.042, +0.280] | beta(full_ctrl) +0.037 [-0.017, +0.087] | full - ctrl +0.105 [+0.007, +0.248]
+  margin_std k=2: beta(full) +0.187 [+0.138, +0.263] | beta(full_ctrl) -0.007 [-0.079, +0.125] | full - ctrl +0.194 [+0.058, +0.255]
+  margin k=2: beta(full) +0.111 [+0.009, +0.244] | beta(full_ctrl) +0.097 [+0.010, +0.211] | full - ctrl +0.014 [-0.122, +0.132]
+  correct k=2: beta(full) +0.061 [-0.006, +0.125] | beta(full_ctrl) -0.014 [-0.113, +0.052] | full - ctrl +0.075 [-0.037, +0.216]
+  margin_std k=3: beta(full) +0.110 [+0.015, +0.252] | beta(full_ctrl) -0.036 [-0.134, +0.064] | full - ctrl +0.146 [+0.018, +0.288]
+  margin k=3: beta(full) +0.082 [-0.008, +0.193] | beta(full_ctrl) +0.047 [-0.043, +0.138] | full - ctrl +0.035 [-0.097, +0.183]
+  correct k=3: beta(full) +0.056 [-0.050, +0.131] | beta(full_ctrl) +0.019 [-0.057, +0.068] | full - ctrl +0.037 [-0.063, +0.144]
+  margin_std k=4: beta(full) +0.103 [+0.028, +0.200] | beta(full_ctrl) +0.018 [-0.087, +0.111] | full - ctrl +0.085 [-0.060, +0.271]
+  margin k=4: beta(full) +0.108 [+0.019, +0.202] | beta(full_ctrl) +0.053 [-0.033, +0.134] | full - ctrl +0.055 [-0.077, +0.197]
+  correct k=4: beta(full) +0.061 [-0.015, +0.129] | beta(full_ctrl) +0.016 [-0.068, +0.086] | full - ctrl +0.045 [-0.061, +0.153]
+  decoded shape correct at k=1: intact 0.856, full 0.856, full_ctrl 0.856 | exact: intact 0.000, full 0.000, full_ctrl 0.008
+  decoded shape correct at k=4: intact 0.847, full 0.847, full_ctrl 0.847 | exact: intact 0.000, full 0.000, full_ctrl 0.000
+  magnitudes: transplant answer 0.290, prefix 0.553; correction ||delta||/||h|| fixed 0.731, Gaussian 0.737

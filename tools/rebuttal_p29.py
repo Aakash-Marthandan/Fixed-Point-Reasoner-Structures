@@ -455,7 +455,8 @@ def merge(tag, base=OUT):
         acc.setdefault("var_state", []).append(d["var_state"] + off)
         for k in ("state_masks", "state_tinfo", "state_cinfo"): acc.setdefault(k, []).extend(json.loads(str(d[k])))
         conds = [str(x) for x in d["conds"]]; off += len(d["state_qi"])
-    out = {k: (json.dumps(v) if k in ("state_masks", "state_tinfo", "state_cinfo") else np.concatenate(v)) for k, v in acc.items()}
+    # empty blocks (no eligible query) are dropped before concatenation: their placeholder arrays need not share the row width (merge fix, P29 conf)
+    out = {k: (json.dumps(v) if k in ("state_masks", "state_tinfo", "state_cinfo") else np.concatenate([x for x in v if len(x)] or v[:1])) for k, v in acc.items()}
     dst = base / f"p29_{tag}.npz"
     np.savez_compressed(dst, conds=np.array(conds), gates=json.dumps(gates), timing=json.dumps(timing), screen=json.dumps(screen), meta=json.dumps(metas), **out)
     (base / f"p29_{tag}.sha256.json").write_text(json.dumps(dict(sha256=sha(dst))) + "\n"); print(f"merged {len(fs)} blocks -> {dst} ({off} states)")
@@ -463,7 +464,8 @@ def merge(tag, base=OUT):
 
 # ---------------- tables from a merged file ----------------
 def load(tag, base=OUT):
-    d = np.load(base / f"p29_{tag}.npz", allow_pickle=False); return d
+    """Every array read into memory once (an NpzFile decompresses an array again on every access; P29 conf: reader performance fix, no result change)."""
+    with np.load(base / f"p29_{tag}.npz", allow_pickle=False) as z: return {k: z[k] for k in z.files}
 
 
 def donor_map(d):
