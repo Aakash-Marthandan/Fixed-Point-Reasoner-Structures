@@ -1,0 +1,26 @@
+P31 REPORT (registered before any P31 row; fresh seeds 20261016; M = 4 averaged controls; |E| = 4; 20000 task-clustered draws)
+screened 370 queries; eligible 123 (246 pair-directions, 122 tasks); overlap with P29's eligible queries {'p31': 123, 'p29': 118, 'both': 116, 'p31_only': 7, 'p29_only': 2}
+gates: native True, batch True, max {'crop_mismatch': 0, 'restore_tensor': 0, 'restore_rollout': 0, 'corr_display': 0, 'corr_other_changed': 0, 'full_flips': 0, 'full_ctrl_flips': 0, 'full_prefix_not_donor': 0, 'full_logit_maxdev': 0.0020751953125, 'full_ctrl_logit_maxdev': 0.0020751953125, 'corr_logit_maxdev_intact': 0.0011890482780927414, 'corr_logit_maxdev_full': 0.0011751885961075459, 'corr_logit_maxdev_full_ctrl': 0.0012074454189132666, 'ctrl_norm_dev': 4.758746029853391e-16, 'ctrl_change_dev': 5.439545369333127e-15, 'ctrl_in_null': 8.881784197001252e-14, 'min_top2_gap': 1.1444091796875e-05, 'excluded_flip_queries': 0, 'ctrl_j0_logit_maxdev': 0.0020751953125, 'ctrl_j0_flips': 0, 'ctrl_j1_logit_maxdev': 0.0023193359375, 'ctrl_j1_flips': 0, 'ctrl_j2_logit_maxdev': 0.001953125, 'ctrl_j2_flips': 0, 'ctrl_j3_logit_maxdev': 0.0023193359375, 'ctrl_j3_flips': 0, 'corr_logit_maxdev_ctrl_j0': 0.0009923425852775836, 'corr_logit_maxdev_ctrl_j1': 0.0011384188164811349, 'corr_logit_maxdev_ctrl_j2': 0.00098818917558674, 'corr_logit_maxdev_ctrl_j3': 0.001066606021595362}
+  PRIMARY margin_std k=1: beta(full) +0.301 [+0.207, +0.389] | beta(avg control) +0.110 [+0.042, +0.175] | full - avg control +0.191 [+0.097, +0.273]
+     outcome_influence omission (55783887, 0.328 of the jackknife variance): beta(full) +0.326 [+0.249, +0.401], diff +0.217 [+0.142, +0.288] -> survives the selected task omission
+     predictor_information omission (f3e62deb): beta(full) +0.304 [+0.209, +0.393], diff +0.190 [+0.095, +0.275] -> survives the selected task omission
+     leave-one-task-out ranges: beta(full) [+0.283, +0.326], diff [+0.183, +0.217]
+     per-control beta (vs intact): j0 +0.092, j1 +0.139, j2 +0.104, j3 +0.103
+     CLIPPED SECONDARY (+-10 after centering, per condition and control, then recentered): beta(full) +0.306 [+0.220, +0.393], diff +0.195 [+0.110, +0.274]; responses clipped 42 of 20664 in 7 queries
+     secondary BASELINE +0.240 | R1 +0.712 (point estimates)
+  margin_std k=2: beta(full) +0.109 [+0.050, +0.182] | beta(avg control) +0.043 [-0.012, +0.097] | full - avg control +0.065 [+0.006, +0.141]
+  margin_std k=3: beta(full) +0.087 [+0.025, +0.156] | beta(avg control) -0.002 [-0.144, +0.118] | full - avg control +0.090 [-0.040, +0.245]
+  margin_std k=4: beta(full) +0.037 [-0.052, +0.113] | beta(avg control) +0.044 [-0.036, +0.097] | full - avg control -0.007 [-0.103, +0.094]
+  SECOND CONFIRMATORY correct k=1: beta(full) +0.111 [+0.019, +0.288] | beta(avg control) +0.047 [-0.011, +0.134] | full - avg control +0.064 [-0.019, +0.194]
+     outcome_influence omission (ac2e8ecf, 0.692 of the jackknife variance): beta(full) +0.199 [+0.092, +0.321], diff +0.129 [+0.030, +0.217] -> survives the selected task omission
+     predictor_information omission (ac2e8ecf): beta(full) +0.199 [+0.093, +0.321], diff +0.129 [+0.026, +0.216] -> survives the selected task omission
+     leave-one-task-out ranges: beta(full) [+0.078, +0.199], diff [+0.036, +0.129]
+  correct k=2: beta(full) +0.021 [-0.018, +0.104] | beta(avg control) +0.057 [-0.033, +0.169] | full - avg control -0.036 [-0.165, +0.107]
+  correct k=3: beta(full) +0.055 [-0.023, +0.156] | beta(avg control) +0.046 [-0.030, +0.159] | full - avg control +0.008 [-0.138, +0.142]
+  correct k=4: beta(full) -0.000 [-0.133, +0.114] | beta(avg control) +0.028 [-0.055, +0.134] | full - avg control -0.029 [-0.162, +0.103]
+  margin k=1: beta(full) +0.105 [+0.010, +0.269] | beta(avg control) +0.054 [-0.014, +0.176] | full - avg control +0.050 [-0.039, +0.172]
+  margin k=2: beta(full) +0.050 [-0.010, +0.157] | beta(avg control) +0.020 [-0.023, +0.102] | full - avg control +0.030 [-0.062, +0.153]
+  margin k=3: beta(full) +0.086 [+0.010, +0.185] | beta(avg control) +0.029 [-0.040, +0.135] | full - avg control +0.057 [-0.059, +0.189]
+  margin k=4: beta(full) +0.043 [-0.044, +0.137] | beta(avg control) +0.040 [-0.015, +0.160] | full - avg control +0.003 [-0.166, +0.127]
+  challenged-arm evaluation-token correctness at k=1 (%): intact 11.11, full 10.80, avg control 10.18
+LETTERS (fixed sequence; P31 alone): R-MARGIN; R-CORRECT-NOT-RESOLVED

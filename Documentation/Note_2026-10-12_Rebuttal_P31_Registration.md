@@ -84,3 +84,69 @@ Per pair-direction: (2 + M) × 13 + 4 = 82 variants, against P29's 43. For about
 - P31 runs after P30's feature replay finishes, so the two do not share the CPU.
 - Before launch, the seed-parametrized runner must reproduce one P29 pilot block bitwise (a regression gate on the runner change).
 - Then three shards, under `caffeinate`, with AC power and an open lid.
+
+## P31 Outcome (2026-10-12 ~23:00Z; `runs/analysis/rebuttal_20261017/report_conf.{txt,json}`; every gate passed; independent recount exact)
+
+**Run.** Launched 18:41Z; three processes; partly on battery at the start, which halved the speed until AC was connected; finished 22:58Z. The tools were unchanged since registration (8ab0286).
+- All 370 confirmation queries were screened. **123 were eligible (246 pair-directions, 122 tasks).** Of them, 116 were also eligible in P29; 7 are new, and 2 of P29's are not eligible here.
+- **Gates (all 47 blocks):**
+  - native recurrence, batch invariance and restoration bitwise;
+  - zero displayed-token changes and no exclusions;
+  - executed transplant and control logit deviation ≤ 2.3e-3 (cap 3e-3), correction ≤ 1.21e-3 (cap 1.5e-3);
+  - smallest top-two gap 1.1e-5, with no flip;
+  - no small-scale exclusions and no unidentified bootstrap draws.
+
+**R-MARGIN (primary; standardized margin, |E| = 4, k = 1; four averaged controls; 20,000 task-clustered draws).**
+
+| quantity | estimate | 95 % interval |
+|---|---|---|
+| β(full) | +0.301 | [+0.207, +0.389] |
+| β(averaged control) | +0.110 | [+0.042, +0.175] |
+| **β(full) − β(averaged control)** | **+0.191** | **[+0.097, +0.273]** |
+
+**→ R-MARGIN.** P29's result replicates, with a similar point estimate (+0.183 there) and a lower bound well above zero.
+- The four controls' individual coefficients relative to intact: +0.092, +0.139, +0.104, +0.103.
+- **Sensitivity (registered diagnostics):**
+  - Outcome influence is far less concentrated than in P29. Task 55783887 holds 0.33 of the jackknife variance. Without it: β(full) +0.326 [+0.249, +0.401], difference +0.217 [+0.142, +0.288] → **survives the selected task omission.**
+  - The predictor-information omission (f3e62deb) also survives: +0.190 [+0.095, +0.275].
+  - Complete leave-one-task-out ranges: β(full) [+0.283, +0.326], difference [+0.183, +0.217].
+- **Clipped secondary** (±10, then recentered): β(full) +0.306 [+0.220, +0.393], difference +0.195 [+0.110, +0.274].
+  - **40 of 17,712 responses were clipped, in 7 queries.** The frozen reader printed "42 of 20,664". Its count also centered, clipped and counted the averaged control's unclipped rows before overwriting them; the estimates are unaffected. The recount gives the correct count.
+- **Horizons, difference from the averaged control:**
+  - k = 2: +0.065 [+0.006, +0.141];
+  - k = 3: +0.090 [−0.040, +0.245];
+  - k = 4: −0.007.
+
+  Here the transfer is detected through the **second** update; in P29 it was detected through the third. Persistence beyond one or two updates is not consistent across the two runs.
+- Secondary: BASELINE +0.240 and R1 +0.712 (point estimates).
+
+**R-CORRECT (second confirmatory, gated on R-MARGIN).**
+- β(full) +0.111 [+0.019, +0.288]; β(averaged control) +0.047; **difference +0.064 [−0.019, +0.194] → R-CORRECT NOT RESOLVED.**
+- The selected-omission diagnostic (task ac2e8ecf, 0.69 of the jackknife variance) gives +0.129 [+0.030, +0.217]. It is a sensitivity diagnostic and **cannot rescue** the registered test.
+- P29's resolved correctness secondary (+0.105) is therefore not confirmed.
+
+**Other secondaries.**
+- Raw margin: difference +0.050 [−0.039, +0.172], unresolved, as in P29.
+- **No repair benefit:** challenged-arm evaluation-token correctness 11.11 % intact, 10.80 % full, 10.18 % averaged control.
+
+**Recount** (`recount.py`, own code). Every point estimate is exact (+0.300514 / +0.109507 / +0.191008; correctness +0.110656 / +0.046703). The independent resampler gives [+0.207, +0.388] and [+0.097, +0.274], and [−0.019, +0.193] for correctness. The selected tasks, their omissions and the leave-one-task-out ranges are exact. The clipped estimates are exact, and the clipped count is corrected above.
+
+**Predictions.**
+
+| event | credence | outcome |
+|---|---|---|
+| R-MARGIN | 0.45 | yes |
+| β(full) resolved > 0 (margin) | 0.75 | yes |
+| R-CORRECT, given R-MARGIN | 0.30 | no |
+| survives the selected task omission (margin), given R-MARGIN | 0.45 | yes |
+
+Brier score 0.189.
+
+**Reading.**
+- **Replicated:** on the public TRM ARC-AGI-1 checkpoint, answer-logit-preserving slow-state transplants transfer part of a history's correction-induced logit-margin responses beyond the average of four matched random changes. This holds across new pairings, challenges and controls on the same tasks; it is not a test of new tasks.
+- **More robust than P29:** the lower bound sits well above zero, it survives the selected task omission, and the leave-one-task-out range is narrow.
+- The donor-aligned coefficient of random changes is again positive (+0.110). The donor-specific part is the difference.
+- **Not replicated:** transfer of which answers get corrected (correctness).
+- **Not shown:** persistence beyond the first one or two updates, a repair benefit, or a selection rule (P30).
+
+**Candidate manuscript wording (the PI decides):** "In a registered replication with fresh Gaussian-start histories, challenges and four averaged matched controls on the same 352 ARC-AGI-1 tasks (123 eligible queries), the query-normalized margin transfer replicated (Δβ = 0.191; 95% task-bootstrap CI [0.097, 0.273]) and survived the prespecified omission of the most influential task; the gated correctness test was not resolved (Δβ = 0.064 [−0.019, 0.194]). Neither run showed a repair benefit."
