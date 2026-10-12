@@ -383,6 +383,50 @@ Brier score 0.453. The transfer was under-predicted, as on Sudoku P26.
 
 **Clock correction.** The ledger entry for this registration is labelled "2026-10-12 ~09:10Z". The commit is 18c010d at 06:30Z (12:00 IST); my time labels ran about three hours ahead.
 
+## P29 SCOPE ADDENDUM after the PI’s review (2026-10-12 ~17:50Z; every number reproduced; exploratory; `runs/analysis/rebuttal_20261015/review_check.py`)
+
+**What stands.** The registered decision stands: S-ARC, with β(full) − β(full_ctrl) = +0.183 [+0.017, +0.389]. The provenance holds:
+- the registered runner was used;
+- the pilot tasks were excluded;
+- all 370 queries were screened and 118 retained;
+- the gates pass;
+- the two later code changes touch only loading and merging.
+
+The PI's independent bootstrap gives about [+0.014, +0.388]. The positive lower bound is reproducible, though close to zero.
+
+**Corrected: predictor information is not outcome influence.**
+- "About 110 effective tasks" measures how broadly the *intact donor-response predictors* vary. It does not measure how evenly tasks contribute to the estimated transplant effect or to its uncertainty.
+- **One task, b9630600, holds 0.62 of the jackknife variance** of the full − control contrast.
+  - Omitting it moves the contrast from +0.183 to +0.108 [−0.015, +0.213].
+  - Every single-task omission leaves a positive point estimate (range +0.108 to +0.225).
+  - **The effect's direction is more stable than its statistical significance.**
+- The registered omission removed a different task, chosen by predictor information before any outcome, and passes as reported. The b9630600 omission was chosen after seeing outcomes. It is a sensitivity analysis: it neither replaces the primary test nor justifies discarding the task.
+- On b9630600, responses after intervention reach **30.1 times** the query's intact scale for the control (one direction) and 14.9 times for the full transplant (the other direction); the intact responses are 0.3–1.3. This is the failure mode the calibration anticipated: standardization balances the predictors and leaves large intervention responses in place.
+- **Withdrawn:** "spread across tasks, not carried by one". **Supported:** predictor information is broadly distributed, while significance remains sensitive to individual-task influence.
+
+**Two interpretations tightened.**
+- **Raw margin.** "Not resolved" is not "nothing transfers": the interval [−0.060, +0.182] allows a positive effect. Disagreement between the raw and standardized analyses does not establish that the effect "lives in the typical query". **That phrase is withdrawn.**
+- **Persistence.** The standardized contrast is positive with intervals excluding zero at k = 2 and 3. **Say "detected through the third update; unresolved at the fourth."** Where the effect ends is not established.
+
+**No repair benefit** (challenged arms, mean evaluation-token correctness at k = 1): intact 9.80 %, full transplant 9.42 %, matched control 10.58 %. Response transfer is not better repair.
+
+**Correctness secondary.** +0.105 [+0.007, +0.248] is encouraging. Only 6.2 % of history–dose groups (44 of 708) vary in correctness across masks, and its information is much less broadly distributed than the margin's. It needs confirmation.
+
+**The mechanism this supports.** The intervention preserves the recipient's current answer logits to numerical tolerance, and the evaluation tokens are never edited. Even so, replacing retained state changes *which equal-sized corrections elsewhere produce donor-like responses*, beyond a matched random change:
+
+> Retained state configures how subsequent corrections propagate, and part of that configuration can be transferred between histories.
+
+P29 supplies evidence for this in TRM on ARC, alongside the Sudoku findings (P26/P27). The generalizable contribution is the intervention method together with the observed transfer of correction responses. **Not tested on ARC:** compactness, represented content, and a rule for choosing beneficial configurations.
+
+**Candidate manuscript wording (the PI's):** "On 118 eligible ARC-AGI-1 evaluation queries, answer-logit-preserving slow-state transplants in a public TRM checkpoint transferred correction-specific responses beyond matched random perturbations under a preregistered, query-normalized margin analysis (Δβ = 0.183; 95% task-bootstrap CI [0.017, 0.389]). This extends the response-transfer finding to a second task and architecture, although statistical significance was sensitive to individual-task influence."
+- The appendix carries the raw-margin analysis, the correctness secondary, the later horizons, and the distinction between predictor concentration and outcome influence.
+- It is a defensible positive addition, **not** a robust improvement in reasoning performance.
+
+**Next (the PI's decisions).**
+1. **One registered replication of the primary finding, with correctness explicitly included** (P31, drafted separately). It uses fresh history and mask seeds, averages a fixed small number of independent matched controls, and predeclares the task-influence analysis and the roles of the two outcomes. Reusing the ARC task set tests reproducibility across histories and challenges, not generalization to new tasks.
+2. Correctness alone is not the next headline; both outcomes are measured in the same runs.
+3. **P30 proceeds as a bounded analysis of the existing Sudoku bank:** can information available before continuation identify a beneficial intervention? It keeps the equally informed control and restart comparisons and the compute accounting. P29 motivates it but gives no evidence that selection will work.
+
 ## Scope (under every outcome)
 
 - Oracle-guided diagnostic corrections through the readout's pseudoinverse: not a validated semantic inverse.
