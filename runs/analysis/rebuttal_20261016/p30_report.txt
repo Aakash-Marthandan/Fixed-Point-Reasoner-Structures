@@ -1,0 +1,17 @@
+P30 (EXPLORATORY; plan 47c2fb4): within-puzzle selection signal in the P28 bank; held-out scores from puzzle-grouped CV
+attention_192 lead     : base 0.193; within-puzzle AUC 0.506 [0.467, 0.547] over 89 puzzles with discordant pairs; top-1 pick 0.188 vs random 0.193 (gain -0.005 [-0.061, +0.059]) vs oracle 0.695; C chosen [0.01]
+attention_192 lead_ctrl: base 0.189; within-puzzle AUC 0.501 [0.451, 0.548] over 86 puzzles with discordant pairs; top-1 pick 0.219 vs random 0.189 (gain +0.030 [-0.025, +0.089]) vs oracle 0.672; C chosen [0.01]
+attention_192 full     : base 0.184; within-puzzle AUC 0.533 [0.486, 0.579] over 88 puzzles with discordant pairs; top-1 pick 0.219 vs random 0.184 (gain +0.035 [-0.024, +0.098]) vs oracle 0.688; C chosen [0.01]
+attention_192 full_ctrl: base 0.199; within-puzzle AUC 0.503 [0.459, 0.546] over 87 puzzles with discordant pairs; top-1 pick 0.219 vs random 0.199 (gain +0.020 [-0.037, +0.080]) vs oracle 0.680; C chosen [0.01, 0.1]
+attention_192 restart  : base 0.172; within-puzzle AUC 0.533 [0.491, 0.574] over 89 puzzles with discordant pairs; top-1 pick 0.203 vs random 0.172 (gain +0.031 [-0.030, +0.093]) vs oracle 0.695; C chosen [0.1, 1.0]
+attention_192: leading-transplant gain minus matched-control gain (paired by puzzle) -0.035 [-0.120, +0.049]; leading pick minus restart pick -0.016 [-0.102, +0.070]
+   compute per puzzle (model iterations): transplant/control selection = bank 64 + continuation 16 = 80 (bank sunk: 16); restart selection = 12 probes x 2 + 14 = 38
+   signal rule (192 decides; 256 replicates): {'auc': False, 'beats_controls': False, 'beats_restarts': False} -> no selection signal at this size
+attention_256 lead     : base 0.169; within-puzzle AUC 0.524 [0.473, 0.570] over 81 puzzles with discordant pairs; top-1 pick 0.156 vs random 0.169 (gain -0.012 [-0.069, +0.049]) vs oracle 0.641; C chosen [0.01]
+attention_256 lead_ctrl: base 0.195; within-puzzle AUC 0.475 [0.427, 0.522] over 83 puzzles with discordant pairs; top-1 pick 0.172 vs random 0.195 (gain -0.023 [-0.084, +0.039]) vs oracle 0.648; C chosen [0.01]
+attention_256 full     : base 0.166; within-puzzle AUC 0.454 [0.409, 0.500] over 75 puzzles with discordant pairs; top-1 pick 0.109 vs random 0.166 (gain -0.057 [-0.111, +0.000]) vs oracle 0.586; C chosen [0.01]
+attention_256 full_ctrl: base 0.159; within-puzzle AUC 0.514 [0.462, 0.565] over 76 puzzles with discordant pairs; top-1 pick 0.133 vs random 0.159 (gain -0.026 [-0.079, +0.023]) vs oracle 0.594; C chosen [0.01]
+attention_256 restart  : base 0.162; within-puzzle AUC 0.465 [0.422, 0.514] over 87 puzzles with discordant pairs; top-1 pick 0.219 vs random 0.162 (gain +0.057 [-0.007, +0.118]) vs oracle 0.680; C chosen [0.01, 0.1, 1.0, 10.0]
+attention_256: leading-transplant gain minus matched-control gain (paired by puzzle) +0.011 [-0.081, +0.106]; leading pick minus restart pick -0.062 [-0.148, +0.023]
+   compute per puzzle (model iterations): transplant/control selection = bank 64 + continuation 16 = 80 (bank sunk: 16); restart selection = 12 probes x 2 + 14 = 38
+   signal rule (192 decides; 256 replicates): {'auc': False, 'beats_controls': False, 'beats_restarts': False} -> no selection signal at this size

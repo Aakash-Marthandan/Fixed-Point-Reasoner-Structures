@@ -67,3 +67,41 @@ Attention 256 is reported as a replicate. Anything else reads "no selection sign
 - **Replay** (deterministic; the P28 runner's `bank` and the restarts' first 2 iterations): about 20–30 min per receiver on the Mac's CPU (the float32 audit's measured bank time), plus minutes for features and models.
 - **Order:** it runs after the P31 replication, if P31 is approved first, so the two do not share the CPU. Otherwise it can start now.
 - **Outputs:** `runs/analysis/rebuttal_20261016/` (features `p30_features_{w}.npz`, then `p30_report.{txt,json}`).
+
+## P30 Outcome (2026-10-12 ~18:45Z; EXPLORATORY; `runs/analysis/rebuttal_20261016/p30_report.{txt,json}`; plan 47c2fb4 unchanged)
+
+**Replay.** Deterministic, outcome-blind; 1,728 s (192) and 2,733 s (256).
+- **Gate:** the regenerated banks reproduce P28's screening. No bank history verified on any of the 256 puzzles.
+- The features were saved before outcomes were joined.
+- One fix was needed before the analysis ran: the cross-validation seeds had to be flattened. The selftest had used a scalar seed.
+
+**Held-out results (8 puzzle-grouped outer folds; inner 4-fold choice of the L2 penalty).**
+
+| receiver | family | base rate | within-puzzle AUC [95 %] | top-1 gain over a random pick [95 %] |
+|---|---|---|---|---|
+| 192 | leading transplant | 0.193 | 0.506 [0.467, 0.547] | −0.005 [−0.061, +0.059] |
+| 192 | matched control | 0.189 | 0.501 [0.451, 0.548] | +0.030 [−0.025, +0.089] |
+| 192 | full transplant | 0.184 | 0.533 [0.486, 0.579] | +0.035 [−0.024, +0.098] |
+| 192 | restart (2-iteration probe) | 0.172 | 0.533 [0.491, 0.574] | +0.031 [−0.030, +0.093] |
+| 256 | leading transplant | 0.169 | 0.524 [0.473, 0.570] | −0.012 [−0.069, +0.049] |
+| 256 | full transplant | 0.166 | 0.454 [0.409, 0.500] | −0.057 [−0.111, +0.000] |
+| 256 | restart | 0.162 | 0.465 [0.422, 0.514] | +0.057 [−0.007, +0.118] |
+
+- **Equally informed comparisons on 192:**
+  - the leading-transplant gain minus the matched-control gain, paired by puzzle: −0.035 [−0.120, +0.049];
+  - the leading pick minus the restart pick: −0.016 [−0.102, +0.070].
+- **Compute per puzzle:** transplant or control selection costs 80 model iterations (16 if the bank is treated as sunk); restart selection costs 38.
+- Inner cross-validation chose the strongest penalty (C = 0.01) in almost every fold, as expected when the features carry little information.
+
+**The plan's signal rule:** on 192 the AUC, beats-controls and beats-restarts conditions all fail → **no selection signal at this size.** Attention 256 agrees.
+
+**Sanity check after the frozen analysis** (`feature_check.py`, exploratory).
+- Every feature varies, except "stalled" (no bank history stalls at iteration 16).
+- The univariate within-puzzle AUCs of the transplant features lie between 0.46 and 0.53 on both receivers.
+- The one larger value is the restart probe's mean margin on 256: 0.576 [0.533, 0.621]. It is the best of 5 features, uncorrected, and absent on 192 (0.510). It is at most a lead about restarts, not about transplants.
+
+**Reading.**
+- Information available before continuation does not identify which transplant succeeds *within* a puzzle. This holds for these solution-free features (recipient state, donor state, pair geometry and the energy in P26's basis) on this bank. The selectors do no better than equally informed selection among matched controls or among restarts.
+- This agrees with P28's finding that the selection opportunity is generic: each strategy succeeds in about 17–19 % of 16-iteration windows.
+- The transferable correction response (P26/P27, P29) is therefore, so far, a mechanistic property without a known rule for choosing beneficial configurations.
+- **Not shown:** that no feature could work. Richer probes, longer windows or learned representations remain untested, and a positive future signal would still need a registered confirmation on fresh puzzles.
