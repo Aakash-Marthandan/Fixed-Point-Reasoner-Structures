@@ -1,0 +1,26 @@
+{
+ "192": {
+  "puzzles": 128,
+  "pair_directions": 1536,
+  "max_score_change": {
+   "lead": 7.691940169252121e-07,
+   "lead_ctrl": 8.87483075473483e-07,
+   "full": 8.117454299849669e-07,
+   "full_ctrl": 8.351202183121131e-07
+  },
+  "flips": 0,
+  "wall_s": 1065
+ },
+ "256": {
+  "puzzles": 128,
+  "pair_directions": 1536,
+  "max_score_change": {
+   "lead": 7.710810336902796e-07,
+   "lead_ctrl": 7.74623472921121e-07,
+   "full": 8.513101974472193e-07,
+   "full_ctrl": 7.89830892244936e-07
+  },
+  "flips": 0,
+  "wall_s": 1786
+ }
+}
