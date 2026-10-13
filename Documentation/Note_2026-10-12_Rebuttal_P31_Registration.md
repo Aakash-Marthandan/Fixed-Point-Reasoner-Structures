@@ -89,7 +89,7 @@ Per pair-direction: (2 + M) × 13 + 4 = 82 variants, against P29's 43. For about
 
 **Run.** Launched 18:41Z; three processes; partly on battery at the start, which halved the speed until AC was connected; finished 22:58Z. The tools were unchanged since registration (8ab0286).
 - All 370 confirmation queries were screened. **123 were eligible (246 pair-directions, 122 tasks).** Of them, 116 were also eligible in P29; 7 are new, and 2 of P29's are not eligible here.
-- **Gates (all 47 blocks):**
+- **Gates** (native recurrence and batch invariance on each shard's first block; restoration and the intervention checks on every applicable variant — wording corrected in the scope addendum):
   - native recurrence, batch invariance and restoration bitwise;
   - zero displayed-token changes and no exclusions;
   - executed transplant and control logit deviation ≤ 2.3e-3 (cap 3e-3), correction ≤ 1.21e-3 (cap 1.5e-3);
@@ -150,3 +150,46 @@ Brier score 0.189.
 - **Not shown:** persistence beyond the first one or two updates, a repair benefit, or a selection rule (P30).
 
 **Candidate manuscript wording (the PI decides):** "In a registered replication with fresh Gaussian-start histories, challenges and four averaged matched controls on the same 352 ARC-AGI-1 tasks (123 eligible queries), the query-normalized margin transfer replicated (Δβ = 0.191; 95% task-bootstrap CI [0.097, 0.273]) and survived the prespecified omission of the most influential task; the gated correctness test was not resolved (Δβ = 0.064 [−0.019, 0.194]). Neither run showed a repair benefit."
+
+## P31 SCOPE ADDENDUM after the PI’s review (2026-10-13 ~11:30Z; exploratory; `runs/analysis/rebuttal_20261017/review_check.py`)
+
+**What stands.** The PI checked the registration, source versions, the saved-array hash, all 47 blocks, the aligned challenges, the control averaging and the task clustering. The PI independently reconstructed the outcomes and repeated the main intervals with 20,000 draws. **R-MARGIN holds; R-CORRECT is not resolved.**
+- These are regression coefficients for correction responses, not percentage-point accuracy changes.
+- The donor-specific evidence is the full − control contrast.
+
+**Reporting precision (corrected).**
+- The native-recurrence and batch-invariance checks ran on **each shard's first block**, not on all 47 blocks. Restoration and the intervention checks (corrections, transplants and controls on the executed tensors) covered every applicable variant. The same holds for P29: its outcome's "gates in all 47 blocks" is corrected likewise.
+- The clipping count is 40 / 17,712.
+
+**Robustness, reproduced.**
+- Omitting the task that made P29 fragile (b9630600, present here) gives +0.193 [+0.099, +0.277].
+- The selected-task omission removes a task that *suppresses* the estimate: +0.217.
+- Every single-task omission lies between +0.183 and +0.217.
+- Correctness varies across masks in only 59 of 738 history–dose groups.
+
+**Scope.** The same task pool and checkpoint, with fresh Gaussian histories, challenges and controls. Not generalization to unseen task families or independently trained models.
+
+**A competing explanation checked: uniform response gain (exploratory).**
+- Each history-and-dose group's condition responses may be any multiple of the recipient's (one free gain per group and condition). The donor coefficient is estimated beyond that gain.
+- Result: full − control **+0.155 [+0.006, +0.273]** in P31 (reproducing the PI's figure), and +0.216 [−0.022, +0.572] in P29.
+- So the effect includes the *pattern across corrections*, beyond uniform amplification. The lower bound is thin and the analysis was not registered, so it supports interpretation and does not replace the registered result.
+
+**Predictive value is modest (exploratory).** The task is to predict the full transplant's centered responses with whole tasks held out, adding the donor's responses to a recipient-response predictor.
+- The PI's specification gives a 1.2 % error reduction [−0.6 %, +3.6 %], and 1.7 % when P29's coefficients are applied to P31.
+- Mine (recipient-only gain vs recipient + donor, no per-group gains; 8 task-grouped folds) gives 5.4 % [+1.5 %, +10.8 %] in P31, 4.4 % in P29, and 5.4 % for P29's coefficients on P31.
+- The two specifications differ. Both say the average relationship reproduces while its value for predicting individual intervention responses is small.
+
+**The statement this supports.**
+
+> Retained state carries part of the computation that determines how corrective evidence affects other predictions, and that part can be transferred between histories.
+
+**The evidence chain for the paper.**
+- P26/P27: correction-response transfer in Sudoku, with partial compression into a frozen subspace.
+- P29/P31: extension to public TRM on ARC, and a successful registered margin replication.
+- P28/P30: the present interventions and the tested selectors do not establish a useful inference advantage.
+
+Compactness remains a Sudoku result: ARC used the full readout-invisible slow component plus the prefix. **Not identified:** an energy function, semantic memory contents, a universal update law, or a reliable performance controller.
+
+**Candidate central sentence (the PI's):** "Retained state configures correction responses beyond the current answer, and score-preserving transplantation transfers part of this response structure across histories in Sudoku and ARC; selecting configurations that improve completion remains unresolved."
+
+**Next (the PI's recommendation):** P32, a bounded prediction-and-intervention experiment on Attention 192, drafted separately. Can a compact description predict previously unmeasured correction responses, and can changing the identified component change those responses by a predicted amount? The rebuttal can already use the replicated result and does not depend on P32.

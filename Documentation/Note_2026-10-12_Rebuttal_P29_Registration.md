@@ -324,7 +324,7 @@ This is the failure mode the PI predicted: small intact scales amplify large int
 **Run.** Launched 06:30Z (12:00 IST) by the system clock; the registration entry's "~09:10Z" label was wrong, see below. Three processes; 13,731 s of rollout time; 10,148 variants.
 - All 370 confirmation queries were screened; 254 were unsolved after one update from both starts.
 - **118 queries were eligible, one per task (118 tasks, 236 pair-directions).** That is inside the projection interval [92, 193], below the central 143.
-- Gates in all 47 blocks:
+- Gates (native recurrence and batch invariance on each shard's first block; restoration and the intervention checks on every applicable variant — wording corrected 2026-10-13):
   - the native recurrence and batch invariance were bitwise, and restoration was bitwise over four updates;
   - zero displayed-token changes under transplants or controls, and no query excluded;
   - executed logit deviation ≤ 2.2e-3 for transplants and controls (cap 3e-3) and ≤ 1.19e-3 for corrections (cap 1.5e-3); the smallest top-two gap was 2.7e-4;
