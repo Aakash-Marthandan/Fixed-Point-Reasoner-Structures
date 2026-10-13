@@ -1,0 +1,15 @@
+P32 STAGE 1 (EXPLORATORY; plan frozen before it ran): Attention 192, update k = 2; primary target = within-dose centered responses of the 3 unmeasured masks
+scored groups 7103, excluded for insufficient variation 1; SSE of predicting zero 16976285.4
+  B0  : SSE 23419377.5 (uncalibrated 16978799.1); overall-Delta SSE 77115169.6; lambdas [(100.0, 1000.0), (1000.0, 1000.0)]
+  B1  : SSE 21964491.9 (uncalibrated 16927541.6); overall-Delta SSE 74797325.9; lambdas [(1000.0, 1000.0)]
+  B1o : SSE 21929397.7 (uncalibrated 16926322.4); overall-Delta SSE 74621361.8; lambdas [(10.0, 1000.0), (100.0, 1000.0)]
+  M3  : SSE 21344473.9 (uncalibrated 16724188.0); overall-Delta SSE 78284042.1; lambdas [(1000.0, 1000.0)]
+  M3o : SSE 21380196.4 (uncalibrated 16733755.9); overall-Delta SSE 78266233.9; lambdas [(1000.0, 1000.0)]
+  M3b : SSE 23271426.8 (uncalibrated 17026651.2); overall-Delta SSE 82998773.1; lambdas [(1000.0, 1000.0)]
+  Rother (rollout-assisted reference): SSE 16888644.8
+  M3 vs B1 (oracle-free): error reduction +2.8 % [-1.5, +7.0]
+  M3o vs B1o (oracle-assisted): +2.5 % [-1.8, +6.7]
+  M3b (bilinear, exploratory) vs B1: -6.0 % [-11.4, -0.5] | Rother vs B1: +23.1 % [+19.2, +27.3]
+  STAGE-1 RULE (>= 10 % and lower bound > 0): {'M3_qualifies': False, 'M3o_qualifies': False} -> Stage-2 candidate: none: no compact predictive description of correction-specific responses at this level
+  Stage-3 prototype (M3, intact-trained, intact probe calibration; response change vs zero): lead red -0.078 slope +0.03 corr +0.010; lead_ctrl red -0.220 slope -0.01 corr -0.009; full red -0.073 slope +0.04 corr +0.012; full_random red -0.099 slope -0.23 corr -0.037; comb_ctrl red -0.199 slope +0.00 corr +0.008; lead-lead_ctrl red -0.187 slope +0.06 corr +0.020; full-comb_ctrl red -0.183 slope +0.08 corr +0.043; full-full_random red -0.079 slope +0.10 corr +0.059
+  Stage-3 prototype (M3o, intact-trained, intact probe calibration; response change vs zero): lead red -0.092 slope +0.01 corr +0.004; lead_ctrl red -0.240 slope -0.01 corr -0.007; full red -0.083 slope +0.04 corr +0.012; full_random red -0.123 slope -0.20 corr -0.034; comb_ctrl red -0.216 slope +0.01 corr +0.012; lead-lead_ctrl red -0.206 slope +0.05 corr +0.013; full-comb_ctrl red -0.196 slope +0.07 corr +0.043; full-full_random red -0.096 slope +0.08 corr +0.060

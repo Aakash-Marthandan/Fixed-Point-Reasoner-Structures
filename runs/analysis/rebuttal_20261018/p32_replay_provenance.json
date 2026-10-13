@@ -1,0 +1,51 @@
+{
+ "P26D": {
+  "states": 208,
+  "mismatches": {
+   "pid": 0,
+   "dir": 0,
+   "E": 0,
+   "grid": 0,
+   "sol": 0,
+   "masks": 0
+  },
+  "hybrid_display_cells_differing": 0,
+  "seconds_features": 2.0,
+  "reroll_variants": 8,
+  "reroll_bitwise": true,
+  "reroll_maxdev": 0.0
+ },
+ "P26C": {
+  "states": 208,
+  "mismatches": {
+   "pid": 0,
+   "dir": 0,
+   "E": 0,
+   "grid": 0,
+   "sol": 0,
+   "masks": 0
+  },
+  "hybrid_display_cells_differing": 0,
+  "seconds_features": 4.0,
+  "reroll_variants": 8,
+  "reroll_bitwise": true,
+  "reroll_maxdev": 0.0
+ },
+ "P27": {
+  "states": 384,
+  "mismatches": {
+   "pid": 0,
+   "dir": 0,
+   "E": 0,
+   "grid": 0,
+   "sol": 0,
+   "masks": 0
+  },
+  "hybrid_display_cells_differing": 0,
+  "seconds_features": 18.9,
+  "reroll_variants": 8,
+  "reroll_bitwise": true,
+  "reroll_maxdev": 0.0
+ },
+ "wall_s": 389.2
+}

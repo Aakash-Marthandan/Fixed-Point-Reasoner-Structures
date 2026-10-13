@@ -82,3 +82,50 @@ Scored puzzles: P26 C and P27, 296 puzzles. P27's hybrid conditions are used onl
 - **Attention 256:** the frozen *procedure* is replicated (refit on 256's data). The fitted *coefficients* cannot be transferred, because the widths and bases differ.
 
 **Compute.** Stage 1 is a replay (timed) plus model fitting. Stages 2 and 3 are P27-sized local runs, priced on a smoke before registration.
+
+## P32 Stage 1 Outcome (2026-10-13 ~13:55Z; EXPLORATORY; `runs/analysis/rebuttal_20261018/p32_stage1_k{1,2}.{txt,json}`; plan and tool committed e46f848 before any number)
+
+**Replay and provenance** (389 s; scratch metadata; nothing written into the archives).
+- All three archives were regenerated exactly: P26 D 208, P26 C 208 and P27 384 pair-directions.
+- Puzzle ids, directions, evaluation cells, displayed grids, solutions and every mask's cells match with zero mismatches.
+- The sampled re-rolls through each archive's own rollout reproduce the saved evaluation-cell scores **bitwise**.
+- P27's five hybrid conditions display exactly the recipient's digits.
+
+**The registered result (k = 1; primary within-dose target; 7,104 scored groups, none excluded).**
+
+| comparison (frozen rule: ≥ 10 % with a lower bound > 0) | error reduction [95 %] |
+|---|---|
+| M3 vs B1 (oracle-free; B1 the stronger visible baseline) | +5.2 % [−0.6, +11.2] |
+| M3o vs B1o (oracle-assisted) | +4.9 % [−0.8, +10.7] |
+| M3b (bilinear, exploratory) vs B1 | −1.5 % [−7.5, +4.7] |
+
+**→ Neither qualifies: "no compact predictive description of correction-specific responses at this level."** Stages 2 and 3 are not run in this form.
+- **Secondary, k = 2:** M3 vs B1 +2.8 % [−1.5, +7.0]; M3o vs B1o +2.5 %. Neither qualifies.
+- Inner cross-validation chose the strongest ridge penalty in the grid (1,000) almost everywhere.
+
+**A design flaw in the frozen calibration (disclosed; post hoc, `diag_stage1.py`).**
+- The per-(state, cell) gain fitted from three probes was unstable. Its 5–95 % range was −3.4 to +6.0 for M3 and −95 to +107 for B0.
+- **Every probe-calibrated model therefore predicted worse than zero:** M3 −20.6 % [−26.8, −14.7] and B1 −27.2 % [−35.9, −20.1] relative to predicting zero. The frozen comparison was between two predictors worse than zero, and the rule should have included zero and the uncalibrated predictors as references.
+- **The conclusion does not depend on the flaw.** Uncalibrated, M3 improves on B1 by **+2.7 % [+1.6, +3.8]** and on zero by **+3.7 % [+2.5, +5.0]**. Hidden state adds a small, resolved amount, nowhere near 10 %.
+
+**What the target looks like.** The within-dose differences are heavy-tailed: |T| has a median of 2.4, a 90th percentile of 45, a 99th of 84 and a maximum of 101. A minority of large swings dominate the squared error, and no tested description predicts them.
+
+**The rollout-assisted reference.** Using the other history's measured responses to the same masks improves on zero by only about 1.6 %. Little of the correction-specific response is shared even between two histories of the same puzzle. (Its "+22.7 % vs B1" reflects B1's calibration failure.)
+
+**Stage-3 prototype (exploratory, P27's hybrids, intact-trained M3).**
+- With the frozen calibration, the predicted intervention changes are worse than predicting no change, by 7–24 %.
+- Without the gain (post hoc, `diag_proto.py`), they are still not better than zero (−0.6 % to −5.5 %).
+- They carry a weak direction: correlations 0.17 for the leading transplant, 0.09 for its control, 0.14 for the full transplant, 0.10 for the combined control, and **0.16 for the leading − control difference**; slopes 0.24–0.47.
+- The magnitude is badly missed: the observed change has RMS ≈ 58 against a predicted 20.
+
+**Reading.**
+- The transferable response structure (P26/P27, P29/P31) is real. But *individual* correction-specific responses at untouched cells are not compactly predictable by linear descriptions of the visible state, the readout-invisible state in P26's frozen basis, and an explicit representation of the correction.
+- Hidden-state features add about 3 % beyond visible ones. About 96 % of the within-dose variance stays unexplained, concentrated in large swings.
+- This agrees with the synthesis's "sensitivity without control" (P20–P24).
+- The chain structure → prediction → controlled realization is blocked at the prediction step for this description class.
+- Not shown: that no description could work. Nonlinear models, the network's own local linear response, or a target built around the large swings remain untested.
+
+**Lessons.**
+1. A calibration fitted from a few probes per unit must be validated inside the training folds before it enters a frozen rule. The rule must include predicting zero and the uncalibrated predictor as references.
+2. A ridge grid chosen at its edge everywhere signals a weak signal and should have extended.
+3. For a heavy-tailed target, the error measure and its robust companion should be fixed before the run.
