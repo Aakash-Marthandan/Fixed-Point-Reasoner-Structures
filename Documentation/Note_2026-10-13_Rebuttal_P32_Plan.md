@@ -129,3 +129,44 @@ Scored puzzles: P26 C and P27, 296 puzzles. P27's hybrid conditions are used onl
 1. A calibration fitted from a few probes per unit must be validated inside the training folds before it enters a frozen rule. The rule must include predicting zero and the uncalibrated predictor as references.
 2. A ridge grid chosen at its edge everywhere signals a weak signal and should have extended.
 3. For a heavy-tailed target, the error measure and its robust companion should be fixed before the run.
+
+## P32 CLOSED — scope addendum after the PI's review (2026-10-14 ~04:45Z; exploratory; every figure reproduced, `runs/analysis/rebuttal_20261018/review_check.py`)
+
+**Decision.** P32 closes under its original rule. Stages 2 and 3 do not run, and no broad nonlinear-model search follows. The PI's independent reconstruction reproduces the uncalibrated M3 error almost exactly and confirms that P26's discovery puzzles stayed training-only.
+
+**The conclusion, narrowed.**
+
+> These pooled features of the selected slow-state subspace, with the tested regression and calibration procedure, did not meet the prespecified forecasting threshold.
+
+- The "about 96 % unexplained" figure is this predictor's held-out squared error. It is **not** an estimate of irreducible unpredictability, or of information absent from the hidden state.
+- **Withdrawn:** "the chain structure → prediction → control is blocked at the prediction step." The tested route to an *accurate numerical response model* failed. A narrower route through *action selection* remains open (below).
+
+**Three qualifications.**
+1. **Most prediction error concerns whether a correction succeeds.** 26.9 % of the scored (state, cell, dose) groups contain unmeasured masks that disagree on whether the untouched cell becomes correct, and those groups hold **86.8 %** of the target's squared magnitude. The largest 10 % of |target| values hold 69.3 %. The hard cases mostly cross the correct/incorrect decision boundary. This identifies a concrete behavioural event; it does not establish competing attractors or a global rule switch.
+2. **P32 tested a narrower state description than its outcome wording suggested.**
+   - Within-dose centering removes **97 of the 176 hidden features** from the specific-response regression: the evaluation cell's displayed-digit row and field mean, its norm, and both global summaries. They are constant within a (state, cell, dose) group.
+   - Such summaries can only affect within-dose predictions through interactions with the proposed correction; they enter only the level and calibration parts.
+   - The features use the slow state, while the correction edits both the slow and the fast state.
+3. **The same uncalibrated predictor can rank corrections** (post hoc diagnostic; the fitted model unchanged). For each history and dose, choose one of the three unmeasured masks by its predicted mean response over the four untouched cells, then score correctness on those cells:
+
+| selection | untouched-cell correctness |
+|---|---|
+| random among the three masks | 67.63 % |
+| visible-feature baseline B1 | 70.13 % |
+| hidden-feature model M3 | **71.88 %** |
+
+- M3 − random: **+4.24 pp [+3.33, +5.16]**. M3 − B1: **+1.75 pp [+0.68, +2.79]**. B1 − random: +2.50 pp.
+- Among 3,828 discordant mask pairs (one corrects the cell and the other does not), M3 ranks the correcting mask higher **64.0 %** of the time; B1 59.0 %.
+- **Scope:** this is *selection among oracle-supplied corrections*. The candidate corrections and the evaluation population were built from the solution. It is not autonomous solving, not whole-puzzle improvement, not hidden-state steering, and it does not overturn P30.
+- **Poor prediction of response magnitude does not imply useless prediction of action ordering.**
+
+**Three capabilities, kept distinct.**
+- Transferring correction-response structure: supported (P26/P27, P29/P31).
+- Forecasting individual response magnitudes accurately: P32's tested approach fails.
+- Using state information to choose between corrective actions: a modest exploratory signal (above).
+
+**Next (the PI).**
+1. P32 is closed.
+2. The ranking result is recorded as exploratory. If more local time is spent here, it gets one small, separately registered fresh-puzzle confirmation with the existing predictor frozen (hidden vs visible vs random selection), run alongside the ARC work and never delaying it.
+3. **ARC is the priority** (`Plan_2026-10-13_ARC_Error_Correction_Pilot_DRAFT.md`). Its central test is whether feedback helps choose or construct revisions that improve unseen answers.
+4. On ARC, demonstration-derived feedback is available and query solutions are not. A result that depends on oracle query corrections cannot satisfy that goal.
