@@ -20,7 +20,7 @@
 #                        monitor puzzle at 30k; a noise-level argmax is not the object the rule means)
 """  .venv/bin/python tools/select_ckpt.py runs/pretrainsport3a_A3  """
 from __future__ import annotations
-import json, re, sys
+import json, math, re, sys
 from pathlib import Path
 
 def _opt(name, default=None):
@@ -54,7 +54,11 @@ def main():
             if key in m:
                 v2 = float(m[key2]) if (key2 and key2 in m) else 0.0
                 v3 = float(m[key3]) if (key3 and key3 in m) else 0.0
-                rows.append((int(m["step"]), float(m[key]), v2, v3))
+                value = float(m[key])
+                if not all(math.isfinite(v) for v in (value, v2, v3)):
+                    print(f"Skipping non-finite {row} metrics at step {m['step']}", file=sys.stderr)
+                    continue
+                rows.append((int(m["step"]), value, v2, v3))
     cand = [(v, v2, v3, s) for s, v, v2, v3 in rows if s in banked]
     if not cand:
         print("NONE", file=sys.stderr); sys.exit(1)
